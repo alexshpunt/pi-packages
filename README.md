@@ -19,10 +19,10 @@ This extension registers a custom provider that routes LLM calls through the **C
 1) Install the extension globally (npm is the preferred source now):
 
 ```
-pi install npm:claude-agent-sdk-pi@latest
+pi install npm:claude-agent-sdk-pi
 ```
 
-(You can omit `@latest` to use the latest version, or pin a specific version for reproducible installs.)
+(You can pin a specific version for reproducible installs.)
 
 **Alternative (git):**
 
