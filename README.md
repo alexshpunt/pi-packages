@@ -38,7 +38,7 @@ Available when using any non-claude-code-acp provider. Pi's LLM can delegate to 
   - `"read"`: read-only codebase access — for review, analysis, research
   - `"none"`: no tools, reasoning only — for general questions, brainstorming
 
-Claude Code's tools are auto-approved (bypass permissions mode). Pre-existing MCP servers from user/project config are suppressed via `--strict-mcp-config`. Pi's skills are forwarded to Claude Code's system prompt so it has the same skill awareness as pi.
+Claude Code's tools are currently auto-approved (bypass permissions mode) — it can read, write, and run commands without user confirmation. The `mode` parameter is the primary control over what Claude Code can do. This may change in future versions to support more granular permission control. Pre-existing MCP servers from user/project config are suppressed via `--strict-mcp-config`. Pi's skills are forwarded to Claude Code's system prompt so it has the same skill awareness as pi.
 
 ## Configuration
 
@@ -68,12 +68,14 @@ Config files: `~/.pi/agent/claude-code-acp.json` (global) and `.pi/claude-code-a
 
 **Claude Code loads its own skills** from `~/.claude/skills/` and `.claude/skills/` in addition to the pi skills we forward. These are additive — Claude Code may have skills pi doesn't know about.
 
+**Provider loses context after switching away and back.** The provider's continuation path only sends the latest user message, assuming ACP still has prior context. If you switch to another provider, have a conversation, and switch back, the ACP session misses everything that happened in between. The fix is to detect the context gap (compare `context.messages.length` to `lastContextLength`) and resend the full context or create a fresh session.
+
 See [docs/acp-meta-reference.md](docs/acp-meta-reference.md) for the full set of available ACP `_meta` options.
 
 ## TODOs
 
 - **Markdown rendering** in expanded tool result view. Currently plain text — code blocks, headings, lists render as raw syntax. Use `Markdown` from `@mariozechner/pi-tui` with a `MarkdownTheme` built from pi's theme (see `buildMdTheme` in `extensions/claude-acp.ts`). Requires returning a `Box` instead of `Text` from `renderResult`.
-- **Persistent AskClaude session**: reuse the same Claude Code session across calls so context accumulates (e.g., plan a feature → implement → review). Use `_meta.claudeCode.options.resume` to reconnect. Add `/claude:clear` to reset. Reset automatically on session fork/switch.
+- **Persistent AskClaude session**: reuse the same Claude Code session across calls so context accumulates (e.g., plan a feature → implement → review). Use `_meta.claudeCode.options.resume` to reconnect. Add `/claude:clear` to reset. Reset automatically on session fork/switch. Tradeoff: `allowedTools` is set at session creation and can't change per-call, so a persistent session would need to be created with `full` tools and rely on prompt-level instructions for mode restrictions. This is more concerning when AskClaude is auto-invoked (e.g., a skill that always delegates planning to Claude) rather than explicitly requested by the user — the user may not realize Claude Code has full tool access. Worth considering whether persistent sessions should default to `read` or require explicit opt-in.
 - **`/claude:btw` command** for ephemeral questions (like Claude Code's own `/btw`): quick question, response displayed but not added to LLM context. Mode `read` by default. Two approaches for showing the full response:
   - **displayOnly message**: `sendMessage` with `display: true` + `displayOnly` detail, filtered from LLM context via `on("context")`. Proven pattern from `extensions/claude-acp.ts`.
   - **Overlay**: `ctx.ui.custom()` with `{ overlay: true }` for a dismissible panel.
