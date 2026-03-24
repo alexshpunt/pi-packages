@@ -362,6 +362,7 @@ let activeSessionId: string | null = null;
 let activeModelId: string | null = null;
 let activePromise: Promise<PromptResponse> | null = null;
 let lastContextLength = 0;
+let hadToolUseCycles = false;
 
 function killConnection() {
 	if (acpProcess) {
@@ -374,6 +375,7 @@ function killConnection() {
 	activeModelId = null;
 	activePromise = null;
 	lastContextLength = 0;
+	hadToolUseCycles = false;
 
 	if (pendingToolCall) {
 		pendingToolCall.resolve("Error: connection killed");
@@ -645,6 +647,7 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 
 			// --- Mode A: Fresh prompt ---
 			} else {
+				hadToolUseCycles = false;
 				let promptText: string;
 				if (!activeSessionId) {
 					// First call — new session with full context
@@ -783,6 +786,10 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 					stream.push({ type: "toolcall_end", contentIndex: idx, toolCall: tc, partial: output });
 
 					output.stopReason = "toolUse";
+					hadToolUseCycles = true;
+					// Strip usage — ACP doesn't provide per-turn usage for tool-use
+					// intermediates. Leaving zeros would pollute llm-perf stats.
+					output.usage = undefined as any;
 					stream.push({ type: "done", reason: "toolUse", message: output });
 					stream.end();
 					// activePromise stays alive — next streamSimple call will resume
@@ -800,14 +807,19 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 					}
 
 					const result = (raceResult as { kind: "done"; result: PromptResponse }).result;
-					// Populate final token usage from PromptResponse if available
-					if (result.usage) {
+					// Populate final token usage from PromptResponse if available.
+					// Skip if there were tool-use cycles — ACP reports cumulative
+					// usage but llm-perf only measures last-turn duration, so
+					// tok/s would be wildly inflated.
+					if (result.usage && !hadToolUseCycles) {
 						output.usage.input = result.usage.inputTokens;
 						output.usage.output = result.usage.outputTokens;
 						output.usage.cacheRead = result.usage.cachedReadTokens ?? 0;
 						output.usage.cacheWrite = result.usage.cachedWriteTokens ?? 0;
 						output.usage.totalTokens = output.usage.input + output.usage.output + output.usage.cacheRead + output.usage.cacheWrite;
 						calculateCost(model, output.usage);
+					} else if (hadToolUseCycles) {
+						output.usage = undefined as any;
 					}
 					output.stopReason = result.stopReason === "cancelled" ? "aborted" : "stop";
 					pushStart();
