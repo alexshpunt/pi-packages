@@ -746,8 +746,8 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 						const kindName = tc.kind ? TOOL_KIND_TO_PI[tc.kind] : undefined;
 						const titleFirst = tc.title.split(" ")[0] || tc.title;
 						const piToolName = kindName ?? mapToolName(titleFirst);
-						const args = tc.rawInput
-							? mapToolArgs(piToolName, tc.rawInput as Record<string, unknown>)
+						const args = (tc.rawInput && typeof tc.rawInput === "object")
+							? tc.rawInput as Record<string, unknown>
 							: {};
 
 						const block = {
@@ -768,8 +768,8 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 						const idx = toolCallIndexMap.get(tc.toolCallId);
 						if (idx != null && (tc.status === "completed" || tc.status === "failed")) {
 							const block = blocks[idx] as { type: "toolCall"; id: string; name: string; arguments: Record<string, unknown> };
-							if (tc.rawInput) {
-								block.arguments = mapToolArgs(block.name, tc.rawInput as Record<string, unknown>);
+							if (tc.rawInput && typeof tc.rawInput === "object") {
+								block.arguments = tc.rawInput as Record<string, unknown>;
 							}
 							stream.push({ type: "toolcall_end", contentIndex: idx, toolCall: block, partial: output });
 						}
