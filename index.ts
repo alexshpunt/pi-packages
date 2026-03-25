@@ -518,7 +518,7 @@ async function promptAndWait(
 	mode: "full" | "read" | "none",
 	toolCalls: Map<string, ToolCallState>,
 	signal?: AbortSignal,
-	options?: { systemPrompt?: string; appendSkills?: boolean; onStreamUpdate?: (responseText: string) => void },
+	options?: { systemPrompt?: string; appendSkills?: boolean; onStreamUpdate?: (responseText: string) => void; model?: string; thinking?: string },
 ): Promise<{ responseText: string; stopReason: string }> {
 	const connection = await ensureConnection();
 
@@ -527,13 +527,17 @@ async function promptAndWait(
 	const skillsBlock = options?.appendSkills !== false && options?.systemPrompt
 		? extractSkillsBlock(options.systemPrompt) : undefined;
 
+	const extraArgs: Record<string, string | null> = { "strict-mcp-config": null };
+	if (options?.thinking) extraArgs["thinking"] = options.thinking;
+	if (options?.model) extraArgs["model"] = options.model;
+
 	const meta: Record<string, unknown> = {
 		...modePreset,
 		...(skillsBlock ? { systemPrompt: { append: skillsBlock } } : {}),
 		claudeCode: {
 			options: {
 				...(modePreset as any).claudeCode?.options,
-				extraArgs: { "strict-mcp-config": null },
+				extraArgs,
 			},
 		},
 	};
@@ -936,11 +940,17 @@ export default function (pi: ExtensionAPI) {
 			parameters: Type.Object({
 				prompt: Type.String({ description: "The question or task for Claude Code. Claude only sees this prompt (no conversation history) — include the user's original question and any relevant context. Don't research up front, let Claude explore." }),
 				mode: Type.Optional(StringEnum(modeValues, { description: modeDesc })),
+				model: Type.Optional(Type.String({ description: 'Claude model (e.g. "opus", "sonnet", "haiku", or full ID). Defaults to Claude Code preference.' })),
+				thinking: Type.Optional(StringEnum(["off", "minimal", "low", "medium", "high", "xhigh"] as const, { description: 'Thinking effort level. Defaults to "medium".' })),
 			}),
 			renderCall(args, theme) {
 				let text = theme.fg("mdLink", theme.bold("AskClaude "));
 				const mode = args.mode ?? defaultMode;
-				if (mode !== "full") text += `${theme.fg("muted", `[tools=${mode}]`)} `;
+				const tags: string[] = [];
+				if (mode !== "full") tags.push(`tools=${mode}`);
+				if (args.model) tags.push(`model=${args.model}`);
+				if (args.thinking) tags.push(`thinking=${args.thinking}`);
+				if (tags.length) text += `${theme.fg("accent", `[${tags.join(", ")}]`)} `;
 				const truncated = args.prompt.length > PREVIEW_MAX_CHARS ? args.prompt.substring(0, PREVIEW_MAX_CHARS) : args.prompt;
 				const lines = truncated.split("\n").slice(0, PREVIEW_MAX_LINES);
 				text += theme.fg("muted", `"${lines.join("\n")}"`);
@@ -1003,6 +1013,8 @@ export default function (pi: ExtensionAPI) {
 					const result = await promptAndWait(params.prompt, mode, toolCalls, signal, {
 						systemPrompt: ctx.getSystemPrompt(),
 						appendSkills: askConf?.appendSkills,
+						model: params.model,
+						thinking: params.thinking,
 					});
 					clearInterval(progressInterval);
 					const executionTime = Date.now() - start;

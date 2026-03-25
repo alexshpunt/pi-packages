@@ -54,6 +54,10 @@ You can override this description via config (see below). You can also steer whe
   - `"read"` (default): read-only codebase access — for review, analysis, research
   - `"none"`: no tools, reasoning only — for general questions, brainstorming
   - `"full"`: read, write, run commands — requires `allowFullMode: true` in config (see below)
+- `model` — Claude model to use (e.g., `"opus"`, `"sonnet"`, `"haiku"`, or full ID). Defaults to Claude Code's preference.
+- `thinking` — extended thinking effort level:
+  - `"off"` — disable extended thinking
+  - `"minimal"`, `"low"`, `"medium"` (default), `"high"`, `"xhigh"` — increasing thinking depth
 
 Unlike the provider, AskClaude uses Claude Code's own built-in tools directly (Glob, Read, etc.) — not pi's tools via MCP. This means tool calls happen inside Claude Code and pi only sees the final result. Claude Code's tools are auto-approved (bypass permissions mode). Pre-existing MCP servers from user/project config are suppressed via `--strict-mcp-config`. Pi's skills are forwarded to Claude Code's system prompt.
 
