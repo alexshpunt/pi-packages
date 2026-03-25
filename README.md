@@ -2,8 +2,14 @@
 
 Pi extension that integrates Claude Code via ACP (Agent Client Protocol). Provides two ways to use Claude Code from pi:
 
-1. **Provider** — route pi's LLM calls through Claude Code (`claude-code-acp` provider)
-2. **AskClaude tool** — delegate specific questions or tasks to Claude Code from any provider
+1. **Provider** — Offers Opus/Sonnet/Haiku as models that can be selected in pi like usual
+2. **AskClaude tool** — pi can use this to delegate tasks or ask questions of Claude Code without having to switch from another model/provider
+
+Behind the scenes, it is automating a real Claude Code session and using MCP to bridge tool calls from Claude Code back to Pi where they are executed.
+
+It a little janky, but actually mostly works! This was inspired by [claude-agent-sdk-pi](https://github.com/prateekmedia/claude-agent-sdk-pi) but the advantage over the Agent SDK approach and the built-in Claude Code emulation is that (I believe) this is a fully compliant way to use Claude Max/Pro subscriptions from Pi. It follows the rules: only the real Claude Code touches Anthropic's API and requests are part of a user-driven coding session.
+
+(IANAL and obviously this extension is unofficial and neither endorsed nor supported by Anthropic.)
 
 ## Setup
 
@@ -12,7 +18,7 @@ Pi extension that integrates Claude Code via ACP (Agent Client Protocol). Provid
    pi install npm:pi-claude-code-acp
    ```
 
-2. Ensure Claude Code is authenticated (`claude` CLI works).
+2. Ensure Claude Code is installed and logged in (`claude` CLI works).
 
 3. Reload pi: `/reload`
 

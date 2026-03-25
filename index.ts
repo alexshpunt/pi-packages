@@ -34,6 +34,18 @@ function getSandboxApi(): SandboxApi | null {
 	return (globalThis as Record<string, unknown>).__pi_sandbox_api__ as SandboxApi ?? null;
 }
 
+/** Extract a useful message from any thrown value (Error, plain object, or primitive). */
+function errorMessage(err: unknown): string {
+	if (err instanceof Error) return err.message;
+	if (err && typeof err === "object") {
+		const obj = err as Record<string, unknown>;
+		if (typeof obj.message === "string") return obj.message;
+		if (typeof obj.error === "string") return obj.error;
+		try { return JSON.stringify(err); } catch { /* fall through */ }
+	}
+	return String(err);
+}
+
 const PROVIDER_ID = "claude-code-acp";
 const MCP_SERVER_NAME = "pi-tools";
 const MAX_CONTEXT_MESSAGES = 20;
@@ -525,7 +537,7 @@ async function ensureSandboxAcpConnection(): Promise<ClientSideConnection | null
 	const sandbox = getSandboxApi();
 	if (!sandbox?.isActive()) return null;
 
-	const proc = sandbox.spawnProcess(["claude-agent-acp"], { cwd: "/workspace" });
+	const proc = sandbox.spawnProcess(["npx", "-y", "@zed-industries/claude-agent-acp"], { cwd: "/workspace" });
 	sandboxAcpProcess = proc;
 
 	let stderrBuffer = "";
@@ -535,6 +547,11 @@ async function ensureSandboxAcpConnection(): Promise<ClientSideConnection | null
 		if (exitCode !== 0 && stderrBuffer.trim()) {
 			console.error(`[claude-code-acp] Sandbox ACP process exited ${exitCode}:\n${stderrBuffer.trim()}`);
 		}
+		sandboxAcpProcess = null;
+		killSandboxConnection();
+	}).catch((err) => {
+		const msg = errorMessage(err);
+		console.error(`[claude-code-acp] Sandbox ACP process error: ${msg}${stderrBuffer.trim() ? `\nstderr: ${stderrBuffer.trim()}` : ""}`);
 		sandboxAcpProcess = null;
 		killSandboxConnection();
 	});
@@ -593,14 +610,20 @@ async function ensureSandboxAcpConnection(): Promise<ClientSideConnection | null
 		stream,
 	);
 
-	await connection.initialize({
-		protocolVersion: PROTOCOL_VERSION,
-		clientCapabilities: {
-			fs: { readTextFile: true, writeTextFile: true },
-			terminal: true,
-		},
-		clientInfo: { name: "pi-claude-code-acp-sandbox", version: "0.1.0" },
-	});
+	try {
+		await connection.initialize({
+			protocolVersion: PROTOCOL_VERSION,
+			clientCapabilities: {
+				fs: { readTextFile: true, writeTextFile: true },
+				terminal: true,
+			},
+			clientInfo: { name: "pi-claude-code-acp-sandbox", version: "0.1.0" },
+		});
+	} catch (err) {
+		killSandboxConnection();
+		const detail = stderrBuffer.trim();
+		throw new Error(`Sandbox ACP init failed: ${errorMessage(err)}${detail ? `\nstderr: ${detail}` : ""}`);
+	}
 
 	sandboxAcpConnection = connection;
 	return connection;
@@ -979,7 +1002,7 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 			}
 
 			output.stopReason = options?.signal?.aborted ? "aborted" : "error";
-			output.errorMessage = error instanceof Error ? error.message : String(error);
+			output.errorMessage = errorMessage(error);
 			if (!started) stream.push({ type: "start", partial: output });
 			stream.push({ type: "error", reason: output.stopReason as "aborted" | "error", error: output });
 			stream.end();
@@ -1108,7 +1131,7 @@ export default function (pi: ExtensionAPI) {
 					};
 				} catch (err) {
 					clearInterval(progressInterval);
-					const msg = err instanceof Error ? err.message : String(err);
+					const msg = errorMessage(err);
 					return {
 						content: [{ type: "text" as const, text: `Error: ${msg}` }],
 						details: { prompt: params.prompt, executionTime: Date.now() - start, error: true },
