@@ -13,9 +13,8 @@ This is a heavily reworked fork of [claude-agent-sdk-pi](https://github.com/prat
 
 (IANAL and obviously this extension is unofficial and neither endorsed nor supported by Anthropic.)
 
-## Example
 
-![screenshot](screenshot.png)
+<a href="screenshot.png"><img src="screenshot.png" width="600"></a>
 
 ## Setup
 
