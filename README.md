@@ -1,4 +1,4 @@
-# pi-claude-code-acp
+# pi-claude-code-acp (experimental)
 
 Pi extension that integrates Claude Code via ACP (Agent Client Protocol). Provides two ways to use Claude Code from pi:
 
@@ -18,9 +18,9 @@ This is a heavily reworked fork of [claude-agent-sdk-pi](https://github.com/prat
 
 ## Setup
 
-1. Install:
+1. Install via git (recommended while experimental):
    ```
-   pi install npm:pi-claude-code-acp
+   pi install git:github.com/elidickinson/pi-claude-code-acp
    ```
 
 2. Ensure Claude Code is installed and logged in (`claude` CLI works).
