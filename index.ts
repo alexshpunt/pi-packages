@@ -426,16 +426,6 @@ async function ensureConnection(): Promise<ClientSideConnection> {
 		stdio: ["pipe", "pipe", "pipe"],
 	});
 	acpProcess = child;
-	// Don't let the child process or its stdio pipes prevent the parent from
-	// exiting. Print mode (-p) doesn't emit session_shutdown, so without this
-	// the process hangs. Cleanup still happens via process.on("exit").
-	child.unref();
-	// @ts-expect-error — stdio are net.Socket at runtime which have unref(), but TS types them as Writable/Readable
-	child.stdin?.unref();
-	// @ts-expect-error
-	child.stdout?.unref();
-	// @ts-expect-error
-	child.stderr?.unref();
 
 	let stderrBuffer = "";
 	child.stderr?.on("data", (chunk: Buffer) => {
@@ -504,8 +494,36 @@ async function ensureConnection(): Promise<ClientSideConnection> {
 		clientInfo: { name: "pi-claude-code-acp", version: "0.1.0" },
 	});
 
+	// Unref after init so the child doesn't prevent exit when idle.
+	// refConnection()/unrefConnection() manage this around active requests.
+	unrefConnection();
+
 	acpConnection = connection;
 	return connection;
+}
+
+/** Keep the event loop alive while we're waiting for ACP responses. */
+function refConnection() {
+	if (!acpProcess) return;
+	acpProcess.ref();
+	// @ts-expect-error — net.Socket at runtime
+	acpProcess.stdin?.ref();
+	// @ts-expect-error
+	acpProcess.stdout?.ref();
+	// @ts-expect-error
+	acpProcess.stderr?.ref();
+}
+
+/** Allow the event loop to exit when idle (no pending ACP work). */
+function unrefConnection() {
+	if (!acpProcess) return;
+	acpProcess.unref();
+	// @ts-expect-error — net.Socket at runtime
+	acpProcess.stdin?.unref();
+	// @ts-expect-error
+	acpProcess.stdout?.unref();
+	// @ts-expect-error
+	acpProcess.stderr?.unref();
 }
 
 process.on("exit", () => { killConnection(); });
@@ -521,6 +539,7 @@ async function promptAndWait(
 	options?: { systemPrompt?: string; appendSkills?: boolean; onStreamUpdate?: (responseText: string) => void; model?: string; thinking?: string },
 ): Promise<{ responseText: string; stopReason: string }> {
 	const connection = await ensureConnection();
+	refConnection();
 
 	// Build _meta: mode preset + skills append + MCP suppression
 	const modePreset = MODE_PRESETS[mode] ?? {};
@@ -602,6 +621,7 @@ async function promptAndWait(
 		const result = abortP ? await Promise.race([promptP, abortP]) : await promptP;
 		return { responseText, stopReason: result.stopReason };
 	} finally {
+		unrefConnection();
 		sessionUpdateHandler = null;
 		connection.unstable_closeSession({ sessionId: sid }).catch(() => {});
 	}
@@ -676,6 +696,7 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 
 		try {
 			const connection = await ensureConnection();
+			refConnection();
 			const tools = getToolsForMcp(context.tools, askClaudeToolName);
 
 			// --- Mode B: Resume with tool result ---
@@ -914,6 +935,8 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 				}
 				sessionUpdateHandler = null;
 				toolCallDetected = null;
+				// Unref unless activePromise survives (toolUse — next call will resume it)
+				if (!activePromise) unrefConnection();
 			}
 		} catch (error) {
 			activePromise = null;
@@ -924,6 +947,7 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 			output.stopReason = options?.signal?.aborted ? "aborted" : "error";
 			output.errorMessage = errorMessage(error);
 			if (!started) stream.push({ type: "start", partial: output });
+			unrefConnection();
 			stream.push({ type: "error", reason: output.stopReason as "aborted" | "error", error: output });
 			stream.end();
 		}
