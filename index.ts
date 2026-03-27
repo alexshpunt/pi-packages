@@ -1,11 +1,11 @@
-import { calculateCost, createAssistantMessageEventStream, getModels, StringEnum, type AssistantMessage, type AssistantMessageEventStream, type Context, type ImageContent, type Model, type SimpleStreamOptions, type Tool } from "@mariozechner/pi-ai";
+import { calculateCost, createAssistantMessageEventStream, getModels, StringEnum, type AssistantMessage, type AssistantMessageEventStream, type Context, type Model, type SimpleStreamOptions, type Tool } from "@mariozechner/pi-ai";
 import { buildSessionContext, type ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { createSdkMcpServer, query, type SDKMessage, type SDKUserMessage, type SettingSource } from "@anthropic-ai/claude-agent-sdk";
-import type { Base64ImageSource, ContentBlockParam, MessageParam } from "@anthropic-ai/sdk/resources";
+import { createSdkMcpServer, query, type SDKMessage, type SettingSource } from "@anthropic-ai/claude-agent-sdk";
 import { pascalCase } from "change-case";
 import { Type } from "@sinclair/typebox";
 import { Text } from "@mariozechner/pi-tui";
-import { existsSync, readFileSync } from "fs";
+import { createSession, openSession } from "cc-session-io";
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
 import { homedir } from "os";
 import { dirname, join, relative, resolve } from "path";
 
@@ -19,11 +19,17 @@ const SDK_TO_PI_TOOL_NAME: Record<string, string> = {
 const PI_TO_SDK_TOOL_NAME: Record<string, string> = {
 	read: "Read", write: "Write", edit: "Edit", bash: "Bash", grep: "Grep", find: "Glob", glob: "Glob",
 };
-const DEFAULT_TOOLS = ["Read", "Write", "Edit", "Bash", "Grep", "Glob"];
-const BUILTIN_TOOL_NAMES = new Set(Object.keys(PI_TO_SDK_TOOL_NAME));
-const TOOL_EXECUTION_DENIED_MESSAGE = "Tool execution is unavailable in this environment.";
 const MCP_SERVER_NAME = "custom-tools";
 const MCP_TOOL_PREFIX = `mcp__${MCP_SERVER_NAME}__`;
+
+const DISALLOWED_BUILTIN_TOOLS = [
+	"Read", "Write", "Edit", "Glob", "Grep", "Bash", "Agent",
+	"NotebookEdit", "EnterWorktree", "ExitWorktree",
+	"CronCreate", "CronDelete", "CronList", "TeamCreate", "TeamDelete",
+	"WebFetch", "WebSearch", "TodoRead", "TodoWrite",
+	"EnterPlanMode", "ExitPlanMode", "RemoteTrigger", "SendMessage",
+	"Skill", "TaskOutput", "TaskStop",
+];
 
 const LATEST_MODEL_IDS = new Set(["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"]);
 
@@ -106,26 +112,6 @@ function messageContentToText(
 	return hasText ? parts.join("\n") : "";
 }
 
-function contentToText(
-	content: string | Array<{ type: string; text?: string; thinking?: string; name?: string; arguments?: Record<string, unknown> }>,
-	customToolNameToSdk?: Map<string, string>,
-): string {
-	if (typeof content === "string") return content;
-	if (!Array.isArray(content)) return "";
-	return content
-		.map((block) => {
-			if (block.type === "text") return block.text ?? "";
-			if (block.type === "thinking") return block.thinking ?? "";
-			if (block.type === "toolCall") {
-				const args = block.arguments ? JSON.stringify(block.arguments) : "{}";
-				const toolName = mapPiToolNameToSdk(block.name, customToolNameToSdk);
-				return `Historical tool call (non-executable): ${toolName} args=${args}`;
-			}
-			return `[${block.type}]`;
-		})
-		.join("\n");
-}
-
 // --- AskClaude helpers ---
 
 interface ToolCallState {
@@ -196,14 +182,130 @@ const MODE_DISALLOWED_TOOLS: Record<string, string[]> = {
 	],
 };
 
-// Build a text summary of conversation history for AskClaude shared mode
-function buildContextSummary(messages: Context["messages"]): string {
-	return messages.map((msg) => {
-		if (msg.role === "user") return `USER:\n${messageContentToText(msg.content) || "[image]"}`;
-		if (msg.role === "assistant") return `ASSISTANT:\n${contentToText(msg.content)}`;
-		if (msg.role === "toolResult") return `TOOL RESULT (${msg.toolName}):\n${messageContentToText(msg.content)}`;
-		return "";
-	}).filter(Boolean).join("\n\n");
+// --- Session persistence ---
+
+interface SessionState {
+	sessionId: string;
+	cursor: number;
+	cwd: string;
+}
+
+let sharedSession: SessionState | null = null;
+
+const SESSION_LOG = join(homedir(), ".pi", "agent", "claude-bridge-session.log");
+function sessionLog(msg: string) {
+	try {
+		mkdirSync(dirname(SESSION_LOG), { recursive: true });
+		appendFileSync(SESSION_LOG, `[${new Date().toISOString()}] ${msg}\n`);
+	} catch {}
+}
+
+/** Convert pi messages to Anthropic API format and import into a cc-session-io session. */
+function convertAndImportMessages(
+	session: ReturnType<typeof createSession>,
+	messages: Context["messages"],
+	customToolNameToSdk?: Map<string, string>,
+): void {
+	const anthropicMessages: Array<{ role: string; content: unknown }> = [];
+
+	for (const msg of messages) {
+		if (msg.role === "user") {
+			const text = typeof msg.content === "string" ? msg.content : messageContentToText(msg.content);
+			anthropicMessages.push({ role: "user", content: text || "[image]" });
+		} else if (msg.role === "assistant") {
+			const content = Array.isArray(msg.content) ? msg.content : [];
+			const blocks: unknown[] = [];
+			for (const block of content) {
+				if (block.type === "text") {
+					blocks.push({ type: "text", text: block.text ?? "" });
+				} else if (block.type === "thinking") {
+					// Drop thinking blocks — signatures are bound to the original session
+					// and invalid when replayed in a new session (Case 4 creates a fresh session)
+
+				} else if (block.type === "toolCall") {
+					const toolName = mapPiToolNameToSdk(block.name, customToolNameToSdk);
+					blocks.push({ type: "tool_use", id: block.id, name: toolName, input: block.arguments ?? {} });
+				}
+			}
+			if (blocks.length) anthropicMessages.push({ role: "assistant", content: blocks });
+		} else if (msg.role === "toolResult") {
+			const text = typeof msg.content === "string" ? msg.content : messageContentToText(msg.content);
+			anthropicMessages.push({
+				role: "user",
+				content: [{ type: "tool_result", tool_use_id: msg.toolCallId, content: text || "", is_error: msg.isError }],
+			});
+		}
+	}
+
+	if (anthropicMessages.length) session.importMessages(anthropicMessages as any);
+}
+
+/** Extract the text content from the last tool result message. */
+function extractLastToolResult(context: Context): { content: string; isError: boolean } | null {
+	for (let i = context.messages.length - 1; i >= 0; i--) {
+		const msg = context.messages[i];
+		if (msg.role === "toolResult") {
+			const text = typeof msg.content === "string" ? msg.content : messageContentToText(msg.content);
+			return { content: text || "", isError: msg.isError };
+		}
+		if (msg.role === "user") break; // stop searching at user messages
+	}
+	return null;
+}
+
+/** Extract the last user message from context as a prompt string. Returns null if last message is not a user message. */
+function extractUserPrompt(messages: Context["messages"]): string | null {
+	const last = messages[messages.length - 1];
+	if (!last || last.role !== "user") return null;
+	if (typeof last.content === "string") return last.content;
+	return messageContentToText(last.content) || "";
+}
+
+
+interface SyncResult {
+	sessionId: string | null;
+}
+
+/**
+ * Ensure the shared session has all messages up to (but not including) the last user message.
+ * Returns session ID to resume from, or null if no resume needed.
+ */
+function syncSharedSession(
+	messages: Context["messages"],
+	cwd: string,
+	customToolNameToSdk?: Map<string, string>,
+	modelId?: string,
+): SyncResult {
+	const priorMessages = messages.slice(0, -1); // everything before the new user prompt
+
+	if (!sharedSession) {
+		if (priorMessages.length === 0) {
+			sessionLog(`Case 1: clean start, ${messages.length} total messages`);
+			return { sessionId: null };
+		}
+		const session = createSession({ projectPath: cwd, ...(modelId ? { model: modelId } : {}) });
+		convertAndImportMessages(session, priorMessages, customToolNameToSdk);
+		session.save();
+		sharedSession = { sessionId: session.sessionId, cursor: priorMessages.length, cwd };
+		sessionLog(`Case 2: first turn with ${priorMessages.length} prior messages → session ${session.sessionId.slice(0, 8)}, ${session.messages.length} records`);
+		return { sessionId: session.sessionId };
+	}
+
+	const missed = priorMessages.slice(sharedSession.cursor);
+	if (missed.length === 0) {
+		sessionLog(`Case 3: no missed messages, resuming session ${sharedSession.sessionId.slice(0, 8)}, cursor=${sharedSession.cursor}`);
+		return { sessionId: sharedSession.sessionId };
+	}
+
+	// Case 4: create fresh session with ALL prior messages (injecting into existing session
+	// creates a branch that Claude Code doesn't follow on resume)
+	const session = createSession({ projectPath: sharedSession.cwd, ...(modelId ? { model: modelId } : {}) });
+	convertAndImportMessages(session, priorMessages, customToolNameToSdk);
+	session.save();
+	const oldSessionId = sharedSession.sessionId;
+	sharedSession = { sessionId: session.sessionId, cursor: priorMessages.length, cwd: sharedSession.cwd };
+	sessionLog(`Case 4: ${missed.length} missed messages, ${priorMessages.length} total → new session ${session.sessionId.slice(0, 8)} (was ${oldSessionId.slice(0, 8)}), ${session.messages.length} records`);
+	return { sessionId: session.sessionId };
 }
 
 // Extract skills block from pi's system prompt for forwarding to Claude Code
@@ -386,122 +488,59 @@ function readSettingsFile(filePath: string): ProviderSettings {
 	}
 }
 
-// --- Provider helpers: prompt building ---
-
-function buildPromptBlocks(
-	context: Context, customToolNameToSdk: Map<string, string> | undefined,
-): ContentBlockParam[] {
-	const blocks: ContentBlockParam[] = [];
-
-	const pushText = (text: string) => { blocks.push({ type: "text", text }); };
-	const pushImage = (image: ImageContent) => {
-		blocks.push({
-			type: "image",
-			source: { type: "base64", media_type: image.mimeType as Base64ImageSource["media_type"], data: image.data },
-		});
-	};
-	const pushPrefix = (label: string) => {
-		pushText(`${blocks.length ? "\n\n" : ""}${label}\n`);
-	};
-
-	const appendContentBlocks = (
-		content: string | Array<{ type: string; text?: string; data?: string; mimeType?: string }>,
-	): boolean => {
-		if (typeof content === "string") {
-			if (content.length > 0) { pushText(content); return content.trim().length > 0; }
-			return false;
-		}
-		if (!Array.isArray(content)) return false;
-		let hasText = false;
-		for (const block of content) {
-			if (block.type === "text") {
-				const text = block.text ?? "";
-				if (text.trim().length > 0) hasText = true;
-				pushText(text);
-			} else if (block.type === "image") {
-				pushImage(block as ImageContent);
-			} else {
-				pushText(`[${block.type}]`);
-			}
-		}
-		return hasText;
-	};
-
-	for (const message of context.messages) {
-		if (message.role === "user") {
-			pushPrefix("USER:");
-			if (!appendContentBlocks(message.content)) pushText("(see attached image)");
-		} else if (message.role === "assistant") {
-			pushPrefix("ASSISTANT:");
-			const text = contentToText(message.content, customToolNameToSdk);
-			if (text.length > 0) pushText(text);
-		} else if (message.role === "toolResult") {
-			pushPrefix(`TOOL RESULT (historical ${mapPiToolNameToSdk(message.toolName, customToolNameToSdk)}):`);
-			if (!appendContentBlocks(message.content)) pushText("(see attached image)");
-		}
-	}
-
-	if (!blocks.length) return [{ type: "text", text: "" }];
-	return blocks;
-}
-
-function buildPromptStream(promptBlocks: ContentBlockParam[]): AsyncIterable<SDKUserMessage> {
-	async function* generator() {
-		yield {
-			type: "user" as const,
-			message: { role: "user", content: promptBlocks } as MessageParam,
-			parent_tool_use_id: null,
-			session_id: "prompt",
-		};
-	}
-	return generator();
-}
-
 // --- Provider helpers: tool resolution ---
 
-function resolveSdkTools(context: Context): {
-	sdkTools: string[];
-	customTools: Tool[];
+// --- Provider helpers: tool bridge ---
+
+interface PendingToolCall {
+	toolName: string;
+	resolve: (result: string) => void;
+}
+
+/** Active query that's waiting for a tool result via the MCP bridge. */
+let activeQuery: ReturnType<typeof query> | null = null;
+
+let pendingToolCall: PendingToolCall | null = null;
+
+function resolveMcpTools(context: Context): {
+	mcpTools: Tool[];
 	customToolNameToSdk: Map<string, string>;
 	customToolNameToPi: Map<string, string>;
 } {
-	if (!context.tools) {
-		return { sdkTools: [...DEFAULT_TOOLS], customTools: [], customToolNameToSdk: new Map(), customToolNameToPi: new Map() };
-	}
-
-	const sdkTools = new Set<string>();
-	const customTools: Tool[] = [];
+	const mcpTools: Tool[] = [];
 	const customToolNameToSdk = new Map<string, string>();
 	const customToolNameToPi = new Map<string, string>();
 
+	if (!context.tools) return { mcpTools, customToolNameToSdk, customToolNameToPi };
+
 	for (const tool of context.tools) {
-		const normalized = tool.name.toLowerCase();
-		if (BUILTIN_TOOL_NAMES.has(normalized)) {
-			const sdkName = PI_TO_SDK_TOOL_NAME[normalized];
-			if (sdkName) sdkTools.add(sdkName);
-			continue;
-		}
+		// All pi tools become MCP tools (built-in SDK tools are disallowed)
 		const sdkName = `${MCP_TOOL_PREFIX}${tool.name}`;
-		customTools.push(tool);
+		mcpTools.push(tool);
 		customToolNameToSdk.set(tool.name, sdkName);
-		customToolNameToSdk.set(normalized, sdkName);
+		customToolNameToSdk.set(tool.name.toLowerCase(), sdkName);
 		customToolNameToPi.set(sdkName, tool.name);
 		customToolNameToPi.set(sdkName.toLowerCase(), tool.name);
 	}
 
-	return { sdkTools: Array.from(sdkTools), customTools, customToolNameToSdk, customToolNameToPi };
+	return { mcpTools, customToolNameToSdk, customToolNameToPi };
 }
 
-function buildCustomToolServers(customTools: Tool[]): Record<string, ReturnType<typeof createSdkMcpServer>> | undefined {
-	if (!customTools.length) return undefined;
-	const mcpTools = customTools.map((tool) => ({
+function buildMcpServers(tools: Tool[]): Record<string, ReturnType<typeof createSdkMcpServer>> | undefined {
+	if (!tools.length) return undefined;
+	const mcpTools = tools.map((tool) => ({
 		name: tool.name,
 		description: tool.description,
 		inputSchema: tool.parameters as unknown,
-		handler: async () => ({
-			content: [{ type: "text", text: TOOL_EXECUTION_DENIED_MESSAGE }],
-			isError: true,
-		}),
+		handler: async () => {
+			// Block until pi provides the tool result
+			return new Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }>((resolve) => {
+				pendingToolCall = {
+					toolName: tool.name,
+					resolve: (result: string) => resolve({ content: [{ type: "text", text: result }] }),
+				};
+			});
+		},
 	}));
 	const server = createSdkMcpServer({ name: MCP_SERVER_NAME, version: "1.0.0", tools: mcpTools });
 	return { [MCP_SERVER_NAME]: server };
@@ -554,10 +593,6 @@ function parsePartialJson(input: string, fallback: Record<string, unknown>): Rec
 	try { return JSON.parse(input); } catch { return fallback; }
 }
 
-function getToolsForProvider(tools?: Tool[], excludeName?: string): Tool[] {
-	if (!tools) return [];
-	return excludeName ? tools.filter((t) => t.name !== excludeName) : tools;
-}
 
 // --- Provider: streaming function ---
 
@@ -582,8 +617,9 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 		let sdkQuery: ReturnType<typeof query> | undefined;
 		let wasAborted = false;
 		const requestAbort = () => {
-			if (!sdkQuery) return;
-			void sdkQuery.interrupt().catch(() => { try { sdkQuery?.close(); } catch {} });
+			const q = sdkQuery ?? activeQuery;
+			if (!q) return;
+			void q.interrupt().catch(() => { try { q?.close(); } catch {} });
 		};
 		const onAbort = () => { wasAborted = true; requestAbort(); };
 		if (options?.signal) {
@@ -601,51 +637,88 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 		let sawStreamEvent = false;
 		let sawToolCall = false;
 		let shouldStopEarly = false;
+		let capturedSessionId: string | undefined;
 
 		try {
-			const { sdkTools, customTools, customToolNameToSdk, customToolNameToPi } = resolveSdkTools(context);
-			const promptBlocks = buildPromptBlocks(context, customToolNameToSdk);
-			const prompt = buildPromptStream(promptBlocks);
-
+			const { mcpTools, customToolNameToSdk, customToolNameToPi } = resolveMcpTools(context);
 			const cwd = (options as { cwd?: string } | undefined)?.cwd ?? process.cwd();
-			const mcpServers = buildCustomToolServers(customTools);
-			const providerSettings = loadProviderSettings();
-			const appendSystemPrompt = providerSettings.appendSystemPrompt !== false;
-			const agentsAppend = appendSystemPrompt ? extractAgentsAppend() : undefined;
-			const skillsAppend = appendSystemPrompt ? extractSkillsAppend(context.systemPrompt) : undefined;
-			const appendParts = [agentsAppend, skillsAppend].filter((part): part is string => Boolean(part));
-			const systemPromptAppend = appendParts.length > 0 ? appendParts.join("\n\n") : undefined;
-			const allowSkillAliasRewrite = Boolean(skillsAppend);
 
-			const settingSources: SettingSource[] | undefined = appendSystemPrompt
-				? undefined
-				: providerSettings.settingSources ?? ["user", "project"];
+			// --- Mode B: Tool result → resolve pending MCP handler ---
+			// Wait briefly for the MCP handler to be called (race between message_stop and MCP invocation)
+			if (activeQuery && !pendingToolCall) {
+				await new Promise<void>((r) => {
+					const check = () => { if (pendingToolCall) r(); else setTimeout(check, 10); };
+					setTimeout(check, 10);
+					setTimeout(r, 2000); // give up after 2s
+				});
+			}
+			if (activeQuery && pendingToolCall) {
+				const toolResult = extractLastToolResult(context);
+				sessionLog(`provider: Mode B (tool result), resolving ${pendingToolCall.toolName}, result=${(toolResult?.content ?? "").slice(0, 60)}`);
+				pendingToolCall.resolve(toolResult?.content ?? "OK");
+				pendingToolCall = null;
+				// Update cursor to include the tool result message
+				if (sharedSession) sharedSession.cursor = context.messages.length;
+				// The active query continues processing via its MCP handler.
+				// We need to keep consuming the stream for pi events.
+				sdkQuery = activeQuery;
 
-			const strictMcpConfigEnabled = !appendSystemPrompt && providerSettings.strictMcpConfig !== false;
+				// Don't close the query in finally — it's still alive
+				if (wasAborted) requestAbort();
 
-			const extraArgs: Record<string, string | null> = { model: model.id };
-			if (strictMcpConfigEnabled) extraArgs["strict-mcp-config"] = null;
+			// --- Mode A: Fresh prompt ---
+			} else {
+				// Clean up any stale active query
+				if (activeQuery) { try { activeQuery.close(); } catch {} activeQuery = null; }
 
-			const queryOptions: NonNullable<Parameters<typeof query>[0]["options"]> = {
-				cwd,
-				tools: sdkTools,
-				permissionMode: "dontAsk",
-				includePartialMessages: true,
-				canUseTool: async () => ({ behavior: "deny", message: TOOL_EXECUTION_DENIED_MESSAGE }),
-				systemPrompt: {
-					type: "preset", preset: "claude_code",
-					append: systemPromptAppend ? systemPromptAppend : undefined,
-				},
-				extraArgs,
-				...(settingSources ? { settingSources } : {}),
-				...(mcpServers ? { mcpServers } : {}),
-			};
 
-			const maxThinkingTokens = mapThinkingTokens(options?.reasoning, model.id, options?.thinkingBudgets);
-			if (maxThinkingTokens != null) queryOptions.maxThinkingTokens = maxThinkingTokens;
+				const { sessionId: resumeSessionId } = syncSharedSession(context.messages, cwd, customToolNameToSdk, model.id);
+				const prompt = extractUserPrompt(context.messages) ?? "";
+				sessionLog(`provider: Mode A, ${context.messages.length} msgs, resume=${resumeSessionId?.slice(0, 8) ?? "none"}, prompt=${prompt.slice(0, 60)}`);
 
-			sdkQuery = query({ prompt, options: queryOptions });
-			if (wasAborted) requestAbort();
+				const mcpServers = buildMcpServers(mcpTools);
+				const providerSettings = loadProviderSettings();
+				const appendSystemPrompt = providerSettings.appendSystemPrompt !== false;
+				const agentsAppend = appendSystemPrompt ? extractAgentsAppend() : undefined;
+				const skillsAppend = appendSystemPrompt ? extractSkillsAppend(context.systemPrompt) : undefined;
+				const appendParts = [agentsAppend, skillsAppend].filter((part): part is string => Boolean(part));
+				const systemPromptAppend = appendParts.length > 0 ? appendParts.join("\n\n") : undefined;
+				const allowSkillAliasRewrite = Boolean(skillsAppend);
+
+				const settingSources: SettingSource[] | undefined = appendSystemPrompt
+					? undefined
+					: providerSettings.settingSources ?? ["user", "project"];
+
+				const strictMcpConfigEnabled = !appendSystemPrompt && providerSettings.strictMcpConfig !== false;
+
+				const extraArgs: Record<string, string | null> = { model: model.id };
+				if (strictMcpConfigEnabled) extraArgs["strict-mcp-config"] = null;
+
+				const queryOptions: NonNullable<Parameters<typeof query>[0]["options"]> = {
+					cwd,
+					disallowedTools: DISALLOWED_BUILTIN_TOOLS,
+					allowedTools: [`mcp__${MCP_SERVER_NAME}__*`],
+					permissionMode: "bypassPermissions",
+					includePartialMessages: true,
+					systemPrompt: {
+						type: "preset", preset: "claude_code",
+						append: systemPromptAppend ? systemPromptAppend : undefined,
+					},
+					extraArgs,
+					...(settingSources ? { settingSources } : {}),
+					...(mcpServers ? { mcpServers } : {}),
+					...(resumeSessionId ? { resume: resumeSessionId } : {}),
+				};
+
+				const maxThinkingTokens = mapThinkingTokens(options?.reasoning, model.id, options?.thinkingBudgets);
+				if (maxThinkingTokens != null) queryOptions.maxThinkingTokens = maxThinkingTokens;
+
+				sdkQuery = query({ prompt, options: queryOptions });
+				activeQuery = sdkQuery;
+				if (wasAborted) requestAbort();
+			}
+
+			const allowSkillAliasRewrite = Boolean(extractSkillsAppend(context.systemPrompt));
 
 			for await (const message of sdkQuery) {
 				if (!started) { stream.push({ type: "start", partial: output }); started = true; }
@@ -766,9 +839,24 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 						}
 						break;
 					}
+
+					case "system": {
+						if ((message as any).subtype === "init" && (message as any).session_id) {
+							capturedSessionId = (message as any).session_id;
+						}
+						break;
+					}
 				}
 
 				if (shouldStopEarly) break;
+			}
+
+			// Update shared session state
+			if (!wasAborted) {
+				const sessionId = capturedSessionId ?? (sharedSession?.sessionId);
+				if (sessionId) {
+					sharedSession = { sessionId, cursor: context.messages.length, cwd };
+				}
 			}
 
 			if (wasAborted || options?.signal?.aborted) {
@@ -776,23 +864,34 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 				output.errorMessage = "Operation aborted";
 				stream.push({ type: "error", reason: "aborted", error: output });
 				stream.end();
+				activeQuery = null;
+
 				return;
 			}
 
+			const isToolUse = output.stopReason === "toolUse";
 			stream.push({
 				type: "done",
-				reason: output.stopReason === "toolUse" ? "toolUse" : output.stopReason === "length" ? "length" : "stop",
+				reason: isToolUse ? "toolUse" : output.stopReason === "length" ? "length" : "stop",
 				message: output,
 			});
 			stream.end();
+
+			// If NOT a tool use stop, the query is done — clean up
+			if (!isToolUse) {
+				activeQuery = null;
+
+			}
 		} catch (error) {
 			output.stopReason = options?.signal?.aborted ? "aborted" : "error";
 			output.errorMessage = error instanceof Error ? error.message : String(error);
 			stream.push({ type: "error", reason: output.stopReason as "aborted" | "error", error: output });
 			stream.end();
+			activeQuery = null;
 		} finally {
 			if (options?.signal) options.signal.removeEventListener("abort", onAbort);
-			sdkQuery?.close();
+			// Don't close the query if it's still active (waiting for tool result)
+			if (sdkQuery && sdkQuery !== activeQuery) sdkQuery.close();
 		}
 	})();
 
@@ -817,14 +916,26 @@ async function promptAndWait(
 	},
 ): Promise<{ responseText: string; stopReason: string }> {
 	const cwd = process.cwd();
+	const modelId = resolveModelId(options?.model ?? "opus");
 
-	// Build prompt — prepend conversation context for shared mode
-	let fullPrompt: string;
+	// Session resume for shared mode — reuse provider's session if it exists,
+	// otherwise create one from pi's context
+	let resumeSessionId: string | null = null;
 	if (!options?.isolated && options?.context?.length) {
-		const summary = buildContextSummary(options.context);
-		fullPrompt = `<conversation_context>\n${summary}\n</conversation_context>\n\n${prompt}`;
+		if (sharedSession) {
+			// Provider already has a session — just resume from it
+			// Any missed messages from other providers were already handled by the provider's Case 4
+			resumeSessionId = sharedSession.sessionId;
+			sessionLog(`askClaude shared: reusing provider session ${sharedSession.sessionId.slice(0, 8)}, prompt=${prompt.slice(0, 60)}`);
+		} else {
+			// No provider session yet — create one from pi's context
+			const contextWithPrompt = [...options.context, { role: "user" as const, content: prompt, timestamp: Date.now() }];
+			const sync = syncSharedSession(contextWithPrompt as Context["messages"], cwd, undefined, modelId);
+			resumeSessionId = sync.sessionId;
+			sessionLog(`askClaude shared: created session ${resumeSessionId?.slice(0, 8) ?? "none"}, ${options.context.length} context msgs, prompt=${prompt.slice(0, 60)}`);
+		}
 	} else {
-		fullPrompt = prompt;
+		sessionLog(`askClaude ${options?.isolated ? "isolated" : "no-context"}: prompt=${prompt.slice(0, 60)}`);
 	}
 
 	// Mode → disallowed tools
@@ -833,9 +944,6 @@ async function promptAndWait(
 	// Skills append
 	const skillsBlock = options?.appendSkills !== false && options?.systemPrompt
 		? extractSkillsBlock(options.systemPrompt) : undefined;
-
-	// Model
-	const modelId = resolveModelId(options?.model ?? "opus");
 
 	// Thinking
 	const thinkingMap: Record<string, ThinkingLevel> = {
@@ -851,7 +959,7 @@ async function promptAndWait(
 	};
 
 	const sdkQuery = query({
-		prompt: fullPrompt,
+		prompt,
 		options: {
 			cwd,
 			permissionMode: "bypassPermissions",
@@ -862,6 +970,8 @@ async function promptAndWait(
 				: undefined,
 			settingSources: ["user", "project"] as SettingSource[],
 			extraArgs,
+			...(resumeSessionId ? { resume: resumeSessionId } : {}),
+			...(options?.isolated ? { persistSession: false } : {}),
 		},
 	});
 
@@ -938,6 +1048,10 @@ let askClaudeToolName = "AskClaude";
 
 export default function (pi: ExtensionAPI) {
 	const config = loadConfig(process.cwd());
+
+	// Reset shared session on pi session lifecycle events
+	pi.on("session_switch", () => { sharedSession = null; });
+	pi.on("session_shutdown", () => { sharedSession = null; });
 
 	// --- Provider ---
 

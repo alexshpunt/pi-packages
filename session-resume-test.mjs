@@ -29,6 +29,7 @@ const OTHER_MODEL = "openai/gpt-oss-120b";
 // Random words to avoid Claude memorizing test values across runs
 const WORD_A = `alpha${Math.random().toString(36).slice(2, 6)}`;
 const WORD_B = `beta${Math.random().toString(36).slice(2, 6)}`;
+const WORD_C = `gamma${Math.random().toString(36).slice(2, 6)}`;
 
 
 // Strip node_modules/.bin from PATH (shadows pi with vendored types package)
@@ -39,11 +40,11 @@ process.env.PATH = process.env.PATH
 
 const log = createWriteStream(LOGFILE);
 
-// Spawn pi in RPC mode with the provider extension
+// Spawn pi in RPC mode — start on non-provider model to test Case 2 (first provider turn with prior history)
 const pi = spawn("pi", [
   "--no-session", "-ne",
   "-e", DIR,
-  "--model", BRIDGE_MODEL,
+  "--model", `${OTHER_PROVIDER}/${OTHER_MODEL}`,
   "--mode", "rpc",
 ], { stdio: ["pipe", "pipe", "pipe"] });
 
@@ -139,59 +140,71 @@ function finish(code, msg) {
 await new Promise((r) => setTimeout(r, 2000));
 
 try {
-  // Turn 1: Provider prompt — establishes context
-  console.log("Turn 1: provider prompt (establish session)...");
+  // Turn 1: Non-provider prompt — establishes context before our provider is used
+  console.log("Turn 1: Non-provider prompt (establish context)...");
   const text1 = await promptAndWait(`The secret word is '${WORD_A}'. Acknowledge and be very brief.`);
   if (!text1) finish(1, "FAIL: Turn 1 produced no text");
   console.log(`  Response: ${text1.slice(0, 80)}`);
 
-  // Switch to other model — context should still be preserved on switch-back
+  // Switch to provider — first provider turn with prior history (Case 2)
+  const [bridgeProvider, bridgeModelId] = BRIDGE_MODEL.split("/");
+  console.log(`Switching to ${BRIDGE_MODEL}...`);
+  await send({ type: "set_model", provider: bridgeProvider, modelId: bridgeModelId });
+
+  // Turn 2: First provider turn — should see WORD_A from prior non-provider history
+  console.log("Turn 2: First provider turn with prior history (Case 2)...");
+  const text2 = await promptAndWait(
+    `The backup word is '${WORD_B}'. Also, what was the secret word? Reply with both words separated by a comma.`
+  );
+  console.log(`  Response: ${text2.slice(0, 80)}`);
+  const lower2 = text2.toLowerCase();
+  if (!lower2.includes(WORD_A)) finish(1, `FAIL: Turn 2 response missing '${WORD_A}': ${text2}`);
+  if (!lower2.includes(WORD_B)) finish(1, `FAIL: Turn 2 response missing '${WORD_B}': ${text2}`);
+
+  // Switch to other model — creates missed messages
   console.log(`Switching to ${OTHER_PROVIDER}/${OTHER_MODEL}...`);
   await send({ type: "set_model", provider: OTHER_PROVIDER, modelId: OTHER_MODEL });
 
-  // Turn 2: Other-model prompt — adds context that provider must see on switch-back
-  console.log("Turn 2: Non-provider prompt (creates missed messages)...");
-  const text2 = await promptAndWait(`The backup word is '${WORD_B}'. Acknowledge briefly.`);
-  if (!text2) finish(1, "FAIL: Turn 2 produced no text");
-  console.log(`  Response: ${text2.slice(0, 80)}`);
+  // Turn 3: Non-provider prompt — adds context that provider must see on switch-back
+  console.log("Turn 3: Non-provider prompt (creates missed messages)...");
+  const text3 = await promptAndWait(`The third word is '${WORD_C}'. Acknowledge briefly.`);
+  if (!text3) finish(1, "FAIL: Turn 3 produced no text");
+  console.log(`  Response: ${text3.slice(0, 80)}`);
 
-  // Switch back to provider — context includes all prior turns
-  const [bridgeProvider, bridgeModelId] = BRIDGE_MODEL.split("/");
+  // Switch back to provider — context includes all prior turns (Case 4)
   console.log(`Switching back to ${BRIDGE_MODEL}...`);
   await send({ type: "set_model", provider: bridgeProvider, modelId: bridgeModelId });
 
-  // Turn 3: Provider prompt — should have context from all turns
-  console.log("Turn 3: Provider prompt (tests context continuity)...");
-  const text3 = await promptAndWait(
-    "What was the secret word and the backup word? Reply with just the two words separated by a comma."
+  // Turn 4: Provider resumes with missed messages (Case 4)
+  console.log("Turn 4: Provider resume with missed messages (Case 4)...");
+  const text4 = await promptAndWait(
+    "What were all three words? Reply with just the three words separated by commas."
   );
-  console.log(`  Response: ${text3.slice(0, 80)}`);
+  console.log(`  Response: ${text4.slice(0, 80)}`);
+  const lower4 = text4.toLowerCase();
+  if (!lower4.includes(WORD_A)) finish(1, `FAIL: Turn 4 response missing '${WORD_A}': ${text4}`);
+  if (!lower4.includes(WORD_B)) finish(1, `FAIL: Turn 4 response missing '${WORD_B}': ${text4}`);
+  if (!lower4.includes(WORD_C)) finish(1, `FAIL: Turn 4 response missing '${WORD_C}': ${text4}`);
 
-  // Assertions
-  const lower = text3.toLowerCase();
-  if (!lower.includes(WORD_A)) finish(1, `FAIL: Turn 3 response missing '${WORD_A}': ${text3}`);
-  if (!lower.includes(WORD_B)) finish(1, `FAIL: Turn 3 response missing '${WORD_B}': ${text3}`);
-
-  // Turn 4: AskClaude shared mode — should see WORD_B which was only told to the non-provider model
+  // Turn 5: AskClaude shared mode — should see WORD_C which was only told to the non-provider model
   console.log(`Switching to ${OTHER_PROVIDER}/${OTHER_MODEL}...`);
   await send({ type: "set_model", provider: OTHER_PROVIDER, modelId: OTHER_MODEL });
 
-  console.log("Turn 4: AskClaude shared mode (should see non-provider context)...");
-  const text4 = await promptAndWait(
-    'Use the AskClaude tool with prompt="What was the backup word mentioned earlier? Reply with just the word."'
-  );
-  // Check AskClaude's tool result (not the calling model's response, which knows WORD_B from its own context)
-  console.log(`  AskClaude result: ${(lastToolResult || "").slice(0, 120)}`);
-  if (!lastToolResult?.toLowerCase().includes(WORD_B)) finish(1, `FAIL: Turn 4 AskClaude tool result missing '${WORD_B}': ${lastToolResult}`);
-
-  // Turn 5: AskClaude isolated mode — should NOT see conversation history
-  console.log("Turn 5: AskClaude isolated mode (should not see context)...");
-  lastToolResult = null;
+  console.log("Turn 5: AskClaude shared mode (should see non-provider context)...");
   const text5 = await promptAndWait(
-    'Use the AskClaude tool with prompt="What was the backup word mentioned earlier? If you don\'t know, say UNKNOWN." and isolated=true'
+    'Use the AskClaude tool with prompt="What was the third word mentioned earlier? Reply with just the word."'
   );
   console.log(`  AskClaude result: ${(lastToolResult || "").slice(0, 120)}`);
-  if (lastToolResult?.toLowerCase().includes(WORD_B)) finish(1, `FAIL: Turn 5 isolated AskClaude should not know '${WORD_B}': ${lastToolResult}`);
+  if (!lastToolResult?.toLowerCase().includes(WORD_C)) finish(1, `FAIL: Turn 5 AskClaude tool result missing '${WORD_C}': ${lastToolResult}`);
+
+  // Turn 6: AskClaude isolated mode — should NOT see conversation history
+  console.log("Turn 6: AskClaude isolated mode (should not see context)...");
+  lastToolResult = null;
+  const text6 = await promptAndWait(
+    'Use the AskClaude tool with prompt="What was the third word mentioned earlier? If you don\'t know, say UNKNOWN." and isolated=true'
+  );
+  console.log(`  AskClaude result: ${(lastToolResult || "").slice(0, 120)}`);
+  if (lastToolResult?.toLowerCase().includes(WORD_C)) finish(1, `FAIL: Turn 6 isolated AskClaude should not know '${WORD_C}': ${lastToolResult}`);
 
   finish(0, "PASS");
 } catch (e) {
