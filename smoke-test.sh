@@ -59,7 +59,13 @@ run "provider: model list includes provider" \
 
 # AskClaude only registers when a non-acp provider is active
 run "tool: AskClaude registered" \
-  bash -c "pi --no-session -ne -e '$DIR' --mode json --model minimax/MiniMax-M2.7-highspeed -p 'list your tools' 2>&1 | grep -q AskClaude && echo ok"
+  bash -c "pi --no-session -ne -e '$DIR' --mode json --model 'openrouter/qwen/qwen3.5-9b' -p 'list your tools' 2>&1 | grep -q AskClaude && echo ok"
+
+# AskClaude e2e: force a non-Claude model to call the tool and check for a tool result
+run "tool: AskClaude responds" \
+  bash -c "pi --no-session -ne -e '$DIR' --model 'openrouter/qwen/qwen3.5-9b' --mode json \
+    -p 'Use the AskClaude tool with prompt=\"What is 2+2? Reply with just the number.\" and then tell me the answer.' 2>&1 \
+    | grep -q '\"toolName\":\"AskClaude\"' && echo ok"
 
 # --- Summary ---
 

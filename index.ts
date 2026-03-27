@@ -33,6 +33,15 @@ const MAX_MIRROR_MESSAGES = 40;
 
 const LATEST_MODEL_IDS = new Set(["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"]);
 
+/** Resolve short model names (e.g. "sonnet") to full CC model IDs. */
+function resolveModelId(input: string): string {
+	const lower = input.toLowerCase();
+	for (const id of LATEST_MODEL_IDS) {
+		if (id === lower || id.includes(lower)) return id;
+	}
+	return input;
+}
+
 const MODELS = getModels("anthropic")
 	.filter((model) => LATEST_MODEL_IDS.has(model.id))
 	.map((model) => ({
@@ -557,8 +566,7 @@ async function promptAndWait(
 		? extractSkillsBlock(options.systemPrompt) : undefined;
 
 	const extraArgs: Record<string, string | null> = { "strict-mcp-config": null };
-	if (options?.thinking) extraArgs["thinking"] = options.thinking;
-	if (options?.model) extraArgs["model"] = options.model;
+	if (options?.thinking) extraArgs["effort"] = options.thinking;
 
 	const meta: Record<string, unknown> = {
 		...modePreset,
@@ -579,6 +587,7 @@ async function promptAndWait(
 	const sid = session.sessionId;
 	// Not strictly needed (requestPermission callback auto-approves) but avoids per-tool round-trip latency
 	await connection.setSessionMode({ sessionId: sid, modeId: "bypassPermissions" });
+	await connection.unstable_setSessionModel({ sessionId: sid, modelId: resolveModelId(options?.model ?? "sonnet") });
 
 	let responseText = "";
 
@@ -997,7 +1006,7 @@ export default function (pi: ExtensionAPI) {
 			parameters: Type.Object({
 				prompt: Type.String({ description: "The question or task for Claude Code. Claude only sees this prompt (no conversation history) — include the user's original question and any relevant context. Don't research up front, let Claude explore." }),
 				mode: Type.Optional(StringEnum(modeValues, { description: modeDesc })),
-				model: Type.Optional(Type.String({ description: 'Claude model (e.g. "opus", "sonnet", "haiku", or full ID). Defaults to Claude Code preference.' })),
+				model: Type.Optional(Type.String({ description: 'Claude model (e.g. "opus", "sonnet", "haiku", or full ID). Defaults to "sonnet".' })),
 				thinking: Type.Optional(StringEnum(["off", "minimal", "low", "medium", "high", "xhigh"] as const, { description: 'Thinking effort level. Defaults to "medium".' })),
 			}),
 			renderCall(args, theme) {
