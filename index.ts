@@ -750,7 +750,7 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 		};
 
 		try {
-			const connection = await ensureConnection();
+			let connection = await ensureConnection();
 			refConnection();
 			const tools = getToolsForMcp(context.tools, askClaudeToolName);
 
@@ -826,9 +826,9 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 							const scriptPath = await writeMcpServerScript(tools, bridgeUrl);
 							mcpServers.push({ command: "node", args: [scriptPath], env: [], name: MCP_SERVER_NAME });
 						}
-						const conn = await ensureConnection();
+						connection = await ensureConnection();
 						refConnection();
-						const resumed = await conn.newSession({
+						const resumed = await connection.newSession({
 							cwd,
 							mcpServers,
 							_meta: {
@@ -841,7 +841,7 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 						} as any);
 						sessionId = resumed.sessionId;
 						activeSessionId = sessionId;
-						await conn.setSessionMode({ sessionId, modeId: "bypassPermissions" });
+						await connection.setSessionMode({ sessionId, modeId: "bypassPermissions" });
 					}
 					if (activeModelId !== model.id) {
 						await connection.unstable_setSessionModel({ sessionId: sessionId!, modelId: model.id });
