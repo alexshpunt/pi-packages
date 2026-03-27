@@ -345,8 +345,10 @@ function extractLastToolResult(context: Context): { toolName: string; content: s
 let mirrorSessionId: string | null = null;
 let mirrorCursor: number = 0;
 
-/** Translate pi messages into cc-session records. */
-function mirrorPiMessages(session: Session, messages: Context["messages"]): void {
+/** Translate pi messages into cc-session records.
+ *  When skipOwnAssistant is true, assistant messages from our provider are
+ *  skipped because CC already wrote them to the JSONL itself. */
+function mirrorPiMessages(session: Session, messages: Context["messages"], skipOwnAssistant = false): void {
 	for (const msg of messages) {
 		if (msg.role === "user") {
 			const text = typeof msg.content === "string"
@@ -354,6 +356,7 @@ function mirrorPiMessages(session: Session, messages: Context["messages"]): void
 				: messageContentToText(msg.content) || "[image]";
 			session.addUserMessage(text);
 		} else if (msg.role === "assistant") {
+			if (skipOwnAssistant && (msg as any).provider === PROVIDER_ID) continue;
 			const blocks: Array<{ type: "text"; text: string } | { type: "thinking"; thinking: string; signature: string } | { type: "tool_use"; id: string; name: string; input: unknown }> = [];
 			if (typeof msg.content === "string") {
 				blocks.push({ type: "text", text: msg.content });
@@ -362,7 +365,12 @@ function mirrorPiMessages(session: Session, messages: Context["messages"]): void
 					if (block.type === "text") {
 						blocks.push({ type: "text", text: block.text ?? "" });
 					} else if (block.type === "thinking") {
-						blocks.push({ type: "thinking", thinking: block.thinking ?? "", signature: "" });
+						// Only include thinking blocks with a valid signature — the
+						// Anthropic API rejects empty/invalid signatures on resume.
+						const sig = (block as any).thinkingSignature;
+						if (sig) {
+							blocks.push({ type: "thinking", thinking: block.thinking ?? "", signature: sig });
+						}
 					} else if (block.type === "toolCall") {
 						blocks.push({ type: "tool_use", id: block.id, name: block.name, input: block.arguments ?? {} });
 					}
@@ -757,7 +765,7 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 							disableBuiltInTools: true,
 							claudeCode: { options: {
 								allowedTools: [`mcp__${MCP_SERVER_NAME}__*`],
-								extraArgs: { "strict-mcp-config": null },
+								extraArgs: { "strict-mcp-config": null, model: model.id },
 								...(mirrorSessionId ? { resume: mirrorSessionId } : {}),
 							} },
 						},
@@ -767,7 +775,6 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 					activeSessionId = sessionId;
 					if (!mirrorSessionId) mirrorSessionId = sessionId;
 					await connection.setSessionMode({ sessionId, modeId: "bypassPermissions" });
-					await connection.unstable_setSessionModel({ sessionId, modelId: model.id });
 					activeModelId = model.id;
 					mirrorCursor = context.messages.length;
 				} else {
@@ -783,7 +790,7 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 						killConnection();
 						const cwd = process.cwd();
 						const ccSession = openSession({ sessionId: mirrorSessionId, projectPath: cwd });
-						mirrorPiMessages(ccSession, missed.slice(-MAX_MIRROR_MESSAGES));
+						mirrorPiMessages(ccSession, missed.slice(-MAX_MIRROR_MESSAGES), true);
 						ccSession.save();
 
 						const conn = await ensureConnection();
@@ -795,7 +802,7 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 								disableBuiltInTools: true,
 								claudeCode: { options: {
 									allowedTools: [`mcp__${MCP_SERVER_NAME}__*`],
-									extraArgs: { "strict-mcp-config": null },
+									extraArgs: { "strict-mcp-config": null, model: model.id },
 									resume: mirrorSessionId,
 								} },
 							},
@@ -804,7 +811,6 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 						sessionId = resumed.sessionId;
 						activeSessionId = sessionId;
 						await conn.setSessionMode({ sessionId, modeId: "bypassPermissions" });
-						await conn.unstable_setSessionModel({ sessionId, modelId: model.id });
 						activeModelId = model.id;
 					}
 					mirrorCursor = context.messages.length;

@@ -94,9 +94,25 @@ Set `CLAUDE_ACP_DEBUG=1` to stream the ACP child process's stderr in real-time. 
 
 **Provider and AskClaude use different tool strategies.** The provider disables Claude Code's built-in tools and routes everything through pi via MCP — pi sees all tool calls but tool names appear as `mcp__pi-tools__*`. AskClaude uses Claude Code's native tools directly — faster and cleaner, but pi only sees the final result, not individual tool calls.
 
-**Provider context awkward when switching between providers.** When switching to claude-code-acp from another provider during a session, we send the last 20 messages as part of the prompt (these messages includes tool results, so roughly 3-5 full exchanges). There's no clean way to insert messages created outside of Claude Code into its history, but this hack seems to work OK.
+**Provider context awkward when switching between providers.** See [Session Sync](#session-sync) below for details on how cross-provider context is handled.
 
 See [docs/acp-meta-reference.md](docs/acp-meta-reference.md) for the full set of available ACP `_meta` options.
+
+## Session Sync
+
+The provider maintains a Claude Code session that mirrors pi's conversation history using [cc-session-io](https://www.npmjs.com/package/cc-session-io). This lets Claude Code resume with full context across turns and provider switches.
+
+**How it works:**
+
+1. **First turn**: Pi's prior messages (from other providers) are translated into Claude Code's JSONL format and written as a seed session. Claude Code then resumes from this session via `--resume`. Up to 20 messages are mirrored (roughly 3-5 full exchanges including tool results).
+
+2. **Continuation turns**: On each subsequent turn, any messages added since the last cursor (e.g., by another provider between our turns) are appended to the JSONL and the session is resumed. Messages from our own provider are skipped since Claude Code already wrote those itself.
+
+3. **Content block translation**: Pi's message types are converted to Anthropic API format — `toolCall` → `tool_use`, `toolResult` → `tool_result`, etc. Thinking blocks are only included when they carry a valid signature from the API; unsigned thinking blocks are dropped because the Anthropic API rejects invalid signatures on resume.
+
+4. **Model selection**: The model is set via CLI args (`extraArgs.model`) on session creation to avoid polluting the JSONL with `/model` command records. Mid-session model changes (when the user switches models between turns) use `unstable_setSessionModel`.
+
+The JSONL file lives at `~/.claude/projects/-<path-hash>/<session-id>.jsonl` and can be resumed directly with `claude --resume <id>`.
 
 ## TODOs
 
