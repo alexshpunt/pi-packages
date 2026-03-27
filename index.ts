@@ -349,6 +349,15 @@ async function writeMcpServerScript(tools: Tool[], bridgeUrl: string): Promise<s
 	return path;
 }
 
+type McpServer = { command: string; args: string[]; env: Array<{ name: string; value: string }>; name: string };
+
+async function buildMcpServers(tools: Tool[]): Promise<McpServer[]> {
+	if (tools.length === 0) return [];
+	const port = await ensureBridgeServer();
+	const scriptPath = await writeMcpServerScript(tools, `http://127.0.0.1:${port}`);
+	return [{ command: "node", args: [scriptPath], env: [], name: MCP_SERVER_NAME }];
+}
+
 // --- Tool result extraction ---
 
 function extractLastToolResult(context: Context): { toolName: string; content: string } | null {
@@ -423,7 +432,6 @@ let sessionUpdateHandler: ((update: SessionUpdate) => void) | null = null;
 let activeSessionId: string | null = null;
 let activeModelId: string | null = null;
 let activePromise: Promise<PromptResponse> | null = null;
-let hadToolUseCycles = false;
 
 function killConnection() {
 	if (acpProcess) {
@@ -435,24 +443,12 @@ function killConnection() {
 	activeSessionId = null;
 	activeModelId = null;
 	activePromise = null;
-	hadToolUseCycles = false;
 
 	if (pendingToolCall) {
 		pendingToolCall.resolve("Error: connection killed");
 		pendingToolCall = null;
 	}
 	toolCallDetected = null;
-
-	if (bridgeServer) {
-		bridgeServer.close();
-		bridgeServer = null;
-		bridgePort = null;
-	}
-
-	if (mcpServerScriptPath) {
-		unlink(mcpServerScriptPath).catch(() => {});
-		mcpServerScriptPath = null;
-	}
 }
 
 async function ensureConnection(): Promise<ClientSideConnection> {
@@ -537,43 +533,8 @@ async function ensureConnection(): Promise<ClientSideConnection> {
 		clientInfo: { name: "pi-claude-code-acp", version: "0.1.0" },
 	});
 
-	// Unref after init so the child doesn't prevent exit when idle.
-	// refConnection()/unrefConnection() manage this around active requests.
-	unrefConnection();
-
 	acpConnection = connection;
 	return connection;
-}
-
-// --- Event-loop ref management ---
-// The ACP child process starts ref'd (default), but ensureConnection() unrefs
-// it after init so it won't block exit when idle. Before any await that reads
-// from the child (prompt, newSession, etc.), call refConnection(). When the
-// work is done, call unrefConnection(). This keeps `-p` mode working: Node
-// can exit when idle, but won't exit while we're waiting for a response.
-
-/** Keep the event loop alive while we're waiting for ACP responses. */
-function refConnection() {
-	if (!acpProcess) return;
-	acpProcess.ref();
-	// @ts-expect-error — net.Socket at runtime
-	acpProcess.stdin?.ref();
-	// @ts-expect-error
-	acpProcess.stdout?.ref();
-	// @ts-expect-error
-	acpProcess.stderr?.ref();
-}
-
-/** Allow the event loop to exit when idle (no pending ACP work). */
-function unrefConnection() {
-	if (!acpProcess) return;
-	acpProcess.unref();
-	// @ts-expect-error — net.Socket at runtime
-	acpProcess.stdin?.unref();
-	// @ts-expect-error
-	acpProcess.stdout?.unref();
-	// @ts-expect-error
-	acpProcess.stderr?.unref();
 }
 
 process.on("exit", () => { killConnection(); });
@@ -589,7 +550,6 @@ async function promptAndWait(
 	options?: { systemPrompt?: string; appendSkills?: boolean; onStreamUpdate?: (responseText: string) => void; model?: string; thinking?: string },
 ): Promise<{ responseText: string; stopReason: string }> {
 	const connection = await ensureConnection();
-	refConnection();
 
 	// Build _meta: mode preset + skills append + MCP suppression
 	const modePreset = MODE_PRESETS[mode] ?? {};
@@ -671,7 +631,6 @@ async function promptAndWait(
 		const result = abortP ? await Promise.race([promptP, abortP]) : await promptP;
 		return { responseText, stopReason: result.stopReason };
 	} finally {
-		unrefConnection();
 		sessionUpdateHandler = null;
 		connection.unstable_closeSession({ sessionId: sid }).catch(() => {});
 	}
@@ -695,6 +654,24 @@ function waitForToolCall(): Promise<void> {
 }
 
 let askClaudeToolName = "AskClaude";
+
+async function createAcpSession(
+	conn: ClientSideConnection, cwd: string, mcpServers: McpServer[], resume?: string,
+): Promise<string> {
+	const session = await conn.newSession({
+		cwd,
+		mcpServers,
+		_meta: {
+			claudeCode: { options: {
+				allowedTools: [`mcp__${MCP_SERVER_NAME}__*`],
+				disallowedTools: DISALLOWED_BUILTIN_TOOLS,
+				...(resume ? { resume } : {}),
+			} },
+		},
+	} as any);
+	await conn.setSessionMode({ sessionId: session.sessionId, modeId: "bypassPermissions" });
+	return session.sessionId;
+}
 
 function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleStreamOptions): AssistantMessageEventStream {
 	const stream = createAssistantMessageEventStream();
@@ -751,7 +728,6 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 
 		try {
 			let connection = await ensureConnection();
-			refConnection();
 			const tools = getToolsForMcp(context.tools, askClaudeToolName);
 
 			// --- Mode B: Resume with tool result ---
@@ -768,7 +744,6 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 
 			// --- Mode A: Fresh prompt ---
 			} else {
-				hadToolUseCycles = false;
 				const lastUser = [...context.messages].reverse().find((m) => m.role === "user");
 				const lastUserText = lastUser ? messageContentToText(lastUser.content) || "" : "";
 
@@ -785,30 +760,10 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 						mirrorSessionId = ccSession.sessionId;
 					}
 
-					const mcpServers: Array<{ command: string; args: string[]; env: Array<{ name: string; value: string }>; name: string }> = [];
-					if (tools.length > 0) {
-						const port = await ensureBridgeServer();
-						const bridgeUrl = `http://127.0.0.1:${port}`;
-						const scriptPath = await writeMcpServerScript(tools, bridgeUrl);
-						mcpServers.push({ command: "node", args: [scriptPath], env: [], name: MCP_SERVER_NAME });
-					}
-
-					const session = await connection.newSession({
-						cwd,
-						mcpServers,
-						_meta: {
-							claudeCode: { options: {
-								allowedTools: [`mcp__${MCP_SERVER_NAME}__*`],
-								disallowedTools: DISALLOWED_BUILTIN_TOOLS,
-								...(mirrorSessionId ? { resume: mirrorSessionId } : {}),
-							} },
-						},
-					} as any);
-
-					sessionId = session.sessionId;
+					const mcpServers = await buildMcpServers(tools);
+					sessionId = await createAcpSession(connection, cwd, mcpServers, mirrorSessionId || undefined);
 					activeSessionId = sessionId;
 					if (!mirrorSessionId) mirrorSessionId = sessionId;
-					await connection.setSessionMode({ sessionId, modeId: "bypassPermissions" });
 					await connection.unstable_setSessionModel({ sessionId, modelId: model.id });
 					activeModelId = model.id;
 					mirrorCursor = context.messages.length;
@@ -823,29 +778,10 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 						ccSession.save();
 
 						killConnection();
-						const mcpServers: Array<{ command: string; args: string[]; env: Array<{ name: string; value: string }>; name: string }> = [];
-						if (tools.length > 0) {
-							const port = await ensureBridgeServer();
-							const bridgeUrl = `http://127.0.0.1:${port}`;
-							const scriptPath = await writeMcpServerScript(tools, bridgeUrl);
-							mcpServers.push({ command: "node", args: [scriptPath], env: [], name: MCP_SERVER_NAME });
-						}
+						const mcpServers = await buildMcpServers(tools);
 						connection = await ensureConnection();
-						refConnection();
-						const resumed = await connection.newSession({
-							cwd,
-							mcpServers,
-							_meta: {
-								claudeCode: { options: {
-									allowedTools: [`mcp__${MCP_SERVER_NAME}__*`],
-									disallowedTools: DISALLOWED_BUILTIN_TOOLS,
-									resume: mirrorSessionId,
-								} },
-							},
-						} as any);
-						sessionId = resumed.sessionId;
+						sessionId = await createAcpSession(connection, cwd, mcpServers, mirrorSessionId!);
 						activeSessionId = sessionId;
-						await connection.setSessionMode({ sessionId, modeId: "bypassPermissions" });
 					}
 					if (activeModelId !== model.id) {
 						await connection.unstable_setSessionModel({ sessionId: sessionId!, modelId: model.id });
@@ -953,7 +889,6 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 					stream.push({ type: "toolcall_end", contentIndex: idx, toolCall: tc, partial: output });
 
 					output.stopReason = "toolUse";
-					hadToolUseCycles = true;
 					stream.push({ type: "done", reason: "toolUse", message: output });
 					stream.end();
 					// activePromise stays alive — next streamSimple call will resume
@@ -990,8 +925,6 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 				}
 				sessionUpdateHandler = null;
 				toolCallDetected = null;
-				// Unref unless activePromise survives (toolUse — next call will resume it)
-				if (!activePromise) unrefConnection();
 			}
 		} catch (error) {
 			activePromise = null;
@@ -1003,7 +936,6 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 			output.stopReason = options?.signal?.aborted ? "aborted" : "error";
 			output.errorMessage = errorMessage(error);
 			if (!started) stream.push({ type: "start", partial: output });
-			unrefConnection();
 			stream.push({ type: "error", reason: output.stopReason as "aborted" | "error", error: output });
 			stream.end();
 		}
@@ -1026,6 +958,8 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_shutdown", async () => {
 		killConnection();
 		resetMirror();
+		if (bridgeServer) { bridgeServer.close(); bridgeServer = null; bridgePort = null; }
+		if (mcpServerScriptPath) { unlink(mcpServerScriptPath).catch(() => {}); mcpServerScriptPath = null; }
 	});
 	pi.on("session_switch", async () => {
 		killConnection();
