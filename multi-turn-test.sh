@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Multi-turn integration tests for pi-claude-code-acp provider.
+# Multi-turn integration tests for pi-claude-bridge provider.
 # Verifies tool use and multi-turn context via --mode json output.
 # Requires: pi CLI, Claude Code (for Agent SDK subprocess), jq.
 
@@ -32,7 +32,7 @@ run_json() {
   local slug=$(echo "$name" | tr ' :,' '-' | tr -cd '[:alnum:]-')
   local logfile="$LOGDIR/$slug.ndjson"
   printf "%-50s " "$name"
-  if timeout "$TIMEOUT" "$@" > "$logfile" 2>&1; then
+  if timeout "$TIMEOUT" "$@" > "$logfile" 2>"$logfile.err"; then
     if [ ! -s "$logfile" ]; then
       echo "FAIL (empty output)"
       ((FAIL++))
@@ -67,7 +67,7 @@ run_json "multi-turn: tool use, context, history" \
    ([.[] | select(.type == "message_update") | .assistantMessageEvent | select(.type == "text_end") | .content] | join(" ") | test("'"$EXPECTED_VERSION"'")) and
    ([.[] | select(.type == "message_update") | .assistantMessageEvent | select(.type == "text_end") | .content] | join(" ") | test("banana"))' \
   pi --no-session -ne -e "$DIR" \
-  --model "claude-code-acp/claude-haiku-4-5" \
+  --model "claude-bridge/claude-haiku-4-5" \
   --mode json \
   -p "The secret word is 'banana'. Read package.json and tell me the version. Be brief." \
      "Now read README.md and tell me the first heading. Be brief." \

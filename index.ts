@@ -11,7 +11,7 @@ import { dirname, join, relative, resolve } from "path";
 
 // --- Constants ---
 
-const PROVIDER_ID = "claude-code-acp";
+const PROVIDER_ID = "claude-bridge";
 
 const SDK_TO_PI_TOOL_NAME: Record<string, string> = {
 	read: "read", write: "write", edit: "edit", bash: "bash", grep: "grep", glob: "find",
@@ -67,8 +67,8 @@ interface Config {
 }
 
 function loadConfig(cwd: string): Config {
-	const globalPath = join(homedir(), ".pi", "agent", "claude-code-acp.json");
-	const projectPath = join(cwd, ".pi", "claude-code-acp.json");
+	const globalPath = join(homedir(), ".pi", "agent", "claude-bridge.json");
+	const projectPath = join(cwd, ".pi", "claude-bridge.json");
 	let global: Partial<Config> = {};
 	let project: Partial<Config> = {};
 	if (existsSync(globalPath)) { try { global = JSON.parse(readFileSync(globalPath, "utf-8")); } catch {} }
@@ -517,7 +517,7 @@ const DEFAULT_THINKING_BUDGETS: Record<NonXhighThinkingLevel, number> = {
 };
 
 // "xhigh" is unavailable in the TUI because pi-ai's supportsXhigh() doesn't
-// recognize the "claude-code-acp" api type. Opus-4-6 gets shifted budgets so
+// recognize the "claude-bridge" api type. Opus-4-6 gets shifted budgets so
 // "high" uses the budget that xhigh would normally use.
 const OPUS_46_THINKING_BUDGETS: Record<ThinkingLevel, number> = {
 	minimal: 2048, low: 8192, medium: 31999, high: 63999, xhigh: 63999,
@@ -942,9 +942,9 @@ export default function (pi: ExtensionAPI) {
 	// --- Provider ---
 
 	pi.registerProvider(PROVIDER_ID, {
-		baseUrl: "claude-code-acp",
+		baseUrl: "claude-bridge",
 		apiKey: "not-used",
-		api: "claude-code-acp",
+		api: "claude-bridge",
 		models: MODELS,
 		streamSimple: streamClaudeAgentSdk,
 	});
@@ -1018,9 +1018,9 @@ export default function (pi: ExtensionAPI) {
 			},
 			async execute(_id, params, signal, onUpdate, ctx) {
 				// Guard: circular delegation
-				if (ctx.model?.baseUrl === "claude-code-acp") {
+				if (ctx.model?.baseUrl === "claude-bridge") {
 					return {
-						content: [{ type: "text" as const, text: "Error: AskClaude cannot be used when the active provider is claude-code-acp — you're already running through Claude Code." }],
+						content: [{ type: "text" as const, text: "Error: AskClaude cannot be used when the active provider is claude-bridge — you're already running through Claude Code." }],
 						details: { error: true },
 					};
 				}
@@ -1061,7 +1061,7 @@ export default function (pi: ExtensionAPI) {
 					};
 				} catch (err) {
 					clearInterval(progressInterval);
-					console.error("[claude-code-acp] AskClaude error:", err);
+					console.error("[claude-bridge] AskClaude error:", err);
 					const msg = errorMessage(err);
 					return {
 						content: [{ type: "text" as const, text: `Error: ${msg}` }],

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Context continuity test for pi-claude-code-acp provider.
+// Context continuity test for pi-claude-bridge provider.
 // Verifies that switching away from the provider and back correctly
 // preserves conversation context (all messages are flattened into
 // each query, so "missed" messages are automatically included).
@@ -22,7 +22,7 @@ const LOGDIR = `${DIR}/.test-output`;
 const LOGFILE = `${LOGDIR}/session-resume.log`;
 const TIMEOUT = 180_000;
 
-const ACP_MODEL = "claude-code-acp/claude-haiku-4-5";
+const BRIDGE_MODEL = "claude-bridge/claude-haiku-4-5";
 const OTHER_PROVIDER = "openrouter";
 const OTHER_MODEL = "openai/gpt-oss-120b";
 
@@ -39,11 +39,11 @@ process.env.PATH = process.env.PATH
 
 const log = createWriteStream(LOGFILE);
 
-// Spawn pi in RPC mode with the ACP extension
+// Spawn pi in RPC mode with the provider extension
 const pi = spawn("pi", [
   "--no-session", "-ne",
   "-e", DIR,
-  "--model", ACP_MODEL,
+  "--model", BRIDGE_MODEL,
   "--mode", "rpc",
 ], { stdio: ["pipe", "pipe", "pipe"] });
 
@@ -140,7 +140,7 @@ await new Promise((r) => setTimeout(r, 2000));
 
 try {
   // Turn 1: Provider prompt — establishes context
-  console.log("Turn 1: ACP prompt (establish session)...");
+  console.log("Turn 1: provider prompt (establish session)...");
   const text1 = await promptAndWait(`The secret word is '${WORD_A}'. Acknowledge and be very brief.`);
   if (!text1) finish(1, "FAIL: Turn 1 produced no text");
   console.log(`  Response: ${text1.slice(0, 80)}`);
@@ -150,15 +150,15 @@ try {
   await send({ type: "set_model", provider: OTHER_PROVIDER, modelId: OTHER_MODEL });
 
   // Turn 2: Other-model prompt — adds context that provider must see on switch-back
-  console.log("Turn 2: Non-ACP prompt (creates missed messages)...");
+  console.log("Turn 2: Non-provider prompt (creates missed messages)...");
   const text2 = await promptAndWait(`The backup word is '${WORD_B}'. Acknowledge briefly.`);
   if (!text2) finish(1, "FAIL: Turn 2 produced no text");
   console.log(`  Response: ${text2.slice(0, 80)}`);
 
   // Switch back to provider — context includes all prior turns
-  const [acpProvider, acpModelId] = ACP_MODEL.split("/");
-  console.log(`Switching back to ${ACP_MODEL}...`);
-  await send({ type: "set_model", provider: acpProvider, modelId: acpModelId });
+  const [bridgeProvider, bridgeModelId] = BRIDGE_MODEL.split("/");
+  console.log(`Switching back to ${BRIDGE_MODEL}...`);
+  await send({ type: "set_model", provider: bridgeProvider, modelId: bridgeModelId });
 
   // Turn 3: Provider prompt — should have context from all turns
   console.log("Turn 3: Provider prompt (tests context continuity)...");
@@ -172,11 +172,11 @@ try {
   if (!lower.includes(WORD_A)) finish(1, `FAIL: Turn 3 response missing '${WORD_A}': ${text3}`);
   if (!lower.includes(WORD_B)) finish(1, `FAIL: Turn 3 response missing '${WORD_B}': ${text3}`);
 
-  // Turn 4: AskClaude shared mode — should see WORD_B which was only told to the non-ACP model
+  // Turn 4: AskClaude shared mode — should see WORD_B which was only told to the non-provider model
   console.log(`Switching to ${OTHER_PROVIDER}/${OTHER_MODEL}...`);
   await send({ type: "set_model", provider: OTHER_PROVIDER, modelId: OTHER_MODEL });
 
-  console.log("Turn 4: AskClaude shared mode (should see non-ACP context)...");
+  console.log("Turn 4: AskClaude shared mode (should see non-provider context)...");
   const text4 = await promptAndWait(
     'Use the AskClaude tool with prompt="What was the backup word mentioned earlier? Reply with just the word."'
   );

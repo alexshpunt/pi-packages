@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Smoke tests for pi-claude-code-acp provider.
+# Smoke tests for pi-claude-bridge provider.
 # Requires: pi CLI, Claude Code (for Agent SDK subprocess).
 # Each test runs pi in print mode with a timeout — if the provider hangs or
 # produces no output, the test fails.
@@ -47,18 +47,18 @@ run() {
 
 run "provider: print mode responds" \
   pi --no-session -ne -e "$DIR" \
-  --model "claude-code-acp/claude-sonnet-4-6" \
+  --model "claude-bridge/claude-sonnet-4-6" \
   -p "Reply with just the word 'yes'"
 
 run "provider: --provider flag works" \
   pi --no-session -ne -e "$DIR" \
-  --provider claude-code-acp \
+  --provider claude-bridge \
   -p "Reply with just the word 'yes'"
 
 run "provider: model list includes provider" \
-  bash -c "pi --no-session -ne -e '$DIR' --list-models 2>&1 | grep claude-code-acp"
+  bash -c "pi --no-session -ne -e '$DIR' --list-models 2>&1 | grep claude-bridge"
 
-# AskClaude only registers when a non-claude-code-acp provider is active
+# AskClaude only registers when a non-claude-bridge provider is active
 run "tool: AskClaude registered" \
   bash -c "pi --no-session -ne -e '$DIR' --mode json --model 'openrouter/qwen/qwen3.5-9b' -p 'list your tools' 2>&1 | grep -q AskClaude && echo ok"
 
