@@ -6,14 +6,23 @@
 
 set -euo pipefail
 
+# npm prepends node_modules/.bin to PATH, which shadows the system pi
+# with the vendored pi-coding-agent (used only for types). Strip it.
+PATH=$(echo "$PATH" | tr ':' '\n' | grep -v node_modules | tr '\n' ':')
+
 TIMEOUT=60
 PASS=0
 FAIL=0
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Clean up any leftover ACP processes from prior runs
-pkill -f "claude-agent-acp" 2>/dev/null || true
-sleep 1
+# Kill child processes spawned by pi (ACP, node, etc.) that outlive the test.
+# Uses pkill -P to target only descendants of given PIDs.
+kill_descendants() {
+  # Kill any remaining children of this shell
+  pkill -P $$ 2>/dev/null || true
+  sleep 1
+}
+trap kill_descendants EXIT
 
 run() {
   local name="$1"; shift
@@ -30,9 +39,7 @@ run() {
     echo "FAIL (exit $?)"
     ((FAIL++))
   fi
-  # Let ACP subprocess exit cleanly between tests
-  pkill -f "claude-agent-acp" 2>/dev/null || true
-  sleep 1
+  kill_descendants
 }
 
 # --- Tests ---
@@ -50,8 +57,9 @@ run "provider: --provider flag works" \
 run "provider: model list includes provider" \
   bash -c "pi --no-session -ne -e '$DIR' --list-models 2>&1 | grep claude-code-acp"
 
+# AskClaude only registers when a non-acp provider is active
 run "tool: AskClaude registered" \
-  bash -c "pi --no-session -ne -e '$DIR' --mode json -p 'list your tools' 2>&1 | grep -q AskClaude && echo ok"
+  bash -c "pi --no-session -ne -e '$DIR' --mode json --model minimax/MiniMax-M2.7-highspeed -p 'list your tools' 2>&1 | grep -q AskClaude && echo ok"
 
 # --- Summary ---
 

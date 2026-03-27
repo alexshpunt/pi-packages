@@ -171,6 +171,17 @@ const MODE_PRESETS: Record<string, Record<string, unknown>> = {
 	] } } },
 };
 
+// Built-in CC tools to block when using the provider (MCP bridge replaces them).
+// disableBuiltInTools is ineffective with bypassPermissions; disallowedTools works.
+const DISALLOWED_BUILTIN_TOOLS = [
+	"Read", "Write", "Edit", "Glob", "Grep", "Bash", "Agent",
+	"NotebookEdit", "EnterWorktree", "ExitWorktree",
+	"CronCreate", "CronDelete", "CronList", "TeamCreate", "TeamDelete",
+	"WebFetch", "WebSearch", "TodoRead", "TodoWrite",
+	"EnterPlanMode", "ExitPlanMode", "RemoteTrigger", "SendMessage",
+	"Skill", "TaskOutput", "TaskStop",
+];
+
 // --- Provider helpers ---
 
 function getToolsForMcp(tools?: Tool[], excludeName?: string): Tool[] {
@@ -463,8 +474,12 @@ async function ensureConnection(): Promise<ClientSideConnection> {
 		if (code && code !== 0 && stderrBuffer.trim()) {
 			console.error(`[claude-code-acp] ACP process exited ${code}:\n${stderrBuffer.trim()}`);
 		}
-		acpProcess = null;
-		killConnection();
+		// Only clean up if this is still the active process — a new one may
+		// have been spawned already (killConnection + ensureConnection cycle).
+		if (acpProcess === child) {
+			acpProcess = null;
+			killConnection();
+		}
 	});
 
 	const input = Writable.toWeb(child.stdin!) as WritableStream<Uint8Array>;
@@ -669,6 +684,11 @@ type RaceResult =
 
 function waitForToolCall(): Promise<void> {
 	return new Promise((resolve) => {
+		// If a tool call already arrived before we started listening, resolve immediately
+		if (pendingToolCall) {
+			resolve();
+			return;
+		}
 		toolCallDetected = resolve;
 	});
 }
@@ -747,22 +767,12 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 				const lastUser = [...context.messages].reverse().find((m) => m.role === "user");
 				const lastUserText = lastUser ? messageContentToText(lastUser.content) || "" : "";
 
-				// MCP server setup (needed for both first activation and resume)
-				const mcpServers: Array<{ command: string; args: string[]; env: Array<{ name: string; value: string }>; name: string }> = [];
-				if (tools.length > 0) {
-					const port = await ensureBridgeServer();
-					const bridgeUrl = `http://127.0.0.1:${port}`;
-					const scriptPath = await writeMcpServerScript(tools, bridgeUrl);
-					mcpServers.push({ command: "node", args: [scriptPath], env: [], name: MCP_SERVER_NAME });
-				}
+				const cwd = process.cwd();
 
 				if (!activeSessionId) {
-					// First call — seed JSONL with recent context via cc-session, then resume
-					const cwd = process.cwd();
-					const contextWithoutLast = context.messages.slice(0, -1); // exclude current user message
+					// First call — seed JSONL with recent context, set up MCP, create session
+					const contextWithoutLast = context.messages.slice(0, -1);
 					const toMirror = contextWithoutLast.slice(-MAX_MIRROR_MESSAGES);
-
-					// Only create cc-session and use resume if there's context to seed
 					if (toMirror.length > 0) {
 						const ccSession = createSession({ projectPath: cwd });
 						mirrorPiMessages(ccSession, toMirror);
@@ -770,14 +780,21 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 						mirrorSessionId = ccSession.sessionId;
 					}
 
+					const mcpServers: Array<{ command: string; args: string[]; env: Array<{ name: string; value: string }>; name: string }> = [];
+					if (tools.length > 0) {
+						const port = await ensureBridgeServer();
+						const bridgeUrl = `http://127.0.0.1:${port}`;
+						const scriptPath = await writeMcpServerScript(tools, bridgeUrl);
+						mcpServers.push({ command: "node", args: [scriptPath], env: [], name: MCP_SERVER_NAME });
+					}
+
 					const session = await connection.newSession({
 						cwd,
 						mcpServers,
 						_meta: {
-							disableBuiltInTools: true,
 							claudeCode: { options: {
 								allowedTools: [`mcp__${MCP_SERVER_NAME}__*`],
-								extraArgs: { "strict-mcp-config": null, model: model.id },
+								disallowedTools: DISALLOWED_BUILTIN_TOOLS,
 								...(mirrorSessionId ? { resume: mirrorSessionId } : {}),
 							} },
 						},
@@ -787,42 +804,46 @@ function streamClaudeAcp(model: Model<any>, context: Context, options?: SimpleSt
 					activeSessionId = sessionId;
 					if (!mirrorSessionId) mirrorSessionId = sessionId;
 					await connection.setSessionMode({ sessionId, modeId: "bypassPermissions" });
+					await connection.unstable_setSessionModel({ sessionId, modelId: model.id });
 					activeModelId = model.id;
 					mirrorCursor = context.messages.length;
 				} else {
-					// Continuation — ACP already has prior context
+					// Continuation — reuse existing session
 					sessionId = activeSessionId;
-					if (activeModelId !== model.id) {
-						await connection.unstable_setSessionModel({ sessionId, modelId: model.id });
-						activeModelId = model.id;
-					}
-					const missed = context.messages.slice(mirrorCursor, -1); // exclude current user message
+					const missed = context.messages.slice(mirrorCursor, -1);
 					if (missed.length > 0 && mirrorSessionId) {
-						// Messages added by another provider — mirror into JSONL and resume
-						killConnection();
-						const cwd = process.cwd();
+						// Messages from another provider — mirror into JSONL, kill, resume
 						const ccSession = openSession({ sessionId: mirrorSessionId, projectPath: cwd });
 						mirrorPiMessages(ccSession, missed.slice(-MAX_MIRROR_MESSAGES), true);
 						ccSession.save();
 
+						killConnection();
+						const mcpServers: Array<{ command: string; args: string[]; env: Array<{ name: string; value: string }>; name: string }> = [];
+						if (tools.length > 0) {
+							const port = await ensureBridgeServer();
+							const bridgeUrl = `http://127.0.0.1:${port}`;
+							const scriptPath = await writeMcpServerScript(tools, bridgeUrl);
+							mcpServers.push({ command: "node", args: [scriptPath], env: [], name: MCP_SERVER_NAME });
+						}
 						const conn = await ensureConnection();
-						refConnection(); // re-ref the new child after reconnect
+						refConnection();
 						const resumed = await conn.newSession({
 							cwd,
 							mcpServers,
 							_meta: {
-								disableBuiltInTools: true,
 								claudeCode: { options: {
 									allowedTools: [`mcp__${MCP_SERVER_NAME}__*`],
-									extraArgs: { "strict-mcp-config": null, model: model.id },
+									disallowedTools: DISALLOWED_BUILTIN_TOOLS,
 									resume: mirrorSessionId,
 								} },
 							},
 						} as any);
-
 						sessionId = resumed.sessionId;
 						activeSessionId = sessionId;
 						await conn.setSessionMode({ sessionId, modeId: "bypassPermissions" });
+					}
+					if (activeModelId !== model.id) {
+						await connection.unstable_setSessionModel({ sessionId: sessionId!, modelId: model.id });
 						activeModelId = model.id;
 					}
 					mirrorCursor = context.messages.length;
