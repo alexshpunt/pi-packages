@@ -84,6 +84,18 @@ run_json "single-turn: multiple sequential tool calls" \
   --mode json \
   -p "Read both package.json and README.md, then tell me the package name and the first word of the README heading."
 
+# 3+ parallel tool calls in a single turn — exercises the chained MCP resolve
+# fix that ensures all pending tool results are delivered when the model fires
+# more than two tool_use blocks simultaneously.
+run_json "single-turn: 3+ parallel tool calls" \
+  '([.[] | select(.type == "message_update") | .assistantMessageEvent | select(.type == "toolcall_end")] | length) >= 3 and
+   ([ .[] | select(.type == "message_update") | .assistantMessageEvent | select(.type == "text_end") ] | length) > 0 and
+   ([ .[] | select(.type == "message_update") | .assistantMessageEvent | select(.type == "text_end") | .content | select(. != null and . != "") ] | length) > 0' \
+  pi --no-session -ne -e "$DIR" \
+  --model "claude-bridge/claude-haiku-4-5" \
+  --mode json \
+  -p "Read package.json, README.md, and tsconfig.json at the same time, then tell me the package name, the first heading in the README, and the TypeScript target."
+
 # Regression: final text after multi-round tool calls was lost when the bridge
 # entered the DEFERRED path and set up a callback that never fired, yielding an
 # empty assistant message back to pi.
