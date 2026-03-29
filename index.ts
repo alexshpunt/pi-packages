@@ -645,6 +645,9 @@ let activeQuery: ReturnType<typeof query> | null = null;
 let pendingToolCalls: PendingToolCall[] = [];
 let toolCallDetected: (() => void) | null = null;
 let currentPiStream: ReturnType<typeof createAssistantMessageEventStream> | null = null;
+// Set when the SDK sends a final response (end_turn, no tool_use). Prevents the
+// DEFERRED path from waiting for an MCP handler that will never come.
+let queryResponseComplete = false;
 
 // Per-turn output state (reset on each streamSimple call that starts a new pi turn)
 let turnOutput: AssistantMessage | null = null;
@@ -925,6 +928,12 @@ function processStreamEvent(
 		return;
 	}
 
+	if (event?.type === "message_stop" && !turnSawToolCall) {
+		// Final text response (end_turn) — no more MCP handlers will fire.
+		queryResponseComplete = true;
+		return;
+	}
+
 	if (event?.type !== "message_stop" && event?.type !== "ping") {
 		debug("processStreamEvent: unhandled event type", event?.type);
 	}
@@ -981,6 +990,8 @@ function processAssistantMessage(message: SDKMessage, model: Model<any>, customT
 		currentPiStream.push({ type: "done", reason: "toolUse", message: turnOutput });
 		currentPiStream.end();
 		currentPiStream = null;
+	} else if (!turnSawToolCall) {
+		queryResponseComplete = true;
 	}
 }
 
@@ -1065,6 +1076,20 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 
 	// --- MCP handler not yet called — wait for it ---
 	if (activeQuery && pendingToolCalls.length === 0) {
+		// Query already sent Claude's final response (end_turn, no tool_use).
+		// Pi is calling back with what it thinks is a tool result, but there's
+		// nothing to deliver. Return an empty finalized stream immediately.
+		if (queryResponseComplete) {
+			debug(`provider: DEFERRED skipped — queryResponseComplete, ctx.msgs=${context.messages.length}`);
+			const emptyMsg: AssistantMessage = {
+				role: "assistant", content: [], stopReason: "stop",
+				usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+			};
+			stream.push({ type: "done", reason: "stop", message: emptyMsg });
+			stream.end();
+			return stream;
+		}
 		currentPiStream = stream;
 		resetTurnState(model);
 		debug(`provider: DEFERRED path — MCP handler not yet called, ctx.msgs=${context.messages.length}`);
@@ -1084,6 +1109,7 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 
 	// --- Fresh query ---
 	currentPiStream = stream;
+	queryResponseComplete = false;
 	resetTurnState(model);
 
 	const { mcpTools, customToolNameToSdk, customToolNameToPi } = resolveMcpTools(context, askClaudeToolName);
