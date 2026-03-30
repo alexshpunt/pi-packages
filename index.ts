@@ -89,6 +89,7 @@ const GLOBAL_AGENTS_PATH = join(homedir(), ".pi", "agent", "AGENTS.md");
 // --- Config ---
 
 interface Config {
+	maxHistoryMessages?: number;
 	askClaude?: {
 		enabled?: boolean;
 		name?: string;
@@ -100,14 +101,23 @@ interface Config {
 	};
 }
 
+function tryParseJson(path: string): Partial<Config> {
+	if (!existsSync(path)) return {};
+	try {
+		return JSON.parse(readFileSync(path, "utf-8"));
+	} catch (e) {
+		console.error(`claude-bridge: failed to parse ${path}: ${e}`);
+		return {};
+	}
+}
+
 function loadConfig(cwd: string): Config {
-	const globalPath = join(homedir(), ".pi", "agent", "claude-bridge.json");
-	const projectPath = join(cwd, ".pi", "claude-bridge.json");
-	let global: Partial<Config> = {};
-	let project: Partial<Config> = {};
-	if (existsSync(globalPath)) { try { global = JSON.parse(readFileSync(globalPath, "utf-8")); } catch (e) { console.error(`claude-bridge: failed to parse ${globalPath}: ${e}`); } }
-	if (existsSync(projectPath)) { try { project = JSON.parse(readFileSync(projectPath, "utf-8")); } catch (e) { console.error(`claude-bridge: failed to parse ${projectPath}: ${e}`); } }
-	const merged = { askClaude: { ...global.askClaude, ...project.askClaude } };
+	const global = tryParseJson(join(homedir(), ".pi", "agent", "claude-bridge.json"));
+	const project = tryParseJson(join(cwd, ".pi", "claude-bridge.json"));
+	const merged: Config = {
+		maxHistoryMessages: project.maxHistoryMessages ?? global.maxHistoryMessages,
+		askClaude: { ...global.askClaude, ...project.askClaude },
+	};
 	debug("loadConfig:", JSON.stringify(merged));
 	return merged;
 }
@@ -233,7 +243,7 @@ interface SessionState {
 
 let sharedSession: SessionState | null = null;
 
-const MAX_MIRROR_MESSAGES = 40;
+let configuredMaxHistoryMessages: number | undefined;
 
 // Convert pi messages to Anthropic API format for session import.
 // Lossy: non-Anthropic thinking blocks are dropped (no valid signature), and only
@@ -245,10 +255,9 @@ function convertAndImportMessages(
 	messages: Context["messages"],
 	customToolNameToSdk?: Map<string, string>,
 ): void {
-	const capped = messages.length > MAX_MIRROR_MESSAGES
-		? messages.slice(-MAX_MIRROR_MESSAGES)
-		: messages;
-	if (messages.length > MAX_MIRROR_MESSAGES) debug(`convertAndImportMessages: capped ${messages.length} → ${MAX_MIRROR_MESSAGES} messages`);
+	const limit = configuredMaxHistoryMessages;
+	const capped = limit && messages.length > limit ? messages.slice(-limit) : messages;
+	if (limit && messages.length > limit) debug(`convertAndImportMessages: capped ${messages.length} → ${limit} messages`);
 	const anthropicMessages: Array<{ role: string; content: unknown }> = [];
 	// Anthropic requires tool IDs matching ^[a-zA-Z0-9_-]+$ — sanitize IDs from other providers
 	const sanitizedIds = new Map<string, string>();
@@ -1424,6 +1433,7 @@ let askClaudeToolName = "AskClaude";
 
 export default function (pi: ExtensionAPI) {
 	const config = loadConfig(process.cwd());
+	configuredMaxHistoryMessages = config.maxHistoryMessages;
 
 	// Reset shared session on pi session lifecycle events
 	const clearSession = (event: string) => {

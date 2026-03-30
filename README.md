@@ -55,6 +55,7 @@ Config: `~/.pi/agent/claude-bridge.json` (global) or `.pi/claude-bridge.json` (p
 
 ```json
 {
+  "maxHistoryMessages": 40,
   "askClaude": {
     "enabled": true,
     "allowFullMode": true,
@@ -62,6 +63,8 @@ Config: `~/.pi/agent/claude-bridge.json` (global) or `.pi/claude-bridge.json` (p
   }
 }
 ```
+
+`maxHistoryMessages` limits how many pi messages are imported into the CC session context. Omit for no limit (default).
 
 ## Debugging
 
