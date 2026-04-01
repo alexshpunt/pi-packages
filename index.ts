@@ -184,9 +184,13 @@ function formatToolAction(tc: ToolCallState): string | undefined {
 	const path = extractPath(tc.rawInput);
 	const verb = tc.name.toLowerCase().split(/\s/)[0];
 	if (verb === "read" || verb === "readfile") {
-		return path ? `read ${shortPath(path)}` : undefined;
+		return path ? `Read(${shortPath(path)})` : "Read";
+	} else if (verb === "glob" || verb === "find") {
+		const input = tc.rawInput as Record<string, unknown> | undefined;
+		const pat = typeof input?.pattern === "string" ? input.pattern.slice(0, 40) : "";
+		return pat ? `Glob(${pat})` : "Glob";
 	} else if (verb === "edit" || verb === "write" || verb === "writefile" || verb === "multiedit") {
-		return path ? `edit ${shortPath(path)}` : undefined;
+		return path ? `Edit(${shortPath(path)})` : "Edit";
 	} else if (verb === "bash" || verb === "terminal") {
 		return `ran ${path ?? "command"}`;
 	} else if (verb === "agent") {
@@ -205,11 +209,23 @@ function formatToolAction(tc: ToolCallState): string | undefined {
 	return tc.name;
 }
 
+const COLLAPSIBLE_VERBS = new Set(["read", "readfile", "grep", "glob", "find"]);
+
 function buildActionSummary(calls: Map<string, ToolCallState>): string {
 	const parts: string[] = [];
+	let prevCollapsible = false;
 	for (const [, tc] of calls) {
 		const action = formatToolAction(tc);
-		if (action) parts.push(action);
+		if (!action) continue;
+		const verb = tc.name.toLowerCase().split(/\s/)[0];
+		const collapsible = COLLAPSIBLE_VERBS.has(verb);
+		// Collapse consecutive collapsible tools — keep only the latest in a run
+		if (collapsible && prevCollapsible) {
+			parts[parts.length - 1] = action;
+		} else {
+			parts.push(action);
+		}
+		prevCollapsible = collapsible;
 	}
 	return parts.join("; ");
 }
