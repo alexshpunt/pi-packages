@@ -1,5 +1,5 @@
 import { calculateCost, createAssistantMessageEventStream, getModels, StringEnum, type AssistantMessage, type AssistantMessageEventStream, type Context, type Model, type SimpleStreamOptions, type Tool } from "@mariozechner/pi-ai";
-import { buildSessionContext, keyHint, type ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { buildSessionContext, keyHint, type ExtensionAPI, type ExtensionUIContext } from "@mariozechner/pi-coding-agent";
 import { createSdkMcpServer, query, type EffortLevel, type SDKMessage, type SDKUserMessage, type SettingSource } from "@anthropic-ai/claude-agent-sdk";
 import type { Base64ImageSource, ContentBlockParam, MessageParam } from "@anthropic-ai/sdk/resources";
 import { z } from "zod";
@@ -730,6 +730,9 @@ interface SavedQueryState {
 }
 const queryStateStack: SavedQueryState[] = [];
 
+// Stashed UI reference for notifying users from the provider (which has no ctx).
+let piUI: ExtensionUIContext | null = null;
+
 // Per-turn output state (reset on each streamSimple call that starts a new pi turn)
 let turnOutput: AssistantMessage | null = null;
 let turnBlocks: Array<any> = [];
@@ -1115,6 +1118,19 @@ async function consumeQuery(
 					capturedSessionId = (message as any).session_id;
 				}
 				break;
+			case "user":
+				break; // SDK echo of user prompt — not needed
+			case "rate_limit_event": {
+				const info = (message as any).rate_limit_info;
+				debug("consumeQuery: rate_limit_event", JSON.stringify(info).slice(0, 300));
+				if (info?.status === "rejected") {
+					const resetsAt = info.resetsAt ? new Date(info.resetsAt).toLocaleTimeString() : "unknown";
+					piUI?.notify(`Claude rate limited (${info.rateLimitType ?? "unknown"}) — resets at ${resetsAt}`, "warning");
+				} else if (info?.status === "allowed_warning") {
+					piUI?.notify(`Claude rate limit warning: ${Math.round(info.utilization ?? 0)}% used (${info.rateLimitType ?? ""})`, "warning");
+				}
+				break;
+			}
 			default:
 				debug("consumeQuery: unhandled SDK message type", message.type);
 				break;
@@ -1159,6 +1175,10 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 			if (pendingToolCalls.length > 0 && pendingResults.length > 0) {
 				debug(`BUG: both queues non-empty! handlers=${pendingToolCalls.length} results=${pendingResults.length}`);
 			}
+		}
+		if (pendingToolCalls.length > 0) {
+			debug(`WARNING: ${pendingToolCalls.length} MCP handlers still waiting after delivering ${allResults.length} results`);
+			piUI?.notify(`Claude bridge: ${pendingToolCalls.length} tool handler(s) still waiting — provider may be stuck`, "warning");
 		}
 		if (sharedSession) sharedSession.cursor = context.messages.length;
 		return stream;
@@ -1556,7 +1576,8 @@ export default function (pi: ExtensionAPI) {
 			g[ACTIVE_STREAM_SIMPLE_KEY] = undefined;
 		}
 	};
-	pi.on("session_start", (event) => {
+	pi.on("session_start", (event, ctx) => {
+		piUI = ctx.ui;
 		if (event.reason === "new" || event.reason === "resume" || event.reason === "fork") {
 			clearSession(`session_start:${event.reason}`);
 		}
@@ -1617,7 +1638,7 @@ export default function (pi: ExtensionAPI) {
 				let text = theme.fg("mdLink", theme.bold("AskClaude "));
 				const mode = args.mode ?? defaultMode;
 				const tags: string[] = [];
-				if (mode !== "full") tags.push(`tools=${mode}`);
+				if (mode !== defaultMode) tags.push(`mode=${mode}`);
 				if (args.model) tags.push(`model=${args.model}`);
 				if (args.thinking) tags.push(`thinking=${args.thinking}`);
 				if (args.isolated) tags.push("isolated");
