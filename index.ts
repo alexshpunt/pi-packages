@@ -1497,6 +1497,10 @@ async function promptAndWait(
 				}
 				case "result": {
 					resultSubtype = message.subtype;
+					const r = message as any;
+					if (r.usage) {
+						debug(`askClaude: result usage: in=${r.usage.input_tokens} out=${r.usage.output_tokens} cacheRead=${r.usage.cache_read_input_tokens ?? 0} cacheWrite=${r.usage.cache_creation_input_tokens ?? 0} turns=${r.num_turns ?? "?"}`);
+					}
 					if (!responseText && message.subtype === "success" && message.result) {
 						responseText = message.result;
 					}
