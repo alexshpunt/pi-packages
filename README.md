@@ -61,7 +61,7 @@ Config: `~/.pi/agent/claude-bridge.json` (global) or `.pi/claude-bridge.json` (p
   "maxHistoryMessages": 40,
   "askClaude": {
     "enabled": true,
-    "allowFullMode": false,
+    "allowFullMode": true,
     "description": "Custom tool description override"
   }
 }
