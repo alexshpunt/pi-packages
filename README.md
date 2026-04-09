@@ -71,11 +71,11 @@ Config: `~/.pi/agent/claude-bridge.json` (global) or `.pi/claude-bridge.json` (p
 
 ## Tests
 
-`npm run test:unit` for offline tests; `CLAUDE_BRIDGE_TESTING_ALT_MODEL=openrouter/z-ai/glm-4.7-flash npm test` for the full suite (hits APIs).
+`npm run test:unit` for offline tests (queue, import). `npm test` for the full suite including integration tests that hit APIs (smoke, multi-turn, cache/session-resume). Set `CLAUDE_BRIDGE_TESTING_ALT_MODEL` in `.env.test` for the alt-provider smoke test (e.g. `openrouter/z-ai/glm-4.7-flash`).
 
 ## Debugging
 
-Set `CLAUDE_BRIDGE_DEBUG=1` to log to `~/.pi/agent/claude-bridge.log`.
+Set `CLAUDE_BRIDGE_DEBUG=1` to log to `~/.pi/agent/claude-bridge.log`. Override output file with `CLAUDE_BRIDGE_DEBUG_PATH`.
 
 ## Maintenance
 
