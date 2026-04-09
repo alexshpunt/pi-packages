@@ -727,6 +727,22 @@ const queryStateStack: SavedQueryState[] = [];
 // Stashed UI reference for notifying users from the provider (which has no ctx).
 let piUI: ExtensionUIContext | null = null;
 
+// --- Background AskClaude tasks ---
+interface BackgroundTask {
+	id: string;
+	prompt: string;
+	status: "running" | "completed" | "error";
+	toolCalls: Map<string, ToolCallState>;
+	result?: string;
+	error?: string;
+	startedAt: number;
+	completedAt?: number;
+	abortController: AbortController;
+	progressInterval?: ReturnType<typeof setInterval>;
+}
+const backgroundTasks = new Map<string, BackgroundTask>();
+let nextBgId = 1;
+
 // Per-turn output state (reset on each streamSimple call that starts a new pi turn)
 let turnOutput: AssistantMessage | null = null;
 let turnBlocks: Array<any> = [];
@@ -1633,6 +1649,7 @@ export default function (pi: ExtensionAPI) {
 				model: Type.Optional(Type.String({ description: 'Claude model (e.g. "opus", "sonnet", "haiku", or full ID). Defaults to "opus".' })),
 				thinking: Type.Optional(StringEnum(["off", "minimal", "low", "medium", "high", "xhigh"] as const, { description: "Thinking effort level. Omit to use Claude Code's default." })),
 				isolated: Type.Optional(Type.Boolean({ description: "When true, Claude sees only this prompt (clean session). When false (default), Claude sees the full conversation history." })),
+				background: Type.Optional(Type.Boolean({ description: "When true, Claude runs in the background and you continue working. The result is delivered as a follow-up message when done. Use for tasks that don't block your current work." })),
 			}),
 			renderCall(args, theme) {
 				let text = theme.fg("mdLink", theme.bold("AskClaude "));
@@ -1642,6 +1659,7 @@ export default function (pi: ExtensionAPI) {
 				if (args.model) tags.push(`model=${args.model}`);
 				if (args.thinking) tags.push(`thinking=${args.thinking}`);
 				if (args.isolated) tags.push("isolated");
+				if (args.background) tags.push("background");
 				if (tags.length) text += `${theme.fg("accent", `[${tags.join(", ")}]`)} `;
 				const truncated = args.prompt.length > PREVIEW_MAX_CHARS ? args.prompt.substring(0, PREVIEW_MAX_CHARS) : args.prompt;
 				const lines = truncated.split("\n").slice(0, PREVIEW_MAX_LINES);
@@ -1693,6 +1711,75 @@ export default function (pi: ExtensionAPI) {
 				const toolCalls = new Map<string, ToolCallState>();
 				const start = Date.now();
 
+				// --- Background mode: fire-and-forget, deliver result via sendMessage ---
+				if (params.background) {
+					const bgId = `claude-bg-${nextBgId++}`;
+					debug(`askClaude bg ${bgId}: starting, mode=${mode}, model=${params.model ?? "default"}, isolated=${params.isolated ?? false}`);
+					const ac = new AbortController();
+					const task: BackgroundTask = {
+						id: bgId,
+						prompt: params.prompt,
+						status: "running",
+						toolCalls,
+						startedAt: start,
+						abortController: ac,
+					};
+					backgroundTasks.set(bgId, task);
+
+					// Footer progress
+					const statusKey = `ask-claude-${bgId}`;
+					task.progressInterval = setInterval(() => {
+						const elapsed = ((Date.now() - start) / 1000).toFixed(0);
+						const summary = buildActionSummary(toolCalls);
+						const status = summary ? `${elapsed}s — ${summary}` : `${elapsed}s — working...`;
+						piUI?.setStatus(statusKey, piUI.theme.fg("mdLink", `◉ ${bgId}: `) + piUI.theme.fg("muted", status));
+					}, 1000);
+
+					// Run detached — result delivered via sendMessage
+					promptAndWait(params.prompt, mode, toolCalls, ac.signal, {
+						systemPrompt: ctx.getSystemPrompt(),
+						appendSkills: askConf?.appendSkills,
+						model: params.model,
+						thinking: params.thinking,
+						isolated: params.isolated,
+						context: params.isolated ? undefined : buildSessionContext(ctx.sessionManager.getBranch()).messages as Context["messages"],
+					}).then((result) => {
+						clearInterval(task.progressInterval);
+						piUI?.setStatus(statusKey, undefined);
+						task.status = "completed";
+						task.result = result.responseText;
+						task.completedAt = Date.now();
+						const elapsed = ((task.completedAt - start) / 1000).toFixed(1);
+						const actions = buildActionSummary(toolCalls);
+						const body = actions
+							? `${result.responseText}\n\n[Claude Code actions: ${actions}]`
+							: result.responseText;
+						debug(`askClaude bg ${bgId}: completed in ${elapsed}s, actions=${actions || "none"}`);
+						pi.sendMessage(
+							{ customType: "ask-claude-bg-result", content: `Background AskClaude task ${bgId} completed (${elapsed}s):\n\n${body}`, display: true },
+							{ triggerTurn: true, deliverAs: "followUp" },
+						);
+					}).catch((err) => {
+						clearInterval(task.progressInterval);
+						piUI?.setStatus(statusKey, undefined);
+						task.status = "error";
+						task.error = errorMessage(err);
+						task.completedAt = Date.now();
+						const elapsed = ((task.completedAt - start) / 1000).toFixed(1);
+						debug(`askClaude bg ${bgId}: error in ${elapsed}s:`, err);
+						pi.sendMessage(
+							{ customType: "ask-claude-bg-result", content: `Background AskClaude task ${bgId} failed (${elapsed}s): ${task.error}`, display: true },
+							{ triggerTurn: true, deliverAs: "followUp" },
+						);
+					});
+
+					return {
+						content: [{ type: "text" as const, text: `Background task ${bgId} started. You'll receive the result when it completes.` }],
+						details: { prompt: params.prompt, backgroundId: bgId },
+					};
+				}
+
+				// --- Foreground mode (default) ---
 				const progressInterval = setInterval(() => {
 					const elapsed = ((Date.now() - start) / 1000).toFixed(0);
 					const summary = buildActionSummary(toolCalls);
