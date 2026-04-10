@@ -403,8 +403,10 @@ function msgPreview(msg: { role: string; content?: unknown }): string {
 	return `${msg.role}:${JSON.stringify(typeof text === "string" ? text.slice(0, 60) : text)}`;
 }
 
-// Extract tool results for the current turn from the end of context.
-// Stops at the nearest assistant or user message — only collects results from THIS turn.
+// Pi doesn't pass tool results directly — it appends them to the context and calls
+// the provider again. This function scrapes them back out by walking the context tail.
+// Fragile: assumes a clean assistant → toolResult* sequence with nothing interleaved.
+// See issue #3 — breaks when pi injects user messages between tool_use and toolResult.
 function extractAllToolResults(context: Context): McpResult[] {
 	const results: McpResult[] = [];
 	let stopIdx = -1;

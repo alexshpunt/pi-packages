@@ -227,7 +227,10 @@ await test("new query sees clean state after drain", async () => {
 
 console.log("Scenario H: extractAllToolResults boundaries");
 
-// Minimal reimplementation of extractAllToolResults for testing
+// Mirrors the core logic of extractAllToolResults from index.ts.
+// Skips toolResultToMcpContent (content conversion) and debug logging —
+// we're testing the backward walk and stop conditions, not content mapping.
+// If the real function's walk logic changes, update this to match.
 function extractAllToolResults(messages) {
 	const results = [];
 	for (let i = messages.length - 1; i >= 0; i--) {
@@ -284,6 +287,254 @@ await test("three turns: only last turn's results", async () => {
 	assert.equal(results.length, 2);
 	assert.equal(results[0].content, "turn3a");
 	assert.equal(results[1].content, "turn3b");
+});
+
+// --- Scenario H2: interleaved messages in tool result sequences ---
+// Tests all permutations of non-toolResult messages appearing in contexts
+// where extractAllToolResults needs to find tool results.
+// Issue #3: pi can inject user messages (steer, followUp, orchestrator context)
+// between tool_use and toolResult, breaking the backward walk.
+
+console.log("Scenario H2: interleaved messages in tool result sequences");
+
+// Helper: run extractAllToolResults and also simulate bridge delivery
+function simulateDelivery(messages, expectedHandlers) {
+	const results = extractAllToolResults(messages);
+	const bridge = createBridge();
+	for (let i = 0; i < expectedHandlers; i++) bridge.waitForResult();
+	for (const r of results) bridge.deliverResult(r);
+	return { results, bridge };
+}
+
+// -- User message at tail (no toolResult yet) --
+
+await test("user message at tail, no toolResult → must find 0 and not enter delivery", async () => {
+	// Defensive: shouldn't happen with current pi (steer arrives after tool
+	// execution, so toolResult is always present), but tests the boundary
+	const messages = [
+		{ role: "user", content: "prompt" },
+		{ role: "assistant", content: [{ type: "toolCall", name: "read", id: "t1" }] },
+		{ role: "user", content: "steer message" },
+	];
+	const { results, bridge } = simulateDelivery(messages, 1);
+	assert.equal(results.length, 0);
+	// Caller must check lastMsgRole before delivering — handler should stay available
+	assert.equal(bridge.handlersWaiting, 1, "handler still stuck — caller should have skipped delivery");
+	bridge.drain({ content: [] });
+});
+
+// -- User message hides toolResult behind it --
+
+await test("assistant → toolResult → user at tail → must find toolResult", async () => {
+	const messages = [
+		{ role: "user", content: "prompt" },
+		{ role: "assistant", content: [{ type: "toolCall", name: "read", id: "t1" }] },
+		{ role: "toolResult", toolCallId: "t1", content: "result" },
+		{ role: "user", content: "steer arrived after result" },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 1, `expected 1, got ${results.length}`);
+	assert.equal(results[0].content, "result");
+});
+
+// -- User message splits toolResults --
+
+await test("user message between 2 toolResults → must find both", async () => {
+	const messages = [
+		{ role: "user", content: "prompt" },
+		{ role: "assistant", content: [{ type: "toolCall", id: "t1" }, { type: "toolCall", id: "t2" }] },
+		{ role: "toolResult", toolCallId: "t1", content: "first" },
+		{ role: "user", content: "injected" },
+		{ role: "toolResult", toolCallId: "t2", content: "second" },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 2, `expected 2, got ${results.length}`);
+	assert.equal(results[0].content, "first");
+	assert.equal(results[1].content, "second");
+});
+
+await test("user message splits 5 toolResults (3 before, 2 after)", async () => {
+	const messages = [
+		{ role: "user", content: "prompt" },
+		{ role: "assistant", content: [{ type: "toolCall", id: "t1" }, { type: "toolCall", id: "t2" }, { type: "toolCall", id: "t3" }, { type: "toolCall", id: "t4" }, { type: "toolCall", id: "t5" }] },
+		{ role: "toolResult", toolCallId: "t1", content: "r1" },
+		{ role: "toolResult", toolCallId: "t2", content: "r2" },
+		{ role: "toolResult", toolCallId: "t3", content: "r3" },
+		{ role: "user", content: "injected" },
+		{ role: "toolResult", toolCallId: "t4", content: "r4" },
+		{ role: "toolResult", toolCallId: "t5", content: "r5" },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 5, `expected 5, got ${results.length}`);
+	for (let i = 0; i < 5; i++) assert.equal(results[i].content, `r${i + 1}`);
+});
+
+// -- Multiple user messages interleaved --
+
+await test("multiple user messages interleaved with toolResults", async () => {
+	const messages = [
+		{ role: "user", content: "prompt" },
+		{ role: "assistant", content: [{ type: "toolCall", id: "t1" }, { type: "toolCall", id: "t2" }, { type: "toolCall", id: "t3" }] },
+		{ role: "toolResult", toolCallId: "t1", content: "r1" },
+		{ role: "user", content: "steer 1" },
+		{ role: "toolResult", toolCallId: "t2", content: "r2" },
+		{ role: "user", content: "steer 2" },
+		{ role: "toolResult", toolCallId: "t3", content: "r3" },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 3, `expected 3, got ${results.length}`);
+	for (let i = 0; i < 3; i++) assert.equal(results[i].content, `r${i + 1}`);
+});
+
+await test("user message before every toolResult", async () => {
+	const messages = [
+		{ role: "user", content: "prompt" },
+		{ role: "assistant", content: [{ type: "toolCall", id: "t1" }, { type: "toolCall", id: "t2" }] },
+		{ role: "user", content: "steer 1" },
+		{ role: "toolResult", toolCallId: "t1", content: "r1" },
+		{ role: "user", content: "steer 2" },
+		{ role: "toolResult", toolCallId: "t2", content: "r2" },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 2, `expected 2, got ${results.length}`);
+});
+
+// -- Assistant message interleaved (shouldn't happen, but defensive) --
+
+await test("assistant message between toolResults → must find results after it", async () => {
+	// If pi somehow inserts an assistant message mid-results, we should still
+	// collect the results after it (current-turn boundary)
+	const messages = [
+		{ role: "user", content: "prompt" },
+		{ role: "assistant", content: [{ type: "toolCall", id: "t1" }, { type: "toolCall", id: "t2" }] },
+		{ role: "toolResult", toolCallId: "t1", content: "old" },
+		{ role: "assistant", content: [{ type: "text", text: "spurious" }] },
+		{ role: "toolResult", toolCallId: "t2", content: "new" },
+	];
+	const results = extractAllToolResults(messages);
+	// Current behavior: stops at assistant, only gets "new"
+	// This is arguably correct — assistant message starts a new turn
+	assert.equal(results.length, 1);
+	assert.equal(results[0].content, "new");
+});
+
+// -- Unknown/custom roles interleaved --
+
+// Note: pi's Context.messages only has roles "user", "assistant", "toolResult".
+// Custom roles (bashExecution, custom, branchSummary) are converted to "user"
+// by convertToLlm() before reaching the provider. No need to test other roles.
+
+// -- Bridge-level consequence: partial delivery --
+
+await test("partial delivery leaves handlers stuck", async () => {
+	// 3 handlers waiting, but user message hides 1 toolResult → only 2 delivered
+	const messages = [
+		{ role: "user", content: "prompt" },
+		{ role: "assistant", content: [{ type: "toolCall", id: "t1" }, { type: "toolCall", id: "t2" }, { type: "toolCall", id: "t3" }] },
+		{ role: "toolResult", toolCallId: "t1", content: "r1" },
+		{ role: "user", content: "injected" },
+		{ role: "toolResult", toolCallId: "t2", content: "r2" },
+		{ role: "toolResult", toolCallId: "t3", content: "r3" },
+	];
+	const { results, bridge } = simulateDelivery(messages, 3);
+	// Must deliver all 3
+	assert.equal(results.length, 3, `expected 3 results, got ${results.length}`);
+	assert.equal(bridge.handlersWaiting, 0, `${bridge.handlersWaiting} handlers still stuck`);
+});
+
+// -- Multi-turn with interleaved messages in current turn only --
+
+await test("multi-turn: user message in current turn only, previous turn clean", async () => {
+	const messages = [
+		{ role: "user", content: "prompt" },
+		{ role: "assistant", content: [{ type: "toolCall", id: "t1" }] },
+		{ role: "toolResult", toolCallId: "t1", content: "turn1-clean" },
+		// Turn 2: has interleaved user message
+		{ role: "assistant", content: [{ type: "toolCall", id: "t2" }, { type: "toolCall", id: "t3" }] },
+		{ role: "toolResult", toolCallId: "t2", content: "turn2-r1" },
+		{ role: "user", content: "steer" },
+		{ role: "toolResult", toolCallId: "t3", content: "turn2-r2" },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 2, `expected 2 (current turn only), got ${results.length}`);
+	assert.equal(results[0].content, "turn2-r1");
+	assert.equal(results[1].content, "turn2-r2");
+});
+
+// -- isError propagation through interleaved messages --
+
+await test("isError propagates through interleaved user messages", async () => {
+	const messages = [
+		{ role: "user", content: "prompt" },
+		{ role: "assistant", content: [{ type: "toolCall", id: "t1" }, { type: "toolCall", id: "t2" }] },
+		{ role: "toolResult", toolCallId: "t1", content: "ok", isError: false },
+		{ role: "user", content: "steer" },
+		{ role: "toolResult", toolCallId: "t2", content: "failed", isError: true },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 2);
+	assert.equal(results[0].isError, false);
+	assert.equal(results[1].isError, true);
+});
+
+// -- Edge cases --
+
+await test("empty context returns empty", async () => {
+	const results = extractAllToolResults([]);
+	assert.equal(results.length, 0);
+});
+
+await test("context with only user message returns empty", async () => {
+	const results = extractAllToolResults([{ role: "user", content: "hello" }]);
+	assert.equal(results.length, 0);
+});
+
+await test("context with only toolResults (no assistant) returns all", async () => {
+	// Degenerate case — shouldn't happen, but function should handle it
+	const messages = [
+		{ role: "toolResult", toolCallId: "t1", content: "orphan1" },
+		{ role: "toolResult", toolCallId: "t2", content: "orphan2" },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 2);
+});
+
+await test("single toolResult returns it", async () => {
+	const messages = [
+		{ role: "assistant", content: [{ type: "toolCall", id: "t1" }] },
+		{ role: "toolResult", toolCallId: "t1", content: "only" },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 1);
+	assert.equal(results[0].content, "only");
+});
+
+await test("consecutive user messages at tail with toolResult behind both", async () => {
+	const messages = [
+		{ role: "assistant", content: [{ type: "toolCall", id: "t1" }] },
+		{ role: "toolResult", toolCallId: "t1", content: "result" },
+		{ role: "user", content: "steer 1" },
+		{ role: "user", content: "steer 2" },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 1, `expected 1, got ${results.length}`);
+});
+
+await test("user message at tail with no toolResult and no assistant", async () => {
+	const messages = [
+		{ role: "user", content: "steer into void" },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 0);
+});
+
+await test("assistant with tool_calls but no toolResults yet → empty", async () => {
+	const messages = [
+		{ role: "user", content: "prompt" },
+		{ role: "assistant", content: [{ type: "toolCall", id: "t1" }, { type: "toolCall", id: "t2" }] },
+	];
+	const results = extractAllToolResults(messages);
+	assert.equal(results.length, 0);
 });
 
 await test("no tool results at end returns empty", async () => {
