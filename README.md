@@ -62,6 +62,8 @@ Config: `~/.pi/agent/claude-bridge.json` (global) or `.pi/claude-bridge.json` (p
   "askClaude": {
     "enabled": true,
     "allowFullMode": true,
+    "defaultBackground": false,
+    "defaultIsolated": false,
     "description": "Custom tool description override"
   }
 }

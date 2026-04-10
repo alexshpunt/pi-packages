@@ -117,6 +117,8 @@ interface Config {
 		label?: string;
 		description?: string;
 		defaultMode?: "full" | "read" | "none";
+		defaultBackground?: boolean;
+		defaultIsolated?: boolean;
 		allowFullMode?: boolean;
 		appendSkills?: boolean;
 	};
@@ -1632,6 +1634,8 @@ export default function (pi: ExtensionAPI) {
 	const askConf = config.askClaude;
 	const allowFull = askConf?.allowFullMode !== false;
 	const defaultMode = askConf?.defaultMode ?? "read";
+	const defaultBackground = askConf?.defaultBackground ?? false;
+	const defaultIsolated = askConf?.defaultIsolated ?? false;
 	askClaudeToolName = askConf?.name ?? "AskClaude";
 
 	const modeValues = allowFull ? ["read", "full", "none"] as const : ["read", "none"] as const;
@@ -1708,13 +1712,15 @@ export default function (pi: ExtensionAPI) {
 				}
 
 				const mode = (params.mode ?? defaultMode) as "full" | "read" | "none";
+				const isolated = params.isolated ?? defaultIsolated;
+				const background = params.background ?? defaultBackground;
 				const toolCalls = new Map<string, ToolCallState>();
 				const start = Date.now();
 
 				// --- Background mode: fire-and-forget, deliver result via sendMessage ---
-				if (params.background) {
+				if (background) {
 					const bgId = `claude-bg-${nextBgId++}`;
-					debug(`askClaude bg ${bgId}: starting, mode=${mode}, model=${params.model ?? "default"}, isolated=${params.isolated ?? false}`);
+					debug(`askClaude bg ${bgId}: starting, mode=${mode}, model=${params.model ?? "default"}, isolated=${isolated}`);
 					const ac = new AbortController();
 					const task: BackgroundTask = {
 						id: bgId,
@@ -1741,8 +1747,8 @@ export default function (pi: ExtensionAPI) {
 						appendSkills: askConf?.appendSkills,
 						model: params.model,
 						thinking: params.thinking,
-						isolated: params.isolated,
-						context: params.isolated ? undefined : buildSessionContext(ctx.sessionManager.getBranch()).messages as Context["messages"],
+						isolated,
+						context: isolated ? undefined : buildSessionContext(ctx.sessionManager.getBranch()).messages as Context["messages"],
 					}).then((result) => {
 						clearInterval(task.progressInterval);
 						piUI?.setStatus(statusKey, undefined);
@@ -1796,8 +1802,8 @@ export default function (pi: ExtensionAPI) {
 						appendSkills: askConf?.appendSkills,
 						model: params.model,
 						thinking: params.thinking,
-						isolated: params.isolated,
-						context: params.isolated ? undefined : buildSessionContext(ctx.sessionManager.getBranch()).messages as Context["messages"],
+						isolated,
+						context: isolated ? undefined : buildSessionContext(ctx.sessionManager.getBranch()).messages as Context["messages"],
 					});
 					clearInterval(progressInterval);
 					onUpdate?.({ content: [{ type: "text", text: "" }], details: {} });
@@ -1813,7 +1819,7 @@ export default function (pi: ExtensionAPI) {
 					};
 				} catch (err) {
 					clearInterval(progressInterval);
-					debug(`askClaude error: mode=${mode}, model=${params.model ?? "default"}, isolated=${params.isolated ?? false}, elapsed=${((Date.now() - start) / 1000).toFixed(1)}s, error=`, err);
+					debug(`askClaude error: mode=${mode}, model=${params.model ?? "default"}, isolated=${isolated}, elapsed=${((Date.now() - start) / 1000).toFixed(1)}s, error=`, err);
 					const msg = errorMessage(err);
 					return {
 						content: [{ type: "text" as const, text: `Error: ${msg}` }],
