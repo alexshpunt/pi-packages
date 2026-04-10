@@ -100,6 +100,19 @@ function waitForEvent(type, timeout = TEST_TIMEOUT) {
 	});
 }
 
+function waitForMatch(predicate, description, timeout = TEST_TIMEOUT) {
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => reject(new Error(`Timeout waiting for ${description}`)), timeout);
+		listeners.push(function handler(msg) {
+			if (predicate(msg)) {
+				clearTimeout(timer);
+				listeners.splice(listeners.indexOf(handler), 1);
+				resolve(msg);
+			}
+		});
+	});
+}
+
 function collectText() {
 	let text = "";
 	const handler = (msg) => {
@@ -211,6 +224,30 @@ await test("parallel tool calls with steer delivers all results", async () => {
 	const matches = (text.match(/slowtool completed/gi) || []).length;
 	if (matches < 3)
 		throw new Error(`Expected 3 SlowTool results, found ${matches}: ${text.slice(0, 300)}`);
+});
+
+
+await test("steer during tool execution is visible to assistant", async () => {
+	// Bug: when a steer arrives during tool execution, pi drains it at the turn
+	// boundary and injects it into context alongside the tool result. The bridge
+	// sees activeQuery=true, enters tool-result-delivery mode, extracts the tool
+	// result, but silently ignores the trailing user message (the steer). Claude
+	// never sees the steer content.
+	const collector = collectText();
+	await send({
+		type: "prompt",
+		message: "Call SlowTool with seconds=2. After it returns, repeat exactly what it returned.",
+	});
+	await waitForEvent("tool_execution_start");
+	await send({
+		type: "prompt",
+		message: "IMPORTANT: Also say the exact word 'MANGO' on its own line in your response.",
+		streamingBehavior: "steer",
+	});
+	await waitForEvent("agent_end", 20_000);
+	const text = collector.stop();
+	if (!text.toLowerCase().includes("mango"))
+		throw new Error(`Steer content not visible to assistant (expected 'mango'): ${text.slice(0, 300)}`);
 });
 
 await test("abort during tool execution recovers cleanly", async () => {

@@ -722,6 +722,11 @@ let pendingResults = new Map<string, McpResult>();
 let turnToolCallIds: string[] = [];
 let nextHandlerIdx = 0;
 
+// User messages (steers/followUps) injected by pi during an active query.
+// These can't be forwarded mid-query — they're saved here and replayed as
+// continuation queries after consumeQuery finishes.
+let deferredUserMessages: string[] = [];
+
 // State stack: when a subagent starts a fresh query while the main query is active,
 // we save the main's state and restore it when the subagent's query ends.
 interface SavedQueryState {
@@ -1214,6 +1219,23 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 			debug(`WARNING: ${pendingToolCalls.size} MCP handlers still waiting after delivering ${allResults.length} results`);
 			piUI?.notify(`Claude bridge: ${pendingToolCalls.size} tool handler(s) still waiting — provider may be stuck`, "warning");
 		}
+
+		// Detect user messages (steer/followUp) that pi injected into context
+		// during the active query. This happens when:
+		//   - User sends a steer while a tool is executing; pi drains the steer
+		//     queue at the turn boundary and appends it to context alongside the
+		//     tool result, then calls the provider again.
+		//   - A followUp is delivered between tool-result turns.
+		// The bridge can't forward these mid-query (the SDK query is in progress),
+		// so we save them for replay as continuation queries after consumeQuery ends.
+		if (lastMsgRole === "user") {
+			const userPrompt = extractUserPrompt(context.messages);
+			if (userPrompt) {
+				deferredUserMessages.push(userPrompt);
+				debug(`provider: deferred user message for replay after query: ${userPrompt.slice(0, 60)}`);
+			}
+		}
+
 		if (sharedSession) sharedSession.cursor = context.messages.length;
 		return stream;
 	}
@@ -1355,7 +1377,7 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 
 	// Background consumer — runs until query ends
 	consumeQuery(sdkQuery, customToolNameToPi, model, () => wasAborted)
-		.then(({ capturedSessionId }) => {
+		.then(async ({ capturedSessionId }) => {
 			debug(`provider: consumeQuery completed, stopReason=${turnOutput?.stopReason}, error=${turnOutput?.errorMessage}, aborted=${wasAborted}`);
 
 			// Check abort FIRST — don't update sharedSession with a session ID
@@ -1363,6 +1385,7 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 			// persisted the session, so resuming it later → "conversation not found".
 			if (wasAborted || options?.signal?.aborted) {
 				sharedSession = null;
+				deferredUserMessages = [];
 				debug(`provider: abort detected, cleared sharedSession`);
 				if (turnOutput) {
 					turnOutput.stopReason = "aborted";
@@ -1386,11 +1409,49 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 				debug(`provider: query done, session=${sessionId.slice(0, 8)}, cursor=${cursor}`);
 				sharedSession = { sessionId, cursor, cwd };
 			}
+
+			// Replay deferred user messages as continuation queries.
+			// Only for outermost queries — reentrant (subagent) queries leave
+			// deferred messages for the parent to handle after it finishes.
+			while (deferredUserMessages.length > 0 && !isReentrant && !wasAborted) {
+				const steerPrompt = deferredUserMessages.shift()!;
+				debug(`provider: replaying deferred user message: ${steerPrompt.slice(0, 60)}`);
+				resetTurnState(model);
+
+				const resumeId = sharedSession?.sessionId;
+				if (!resumeId) {
+					debug(`WARNING: no session to resume for deferred message, dropping`);
+					break;
+				}
+
+				const contOptions = { ...queryOptions, resume: resumeId };
+				const contQuery = query({ prompt: steerPrompt, options: contOptions });
+				activeQuery = contQuery;
+
+				debug(`provider: continuation query, model=${model.id}, resume=${resumeId.slice(0, 8)}, prompt=${steerPrompt.slice(0, 60)}`);
+
+				try {
+					const { capturedSessionId: contSid } = await consumeQuery(contQuery, customToolNameToPi, model, () => wasAborted);
+					const sid = contSid ?? sharedSession?.sessionId;
+					if (sid) {
+						sharedSession = { sessionId: sid, cursor: sharedSession?.cursor ?? 0, cwd };
+					}
+				} catch (contError) {
+					debug(`provider: continuation query error:`, contError);
+					break;
+				} finally {
+					contQuery.close();
+				}
+			}
+
+			// Restore activeQuery to sdkQuery so .finally() handles cleanup correctly
+			activeQuery = sdkQuery;
 			finalizeCurrentStream(turnOutput?.stopReason);
 		})
 		.catch((error) => {
 			debug(`provider: query error, model=${model.id}, aborted=${Boolean(options?.signal?.aborted)}, error=`, error);
 			if (wasAborted || options?.signal?.aborted) sharedSession = null; // don't resume a killed session
+			deferredUserMessages = [];
 			if (turnOutput) {
 				turnOutput.stopReason = options?.signal?.aborted ? "aborted" : "error";
 				turnOutput.errorMessage = error instanceof Error ? error.message : String(error);
