@@ -41,21 +41,7 @@
   class instance keyed by session/query ID.
 
 - **Per-turn queries** (alternative to long-running query + reentrant delivery):
-  Instead of one `query()` call with MCP handlers blocking the SDK generator for
-  tool results, each `streamClaudeAgentSdk` call would start its own `query()` that
-  resumes the session. Tool results would be injected into the cc-session-io session
-  and the next `query()` would pick them up via resume.
-
-  This would eliminate: `activeQuery` tracking, `pendingToolCalls`/`pendingResults`
-  maps, `queryStateStack` save/restore, the deferred-steer-replay mechanism, and
-  the entire reentrant call path. Every provider call becomes a fresh query —
-  steers, followUps, and tool results are all just "resume with new message."
-
-  Challenges: the SDK's `query()` currently expects to handle tool execution via MCP
-  handlers internally. Per-turn queries would need a way to inject tool results into
-  the session externally (append `tool_result` records to the session JSONL before
-  resuming). May need cc-session-io changes or manual JSONL manipulation. Session
-  resume overhead per turn is likely negligible with prompt caching.
+  Core architecture validated — see [plan](docs/per-turn-queries-plan.md).
 
 ## Testing Gaps
 
