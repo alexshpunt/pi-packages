@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Repair orphan tool_use/tool_result pairs before import** — `convertAndImportMessages` now runs a pairing-repair pass that strips leading orphan `tool_result` blocks, injects synthetic `tool_result`s for assistant `tool_use`s missing a response, and drops mid-conversation orphans. Prevents API 400s when history starts mid-turn (provider switches, Case-4 session sync).
+
 ## 0.1.6 — 2026-04-10
 
 - **Fix: steer messages during tool execution now reach Claude** — when a user sends a steer while a tool is executing, pi injects it into context alongside the tool result. The bridge previously only processed tool results in this path, silently dropping the steer. Now detected and replayed as a continuation query after the current query completes.
