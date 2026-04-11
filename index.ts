@@ -7,7 +7,7 @@ import { z } from "zod";
 import { pascalCase } from "change-case";
 import { Type } from "@sinclair/typebox";
 import { Text } from "@mariozechner/pi-tui";
-import { createSession } from "cc-session-io";
+import { createSession, deleteSession } from "cc-session-io";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync, statSync } from "fs";
 import { homedir } from "os";
 import { dirname, join, resolve } from "path";
@@ -625,13 +625,25 @@ function debugSessionPaths(label: string, cwd: string, jsonlPath: string): void 
 //     streamSimple returns, which CC's own persisted session already has).
 //     Returns the existing sessionId. Keeps CC's prompt cache warm.
 //   REBUILD — no session yet, or pi's history has diverged (non-trailing
-//     missed messages, e.g. another provider took a turn). Creates a fresh
-//     session file containing all prior messages and resumes that.
-//     Injecting into an existing session was tried before and CC treats the
-//     graft as a branch that --resume doesn't follow, so a full rebuild is
-//     the simplest correct approach.
-// Log strings still say "Case 1/2/3/4" so existing diagnostics (cache-test.sh,
-// session-resume-test) keep grepping the same anchors.
+//     missed messages, e.g. another provider took a turn). Wipes the existing
+//     session file (if any) and writes a fresh one containing all prior
+//     messages, reusing the same sessionId across rebuilds so UUIDs stay
+//     stable for the lifetime of pi's session.
+//
+// Why a full rebuild rather than patching:
+//   Injecting deltas into an existing session creates a branch that CC's
+//   --resume doesn't follow (documented attempt prior to this). A complete
+//   overwrite at the same path is simpler and correct.
+//
+// Why reuse the sessionId across rebuilds:
+//   CC re-reads the JSONL on every --resume call — no in-process UUID
+//   caching. Validated in tests/exp-session-clear.mjs, including the case
+//   where CC had appended its own tool_use/tool_result records between
+//   rebuilds. Preserving the UUID means stable log correlation across
+//   provider switches and no orphaned session files.
+//
+// Log strings still say "Case 1/2/3/4" so existing diagnostics (int-cache.sh,
+// int-session-resume.mjs) keep grepping the same anchors.
 function syncSharedSession(
 	messages: Context["messages"],
 	cwd: string,
@@ -659,17 +671,26 @@ function syncSharedSession(
 		debug(`Case 1: clean start, ${messages.length} total messages`);
 		return { sessionId: null };
 	}
-	const session = createSession({ projectPath: cwd, claudeDir: process.env.CLAUDE_CONFIG_DIR, ...(modelId ? { model: modelId } : {}) });
-	convertAndImportMessages(session, priorMessages, customToolNameToSdk);
-	session.save();
 	const previousSessionId = sharedSession?.sessionId;
 	const previousCursor = sharedSession?.cursor ?? 0;
+	// Wipe prior jsonl + companion dir (no-op if nothing to wipe).
+	if (previousSessionId !== undefined) {
+		deleteSession(previousSessionId, cwd, process.env.CLAUDE_CONFIG_DIR);
+	}
+	const session = createSession({
+		projectPath: cwd,
+		claudeDir: process.env.CLAUDE_CONFIG_DIR,
+		...(previousSessionId !== undefined ? { sessionId: previousSessionId } : {}),
+		...(modelId ? { model: modelId } : {}),
+	});
+	convertAndImportMessages(session, priorMessages, customToolNameToSdk);
+	session.save();
 	sharedSession = { sessionId: session.sessionId, cursor: priorMessages.length, cwd };
 	if (previousSessionId === undefined) {
 		debug(`Case 2: first turn with ${priorMessages.length} prior messages → session ${session.sessionId.slice(0, 8)}, ${session.messages.length} records`);
 	} else {
 		const missedCount = priorMessages.length - previousCursor;
-		debug(`Case 4: ${missedCount} missed messages, ${priorMessages.length} total → new session ${session.sessionId.slice(0, 8)} (was ${previousSessionId.slice(0, 8)}), ${session.messages.length} records`);
+		debug(`Case 4: ${missedCount} missed messages, ${priorMessages.length} total → rewrote session ${session.sessionId.slice(0, 8)} (same id), ${session.messages.length} records`);
 	}
 	debugSessionPaths(`${session.sessionId.slice(0, 8)}`, cwd, session.jsonlPath);
 	return { sessionId: session.sessionId };
