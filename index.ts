@@ -318,6 +318,11 @@ interface SessionState {
 	sessionId: string;
 	cursor: number;
 	cwd: string;
+	// Set after an abort: the session file on disk may be in an indeterminate
+	// state (CC partially wrote assistant output before the interrupt), so
+	// REUSE must not fire. REBUILD still preserves the sessionId via
+	// deleteSession+createSession, which wipes the partial state cleanly.
+	needsRebuild?: boolean;
 }
 
 let sharedSession: SessionState | null = null;
@@ -653,7 +658,7 @@ function syncSharedSession(
 	const priorMessages = messages.slice(0, -1); // everything before the new user prompt
 
 	// REUSE path
-	if (sharedSession) {
+	if (sharedSession && !sharedSession.needsRebuild) {
 		const missed = priorMessages.slice(sharedSession.cursor);
 		const trailingAssistantOnly =
 			missed.length === 1 && (missed[0] as { role?: string }).role === "assistant";
@@ -662,6 +667,7 @@ function syncSharedSession(
 				sharedSession = { ...sharedSession, cursor: priorMessages.length, cwd };
 			}
 			debug(`Case 3: ${trailingAssistantOnly ? "advanced cursor past trailing assistant, " : ""}resuming session ${sharedSession.sessionId.slice(0, 8)}, cursor=${sharedSession.cursor}`);
+			debug(`syncResult: path=reuse sessionId=${sharedSession.sessionId} cursor=${sharedSession.cursor}`);
 			return { sessionId: sharedSession.sessionId };
 		}
 	}
@@ -669,18 +675,27 @@ function syncSharedSession(
 	// REBUILD path
 	if (priorMessages.length === 0) {
 		debug(`Case 1: clean start, ${messages.length} total messages`);
+		debug(`syncResult: path=clean-start`);
 		return { sessionId: null };
 	}
 	const previousSessionId = sharedSession?.sessionId;
 	const previousCursor = sharedSession?.cursor ?? 0;
-	// Wipe prior jsonl + companion dir (no-op if nothing to wipe).
-	if (previousSessionId !== undefined) {
-		deleteSession(previousSessionId, cwd, process.env.CLAUDE_CONFIG_DIR);
+	// After an abort, the killed CC subprocess may still be flushing its
+	// interrupt cleanup (including a stray "[Request interrupted by user]"
+	// record with a parentUuid from its in-memory state). If we reuse the
+	// same sessionId → same file path, those late writes race with our
+	// rebuild and append an orphan record that breaks CC's parent-uuid
+	// chain on the next resume. Take a fresh UUID in this one case to
+	// sidestep the race; normal rebuilds still preserve the sessionId.
+	const preserveId = previousSessionId !== undefined && !sharedSession?.needsRebuild;
+	if (preserveId) {
+		// Wipe prior jsonl + companion dir (no-op if nothing to wipe).
+		deleteSession(previousSessionId!, cwd, process.env.CLAUDE_CONFIG_DIR);
 	}
 	const session = createSession({
 		projectPath: cwd,
 		claudeDir: process.env.CLAUDE_CONFIG_DIR,
-		...(previousSessionId !== undefined ? { sessionId: previousSessionId } : {}),
+		...(preserveId ? { sessionId: previousSessionId } : {}),
 		...(modelId ? { model: modelId } : {}),
 	});
 	convertAndImportMessages(session, priorMessages, customToolNameToSdk);
@@ -688,11 +703,14 @@ function syncSharedSession(
 	sharedSession = { sessionId: session.sessionId, cursor: priorMessages.length, cwd };
 	if (previousSessionId === undefined) {
 		debug(`Case 2: first turn with ${priorMessages.length} prior messages → session ${session.sessionId.slice(0, 8)}, ${session.messages.length} records`);
-	} else {
+	} else if (preserveId) {
 		const missedCount = priorMessages.length - previousCursor;
 		debug(`Case 4: ${missedCount} missed messages, ${priorMessages.length} total → rewrote session ${session.sessionId.slice(0, 8)} (same id), ${session.messages.length} records`);
+	} else {
+		debug(`Case 4 post-abort: ${priorMessages.length} total → new session ${session.sessionId.slice(0, 8)} (was ${previousSessionId.slice(0, 8)}, rotated to avoid race with orphan writer), ${session.messages.length} records`);
 	}
 	debugSessionPaths(`${session.sessionId.slice(0, 8)}`, cwd, session.jsonlPath);
+	debug(`syncResult: path=rebuild sessionId=${session.sessionId} priors=${priorMessages.length} ${previousSessionId === undefined ? "first" : preserveId ? "preserved" : "rotated-post-abort"}`);
 	return { sessionId: session.sessionId };
 }
 
@@ -1530,12 +1548,14 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 			debug(`provider: consumeQuery completed, stopReason=${turnOutput?.stopReason}, error=${turnOutput?.errorMessage}, aborted=${wasAborted}`);
 
 			// Check abort FIRST — don't update sharedSession with a session ID
-			// from a query that was force-killed. The SDK subprocess may not have
-			// persisted the session, so resuming it later → "conversation not found".
+			// from a query that was force-killed. Instead, mark the existing
+			// session dirty so the next turn takes the REBUILD path (which
+			// wipes the partial file via deleteSession and rewrites in place,
+			// preserving the sessionId).
 			if (wasAborted || options?.signal?.aborted) {
-				sharedSession = null;
+				if (sharedSession) sharedSession = { ...sharedSession, needsRebuild: true };
 				deferredUserMessages = [];
-				debug(`provider: abort detected, cleared sharedSession`);
+				debug(`provider: abort detected, marked sharedSession needsRebuild`);
 				if (turnOutput) {
 					turnOutput.stopReason = "aborted";
 					turnOutput.errorMessage = "Operation aborted";
@@ -1599,7 +1619,13 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 		})
 		.catch((error) => {
 			debug(`provider: query error, model=${model.id}, aborted=${Boolean(options?.signal?.aborted)}, error=`, error);
-			if (wasAborted || options?.signal?.aborted) sharedSession = null; // don't resume a killed session
+			// Mark the session dirty so the next turn takes the REBUILD path,
+			// which will deleteSession+createSession and wipe any partial state
+			// CC wrote before the abort. The sessionId is preserved across this
+			// — rebuild uses it via createSession({sessionId: previousId}).
+			if ((wasAborted || options?.signal?.aborted) && sharedSession) {
+				sharedSession = { ...sharedSession, needsRebuild: true };
+			}
 			deferredUserMessages = [];
 			if (turnOutput) {
 				turnOutput.stopReason = options?.signal?.aborted ? "aborted" : "error";

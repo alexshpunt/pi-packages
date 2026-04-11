@@ -3,7 +3,7 @@
  * Provides spawn, send, event waiting, and text collection utilities.
  */
 import { spawn } from "node:child_process";
-import { createWriteStream, mkdirSync } from "node:fs";
+import { createWriteStream, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { StringDecoder } from "node:string_decoder";
@@ -37,6 +37,10 @@ export function createRpcHarness(opts) {
 	let reqId = 0;
 
 	function start() {
+		// Truncate the debug log on each run so test assertions that grep the
+		// log see only this run's output, not accumulated history from prior
+		// failing runs. RPC log is still append so cross-run comparisons work.
+		writeFileSync(DEBUG_LOG, "");
 		rpcLog = createWriteStream(RPC_LOG, { flags: "a" });
 		const spawnArgs = ["--no-session", "-ne", "-e", DIR, "--mode", "rpc", ...args];
 		pi = spawn("pi", spawnArgs, {
