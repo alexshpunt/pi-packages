@@ -604,61 +604,54 @@ interface SyncResult {
  * Ensure the shared session has all messages up to (but not including) the last user message.
  * Returns session ID to resume from, or null if no resume needed.
  */
-// Read the session file we just wrote back and verify it matches expectations
-// before CC resumes it. Turns silent "No conversation found" failures into
-// loud, actionable errors with enough context for diagnosis from a single
-// user report. Covers:
-//   - file missing / not written to the expected path
-//   - record count mismatch (import lost records, partial save, stray writer)
-//   - sessionId drift (records attribute to a different session)
-//   - malformed JSONL (first/last record fails to parse)
-// Thrown errors propagate through streamSimple; CC never sees a resume
-// targeting a broken file.
+// Read the session file we just wrote and sanity-check it. Warns instead of
+// throwing — CC may be more tolerant than our checks, so a false positive
+// shouldn't block the user. The warning lands in the debug log with enough
+// context for diagnosis from a single user report.
 function verifyWrittenSession(
 	jsonlPath: string,
 	expectedSessionId: string,
 	expectedRecordCount: number,
 	cwd: string,
 ): void {
+	const warn = (msg: string) => {
+		debug(`WARNING session verify: ${msg}`);
+		piUI?.notify(
+			`Session file issue: ${msg}\n` +
+			`cwd=${cwd} realpath=${safeRealpath(cwd)} CLAUDE_CONFIG_DIR=${process.env.CLAUDE_CONFIG_DIR ?? "(unset)"}\n` +
+			`Please copy and paste this message into a new issue at https://github.com/elidickinson/pi-claude-bridge/issues/new` +
+			(DEBUG ? ` and attach ${DEBUG_LOG_PATH}` : ` (rerun with CLAUDE_BRIDGE_DEBUG=1 to capture a debug log)`),
+			"warning",
+		);
+		diagDump("session_verify_fail", { msg, jsonlPath, cwd, realpath: safeRealpath(cwd), claudeConfigDir: process.env.CLAUDE_CONFIG_DIR ?? null });
+	};
 	let st: ReturnType<typeof statSync>;
 	try {
 		st = statSync(jsonlPath);
 	} catch (e) {
-		throw new Error(
-			`session verify: file missing after save — path=${jsonlPath} cwd=${cwd} ` +
-			`realpath(cwd)=${safeRealpath(cwd)} CLAUDE_CONFIG_DIR=${process.env.CLAUDE_CONFIG_DIR ?? "(unset)"} ` +
-			`err=${(e as Error).message}`,
-		);
+		warn(`file missing after save — path=${jsonlPath} cwd=${cwd} realpath(cwd)=${safeRealpath(cwd)} err=${(e as Error).message}`);
+		return;
 	}
 	let content: string;
 	try {
 		content = readFileSync(jsonlPath, "utf8");
 	} catch (e) {
-		throw new Error(`session verify: file unreadable — path=${jsonlPath} size=${st.size} err=${(e as Error).message}`);
+		warn(`file unreadable — path=${jsonlPath} size=${st.size} err=${(e as Error).message}`);
+		return;
 	}
 	const lines = content.split("\n").filter((l) => l.trim().length > 0);
 	if (lines.length !== expectedRecordCount) {
-		throw new Error(
-			`session verify: record count mismatch — expected=${expectedRecordCount} actual=${lines.length} ` +
-			`path=${jsonlPath} bytes=${content.length}`,
-		);
+		warn(`record count mismatch — expected=${expectedRecordCount} actual=${lines.length} path=${jsonlPath} bytes=${content.length}`);
+		return;
 	}
-	// Parse first and last records, confirm sessionId matches.
-	const firstLine = lines[0];
-	const lastLine = lines[lines.length - 1];
-	let firstRec: { sessionId?: string };
-	let lastRec: { sessionId?: string };
 	try {
-		firstRec = JSON.parse(firstLine);
-		lastRec = JSON.parse(lastLine);
+		const firstRec = JSON.parse(lines[0]);
+		const lastRec = JSON.parse(lines[lines.length - 1]);
+		if (firstRec.sessionId !== expectedSessionId || lastRec.sessionId !== expectedSessionId) {
+			warn(`sessionId drift — expected=${expectedSessionId} first=${firstRec.sessionId} last=${lastRec.sessionId}`);
+		}
 	} catch (e) {
-		throw new Error(`session verify: malformed JSONL — path=${jsonlPath} err=${(e as Error).message}`);
-	}
-	if (firstRec.sessionId !== expectedSessionId || lastRec.sessionId !== expectedSessionId) {
-		throw new Error(
-			`session verify: sessionId drift — expected=${expectedSessionId} ` +
-			`first=${firstRec.sessionId} last=${lastRec.sessionId} path=${jsonlPath}`,
-		);
+		warn(`malformed JSONL — path=${jsonlPath} err=${(e as Error).message}`);
 	}
 }
 

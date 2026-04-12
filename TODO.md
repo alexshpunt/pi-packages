@@ -48,10 +48,18 @@
 
 ## Testing Gaps
 
-- **Structured diagnostics for tests**: Tests currently grep freeform debug log
-  strings (e.g. 'Case 1/2/3/4') to verify internal state. Emit these as
-  structured NDJSON events or dedicated diagLog entries so tests can query
-  without brittle string matching.
+- **Structured diagnostics for tests**: Tests grep debug-log strings to verify
+  internal state. The `syncResult:` marker added on `simplify-session-sync`
+  narrows this for session sync (tests parse a single targeted line per
+  decision instead of the old Case-1/2/3/4 labels), but it's still grep-based.
+  A proper diagnostic channel (NDJSON or dedicated diagLog entries) would be
+  cleaner and resilient to log-format churn.
+
+- **verifyWrittenSession failure paths untested**: The helper throws on
+  missing file / record-count mismatch / malformed JSONL / sessionId drift,
+  but no unit test deliberately induces each failure to confirm the error
+  messages stay useful. Low priority — the logic is simple and visual
+  inspection of the current code is enough for now.
 
 ## Deferred
 
@@ -60,6 +68,17 @@
   `persistSession: false` on `query()` to prevent CC from writing its own JSONL
   (we only need the cc-session-io one for seeding resume). Currently sessions
   accumulate indefinitely with no cleanup or reuse.
+
+- **CC CLI debug log accumulation**: When `CLAUDE_BRIDGE_DEBUG=1`, every
+  `query()` call writes a new file under `~/.pi/agent/cc-cli-logs/`. These
+  accumulate indefinitely.
+
+- **Bun/Node hash mismatch for >200-char paths** (cc-session-io known
+  limitation, documented in its README). Node writes with djb2, Bun reads
+  with wyhash — for long encoded paths the dirs don't match and CC can't
+  find the session. Rare in practice (requires deep nesting), but the fix is
+  to make cc-session-io's `projectPathToHash` Bun-aware at write time. Would
+  live upstream in cc-session-io.
 
 - **Post-abort rebuild rotates sessionId** (see `Case 4 post-abort` log line).
   Normal Case 4 rebuilds preserve the sessionId by wiping the file in place

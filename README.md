@@ -15,22 +15,17 @@ Uses your Claude Max/Pro subscription. I believe this is compliant with Anthropi
 <a href="claude-bridge2.png"><img src="claude-bridge2.png" width="49%"></a>
 </p>
 
-## Setup
+## Install
 
-1. Install:
-   ```
-   pi install npm:pi-claude-bridge
-   ```
-
-2. Ensure Claude Code is installed and logged in (`claude` CLI works).
-
-3. Reload pi: `/reload`
+```
+pi install npm:pi-claude-bridge
+```
 
 ## Provider
 
 Use `/model` to select `claude-bridge/claude-opus-4-6`, `claude-bridge/claude-sonnet-4-6`, or `claude-bridge/claude-haiku-4-5`.
 
-Behind the scenes, pi's tools are bridged to Claude Code but it should all work like normal in pi. Bash commands get a 120-second default timeout (matching Claude Code's default) since pi's bash has no timeout by default.
+Behind the scenes, pi's tools are bridged to Claude Code but it should all work like normal in pi. Bash commands get a 120-second default timeout (matching Claude Code's default) since pi's bash has no timeout by default. Skills in pi are copied over to Claude Code's system prompt so should work as they would with any other pi provider.
 
 ## AskClaude Tool
 
@@ -69,11 +64,18 @@ Config: `~/.pi/agent/claude-bridge.json` (global) or `.pi/claude-bridge.json` (p
 
 ## Tests
 
-`npm run test:unit` for offline tests (queue, import). `npm test` for the full suite including integration tests that hit APIs (smoke, multi-turn, cache/session-resume). Set `CLAUDE_BRIDGE_TESTING_ALT_MODEL` in `.env.test` for the alt-provider smoke test (e.g. `openrouter/z-ai/glm-4.7-flash`).
+`npm run test:unit` for offline tests (`tests/unit-*.mjs`: queue, import, skills). 
+
+`npm test` for the full suite, which adds integration tests that hit APIs (`tests/int-*.{sh,mjs}`: smoke, multi-turn, cache, session-resume, session-rebuild, tool-message). Set `CLAUDE_BRIDGE_TESTING_ALT_MODEL` in `.env.test` for the alt-provider smoke test (e.g. `openrouter/z-ai/glm-4.7-flash`).
 
 ## Debugging
 
-Set `CLAUDE_BRIDGE_DEBUG=1` to log to `~/.pi/agent/claude-bridge.log`. Override output file with `CLAUDE_BRIDGE_DEBUG_PATH`.
+Set `CLAUDE_BRIDGE_DEBUG=1` to enable debug output:
+
+- **Bridge log** at `~/.pi/agent/claude-bridge.log` — every provider call, session sync decision, tool result delivery, and CC's stderr. Override location with `CLAUDE_BRIDGE_DEBUG_PATH`.
+- **Per-query Claude Code CLI logs** at `~/.pi/agent/cc-cli-logs/<timestamp>-<tag>-<seq>.log` — the CC subprocess's own debug stream, one file per `query()` call. Tags are `provider` (main turn), `continuation` (steer replay), or `askclaude` (sub-delegation). Useful when a resume fails or CC misbehaves internally — shows the CLI's own view of session loading, API requests, and tool calls.
+
+When filing a bug about a session-resume failure (e.g. "No conversation found"), the most useful attachments are the `syncResult:` lines from the bridge log plus the matching `cc-cli-logs/` file for the failing query.
 
 ## Maintenance
 
