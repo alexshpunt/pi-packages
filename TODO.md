@@ -108,6 +108,18 @@
   only land on a dead inode. Deterministic, zero-latency, costs one extra UUID
   in the debug log per abort.
 
+  Considered and rejected:
+  - **Append-only session (never delete+recreate).** Doesn't help. The race
+    isn't specific to delete+recreate — it's that two processes write to the
+    same file with no coordination. After abort, the bridge appends new records
+    (parentUuid chained from its last known record) while the dying subprocess
+    flushes a late write (parentUuid chained from *its* last record). Order is
+    nondeterministic; either way the parent-uuid chain forks and CC sees
+    orphaned records on resume. Append-only just moves the corruption from
+    "orphan on a fresh file" to "orphan in the middle of an existing file."
+    Any approach sharing a mutable file between bridge and CC subprocess is
+    inherently racy after abort.
+
   Options to revisit:
   - **Short delay (~500ms) before post-abort rebuild**, keep the UUID stable.
     Overprovisions the observed ~1–2ms race window by 250–500×. Adds visible
