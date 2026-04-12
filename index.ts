@@ -604,6 +604,68 @@ interface SyncResult {
  * Ensure the shared session has all messages up to (but not including) the last user message.
  * Returns session ID to resume from, or null if no resume needed.
  */
+// Read the session file we just wrote back and verify it matches expectations
+// before CC resumes it. Turns silent "No conversation found" failures into
+// loud, actionable errors with enough context for diagnosis from a single
+// user report. Covers:
+//   - file missing / not written to the expected path
+//   - record count mismatch (import lost records, partial save, stray writer)
+//   - sessionId drift (records attribute to a different session)
+//   - malformed JSONL (first/last record fails to parse)
+// Thrown errors propagate through streamSimple; CC never sees a resume
+// targeting a broken file.
+function verifyWrittenSession(
+	jsonlPath: string,
+	expectedSessionId: string,
+	expectedRecordCount: number,
+	cwd: string,
+): void {
+	let st: ReturnType<typeof statSync>;
+	try {
+		st = statSync(jsonlPath);
+	} catch (e) {
+		throw new Error(
+			`session verify: file missing after save — path=${jsonlPath} cwd=${cwd} ` +
+			`realpath(cwd)=${safeRealpath(cwd)} CLAUDE_CONFIG_DIR=${process.env.CLAUDE_CONFIG_DIR ?? "(unset)"} ` +
+			`err=${(e as Error).message}`,
+		);
+	}
+	let content: string;
+	try {
+		content = readFileSync(jsonlPath, "utf8");
+	} catch (e) {
+		throw new Error(`session verify: file unreadable — path=${jsonlPath} size=${st.size} err=${(e as Error).message}`);
+	}
+	const lines = content.split("\n").filter((l) => l.trim().length > 0);
+	if (lines.length !== expectedRecordCount) {
+		throw new Error(
+			`session verify: record count mismatch — expected=${expectedRecordCount} actual=${lines.length} ` +
+			`path=${jsonlPath} bytes=${content.length}`,
+		);
+	}
+	// Parse first and last records, confirm sessionId matches.
+	const firstLine = lines[0];
+	const lastLine = lines[lines.length - 1];
+	let firstRec: { sessionId?: string };
+	let lastRec: { sessionId?: string };
+	try {
+		firstRec = JSON.parse(firstLine);
+		lastRec = JSON.parse(lastLine);
+	} catch (e) {
+		throw new Error(`session verify: malformed JSONL — path=${jsonlPath} err=${(e as Error).message}`);
+	}
+	if (firstRec.sessionId !== expectedSessionId || lastRec.sessionId !== expectedSessionId) {
+		throw new Error(
+			`session verify: sessionId drift — expected=${expectedSessionId} ` +
+			`first=${firstRec.sessionId} last=${lastRec.sessionId} path=${jsonlPath}`,
+		);
+	}
+}
+
+function safeRealpath(p: string): string {
+	try { return realpathSync(p); } catch (e) { return `<failed: ${(e as Error).message}>`; }
+}
+
 // Diagnostic snapshot of where a session file was just written. Catches the
 // class of bugs where pi writes to ~/.claude/projects/<X> but CC SDK reads
 // from ~/.claude/projects/<Y> (symlinks, CLAUDE_CONFIG_DIR, hash mismatch).
@@ -700,6 +762,7 @@ function syncSharedSession(
 	});
 	convertAndImportMessages(session, priorMessages, customToolNameToSdk);
 	session.save();
+	verifyWrittenSession(session.jsonlPath, session.sessionId, session.messages.length, cwd);
 	sharedSession = { sessionId: session.sessionId, cursor: priorMessages.length, cwd };
 	if (previousSessionId === undefined) {
 		debug(`Case 2: first turn with ${priorMessages.length} prior messages → session ${session.sessionId.slice(0, 8)}, ${session.messages.length} records`);
