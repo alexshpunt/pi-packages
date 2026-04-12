@@ -81,7 +81,7 @@ const PROVIDER_ID = "claude-bridge";
 
 // Global key to prevent re-registration of the provider across module reloads.
 //
-// When pi-subagents spawns a subagent, the subagent's session loads this module
+// Extensions like pi-subagents spawn a subagent and it loads this module
 // again. Without this guard, the subagent's call to registerProvider() would
 // overwrite the parent's `streamSimple` function reference in the shared
 // ModelRegistry. When the parent later delivers a tool result, it would call
@@ -114,21 +114,13 @@ const DISALLOWED_BUILTIN_TOOLS = [
 	"AskUserQuestion", "TaskCreate", "TaskGet", "TaskList", "TaskUpdate",
 ];
 
-const LATEST_MODEL_IDS = new Set(["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"]);
-
 const MODELS = getModels("anthropic")
-	.filter((model) => LATEST_MODEL_IDS.has(model.id))
-	.map((model) => ({
-		id: model.id, name: model.name, reasoning: model.reasoning, input: model.input,
-		cost: model.cost, contextWindow: model.contextWindow, maxTokens: model.maxTokens,
-	}));
+	.filter((model) => ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"].includes(model.id));
 
 function resolveModelId(input: string): string {
 	const lower = input.toLowerCase();
-	for (const id of LATEST_MODEL_IDS) {
-		if (id === lower || id.includes(lower)) return id;
-	}
-	return input;
+	const match = MODELS.find((m) => m.id === lower || m.id.includes(lower));
+	return match ? match.id : input;
 }
 
 // --- Skills/settings paths ---
@@ -297,7 +289,9 @@ const ASKCLAUDE_ALWAYS_BLOCKED = [
 	"ToolSearch", // probes for blocked tools, wastes tokens
 ];
 const MODE_DISALLOWED_TOOLS: Record<string, string[]> = {
-	full: [...ASKCLAUDE_ALWAYS_BLOCKED],
+  full: [
+    ...ASKCLAUDE_ALWAYS_BLOCKED
+  ],
 	read: [
 		...ASKCLAUDE_ALWAYS_BLOCKED,
 		"Write", "Edit", "Bash", "NotebookEdit",
