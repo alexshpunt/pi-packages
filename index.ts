@@ -96,10 +96,10 @@ const PROVIDER_ID = "claude-bridge";
 const ACTIVE_STREAM_SIMPLE_KEY = Symbol.for("claude-bridge:activeStreamSimple");
 
 const SDK_TO_PI_TOOL_NAME: Record<string, string> = {
-	read: "read", write: "write", edit: "edit", bash: "bash", grep: "grep", glob: "find",
+	read: "read", write: "write", edit: "edit", bash: "bash",
 };
 const PI_TO_SDK_TOOL_NAME: Record<string, string> = {
-	read: "Read", write: "Write", edit: "Edit", bash: "Bash", grep: "Grep", find: "Glob", glob: "Glob",
+	read: "Read", write: "Write", edit: "Edit", bash: "Bash",
 };
 const MCP_SERVER_NAME = "custom-tools";
 const MCP_TOOL_PREFIX = `mcp__${MCP_SERVER_NAME}__`;
@@ -230,7 +230,7 @@ function formatToolAction(tc: ToolCallState): string | undefined {
 	const verb = tc.name.toLowerCase().split(/\s/)[0];
 	if (verb === "read" || verb === "readfile") {
 		return path ? `Read(${shortPath(path)})` : "Read";
-	} else if (verb === "glob" || verb === "find") {
+	} else if (verb === "glob") {
 		const input = tc.rawInput as Record<string, unknown> | undefined;
 		const pat = typeof input?.pattern === "string" ? input.pattern.slice(0, 40) : "";
 		return pat ? `Glob(${pat})` : "Glob";
@@ -289,9 +289,9 @@ const ASKCLAUDE_ALWAYS_BLOCKED = [
 	"ToolSearch", // probes for blocked tools, wastes tokens
 ];
 const MODE_DISALLOWED_TOOLS: Record<string, string[]> = {
-  full: [
-    ...ASKCLAUDE_ALWAYS_BLOCKED
-  ],
+	full: [
+		...ASKCLAUDE_ALWAYS_BLOCKED,
+	],
 	read: [
 		...ASKCLAUDE_ALWAYS_BLOCKED,
 		"Write", "Edit", "Bash", "NotebookEdit",
@@ -666,7 +666,7 @@ function debugSessionPaths(label: string, cwd: string, jsonlPath: string): void 
 		fileSize = st.size;
 	} catch { /* file may not exist yet */ }
 	debug(`${label}: cwd=${cwd}`);
-	if (realCwd !== cwd) debug(`${label}: realpath(cwd)=${realCwd} ${realCwd === cwd ? "" : "(DIFFERS — symlink-resolved path is what CC SDK uses)"}`);
+	if (realCwd !== cwd) debug(`${label}: realpath(cwd)=${realCwd} (DIFFERS — symlink-resolved path is what CC SDK uses)`);
 	debug(`${label}: jsonlPath=${jsonlPath}`);
 	debug(`${label}: fileExists=${fileExists}${fileSize != null ? ` size=${fileSize}` : ""}`);
 	debug(`${label}: env.CLAUDE_CONFIG_DIR=${process.env.CLAUDE_CONFIG_DIR ?? "(unset)"} HOME=${process.env.HOME ?? "(unset)"}`);
@@ -806,7 +806,6 @@ const SDK_KEY_RENAMES: Record<string, Record<string, string>> = {
 	read:  { file_path: "path" },
 	write: { file_path: "path" },
 	edit:  { file_path: "path", old_string: "oldText", new_string: "newText", old_text: "oldText", new_text: "newText" },
-	grep:  { head_limit: "limit" },
 };
 
 // Maps SDK tool args to pi tool args via key renaming + pass-through.
