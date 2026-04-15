@@ -26,6 +26,16 @@ const DEBUG = process.env.CLAUDE_BRIDGE_DEBUG === "1";
 const DEBUG_LOG_PATH = process.env.CLAUDE_BRIDGE_DEBUG_PATH || join(homedir(), ".pi", "agent", "claude-bridge.log");
 const DIAG_LOG_PATH = join(homedir(), ".pi", "agent", "claude-bridge-diag.log");
 
+// Ensure log directories exist when debug is enabled
+if (DEBUG) {
+	try {
+		mkdirSync(dirname(DEBUG_LOG_PATH), { recursive: true });
+		mkdirSync(dirname(DIAG_LOG_PATH), { recursive: true });
+	} catch {
+		// If directory creation fails, debug functions will throw on first use
+	}
+}
+
 // Unique per module evaluation — confirms whether subagents share module state
 const moduleInstanceId = Math.random().toString(36).slice(2, 8);
 
@@ -321,13 +331,13 @@ function convertAndImportMessages(
 	const capped = limit && messages.length > limit ? messages.slice(-limit) : messages;
 	if (limit && messages.length > limit) debug(`convertAndImportMessages: capped ${messages.length} → ${limit} messages`);
 
-	const { anthropicMessages, sanitizedIds } = convertPiMessages(capped as any, customToolNameToSdk);
+	const { anthropicMessages, sanitizedIds } = convertPiMessages(capped, customToolNameToSdk);
 
 	debug(`convertAndImportMessages: ${capped.length} pi msgs → ${anthropicMessages.length} anthropic msgs`);
 	debug(`convertAndImportMessages: imported roles:`, anthropicMessages.map((m, i) => {
 		const c = m.content;
 		if (typeof c === "string") return `[${i}]${m.role}:text`;
-		if (Array.isArray(c)) return `[${i}]${m.role}:${(c as any[]).map((b: any) => b.type).join("+")}`;
+		if (Array.isArray(c)) return `[${i}]${m.role}:${(c).map((b) => b.type).join("+")}`;
 		return `[${i}]${m.role}:?`;
 	}).join(" "));
 	if (sanitizedIds.size > 0) {
@@ -335,11 +345,11 @@ function convertAndImportMessages(
 			[...sanitizedIds.entries()].map(([orig, clean]) => orig === clean ? orig : `${orig}→${clean}`).join(", "));
 	}
 	// Pre-repair for debug logging; importMessages also repairs internally (idempotent).
-	const repaired = repairToolPairing(anthropicMessages as any);
+	const repaired = repairToolPairing(anthropicMessages);
 	if (repaired.length !== anthropicMessages.length) {
 		debug(`convertAndImportMessages: repairToolPairing ${anthropicMessages.length} → ${repaired.length} msgs`);
 	}
-	if (repaired.length) session.importMessages(repaired as any);
+	if (repaired.length) session.importMessages(repaired);
 }
 
 type McpContent = Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }>;
