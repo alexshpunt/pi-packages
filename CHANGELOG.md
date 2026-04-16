@@ -1,9 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-04-15
 
+- **Fix: stale cursor after tool-using first turn (issue #4)** — after the first turn used tools, the session cursor pointed at the wrong message, causing Claude to re-process stale context. Now correctly advances past all tool_result blocks.
 - **Fix: session resume on symlinked paths / CLAUDE_CONFIG_DIR** — cc-session-io now resolves symlinks (realpathSync + NFC) and honors `CLAUDE_CONFIG_DIR`, matching how Claude Code resolves session paths. Fixes "No conversation found" on macOS symlinked dirs. Bump cc-session-io → 0.2.0.
-- **Session rebuild preserves sessionId** — provider switches no longer churn UUIDs. Warns in the TUI with diagnostic context if the written session file looks wrong.
+- **Verify-after-write for session files** — warns with diagnostic context if the written session file doesn't round-trip correctly, instead of letting Claude silently resume a corrupt session.
+- **Session rebuild preserves sessionId** — provider switches no longer churn UUIDs.
 - **CC CLI debug capture** — `CLAUDE_BRIDGE_DEBUG=1` now also writes Claude Code's own debug stream to `~/.pi/agent/cc-cli-logs/`, one file per query.
 - **Fix: debug() logged Error objects as `{}`** — now formats with message and stack.
 - **Repair orphan tool_use/tool_result pairs before import** — prevents potential API 400s when history starts mid-turn after a provider switch.
