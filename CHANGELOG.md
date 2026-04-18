@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Internal: move sources into `src/`** — `index.ts` and the 6 extracted modules now live under `src/`; screenshots under `assets/`. `pi.extensions` and published `files` updated accordingly.
+- **Internal: extract 5 more pure modules from `index.ts`** — `config`, `provider-settings`, `agents-md`, `typebox-to-zod`, `askclaude-ui`. `index.ts` down from 1758 to 1507 lines.
 
 ## 0.3.1 — 2026-04-18
 
