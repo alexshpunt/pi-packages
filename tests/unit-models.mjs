@@ -1,29 +1,11 @@
 /**
- * Tests for MODELS construction + resolveModelId (mirrored from index.ts:124-138).
+ * Tests for MODELS construction + resolveModelId.
  * Pins: opus shortcut resolves to whichever opus is first in MODEL_IDS_IN_ORDER,
  * projection strips pi-ai's baseUrl/api/provider/headers, and ordering is preserved.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-
-// --- Mirrored from index.ts (same source of truth) ---
-
-const MODEL_IDS_IN_ORDER = ["claude-opus-4-7", "claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"];
-
-function buildModels(piAiModels) {
-	return MODEL_IDS_IN_ORDER
-		.map((id) => piAiModels.find((m) => m.id === id))
-		.filter((m) => m != null)
-		.map(({ id, name, reasoning, input, cost, contextWindow, maxTokens }) => ({
-			id, name, reasoning, input, cost, contextWindow, maxTokens,
-		}));
-}
-
-function resolveModelId(models, input) {
-	const lower = input.toLowerCase();
-	const match = models.find((m) => m.id === lower || m.id.includes(lower));
-	return match ? match.id : input;
-}
+import { MODEL_IDS_IN_ORDER, buildModels, resolveModelId } from "../models.js";
 
 // Simulated pi-ai registry entry — extra fields mimic the ones pi-ai exposes
 // that must not leak into the provider-registered MODELS array.

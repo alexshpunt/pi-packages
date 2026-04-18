@@ -1,28 +1,27 @@
 /**
  * Tests for the symmetric queue synchronization between MCP handlers and tool results.
  * Exercises all timing orderings without hitting any API.
+ *
+ * extractAllToolResults is imported from the real module. `createBridge` below
+ * is a test model of the queue pattern — the production implementation inlines
+ * the same state machine in MCP handlers + provider callbacks (index.ts).
+ * A future ToolResultBridge refactor would let this test import the real class.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { extractAllToolResults as _extractAllToolResults } from "../extract-tool-results.js";
 
-// --- Extracted queue logic (mirrors index.ts pendingToolCalls/pendingResults) ---
-// ID-based: both maps are keyed by toolCallId.
-
-// Mirrors the core logic of extractAllToolResults from index.ts.
-// Skips toolResultToMcpContent (content conversion) and debug logging —
-// we're testing the backward walk and stop conditions, not content mapping.
+// Test wrapper: real extract returns { results, stopIdx }; tests only want results.
+// Also unwraps converted content so assertions can check the original string.
 function extractAllToolResults(messages) {
-	const results = [];
-	for (let i = messages.length - 1; i >= 0; i--) {
-		const msg = messages[i];
-		if (msg.role === "toolResult") {
-			results.unshift({ content: msg.content, isError: msg.isError, toolCallId: msg.toolCallId });
-		} else if (msg.role === "assistant") {
-			break;
-		}
-		// user messages: skip (steer/followUp injected mid-tool-execution)
-	}
-	return results;
+	const { results } = _extractAllToolResults(messages);
+	// Unwrap [{type: "text", text: "foo"}] → "foo" so tests can compare raw.
+	return results.map((r) => ({
+		...r,
+		content: Array.isArray(r.content) && r.content.length === 1 && r.content[0].type === "text"
+			? r.content[0].text
+			: r.content,
+	}));
 }
 
 function createBridge() {

@@ -1,78 +1,23 @@
 /**
  * Tests for QueryContext class and context stack infrastructure.
- * Mirrors the class/helpers from index.ts — exercises isolation, guards,
- * deferred message merging, and context pinning without hitting any API.
+ * Exercises isolation, guards, deferred message merging, and context pinning
+ * using the real module — no API calls, no extension activation.
  */
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { ctx, pushContext, popContext, resetStack, stackDepth } from "../query-state.js";
 
-// --- Mirrored QueryContext + stack (same logic as index.ts) ---
-
-class QueryContext {
-	activeQuery = null;
-	currentPiStream = null;
-	latestCursor = 0;
-	pendingToolCalls = new Map();
-	pendingResults = new Map();
-	turnToolCallIds = [];
-	nextHandlerIdx = 0;
-	deferredUserMessages = [];
-
-	turnOutput = null;
-	turnStarted = false;
-	turnSawStreamEvent = false;
-	turnSawToolCall = false;
-
-	get turnBlocks() {
-		if (!this.turnOutput) throw new Error("turnBlocks accessed before resetTurnState");
-		return this.turnOutput.content;
-	}
-
-	resetTurnState() {
-		this.turnOutput = {
-			role: "assistant", content: [],
-			stopReason: "stop", timestamp: Date.now(),
-		};
-		this.turnStarted = false;
-		this.turnSawStreamEvent = false;
-		this.turnSawToolCall = false;
-	}
-}
-
-let _ctx;
-let contextStack;
-
-function resetModule() {
-	_ctx = new QueryContext();
-	contextStack = [];
-}
-
-function ctx() { return _ctx; }
-
-function pushContext() {
-	if (!_ctx.activeQuery) throw new Error("pushContext() called with no active query");
-	contextStack.push(_ctx);
-	_ctx = new QueryContext();
-}
-
-function popContext() {
-	if (contextStack.length === 0) throw new Error("popContext() called with empty stack");
-	const parent = contextStack[contextStack.length - 1];
-	parent.deferredUserMessages.push(..._ctx.deferredUserMessages);
-	_ctx = contextStack.pop();
-}
-
-// --- Tests ---
+const fakeModel = { api: "anthropic", provider: "anthropic", id: "test-model" };
 
 describe("QueryContext class", () => {
-	beforeEach(() => resetModule());
+	beforeEach(() => resetStack());
 
 	it("turnBlocks throws before resetTurnState", () => {
 		assert.throws(() => ctx().turnBlocks, /turnBlocks accessed before resetTurnState/);
 	});
 
 	it("turnBlocks reflects turnOutput.content after resetTurnState", () => {
-		ctx().resetTurnState();
+		ctx().resetTurnState(fakeModel);
 		assert.ok(Array.isArray(ctx().turnBlocks));
 		assert.strictEqual(ctx().turnBlocks.length, 0);
 
@@ -86,7 +31,7 @@ describe("QueryContext class", () => {
 	it("resetTurnState preserves turnToolCallIds and nextHandlerIdx", () => {
 		ctx().turnToolCallIds = ["id1", "id2"];
 		ctx().nextHandlerIdx = 5;
-		ctx().resetTurnState();
+		ctx().resetTurnState(fakeModel);
 
 		assert.deepStrictEqual(ctx().turnToolCallIds, ["id1", "id2"]);
 		assert.strictEqual(ctx().nextHandlerIdx, 5);
@@ -94,7 +39,7 @@ describe("QueryContext class", () => {
 });
 
 describe("context stack guards", () => {
-	beforeEach(() => resetModule());
+	beforeEach(() => resetStack());
 
 	it("pushContext throws with no active query", () => {
 		assert.throws(() => pushContext(), /no active query/);
@@ -106,7 +51,7 @@ describe("context stack guards", () => {
 });
 
 describe("stack isolation and restore", () => {
-	beforeEach(() => resetModule());
+	beforeEach(() => resetStack());
 
 	it("push/pop isolates state and restores parent", () => {
 		// Parent setup
@@ -158,28 +103,28 @@ describe("stack isolation and restore", () => {
 
 		// Level 1
 		pushContext();
-		assert.strictEqual(contextStack.length, 1);
+		assert.strictEqual(stackDepth(), 1);
 		ctx().activeQuery = { id: "L1" };
 		ctx().latestCursor = 20;
 		ctx().deferredUserMessages = ["L1-msg"];
 
 		// Level 2
 		pushContext();
-		assert.strictEqual(contextStack.length, 2);
+		assert.strictEqual(stackDepth(), 2);
 		ctx().activeQuery = { id: "L2" };
 		ctx().latestCursor = 30;
 		ctx().deferredUserMessages = ["L2-msg"];
 
 		// Pop L2 → L1 (L2's deferred merge into L1)
 		popContext();
-		assert.strictEqual(contextStack.length, 1);
+		assert.strictEqual(stackDepth(), 1);
 		assert.deepStrictEqual(ctx().activeQuery, { id: "L1" });
 		assert.strictEqual(ctx().latestCursor, 20);
 		assert.deepStrictEqual(ctx().deferredUserMessages, ["L1-msg", "L2-msg"]);
 
 		// Pop L1 → L0 (L1+L2's deferred merge into L0)
 		popContext();
-		assert.strictEqual(contextStack.length, 0);
+		assert.strictEqual(stackDepth(), 0);
 		assert.deepStrictEqual(ctx().activeQuery, { id: "L0" });
 		assert.strictEqual(ctx().latestCursor, 10);
 		assert.deepStrictEqual(ctx().deferredUserMessages, ["L0-msg", "L1-msg", "L2-msg"]);
@@ -187,7 +132,7 @@ describe("stack isolation and restore", () => {
 });
 
 describe("context pinning (MCP handler closure pattern)", () => {
-	beforeEach(() => resetModule());
+	beforeEach(() => resetStack());
 
 	it("captured context ref stays valid across push/pop", () => {
 		ctx().activeQuery = { id: "parent" };

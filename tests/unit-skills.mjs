@@ -5,28 +5,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-
-const MCP_SERVER_NAME = "custom-tools";
-
-// --- Extracted logic (mirrors index.ts) ---
-
-function rewriteSkillsBlock(skillsBlock) {
-	return skillsBlock.replace(
-		"Use the read tool to load a skill's file",
-		`Use the read tool (mcp__${MCP_SERVER_NAME}__read) to load a skill's file`,
-	);
-}
-
-function extractSkillsBlock(systemPrompt) {
-	if (!systemPrompt) return undefined;
-	const startMarker = "The following skills provide specialized instructions for specific tasks.";
-	const endMarker = "</available_skills>";
-	const start = systemPrompt.indexOf(startMarker);
-	if (start === -1) return undefined;
-	const end = systemPrompt.indexOf(endMarker, start);
-	if (end === -1) return undefined;
-	return rewriteSkillsBlock(systemPrompt.slice(start, end + endMarker.length).trim());
-}
+import { extractSkillsBlock } from "../skills.js";
 
 // Realistic pi system prompt with skills block
 const SYSTEM_PROMPT = `You are a coding assistant.

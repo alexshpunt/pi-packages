@@ -11,6 +11,11 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync, stat
 import { homedir } from "os";
 import { dirname, join, resolve } from "path";
 import { PROVIDER_ID, messageContentToText, convertPiMessages } from "./convert.js";
+import { buildModels, resolveModelId as _resolveModelId } from "./models.js";
+import { MCP_SERVER_NAME, MCP_TOOL_PREFIX, extractSkillsBlock } from "./skills.js";
+import { verifyWrittenSession as _verifyWrittenSession } from "./session-verify.js";
+import { extractAllToolResults as _extractAllToolResults, type McpResult } from "./extract-tool-results.js";
+import { QueryContext, ctx, stackDepth, pushContext, popContext } from "./query-state.js";
 
 // Compat (#2): use factory if available (pi-ai ≥0.66), else fall back to constructor (gsd-pi etc.)
 const _piAi = piAi as any;
@@ -106,8 +111,6 @@ const ACTIVE_STREAM_SIMPLE_KEY = Symbol.for("claude-bridge:activeStreamSimple");
 const SDK_TO_PI_TOOL_NAME: Record<string, string> = {
 	read: "read", write: "write", edit: "edit", bash: "bash",
 };
-const MCP_SERVER_NAME = "custom-tools";
-const MCP_TOOL_PREFIX = `mcp__${MCP_SERVER_NAME}__`;
 
 const DISALLOWED_BUILTIN_TOOLS = [
 	"Read", "Write", "Edit", "Glob", "Grep", "Bash", "Agent",
@@ -119,23 +122,11 @@ const DISALLOWED_BUILTIN_TOOLS = [
 	"AskUserQuestion", "TaskCreate", "TaskGet", "TaskList", "TaskUpdate",
 ];
 
-// Canonical selection + display order for the model picker.
-// `resolveModelId` returns the first partial match, so `opus` resolves to the first-listed opus entry.
-const MODEL_IDS_IN_ORDER = ["claude-opus-4-7", "claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"];
-
-// Strip baseUrl/api/provider/headers — pi's registerProvider supplies its own.
-const _piAiModels = getModels("anthropic");
-const MODELS = MODEL_IDS_IN_ORDER
-	.map((id) => _piAiModels.find((m) => m.id === id))
-	.filter((m): m is NonNullable<typeof m> => m != null)
-	.map(({ id, name, reasoning, input, cost, contextWindow, maxTokens }) => ({
-		id, name, reasoning, input, cost, contextWindow, maxTokens,
-	}));
+// MODELS is buildModels(getModels("anthropic")) — projection kept in models.js.
+const MODELS = buildModels(getModels("anthropic"));
 
 function resolveModelId(input: string): string {
-	const lower = input.toLowerCase();
-	const match = MODELS.find((m) => m.id === lower || m.id.includes(lower));
-	return match ? match.id : input;
+	return _resolveModelId(MODELS, input);
 }
 
 // --- Skills/settings paths ---
@@ -358,21 +349,6 @@ function convertAndImportMessages(
 	if (repaired.length) session.importMessages(repaired);
 }
 
-type McpContent = Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }>;
-
-function toolResultToMcpContent(
-	content: string | Array<{ type: string; text?: string; data?: string; mimeType?: string }>,
-): McpContent {
-	if (typeof content === "string") return [{ type: "text", text: content || "" }];
-	if (!Array.isArray(content)) return [{ type: "text", text: "" }];
-	const blocks: McpContent = [];
-	for (const block of content) {
-		if (block.type === "text" && block.text) blocks.push({ type: "text", text: block.text });
-		else if (block.type === "image" && block.data && block.mimeType) blocks.push({ type: "image", data: block.data, mimeType: block.mimeType });
-	}
-	return blocks.length ? blocks : [{ type: "text", text: "" }];
-}
-
 function msgPreview(msg: { role: string; content?: unknown }): string {
 	const c = msg.content;
 	const text = typeof c === "string" ? c : Array.isArray(c) ? (c[0] as any)?.text ?? (c[0] as any)?.type ?? "?" : "?";
@@ -380,19 +356,10 @@ function msgPreview(msg: { role: string; content?: unknown }): string {
 }
 
 // Pi doesn't pass tool results directly — it appends them to the context and calls
-// the provider again. This function scrapes them back out by walking the context tail.
-// Walks past user messages (steer/followUp) that pi may inject between toolResults.
-// Stops at the nearest assistant message (turn boundary).
+// the provider again. Thin wrapper over extract-tool-results.js that adds per-turn
+// debug logging at the extraction boundary.
 function extractAllToolResults(context: Context): McpResult[] {
-	const results: McpResult[] = [];
-	let stopIdx = -1;
-	for (let i = context.messages.length - 1; i >= 0; i--) {
-		const msg = context.messages[i];
-		if (msg.role === "toolResult") {
-			results.unshift({ content: toolResultToMcpContent(msg.content), isError: msg.isError, toolCallId: msg.toolCallId });
-		} else if (msg.role === "assistant") { stopIdx = i; break; }
-		// user messages: skip (steer/followUp injected mid-tool-execution)
-	}
+	const { results, stopIdx } = _extractAllToolResults(context.messages as unknown as Array<{ role: string; [key: string]: unknown }>);
 	debug(`extractAllToolResults: ${results.length} results from ${context.messages.length} msgs, stopped at index ${stopIdx}`);
 	debug(`extractAllToolResults: all msg roles:`, context.messages.map((m, i) => `[${i}]${m.role}`).join(" "));
 	for (let r = 0; r < results.length; r++) {
@@ -463,15 +430,16 @@ interface SyncResult {
  */
 // Read the session file we just wrote and sanity-check it. Warns instead of
 // throwing — CC may be more tolerant than our checks, so a false positive
-// shouldn't block the user. The warning lands in the debug log with enough
-// context for diagnosis from a single user report.
+// shouldn't block the user. Pure logic is in session-verify.js; this wrapper
+// fans each warning out to debug log + piUI notify + diagDump.
 function verifyWrittenSession(
 	jsonlPath: string,
 	expectedSessionId: string,
 	expectedRecordCount: number,
 	cwd: string,
 ): void {
-	const warn = (msg: string) => {
+	const warnings = _verifyWrittenSession(jsonlPath, expectedSessionId, expectedRecordCount);
+	for (const msg of warnings) {
 		debug(`WARNING session verify: ${msg}`);
 		piUI?.notify(
 			`Session file issue: ${msg}\n` +
@@ -481,34 +449,6 @@ function verifyWrittenSession(
 			"warning",
 		);
 		diagDump("session_verify_fail", { msg, jsonlPath, cwd, realpath: safeRealpath(cwd), claudeConfigDir: process.env.CLAUDE_CONFIG_DIR ?? null });
-	};
-	let st: ReturnType<typeof statSync>;
-	try {
-		st = statSync(jsonlPath);
-	} catch (e) {
-		warn(`file missing after save — path=${jsonlPath} cwd=${cwd} realpath(cwd)=${safeRealpath(cwd)} err=${(e as Error).message}`);
-		return;
-	}
-	let content: string;
-	try {
-		content = readFileSync(jsonlPath, "utf8");
-	} catch (e) {
-		warn(`file unreadable — path=${jsonlPath} size=${st.size} err=${(e as Error).message}`);
-		return;
-	}
-	const lines = content.split("\n").filter((l) => l.trim().length > 0);
-	if (lines.length !== expectedRecordCount) {
-		warn(`record count mismatch — expected=${expectedRecordCount} actual=${lines.length} path=${jsonlPath} bytes=${content.length}`);
-		return;
-	}
-	try {
-		const firstRec = JSON.parse(lines[0]);
-		const lastRec = JSON.parse(lines[lines.length - 1]);
-		if (firstRec.sessionId !== expectedSessionId || lastRec.sessionId !== expectedSessionId) {
-			warn(`sessionId drift — expected=${expectedSessionId} first=${firstRec.sessionId} last=${lastRec.sessionId}`);
-		}
-	} catch (e) {
-		warn(`malformed JSONL — path=${jsonlPath} err=${(e as Error).message}`);
 	}
 }
 
@@ -626,18 +566,6 @@ function syncSharedSession(
 	return { sessionId: session.sessionId };
 }
 
-// Extract skills block from pi's system prompt for forwarding to Claude Code
-function extractSkillsBlock(systemPrompt?: string): string | undefined {
-	if (!systemPrompt) return undefined;
-	const startMarker = "The following skills provide specialized instructions for specific tasks.";
-	const endMarker = "</available_skills>";
-	const start = systemPrompt.indexOf(startMarker);
-	if (start === -1) return undefined;
-	const end = systemPrompt.indexOf(endMarker, start);
-	if (end === -1) return undefined;
-	return rewriteSkillsBlock(systemPrompt.slice(start, end + endMarker.length).trim());
-}
-
 // --- Provider helpers: tool name mapping ---
 
 function mapToolName(name: string, customToolNameToPi?: Map<string, string>): string {
@@ -680,14 +608,6 @@ function mapToolArgs(
 }
 
 // --- Provider helpers: system prompt ---
-
-
-function rewriteSkillsBlock(skillsBlock: string): string {
-	return skillsBlock.replace(
-		"Use the read tool to load a skill's file",
-		`Use the read tool (mcp__${MCP_SERVER_NAME}__read) to load a skill's file`,
-	);
-}
 
 function resolveAgentsMdPath(): string | undefined {
 	const fromCwd = findAgentsMdInParents(process.cwd());
@@ -775,74 +695,10 @@ function readSettingsFile(filePath: string): ProviderSettings {
 
 // --- Provider helpers: tool bridge ---
 
-interface McpResult { content: McpContent; isError?: boolean; toolCallId?: string; [key: string]: unknown }
-
-interface PendingToolCall {
-	toolName: string;
-	resolve: (result: McpResult) => void;
-}
-
-// --- Query state: QueryContext class + context stack ---
-//
-// All per-query and per-turn mutable state lives here. Reentrant queries
-// (subagents) push the parent context onto a stack and get a fresh instance.
-// Adding a new field = one property on the class.
-
-class QueryContext {
-	// Query-scoped (fully isolated per query)
-	activeQuery: ReturnType<typeof query> | null = null;
-	currentPiStream: AssistantMessageEventStream | null = null;
-	latestCursor = 0;
-	pendingToolCalls = new Map<string, PendingToolCall>();
-	pendingResults = new Map<string, McpResult>();
-	turnToolCallIds: string[] = [];
-	nextHandlerIdx = 0;
-	deferredUserMessages: string[] = [];
-
-	// Per-turn (reset together)
-	turnOutput: AssistantMessage | null = null;
-	turnStarted = false;
-	turnSawStreamEvent = false;
-	turnSawToolCall = false;
-
-	get turnBlocks(): Array<any> {
-		if (!this.turnOutput) throw new Error("turnBlocks accessed before resetTurnState");
-		return this.turnOutput.content as Array<any>;
-	}
-
-	resetTurnState(model: Model<any>): void {
-		this.turnOutput = {
-			role: "assistant", content: [],
-			api: model.api, provider: model.provider, model: model.id,
-			usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
-			stopReason: "stop", timestamp: Date.now(),
-		};
-		this.turnStarted = false;
-		this.turnSawStreamEvent = false;
-		this.turnSawToolCall = false;
-		// turnToolCallIds and nextHandlerIdx are NOT reset — they persist across
-		// tool-result delivery callbacks within the same assistant message.
-	}
-}
-
-let _ctx = new QueryContext();
-const contextStack: QueryContext[] = [];
-
-function ctx(): QueryContext { return _ctx; }
-
-function pushContext(): void {
-	if (!_ctx.activeQuery) throw new Error("pushContext() called with no active query");
-	contextStack.push(_ctx);
-	_ctx = new QueryContext();
-}
-
-function popContext(): void {
-	if (contextStack.length === 0) throw new Error("popContext() called with empty stack");
-	const parent = contextStack[contextStack.length - 1];
-	parent.deferredUserMessages.push(..._ctx.deferredUserMessages);
-	_ctx = contextStack.pop()!;
-}
+// --- Query state ---
+// QueryContext + context stack live in query-state.js so tests can import
+// them without activating the extension. `ctx()`, `pushContext()`, `popContext()`
+// are imported at the top of this file.
 
 // Global (not query state):
 let piUI: ExtensionUIContext | null = null;
@@ -1330,7 +1186,7 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 	// 1. Determine reentrancy and push parent context if needed.
 	const isReentrant = ctx().activeQuery !== null;
 	if (isReentrant) pushContext();
-	debug(`provider: fresh query setup, isReentrant=${isReentrant}, stackDepth=${contextStack.length}`);
+	debug(`provider: fresh query setup, isReentrant=${isReentrant}, stackDepth=${stackDepth()}`);
 
 	// 2. Fresh child context — constructor already gave us clean Maps and empty
 	//    arrays. For a reused top-level context, clear explicitly.
@@ -1354,7 +1210,7 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 			contextLength: context.messages.length,
 			lastMsgRole: lastMsg?.role,
 			isReentrant,
-			stackDepth: contextStack.length,
+			stackDepth: stackDepth(),
 			activeQueryExists: ctx().activeQuery !== null,
 			sharedSession: sharedSession ? { sessionId: sharedSession.sessionId.slice(0, 8), cursor: sharedSession.cursor } : null,
 			messageRoles: context.messages.map((m, i) => `[${i}]${m.role}`).join(" "),
