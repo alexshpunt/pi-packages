@@ -5,7 +5,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { MODEL_IDS_IN_ORDER, buildModels, resolveModelId } from "../models.js";
+import { MODEL_IDS_IN_ORDER, buildModels, resolveModelId } from "../src/models.js";
 
 // Simulated pi-ai registry entry — extra fields mimic the ones pi-ai exposes
 // that must not leak into the provider-registered MODELS array.
