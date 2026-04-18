@@ -5,7 +5,7 @@ export const MCP_SERVER_NAME = "custom-tools";
 export const MCP_TOOL_PREFIX = `mcp__${MCP_SERVER_NAME}__`;
 
 // Extract skills block from pi's system prompt for forwarding to Claude Code.
-export function extractSkillsBlock(systemPrompt) {
+export function extractSkillsBlock(systemPrompt?: string): string | undefined {
 	if (!systemPrompt) return undefined;
 	const startMarker = "The following skills provide specialized instructions for specific tasks.";
 	const endMarker = "</available_skills>";
@@ -16,7 +16,7 @@ export function extractSkillsBlock(systemPrompt) {
 	return rewriteSkillsBlock(systemPrompt.slice(start, end + endMarker.length).trim());
 }
 
-export function rewriteSkillsBlock(skillsBlock) {
+export function rewriteSkillsBlock(skillsBlock: string): string {
 	return skillsBlock.replace(
 		"Use the read tool to load a skill's file",
 		`Use the read tool (mcp__${MCP_SERVER_NAME}__read) to load a skill's file`,

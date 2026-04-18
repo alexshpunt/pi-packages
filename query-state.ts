@@ -6,29 +6,37 @@
 //
 // Extracted from index.ts so tests can import without activating the extension.
 
+import type { AssistantMessage, AssistantMessageEventStream, Model } from "@mariozechner/pi-ai";
+import type { McpResult } from "./extract-tool-results.js";
+
+export interface PendingToolCall {
+	toolName: string;
+	resolve: (result: McpResult) => void;
+}
+
 export class QueryContext {
 	// Query-scoped (fully isolated per query)
-	activeQuery = null;
-	currentPiStream = null;
+	activeQuery: unknown | null = null;
+	currentPiStream: AssistantMessageEventStream | null = null;
 	latestCursor = 0;
-	pendingToolCalls = new Map();
-	pendingResults = new Map();
-	turnToolCallIds = [];
+	pendingToolCalls = new Map<string, PendingToolCall>();
+	pendingResults = new Map<string, McpResult>();
+	turnToolCallIds: string[] = [];
 	nextHandlerIdx = 0;
-	deferredUserMessages = [];
+	deferredUserMessages: string[] = [];
 
 	// Per-turn (reset together)
-	turnOutput = null;
+	turnOutput: AssistantMessage | null = null;
 	turnStarted = false;
 	turnSawStreamEvent = false;
 	turnSawToolCall = false;
 
-	get turnBlocks() {
+	get turnBlocks(): Array<any> {
 		if (!this.turnOutput) throw new Error("turnBlocks accessed before resetTurnState");
 		return this.turnOutput.content;
 	}
 
-	resetTurnState(model) {
+	resetTurnState(model: Model<any>): void {
 		this.turnOutput = {
 			role: "assistant", content: [],
 			api: model.api, provider: model.provider, model: model.id,
@@ -45,28 +53,28 @@ export class QueryContext {
 }
 
 let _ctx = new QueryContext();
-const contextStack = [];
+const contextStack: QueryContext[] = [];
 
-export function ctx() { return _ctx; }
+export function ctx(): QueryContext { return _ctx; }
 
-export function stackDepth() { return contextStack.length; }
+export function stackDepth(): number { return contextStack.length; }
 
-export function pushContext() {
+export function pushContext(): void {
 	if (!_ctx.activeQuery) throw new Error("pushContext() called with no active query");
 	contextStack.push(_ctx);
 	_ctx = new QueryContext();
 }
 
-export function popContext() {
+export function popContext(): void {
 	if (contextStack.length === 0) throw new Error("popContext() called with empty stack");
 	const parent = contextStack[contextStack.length - 1];
 	parent.deferredUserMessages.push(..._ctx.deferredUserMessages);
-	_ctx = contextStack.pop();
+	_ctx = contextStack.pop()!;
 }
 
 // Test-only: drop all state so test files can start from a clean module.
 // Not called from production.
-export function resetStack() {
+export function resetStack(): void {
 	_ctx = new QueryContext();
 	contextStack.length = 0;
 }

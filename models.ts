@@ -6,7 +6,7 @@ export const MODEL_IDS_IN_ORDER = ["claude-opus-4-7", "claude-opus-4-6", "claude
 
 // Project pi-ai's model entries down to the fields pi's registerProvider expects,
 // and keep MODEL_IDS_IN_ORDER ordering. IDs missing from pi-ai are silently dropped.
-export function buildModels(piAiModels) {
+export function buildModels<T extends { id: string; [key: string]: any }>(piAiModels: T[]) {
 	return MODEL_IDS_IN_ORDER
 		.map((id) => piAiModels.find((m) => m.id === id))
 		.filter((m) => m != null)
@@ -15,7 +15,7 @@ export function buildModels(piAiModels) {
 		}));
 }
 
-export function resolveModelId(models, input) {
+export function resolveModelId(models: Array<{ id: string }>, input: string): string {
 	const lower = input.toLowerCase();
 	const match = models.find((m) => m.id === lower || m.id.includes(lower));
 	return match ? match.id : input;

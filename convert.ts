@@ -1,15 +1,17 @@
 // Pure pi→Anthropic message conversion helpers.
 // Extracted so they can be tested without pulling in the full extension runtime.
 
+import type { Message as PiMessage } from "@mariozechner/pi-ai";
+import type { Message as SessionMessage } from "cc-session-io";
 import { pascalCase } from "change-case";
 
 export const PROVIDER_ID = "claude-bridge";
 
-export const PI_TO_SDK_TOOL_NAME = {
+export const PI_TO_SDK_TOOL_NAME: Record<string, string> = {
 	read: "Read", write: "Write", edit: "Edit", bash: "Bash",
 };
 
-export function sanitizeToolId(id, cache) {
+export function sanitizeToolId(id: string, cache: Map<string, string>): string {
 	const existing = cache.get(id);
 	if (existing) return existing;
 	const clean = id.replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -17,7 +19,7 @@ export function sanitizeToolId(id, cache) {
 	return clean;
 }
 
-export function mapPiToolNameToSdk(name, customToolNameToSdk) {
+export function mapPiToolNameToSdk(name: string, customToolNameToSdk?: Map<string, string>): string {
 	if (!name) return "";
 	const normalized = name.toLowerCase();
 	if (customToolNameToSdk) {
@@ -28,7 +30,9 @@ export function mapPiToolNameToSdk(name, customToolNameToSdk) {
 	return pascalCase(name);
 }
 
-export function messageContentToText(content) {
+export function messageContentToText(
+	content: string | Array<{ type: string; text?: string; data?: string; mimeType?: string }>,
+): string {
 	if (typeof content === "string") return content;
 	if (!Array.isArray(content)) return "";
 	const parts = [];
@@ -41,7 +45,10 @@ export function messageContentToText(content) {
 }
 
 /** Convert pi message array to Anthropic API format. */
-export function convertPiMessages(messages, customToolNameToSdk) {
+export function convertPiMessages(
+	messages: PiMessage[],
+	customToolNameToSdk?: Map<string, string>,
+): { anthropicMessages: SessionMessage[]; sanitizedIds: Map<string, string> } {
 	const anthropicMessages = [];
 	const sanitizedIds = new Map();
 

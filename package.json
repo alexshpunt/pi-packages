@@ -21,26 +21,20 @@
   },
   "files": [
     "index.ts",
-    "convert.js",
-    "convert.d.ts",
-    "models.js",
-    "models.d.ts",
-    "skills.js",
-    "skills.d.ts",
-    "session-verify.js",
-    "session-verify.d.ts",
-    "extract-tool-results.js",
-    "extract-tool-results.d.ts",
-    "query-state.js",
-    "query-state.d.ts",
+    "convert.ts",
+    "models.ts",
+    "skills.ts",
+    "session-verify.ts",
+    "extract-tool-results.ts",
+    "query-state.ts",
     "README.md",
     "LICENSE",
     "claude-bridge1.png",
     "claude-bridge2.png"
   ],
   "scripts": {
-    "test:unit": "node --test tests/unit-*.mjs",
-    "test": "set -a && [ -f .env.test ] && . .env.test; set +a && npm run test:unit && tests/int-smoke.sh && tests/int-multi-turn.sh && tests/int-cache.sh && node --test tests/int-*.mjs",
+    "test:unit": "node --import tsx --test tests/unit-*.mjs",
+    "test": "set -a && [ -f .env.test ] && . .env.test; set +a && npm run test:unit && tests/int-smoke.sh && tests/int-multi-turn.sh && tests/int-cache.sh && node --import tsx --test tests/int-*.mjs",
     "test:usage": "tests/usage-test.sh",
     "typecheck": "tsc --noEmit"
   },
@@ -59,6 +53,7 @@
     "@mariozechner/pi-ai": "^0.67.6",
     "@mariozechner/pi-coding-agent": "^0.66.1",
     "@types/node": "^24.3.0",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   },
   "pi": {

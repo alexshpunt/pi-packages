@@ -4,7 +4,7 @@
 
 import { statSync, readFileSync } from "fs";
 
-export function verifyWrittenSession(jsonlPath, expectedSessionId, expectedRecordCount) {
+export function verifyWrittenSession(jsonlPath: string, expectedSessionId: string, expectedRecordCount: number): string[] {
 	const warnings = [];
 	let st;
 	try {
