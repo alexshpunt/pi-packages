@@ -809,9 +809,8 @@ function updateUsage(output: AssistantMessage, usage: Record<string, number | un
 	if (usage.cache_creation_input_tokens != null) output.usage.cacheWrite = usage.cache_creation_input_tokens;
 	output.usage.totalTokens = output.usage.input + output.usage.output + output.usage.cacheRead + output.usage.cacheWrite;
 	calculateCost(model, output.usage);
-	const cachePct = output.usage.input + output.usage.cacheRead > 0
-		? Math.round(output.usage.cacheRead / (output.usage.input + output.usage.cacheRead) * 100)
-		: 0;
+	const promptTokens = output.usage.input + output.usage.cacheRead + output.usage.cacheWrite;
+	const cachePct = promptTokens > 0 ? Math.round(output.usage.cacheRead / promptTokens * 100) : 0;
 	debug(`usage: in=${output.usage.input} out=${output.usage.output} cacheRead=${output.usage.cacheRead} cacheWrite=${output.usage.cacheWrite} total=${output.usage.totalTokens} cachePct=${cachePct}% model=${model.id}`);
 }
 
