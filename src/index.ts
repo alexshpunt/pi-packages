@@ -3,7 +3,7 @@ import * as piAi from "@mariozechner/pi-ai";
 import { buildSessionContext, keyHint, type ExtensionAPI, type ExtensionUIContext } from "@mariozechner/pi-coding-agent";
 import { createSdkMcpServer, query, type EffortLevel, type SDKMessage, type SDKUserMessage, type SettingSource } from "@anthropic-ai/claude-agent-sdk";
 import type { Base64ImageSource, ContentBlockParam, MessageParam } from "@anthropic-ai/sdk/resources";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import { Text } from "@mariozechner/pi-tui";
 import { createSession, deleteSession, repairToolPairing } from "cc-session-io";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync, statSync } from "fs";
@@ -1390,17 +1390,18 @@ export default function (pi: ExtensionAPI) {
 	if (allowFull) modeDesc += ` "full": allows writing and bash execution (careful: runs without feedback to pi).`;
 
 	if (askConf?.enabled !== false) {
-		pi.registerTool({
+		const askClaudeParams = Type.Object({
+			prompt: Type.String({ description: "The question or task for Claude Code. By default Claude sees the full conversation history. Don't research up front, let Claude explore." }),
+			mode: Type.Optional(StringEnum(modeValues, { description: modeDesc })),
+			model: Type.Optional(Type.String({ description: 'Claude model (e.g. "opus", "sonnet", "haiku", or full ID). Defaults to "opus".' })),
+			thinking: Type.Optional(StringEnum(["off", "minimal", "low", "medium", "high", "xhigh"] as const, { description: "Thinking effort level. Omit to use Claude Code's default." })),
+			isolated: Type.Optional(Type.Boolean({ description: "When true, Claude sees only this prompt (clean session). When false (default), Claude sees the full conversation history." })),
+		});
+		pi.registerTool<typeof askClaudeParams>({
 			name: askConf?.name ?? "AskClaude",
 			label: askConf?.label ?? "Ask Claude Code",
 			description: askConf?.description ?? (allowFull ? DEFAULT_TOOL_DESCRIPTION_FULL : DEFAULT_TOOL_DESCRIPTION),
-			parameters: Type.Object({
-				prompt: Type.String({ description: "The question or task for Claude Code. By default Claude sees the full conversation history. Don't research up front, let Claude explore." }),
-				mode: Type.Optional(StringEnum(modeValues, { description: modeDesc })),
-				model: Type.Optional(Type.String({ description: 'Claude model (e.g. "opus", "sonnet", "haiku", or full ID). Defaults to "opus".' })),
-				thinking: Type.Optional(StringEnum(["off", "minimal", "low", "medium", "high", "xhigh"] as const, { description: "Thinking effort level. Omit to use Claude Code's default." })),
-				isolated: Type.Optional(Type.Boolean({ description: "When true, Claude sees only this prompt (clean session). When false (default), Claude sees the full conversation history." })),
-			}),
+			parameters: askClaudeParams,
 			renderCall(args, theme) {
 				let text = theme.fg("mdLink", theme.bold("AskClaude "));
 				const mode = args.mode ?? defaultMode;
