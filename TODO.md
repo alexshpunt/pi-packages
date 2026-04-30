@@ -32,14 +32,6 @@
   applicable to AskClaude subagents. See `fractary/pi-claude-code`
   `PlanMode.ts`.
 
-## Architecture Issues (high priority)
-
-- ~~**Per-turn queries**~~ — investigated and abandoned. The SDK has no supported
-  path to inject tool_results externally: resuming a session that ends in
-  `user(tool_result)` with a new prompt forces a fresh user turn instead of
-  letting the model respond to the tool result. MCP handler blocking is the
-  sanctioned mechanism. See `per-turn-queries` branch for the writeup.
-
 ## Testing Gaps
 
 - **Structured diagnostics for tests**: Tests grep debug-log strings to verify
