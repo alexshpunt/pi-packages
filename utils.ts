@@ -1,5 +1,3 @@
-export const OLLAMA_BASE = (process.env.OLLAMA_API_BASE || "https://ollama.com").replace(/\/+$/, "");
-
 export async function fetchJsonWithTimeout<T>(
   url: string,
   init: RequestInit,
@@ -26,7 +24,7 @@ export async function fetchJsonWithTimeout<T>(
   }
 }
 
-export async function runPool<T, R>(
+export async function concurrentMap<T, R>(
   items: T[],
   workers: number,
   fn: (item: T) => Promise<R>,

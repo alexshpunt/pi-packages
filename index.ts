@@ -28,11 +28,11 @@ import {
   assembleModels,
   FALLBACK_MODELS,
   fetchModels,
+  OLLAMA_BASE,
   type RefreshProgress,
   readCacheState,
   writeCache,
 } from "./models.ts";
-import { OLLAMA_BASE } from "./utils.ts";
 import { registerWebFetchTool, registerWebSearchTool } from "./web-tools.ts";
 
 /**

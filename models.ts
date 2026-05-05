@@ -7,15 +7,15 @@ import {
   type ProviderModelConfig,
 } from "@mariozechner/pi-coding-agent";
 import { resolveThinkingLevelMap } from "./thinking.ts";
-import { fetchJsonWithTimeout, getContextLength, OLLAMA_BASE, runPool } from "./utils.ts";
-
-export { OLLAMA_BASE };
+import { concurrentMap, fetchJsonWithTimeout, getContextLength } from "./utils.ts";
 
 // --- Constants ---
 const CACHE_DIR = join(getAgentDir(), "cache");
 const CACHE_FILE = join(CACHE_DIR, "ollama-cloud-models.json");
 const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 10000;
+
+export const OLLAMA_BASE = (process.env.OLLAMA_API_BASE || "https://ollama.com").replace(/\/+$/, "");
 
 // Initialize AuthStorage
 const authStorage = AuthStorage.create();
@@ -193,7 +193,7 @@ async function refreshOllamaCloudModels(params: {
 
   let detailsDone = 0;
   let detailsFailed = 0;
-  const detailResults = await runPool(modelIds, params.workers ?? 8, async (id) => {
+  const detailResults = await concurrentMap(modelIds, params.workers ?? 8, async (id) => {
     try {
       return [id, await fetchModelDetails(params.apiKey, id)] as const;
     } catch (error) {
