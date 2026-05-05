@@ -34,14 +34,33 @@ const BINARY_THINKING_MAP: ThinkingLevelMap = {
   xhigh: null,
 };
 
+function normalizeThinkingMap(partial: Partial<ThinkingLevelMap>): ThinkingLevelMap {
+  const map: ThinkingLevelMap = { ...BINARY_THINKING_MAP };
+  for (const level of PI_THINKING_LEVELS) {
+    if (level in partial) {
+      map[level] = partial[level] ?? null;
+    }
+  }
+  return map;
+}
+
 function readThinkingCatalog(): ThinkingCatalog {
   try {
     const parsed = JSON.parse(readFileSync(CATALOG_FILE, "utf-8")) as Partial<ThinkingCatalog>;
+    const defaultMap = normalizeThinkingMap(parsed.default ?? {});
+    const models: Record<string, ThinkingLevelMap> = {};
+    for (const [id, map] of Object.entries(parsed.models ?? {})) {
+      models[id] = normalizeThinkingMap(map);
+    }
+    const patterns: CatalogPattern[] = (parsed.patterns ?? []).map((p) => ({
+      match: p.match,
+      map: normalizeThinkingMap(p.map),
+    }));
     return {
       version: parsed.version ?? 1,
-      default: parsed.default ?? BINARY_THINKING_MAP,
-      models: parsed.models ?? {},
-      patterns: parsed.patterns ?? [],
+      default: defaultMap,
+      models,
+      patterns,
     };
   } catch {
     return { version: 1, default: BINARY_THINKING_MAP, models: {}, patterns: [] };
