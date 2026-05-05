@@ -209,18 +209,15 @@ export async function refreshOllamaCloudModels(params: {
     }
   });
   const models: Record<string, CachedOllamaModel> = {};
-  let failed = 0;
   for (const result of detailResults) {
     if (result.status === "fulfilled") {
       const [id, data] = result.value;
       models[id] = data;
-    } else {
-      failed++;
     }
   }
   const succeeded = Object.keys(models).length;
-  if (succeeded === 0) throw new Error(`Failed to fetch model details${failed ? ` (${failed} failed)` : ""}`);
-  notify(`Fetched ${succeeded} model details${failed ? ` (${failed} failed)` : ""}`, "info");
+  if (succeeded === 0) throw new Error(`Failed to fetch model details${detailsFailed ? ` (${detailsFailed} failed)` : ""}`);
+  notify(`Fetched ${succeeded} model details${detailsFailed ? ` (${detailsFailed} failed)` : ""}`, "info");
 
   onProgress({
     stage: "done",
@@ -255,28 +252,24 @@ export async function fetchModels(
   ctx: Pick<ExtensionCommandContext, "ui">,
   onProgress?: (progress: RefreshProgress) => void,
 ): Promise<Record<string, CachedOllamaModel> | null> {
-  const apiKey = await getOllamaCloudApiKey();
-
-  if (!apiKey) {
-    ctx.ui.notify(
-      "No Ollama Cloud API key found. \n" +
-        "Please ensure your API key is set in either: \n" +
-        "- OLLAMA_API_KEY environment variable,\n" +
-        "- auth.json file (at ~/.pi/agent/auth.json) under 'ollama-cloud' key,\n" +
-        "- or via the CLI --api-key flag.\n" +
-        "Example auth.json entry: \n" +
-        '{ "ollama-cloud": { "type": "api_key", "key": "YOUR_API_KEY" } }',
-      "error",
-    );
-    return null;
-  }
-
   try {
-    return await refreshOllamaCloudModels({
-      apiKey,
+    const result = await refreshModelsFromAuth({
       notify: (message, level) => ctx.ui.notify(message, level),
       onProgress,
     });
+    if (!result) {
+      ctx.ui.notify(
+        "No Ollama Cloud API key found. \n" +
+          "Please ensure your API key is set in either: \n" +
+          "- OLLAMA_API_KEY environment variable,\n" +
+          "- auth.json file (at ~/.pi/agent/auth.json) under 'ollama-cloud' key,\n" +
+          "- or via the CLI --api-key flag.\n" +
+          "Example auth.json entry: \n" +
+          '{ "ollama-cloud": { "type": "api_key", "key": "YOUR_API_KEY" } }',
+        "error",
+      );
+    }
+    return result;
   } catch (error) {
     ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
     return null;
