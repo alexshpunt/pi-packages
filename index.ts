@@ -28,11 +28,11 @@ import {
   assembleModels,
   FALLBACK_MODELS,
   fetchModels,
-  OLLAMA_BASE,
   type RefreshProgress,
   readCacheState,
   writeCache,
 } from "./models.ts";
+import { OLLAMA_BASE } from "./utils.ts";
 import { registerWebFetchTool, registerWebSearchTool } from "./web-tools.ts";
 
 /**
@@ -80,7 +80,7 @@ function createRefreshProgressUi(ctx: Pick<ExtensionCommandContext, "ui">) {
       const summary = total > 0 ? `${current}/${total} (${percent}%${failed})` : progress.message;
       const line = `☁ Ollama Cloud — ${stage} — ${summary} ${renderProgressBar(current, total)}`;
 
-      ctx.ui.setWorkingMessage(`Ollama Cloud refresh — ${progress.message}: ${summary}`);
+      ctx.ui.setWorkingMessage(`Refreshing Ollama Cloud models — ${stage.toLowerCase()}`);
       ctx.ui.setWidget(key, [line], { placement: "belowEditor" });
     },
     clear() {

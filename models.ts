@@ -9,6 +9,8 @@ import {
 import { resolveThinkingLevelMap } from "./thinking.ts";
 import { fetchJsonWithTimeout, getContextLength, OLLAMA_BASE, runPool } from "./utils.ts";
 
+export { OLLAMA_BASE };
+
 // --- Constants ---
 const CACHE_DIR = join(getAgentDir(), "cache");
 const CACHE_FILE = join(CACHE_DIR, "ollama-cloud-models.json");
@@ -20,7 +22,7 @@ const authStorage = AuthStorage.create();
 
 // --- Raw API types ---
 /** Response from POST /api/show */
-export interface OllamaShowResponse {
+interface OllamaShowResponse {
   details: {
     parent_model: string;
     format: string;
@@ -34,16 +36,16 @@ export interface OllamaShowResponse {
   modified_at: string;
 }
 
-export type CachedOllamaModel = OllamaShowResponse;
+type CachedOllamaModel = OllamaShowResponse;
 
 /** On-disk cache: raw /api/show responses keyed by model ID. */
-export interface CachedData {
+interface CachedData {
   /** Unix epoch milliseconds used to decide when the generated metadata is stale. */
   timestamp?: number;
   models: Record<string, CachedOllamaModel>;
 }
 
-export type RefreshProgressStage = "list" | "details" | "done";
+type RefreshProgressStage = "list" | "details" | "done";
 
 export interface RefreshProgress {
   stage: RefreshProgressStage;
@@ -95,7 +97,7 @@ export const FALLBACK_MODELS: ProviderModelConfig[] = [
 ];
 
 // --- Cache I/O ---
-export type CacheState =
+type CacheState =
   | { status: "fresh"; models: Record<string, CachedOllamaModel> }
   | { status: "stale"; models: Record<string, CachedOllamaModel> }
   | { status: "missing" };
@@ -137,7 +139,7 @@ export function readCacheState(): CacheState {
     : { status: "stale", models: data.models };
 }
 
-export function readCache(): Record<string, CachedOllamaModel> | null {
+function readCache(): Record<string, CachedOllamaModel> | null {
   const state = readCacheState();
   return state.status === "missing" ? null : state.models;
 }
@@ -176,7 +178,7 @@ async function fetchModelDetails(apiKey: string, id: string, timeoutMs = FETCH_T
   return res.data;
 }
 
-export async function refreshOllamaCloudModels(params: {
+async function refreshOllamaCloudModels(params: {
   apiKey: string;
   notify?: (message: string, level?: "info" | "error") => void;
   onProgress?: (progress: RefreshProgress) => void;
@@ -232,7 +234,7 @@ async function getOllamaCloudApiKey(): Promise<string | undefined> {
   return (await authStorage.getApiKey("ollama-cloud")) ?? process.env.OLLAMA_API_KEY;
 }
 
-export async function refreshModelsFromAuth(
+async function refreshModelsFromAuth(
   params: {
     notify?: (message: string, level?: "info" | "error") => void;
     onProgress?: (progress: RefreshProgress) => void;
@@ -275,5 +277,3 @@ export async function fetchModels(
     return null;
   }
 }
-
-export { OLLAMA_BASE };
