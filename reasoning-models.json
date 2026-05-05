@@ -15,7 +15,7 @@
       "low": "low",
       "medium": "medium",
       "high": "high",
-      "xhigh": "max"
+      "xhigh": "xhigh"
     }
   },
   "patterns": [
