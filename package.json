@@ -8,10 +8,8 @@
   "files": [
     "index.ts",
     "models.ts",
-    "thinking.ts",
     "utils.ts",
     "web-tools.ts",
-    "reasoning-models.ts",
     "CHANGELOG.md",
     "README.md",
     "LICENSE"

@@ -6,7 +6,6 @@ import {
   getAgentDir,
   type ProviderModelConfig,
 } from "@mariozechner/pi-coding-agent";
-import { resolveThinkingLevelMap } from "./thinking.ts";
 import { concurrentMap, fetchJsonWithTimeout, getContextLength } from "./utils.ts";
 
 // --- Constants ---
@@ -55,6 +54,36 @@ export interface RefreshProgress {
   message: string;
 }
 
+// --- Thinking level mapping ---
+// Ollama Cloud's OpenAI-compatible API accepts: "none", "low", "medium", "high".
+// "max" is NOT supported. See https://docs.ollama.com/api/openai-compatibility
+
+const DEFAULT_THINKING_MAP = {
+  off: "none",
+  minimal: null,
+  low: "low",
+  medium: "medium",
+  high: "high",
+  xhigh: null,
+};
+
+// GPT-OSS can't disable thinking, only low/medium/high.
+// https://ollama.com/library/gpt-oss
+const GPT_OSS_THINKING_MAP = {
+  off: null,
+  minimal: null,
+  low: "low",
+  medium: "medium",
+  high: "high",
+  xhigh: null,
+};
+
+function resolveThinkingLevelMap(id: string, capabilities: string[]): ProviderModelConfig["thinkingLevelMap"] {
+  if (!capabilities.includes("thinking")) return undefined;
+  if (id.startsWith("gpt-oss")) return GPT_OSS_THINKING_MAP;
+  return DEFAULT_THINKING_MAP;
+}
+
 // --- Assembly: raw API data -> ProviderModelConfig[] ---
 export function assembleModels(raw: Record<string, CachedOllamaModel>): ProviderModelConfig[] {
   return Object.entries(raw)
@@ -63,7 +92,7 @@ export function assembleModels(raw: Record<string, CachedOllamaModel>): Provider
       id,
       name: id,
       reasoning: data.capabilities?.includes("thinking") ?? false,
-      thinkingLevelMap: resolveThinkingLevelMap(id, data),
+      thinkingLevelMap: resolveThinkingLevelMap(id, data.capabilities ?? []),
       input: (data.capabilities?.includes("vision") ? ["text", "image"] : ["text"]) as ("text" | "image")[],
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
       contextWindow: getContextLength(data.model_info ?? {}),

@@ -7,7 +7,7 @@ Registers Ollama Cloud as a model provider with dynamically fetched models, and 
 ## Features
 
 - **Dynamic model discovery** - Fetches the full model list from `ollama.com/v1/models`, then fetches per-model details via `/api/show` to determine capabilities, context length, and tool support.
-- **Curated thinking levels** - Models that advertise the `thinking` capability are mapped through `reasoning-models.ts` so Pi only exposes thinking levels known to be effective for that model family.
+- **Curated thinking levels** — Maps Pi's thinking levels to Ollama Cloud's OpenAI-compatible `reasoning_effort` values (`none`, `low`, `medium`, `high`). GPT-OSS has no off mode (low/medium/high only).
 - **Persistent cache** - Raw API responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` so models are available immediately on startup without hitting the network.
 - **Startup refresh** - When the local cache is stale, the plugin uses it immediately and then runs the same visible refresh flow as `/ollama-cloud-refresh` once the Pi session UI is available. Missing/invalid caches use a small fallback list until refresh completes.
 - **`/ollama-cloud-refresh` command** - Re-fetches the model list and updates the cache and provider registration live (no restart needed).
@@ -122,7 +122,7 @@ Model metadata is derived from the cached data:
 | Field | Source |
 |---|---|
 | `reasoning` | `capabilities` includes `"thinking"` |
-| `thinkingLevelMap` | `reasoning-models.ts`; unknown thinking-capable models default to binary on/off with Pi `medium` as the single on level |
+| `thinkingLevelMap` | Mapped from capabilities: `off`→`none`, `low`→`low`, `medium`→`medium`, `high`→`high`; GPT-OSS has no off mode |
 | `input` | `["text", "image"]` if `capabilities` includes `"vision"`, else `["text"]` |
 | `contextWindow` | `model_info.*.context_length` (falls back to 128000) |
 | `maxTokens` | Fixed at 32768 |
@@ -130,20 +130,18 @@ Model metadata is derived from the cached data:
 
 ### Thinking level mapping
 
-Ollama currently exposes thinking support as a binary capability, not as a machine-readable list of effective thinking levels. Some endpoints accept values such as `low`, `medium`, `high`, or `max` even when the model treats them as the same binary "thinking on" mode, so this extension uses a curated catalog of effective levels instead of treating accepted request values as authoritative.
+Pi's thinking levels are mapped to Ollama Cloud's OpenAI-compatible `reasoning_effort` parameter. The API accepts four values: `none`, `low`, `medium`, `high` ("max" is not supported). See [OpenAI compatibility docs](https://docs.ollama.com/api/openai-compatibility).
 
-Instead, `reasoning-models.ts` curates the levels exposed to Pi, based on Ollama's [thinking capability docs](https://docs.ollama.com/capabilities/thinking) plus known model-specific behavior:
+| Pi level | reasoning_effort sent |
+|---|---|
+| `off` | `"none"` |
+| `low` | `"low"` |
+| `medium` | `"medium"` |
+| `high` | `"high"` |
 
-| Model/family | Pi levels exposed | Notes |
-|---|---|---|
-| `deepseek-v4-pro` | `off`, `minimal`, `low`, `medium`, `high`, `xhigh` | Maps Pi `xhigh` to Ollama `max`. |
-| `gpt-oss*` | `low`, `medium`, `high` | Ollama docs list low/medium/high, no off mode. |
-| `qwen3*` | `off`, `medium` | Qwen 3.x uses boolean think flag. |
-| `deepseek*` | `off`, `medium` | v3.1 and R1 documented as boolean; others assumed binary. |
-| `gemma*`, `glm*`, `kimi*`, `minimax*`, `mistral*`, `nemotron*`, `laguna*`, `magistral*`, `gemini*` | `off`, `medium` | Assumed binary — no gradation docs found. |
-| unknown thinking model | `off`, `medium` | Conservative binary default. |
+`minimal` and `xhigh` are hidden (null) since they'd just duplicate `low`/`high`.
 
-Pi talks to Ollama Cloud through its OpenAI-compatible `/v1/chat/completions` endpoint. For models where off is supported, Pi's `off` level maps to `reasoning_effort: "none"`; binary "on" maps to Pi `medium`.
+**GPT-OSS exception:** GPT-OSS models can't disable thinking and only accept low/medium/high. The `off` level is hidden for these models. See [GPT-OSS library page](https://ollama.com/library/gpt-oss).
 
 Refresh from inside Pi:
 
