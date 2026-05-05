@@ -155,7 +155,7 @@ async function fetchModelIds(apiKey: string, timeoutMs = FETCH_TIMEOUT_MS): Prom
     { headers: { Authorization: `Bearer ${apiKey}` } },
     timeoutMs,
   );
-  if (!res.ok || !res.data) throw new Error(`Failed to fetch model list: ${res.status || res.error}`);
+  if (!res.ok || !res.data) throw new Error(`Failed to fetch model list: ${res.status}${res.error ? ` - ${res.error}` : ""}`);
   return res.data.data.map((m) => m.id);
 }
 
@@ -169,7 +169,7 @@ async function fetchModelDetails(apiKey: string, id: string, timeoutMs = FETCH_T
     },
     timeoutMs,
   );
-  if (!res.ok || !res.data) throw new Error(`Failed to fetch /api/show for ${id}: ${res.status || res.error}`);
+  if (!res.ok || !res.data) throw new Error(`Failed to fetch /api/show for ${id}: ${res.status}${res.error ? ` - ${res.error}` : ""}`);
   return res.data;
 }
 
