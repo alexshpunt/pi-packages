@@ -7,9 +7,10 @@ Registers Ollama Cloud as a model provider with dynamically fetched models, and 
 ## Features
 
 - **Dynamic model discovery** - Fetches the full model list from `ollama.com/v1/models`, then fetches per-model details via `/api/show` to determine capabilities, context length, and tool support.
+- **Curated thinking levels** - Models that advertise the `thinking` capability are mapped through `reasoning-models.json` so Pi only exposes thinking levels known to be effective for that model family.
 - **Persistent cache** - Raw API responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` so models are available immediately on startup without hitting the network.
-- **Cold cache fallback** - When no cache exists, a small set of hardcoded models is used until `/ollama-cloud-refresh` is run.
-- **`/ollama-cloud-refresh` command** - Re-fetches the model list from the API and updates the cache and provider registration live (no restart needed).
+- **Startup refresh** - When the local cache is stale, the plugin uses it immediately and then runs the same visible refresh flow as `/ollama-cloud-refresh` once the Pi session UI is available. Missing/invalid caches use a small fallback list until refresh completes.
+- **`/ollama-cloud-refresh` command** - Re-fetches the model list and updates the cache and provider registration live (no restart needed).
 - **`ollama_web_search` tool** - Search the web for real-time information using Ollama Cloud's `/api/web_search` endpoint. Returns titles, URLs, and content snippets.
 - **`ollama_web_fetch` tool** - Fetch and extract text content from a web page URL using Ollama Cloud's `/api/web_fetch` endpoint. Returns page title, content, and links.
 - **Zero cost tracking** - All models are registered with zero costs since Ollama Cloud uses a flat subscription model (Free, Pro, Max) rather than per-token billing. Per-request costs don't apply, so Pi's cost tracker always shows zero. See [ollama.com/pricing](https://ollama.com/pricing) for plan details.
@@ -93,13 +94,13 @@ Accepted disabling values are `0`, `false`, `no`, `off`, or an empty string. Whe
 
 ### 4. Fetch models
 
-On first launch the plugin will use a small set of fallback models. Run:
+On first launch the plugin registers a small hardcoded fallback list, then refreshes model metadata automatically with the same progress widget used by the manual command. If an existing cache is merely stale, that cached model list remains active while refresh runs. You can also run:
 
 ```
 /ollama-cloud-refresh
 ```
 
-This fetches the full model list from the Ollama Cloud API and caches it locally.
+This fetches the full model list from the Ollama Cloud API and overwrites the local cache.
 
 ### 5. Select a model
 
@@ -114,17 +115,42 @@ The plugin uses two Ollama Cloud API endpoints to build the model list:
 
 Only models with the `tools` capability are registered - these are the ones Pi can use for tool-calling.
 
-The raw `/api/show` responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json`. This cache **never expires** - run `/ollama-cloud-refresh` to update it.
+The raw `/api/show` responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` with a top-level `timestamp` value. If that local cache is older than 30 days, the plugin keeps using it immediately and triggers the visible refresh flow on `session_start`. If the cache is missing or invalid, the plugin registers a small hardcoded model list until refresh succeeds. If no key is available or refresh fails, the current registered list remains active until `/ollama-cloud-refresh` succeeds.
 
 Model metadata is derived from the cached data:
 
 | Field | Source |
 |---|---|
 | `reasoning` | `capabilities` includes `"thinking"` |
+| `thinkingLevelMap` | `reasoning-models.json`; unknown thinking-capable models default to binary on/off with Pi `medium` as the single on level |
 | `input` | `["text", "image"]` if `capabilities` includes `"vision"`, else `["text"]` |
 | `contextWindow` | `model_info.*.context_length` (falls back to 128000) |
 | `maxTokens` | Fixed at 32768 |
 | `cost` | All zeros (Ollama Cloud uses subscription plans, not per-token billing - see [pricing](https://ollama.com/pricing)) |
+
+### Thinking level mapping
+
+Ollama currently exposes thinking support as a binary capability, not as a machine-readable list of effective thinking levels. Some endpoints accept values such as `low`, `medium`, `high`, or `max` even when the model treats them as the same binary "thinking on" mode, so this extension uses a curated catalog of effective levels instead of treating accepted request values as authoritative.
+
+Instead, `reasoning-models.json` curates the levels exposed to Pi, based on Ollama's [thinking capability docs](https://docs.ollama.com/capabilities/thinking) plus known model-specific behavior:
+
+| Model/family | Pi levels exposed | Notes |
+|---|---|---|
+| `deepseek-v4-pro` | `off`, `minimal`, `low`, `medium`, `high`, `xhigh` | Maps Pi `xhigh` to Ollama `max`. |
+| `gpt-oss*` | `low`, `medium`, `high` | Ollama docs list low/medium/high and no off mode. |
+| `qwen3*` | `off`, `medium` | Qwen 3.x is treated as binary on/off. |
+| `deepseek*` | `off`, `medium` | DeepSeek models are treated as binary on/off unless explicitly overridden. |
+| unknown thinking model | `off`, `medium` | Conservative binary default. |
+
+Pi talks to Ollama Cloud through its OpenAI-compatible `/v1/chat/completions` endpoint. For models where off is supported, Pi's `off` level maps to `reasoning_effort: "none"`; binary "on" maps to Pi `medium`.
+
+Refresh from inside Pi:
+
+```text
+/ollama-cloud-refresh
+```
+
+That command updates `~/.pi/agent/cache/ollama-cloud-models.json` with a new `timestamp` and re-registers the provider live, so no restart is required.
 
 ## Tools
 

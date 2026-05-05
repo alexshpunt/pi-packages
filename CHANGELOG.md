@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+- Add packaged `reasoning-models.json` for curated effective thinking levels instead of treating accepted API values as authoritative.
+- Map Pi `off` to Ollama's OpenAI-compatible `reasoning_effort: "none"` where off is supported, keep GPT-OSS on low/medium/high only, treat Qwen 3.x and most DeepSeek models as binary on/off, and give unknown thinking-capable models a conservative binary `off`/`medium` map.
+- Document how thinking levels are determined and how to refresh the cached model metadata.
+- Treat stale local model caches as usable for immediate startup while triggering the same visible refresh flow as `/ollama-cloud-refresh` on `session_start`; use fallback models only when the cache is missing or invalid.
+- Add a single-line `/ollama-cloud-refresh` progress widget showing the current stage, count, percentage, failures, and progress bar.
+
 ## [0.3.1] - 2026-05-05
 
 - Fix `OLLAMA_API_KEY` env var not being respected by `fetchModels` and web tools. pi-ai does not know about the `ollama-cloud` provider ID, so `AuthStorage.getApiKey()` alone misses the env var. Added explicit `process.env.OLLAMA_API_KEY` fallback.
