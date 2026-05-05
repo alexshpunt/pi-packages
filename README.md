@@ -136,7 +136,7 @@ Instead, `reasoning-models.json` curates the levels exposed to Pi, based on Olla
 
 | Model/family | Pi levels exposed | Notes |
 |---|---|---|
-| `deepseek-v4-pro` | `off`, `minimal`, `low`, `medium`, `high`, `xhigh` | Full granular reasoning through Ollama Cloud's OpenAI-compatible `reasoning_effort` values. |
+| `deepseek-v4-pro` | `off`, `minimal`, `low`, `medium`, `high`, `xhigh` | Maps Pi `xhigh` to Ollama `max`. |
 | `gpt-oss*` | `low`, `medium`, `high` | Ollama docs list low/medium/high and no off mode. |
 | `qwen3*` | `off`, `medium` | Qwen 3.x is treated as binary on/off. |
 | `deepseek*` | `off`, `medium` | DeepSeek models are treated as binary on/off unless explicitly overridden. |
