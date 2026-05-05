@@ -137,9 +137,10 @@ Instead, `reasoning-models.ts` curates the levels exposed to Pi, based on Ollama
 | Model/family | Pi levels exposed | Notes |
 |---|---|---|
 | `deepseek-v4-pro` | `off`, `minimal`, `low`, `medium`, `high`, `xhigh` | Maps Pi `xhigh` to Ollama `max`. |
-| `gpt-oss*` | `low`, `medium`, `high` | Ollama docs list low/medium/high and no off mode. |
-| `qwen3*` | `off`, `medium` | Qwen 3.x is treated as binary on/off. |
-| `deepseek*` | `off`, `medium` | DeepSeek models are treated as binary on/off unless explicitly overridden. |
+| `gpt-oss*` | `low`, `medium`, `high` | Ollama docs list low/medium/high, no off mode. |
+| `qwen3*` | `off`, `medium` | Qwen 3.x uses boolean think flag. |
+| `deepseek*` | `off`, `medium` | v3.1 and R1 documented as boolean; others assumed binary. |
+| `gemma*`, `glm*`, `kimi*`, `minimax*`, `mistral*`, `nemotron*`, `laguna*`, `magistral*`, `gemini*` | `off`, `medium` | Assumed binary — no gradation docs found. |
 | unknown thinking model | `off`, `medium` | Conservative binary default. |
 
 Pi talks to Ollama Cloud through its OpenAI-compatible `/v1/chat/completions` endpoint. For models where off is supported, Pi's `off` level maps to `reasoning_effort: "none"`; binary "on" maps to Pi `medium`.
