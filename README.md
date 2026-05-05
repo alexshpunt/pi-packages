@@ -7,7 +7,7 @@ Registers Ollama Cloud as a model provider with dynamically fetched models, and 
 ## Features
 
 - **Dynamic model discovery** - Fetches the full model list from `ollama.com/v1/models`, then fetches per-model details via `/api/show` to determine capabilities, context length, and tool support.
-- **Curated thinking levels** - Models that advertise the `thinking` capability are mapped through `reasoning-models.json` so Pi only exposes thinking levels known to be effective for that model family.
+- **Curated thinking levels** - Models that advertise the `thinking` capability are mapped through `reasoning-models.ts` so Pi only exposes thinking levels known to be effective for that model family.
 - **Persistent cache** - Raw API responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` so models are available immediately on startup without hitting the network.
 - **Startup refresh** - When the local cache is stale, the plugin uses it immediately and then runs the same visible refresh flow as `/ollama-cloud-refresh` once the Pi session UI is available. Missing/invalid caches use a small fallback list until refresh completes.
 - **`/ollama-cloud-refresh` command** - Re-fetches the model list and updates the cache and provider registration live (no restart needed).
@@ -122,7 +122,7 @@ Model metadata is derived from the cached data:
 | Field | Source |
 |---|---|
 | `reasoning` | `capabilities` includes `"thinking"` |
-| `thinkingLevelMap` | `reasoning-models.json`; unknown thinking-capable models default to binary on/off with Pi `medium` as the single on level |
+| `thinkingLevelMap` | `reasoning-models.ts`; unknown thinking-capable models default to binary on/off with Pi `medium` as the single on level |
 | `input` | `["text", "image"]` if `capabilities` includes `"vision"`, else `["text"]` |
 | `contextWindow` | `model_info.*.context_length` (falls back to 128000) |
 | `maxTokens` | Fixed at 32768 |
@@ -132,7 +132,7 @@ Model metadata is derived from the cached data:
 
 Ollama currently exposes thinking support as a binary capability, not as a machine-readable list of effective thinking levels. Some endpoints accept values such as `low`, `medium`, `high`, or `max` even when the model treats them as the same binary "thinking on" mode, so this extension uses a curated catalog of effective levels instead of treating accepted request values as authoritative.
 
-Instead, `reasoning-models.json` curates the levels exposed to Pi, based on Ollama's [thinking capability docs](https://docs.ollama.com/capabilities/thinking) plus known model-specific behavior:
+Instead, `reasoning-models.ts` curates the levels exposed to Pi, based on Ollama's [thinking capability docs](https://docs.ollama.com/capabilities/thinking) plus known model-specific behavior:
 
 | Model/family | Pi levels exposed | Notes |
 |---|---|---|
