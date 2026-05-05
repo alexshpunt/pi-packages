@@ -66,6 +66,7 @@ export function assembleModels(raw: Record<string, CachedOllamaModel>): Provider
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
       contextWindow: getContextLength(data.model_info ?? {}),
       maxTokens: 32768,
+      compat: { supportsDeveloperRole: false },
     }));
 }
 
@@ -79,6 +80,7 @@ export const FALLBACK_MODELS: ProviderModelConfig[] = [
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     contextWindow: 202752,
     maxTokens: 32768,
+    compat: { supportsDeveloperRole: false },
   },
   {
     id: "gemma4:31b",
@@ -88,6 +90,7 @@ export const FALLBACK_MODELS: ProviderModelConfig[] = [
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     contextWindow: 262144,
     maxTokens: 32768,
+    compat: { supportsDeveloperRole: false },
   },
 ];
 

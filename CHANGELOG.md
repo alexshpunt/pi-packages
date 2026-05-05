@@ -4,8 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-- Add packaged `reasoning-models.json` for curated effective thinking levels instead of treating accepted API values as authoritative.
-- Map Pi `off` to Ollama's OpenAI-compatible `reasoning_effort: "none"` where off is supported, keep GPT-OSS on low/medium/high only, treat Qwen 3.x and most DeepSeek models as binary on/off, and give unknown thinking-capable models a conservative binary `off`/`medium` map.
+- Fix `/api/chat` requests not disabling thinking when Pi's thinking level is set to `off`, by mapping Pi `off` to `reasoning_effort: "none"` for models that support it (#6).
+- Add packaged `reasoning-models.json` with curated thinking-level maps: GPT-OSS on low/medium/high only, Qwen 3.x and most DeepSeek models as binary on/off, conservative binary default for unknown thinking-capable models.
 - Document how thinking levels are determined and how to refresh the cached model metadata.
 - Treat stale local model caches as usable for immediate startup while triggering the same visible refresh flow as `/ollama-cloud-refresh` on `session_start`; use fallback models only when the cache is missing or invalid.
 - Add a single-line `/ollama-cloud-refresh` progress widget showing the current stage, count, percentage, failures, and progress bar.
