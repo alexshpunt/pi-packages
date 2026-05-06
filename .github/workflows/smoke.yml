@@ -29,7 +29,29 @@ jobs:
       - name: Install pi
         run: npm install -g @mariozechner/pi-coding-agent
 
-      - name: Smoke test
+      - name: Basic smoke test
         env:
           OLLAMA_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
         run: pi --extension ./index.ts --model "ollama-cloud/gemma4:31b" --no-tools -p "Say hi in one word"
+
+      - name: Thinking off (no reasoning)
+        env:
+          OLLAMA_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+        run: |
+          output=$(pi --no-extensions -e ./index.ts --thinking off --model "ollama-cloud/glm-5.1" --no-tools --mode json -p 'hi' 2>/dev/null)
+          if echo "$output" | grep -q '"type":"thinking"'; then
+            echo "FAIL: thinking block found when off"
+            exit 1
+          fi
+          echo "PASS: no thinking block when off"
+
+      - name: Thinking low (reasoning enabled)
+        env:
+          OLLAMA_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+        run: |
+          output=$(pi --no-extensions -e ./index.ts --thinking low --model "ollama-cloud/glm-5.1" --no-tools --mode json -p 'hi' 2>/dev/null)
+          if ! echo "$output" | grep -q '"type":"thinking"'; then
+            echo "FAIL: no thinking block found when low"
+            exit 1
+          fi
+          echo "PASS: thinking block found when low"

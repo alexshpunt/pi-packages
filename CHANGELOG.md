@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Document how thinking levels are determined and how to refresh the cached model metadata.
 - Treat stale local model caches as usable for immediate startup while triggering the same visible refresh flow as `/ollama-cloud-refresh` on `session_start`; use fallback models only when the cache is missing or invalid.
 - Add a single-line `/ollama-cloud-refresh` progress widget showing the current stage, count, percentage, failures, and progress bar.
+- Add thinking on/off assertions to the CI smoke test.
 
 ## [0.3.1] - 2026-05-05
 
