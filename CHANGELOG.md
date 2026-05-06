@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## [0.4.0] - 2026-05-06
 
 - Fix `/api/chat` requests not disabling thinking when Pi's thinking level is set to `off`. Maps Pi `off` to `reasoning_effort: "none"` on models where the API respects it, hides the `off` level on models where it doesn't (gpt-oss, kimi-k2-thinking, minimax, qwen3-vl). (#6)
 - Add `thinking-levels.ts` with curated per-model thinking level maps (DEFAULT, GPT_OSS, QWEN3, NO_OFF), validated against all 24 thinking-capable models via automated experiment (see docs/think-experiment.md).
