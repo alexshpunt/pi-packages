@@ -12,10 +12,10 @@
  * Model-specific behavior discovered through testing (see docs/think-experiment.md):
  *   - Most models: all levels work, "none" disables thinking
  *   - GPT-OSS: no off mode, only low/medium/high
- *   - Qwen 3.x (non-VL): binary-only (think/nothink) — off works
- *   - Qwen 3 VL: "none" doesn't disable thinking — off is hidden
- *   - Kimi K2 Thinking: "none" doesn't disable thinking — off is hidden
- *   - MiniMax M2.x: "none" doesn't disable thinking — off is hidden
+ *   - Qwen 3.x (non-VL): binary-only (think/nothink) - off works
+ *   - Qwen 3 VL: "none" doesn't disable thinking - off is hidden
+ *   - Kimi K2 Thinking: "none" doesn't disable thinking - off is hidden
+ *   - MiniMax M2.x: "none" doesn't disable thinking - off is hidden
  *
  * Reference: https://docs.ollama.com/api/openai-compatibility
  */
@@ -56,7 +56,7 @@ export const QWEN3: ThinkingLevelMap = {
   xhigh: null,
 };
 
-/** "none" doesn't disable thinking — off is hidden.
+/** "none" doesn't disable thinking - off is hidden.
  *  Used by kimi and minimax families. */
 export const NO_OFF: ThinkingLevelMap = {
   off: null,

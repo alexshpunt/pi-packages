@@ -106,10 +106,10 @@ jq -r 'select(.effort == "none" and (.response.choices[0].message.reasoning // "
 
 Models where `"none"` **does not** disable thinking (used by `NO_OFF` map in `thinking-levels.ts`):
 
-- `gpt-oss:20b`, `gpt-oss:120b` — documented: no off mode
-- `kimi-k2-thinking` — only this specific kimi model; `kimi-k2.5`/`kimi-k2.6` work fine
-- `minimax-m2.1`, `minimax-m2.5`, `minimax-m2.7` — entire minimax family affected
-- `qwen3-vl:235b` — unlike other qwen3 models which support off
+- `gpt-oss:20b`, `gpt-oss:120b` - documented: no off mode
+- `kimi-k2-thinking` - only this specific kimi model; `kimi-k2.5`/`kimi-k2.6` work fine
+- `minimax-m2.1`, `minimax-m2.5`, `minimax-m2.7` - entire minimax family affected
+- `qwen3-vl:235b` - unlike other qwen3 models which support off
 
 All other thinking-capable models correctly produce 0 thinking chars with `"none"`.
 

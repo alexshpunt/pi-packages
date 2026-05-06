@@ -2,12 +2,12 @@
 
 Ollama Cloud provider plugin for [Pi](https://github.com/badlogic/pi-mono) coding agent.
 
-Registers Ollama Cloud as a model provider with dynamically fetched models, and provides `ollama_web_search` and `ollama_web_fetch` tools that use the [Ollama Cloud web search API](https://docs.ollama.com/capabilities/web-search) — no local Ollama server required.
+Registers Ollama Cloud as a model provider with dynamically fetched models, and provides `ollama_web_search` and `ollama_web_fetch` tools that use the [Ollama Cloud web search API](https://docs.ollama.com/capabilities/web-search) - no local Ollama server required.
 
 ## Features
 
 - **Dynamic model discovery** - Fetches the full model list from `ollama.com/v1/models`, then fetches per-model details via `/api/show` to determine capabilities, context length, and tool support.
-- **Curated thinking levels** — Maps Pi's thinking levels to Ollama Cloud's OpenAI-compatible `reasoning_effort` values via `thinking-levels.ts`, with per-model exceptions based on API testing.
+- **Curated thinking levels** - Maps Pi's thinking levels to Ollama Cloud's OpenAI-compatible `reasoning_effort` values via `thinking-levels.ts`, with per-model exceptions based on API testing.
 - **Persistent cache** - Raw API responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` so models are available immediately on startup without hitting the network.
 - **Startup refresh** - When the local cache is stale, the plugin uses it immediately and then runs the same visible refresh flow as `/ollama-cloud-refresh` once the Pi session UI is available. Missing/invalid caches use a small fallback list until refresh completes.
 - **`/ollama-cloud-refresh` command** - Re-fetches the model list and updates the cache and provider registration live (no restart needed).
@@ -194,7 +194,7 @@ The project uses [Biome](https://biomejs.dev/) for linting and formatting (2-spa
 
 **You can use both at the same time.** The providers live under different names (`ollama` vs `ollama-cloud`), so you can switch between them with `/model` or `Ctrl+L`. For example, use your local `ollama` provider for low-latency work on smaller models, and `ollama-cloud` for direct access to the full catalog of cloud models without needing a local server.
 
-> **Note:** The [`@ollama/pi-web-search`](https://www.npmjs.com/package/@ollama/pi-web-search) package (installed automatically by `ollama launch pi`) calls the **local** Ollama server's `/api/experimental/web_search` and `/api/experimental/web_fetch` endpoints and authenticates via `ollama signin`. This extension's `ollama_web_search` and `ollama_web_fetch` tools use the **cloud** API at `ollama.com/api/web_search` and `ollama.com/api/web_fetch` instead — same API key, no local server required. Both can coexist: the local tools register as `web_search`/`web_fetch` and these register as `ollama_web_search`/`ollama_web_fetch` to avoid name conflicts.
+> **Note:** The [`@ollama/pi-web-search`](https://www.npmjs.com/package/@ollama/pi-web-search) package (installed automatically by `ollama launch pi`) calls the **local** Ollama server's `/api/experimental/web_search` and `/api/experimental/web_fetch` endpoints and authenticates via `ollama signin`. This extension's `ollama_web_search` and `ollama_web_fetch` tools use the **cloud** API at `ollama.com/api/web_search` and `ollama.com/api/web_fetch` instead - same API key, no local server required. Both can coexist: the local tools register as `web_search`/`web_fetch` and these register as `ollama_web_search`/`ollama_web_fetch` to avoid name conflicts.
 
 ## Releasing
 
@@ -207,9 +207,9 @@ npm version minor   # or patch, or major
 git push --tags
 ```
 
-The tag version must match the version in `package.json` — `npm version` handles this automatically. The workflow at `.github/workflows/publish.yml` verifies the match before publishing to npm.
+The tag version must match the version in `package.json` - `npm version` handles this automatically. The workflow at `.github/workflows/publish.yml` verifies the match before publishing to npm.
 
-The workflow uses npm's [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) — no tokens stored as secrets. To set it up:
+The workflow uses npm's [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (OIDC) - no tokens stored as secrets. To set it up:
 
 1. Go to [npmjs.com](https://www.npmjs.com) → your avatar → **Packages** → `pi-ollama-cloud` → **Settings** → **Trusted publishing**
 2. Click **GitHub Actions** and enter:
@@ -220,5 +220,5 @@ Each publish also gets automatic [provenance attestation](https://docs.npmjs.com
 
 ## Notes
 
-- The extension sets `supportsDeveloperRole: false` on all models so the system prompt always uses `role: "system"`. Without this, pi sends the prompt as `role: "developer"` for thinking-capable models, which some models (e.g. GLM-5.1) ignore entirely — the prompt simply isn't read.
+- The extension sets `supportsDeveloperRole: false` on all models so the system prompt always uses `role: "system"`. Without this, pi sends the prompt as `role: "developer"` for thinking-capable models, which some models (e.g. GLM-5.1) ignore entirely - the prompt simply isn't read.
 - The fetch timeout is 10 seconds per request. On slow connections, some model detail fetches may time out - the plugin reports how many succeeded vs failed.
