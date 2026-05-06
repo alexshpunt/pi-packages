@@ -122,7 +122,7 @@ Model metadata is derived from the cached data:
 | Field | Source |
 |---|---|
 | `reasoning` | `capabilities` includes `"thinking"` |
-| `thinkingLevelMap` | Mapped from capabilities: `off`→`none`, `low`→`low`, `medium`→`medium`, `high`→`high`; GPT-OSS has no off mode |
+| `thinkingLevelMap` | [`thinking-levels.ts`](thinking-levels.ts) with 4 maps (DEFAULT, GPT_OSS, QWEN3, NO_OFF) based on API testing |
 | `input` | `["text", "image"]` if `capabilities` includes `"vision"`, else `["text"]` |
 | `contextWindow` | `model_info.*.context_length` (falls back to 128000) |
 | `maxTokens` | Fixed at 32768 |
@@ -220,5 +220,5 @@ Each publish also gets automatic [provenance attestation](https://docs.npmjs.com
 
 ## Notes
 
-- Some Ollama Cloud models may reject the `developer` message role, causing a `400` error. If you encounter this, the model may need `compat: { supportsDeveloperRole: false }`. You can edit `index.ts` to add this for specific models, or open an issue to track it.
+- The extension sets `supportsDeveloperRole: false` on all models, so the system prompt always uses `role: "system"`. This avoids 400 errors on models that don't handle the `developer` role.
 - The fetch timeout is 10 seconds per request. On slow connections, some model detail fetches may time out - the plugin reports how many succeeded vs failed.
