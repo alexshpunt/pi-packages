@@ -143,6 +143,8 @@ Pi's thinking levels are mapped to Ollama Cloud's OpenAI-compatible `reasoning_e
 
 **GPT-OSS exception:** GPT-OSS models can't disable thinking and only accept low/medium/high. The `off` level is hidden for these models. See [GPT-OSS library page](https://ollama.com/library/gpt-oss).
 
+**Qwen 3.x exception:** Qwen 3.x is binary-only (think/nothink). Only `off` and `medium` are exposed. See [thinking capabilities docs](https://docs.ollama.com/capabilities/thinking).
+
 Refresh from inside Pi:
 
 ```text

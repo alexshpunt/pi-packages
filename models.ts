@@ -78,9 +78,21 @@ const GPT_OSS_THINKING_MAP = {
   xhigh: null,
 };
 
+// Qwen 3.x is binary-only (think / nothink), no gradation.
+// https://docs.ollama.com/capabilities/thinking
+const BINARY_THINKING_MAP = {
+  off: "none",
+  minimal: null,
+  low: null,
+  medium: "medium",
+  high: null,
+  xhigh: null,
+};
+
 function resolveThinkingLevelMap(id: string, capabilities: string[]): ProviderModelConfig["thinkingLevelMap"] {
   if (!capabilities.includes("thinking")) return undefined;
   if (id.startsWith("gpt-oss")) return GPT_OSS_THINKING_MAP;
+  if (id.startsWith("qwen3")) return BINARY_THINKING_MAP;
   return DEFAULT_THINKING_MAP;
 }
 
