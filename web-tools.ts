@@ -162,6 +162,12 @@ export function registerWebSearchTool(pi: ExtensionAPI) {
         };
       }
     },
+    renderCall(args, theme, _context) {
+      const display = args.query
+        ? `ollama_web_search("${args.query}")`
+        : "ollama_web_search";
+      return new Text(theme.fg("toolTitle", display), 0, 0);
+    },
     renderResult: createRenderResult(),
   });
 }
@@ -221,6 +227,12 @@ export function registerWebFetchTool(pi: ExtensionAPI) {
           isError: true,
         };
       }
+    },
+    renderCall(args, theme, _context) {
+      const display = args.url
+        ? `ollama_web_fetch("${args.url}")`
+        : "ollama_web_fetch";
+      return new Text(theme.fg("toolTitle", display), 0, 0);
     },
     renderResult: createRenderResult(),
   });
