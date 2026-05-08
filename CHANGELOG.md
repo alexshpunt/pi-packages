@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+- Update `peerDependencies` to the new `@earendil-works/*` packages
+
 ## [0.4.1] - 2026-05-07
 
 - Add `renderCall` to `ollama_web_search` and `ollama_web_fetch` tools so the TUI displays the query/URL in the tool call header instead of just the bare tool name. (#12)

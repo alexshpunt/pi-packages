@@ -22,7 +22,7 @@ jobs:
           node-version: 24
 
       - name: Install pi
-        run: npm install -g @mariozechner/pi-coding-agent
+        run: npm install -g @earendil-works/pi-coding-agent
 
       - name: Smoke test
         env:

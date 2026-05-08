@@ -34,7 +34,7 @@ jobs:
         run: npm run lint
 
       - name: Install pi
-        run: npm install -g @mariozechner/pi-coding-agent
+        run: npm install -g @earendil-works/pi-coding-agent
 
       - name: Basic smoke test
         if: env.HAS_API_KEY == 'true'
