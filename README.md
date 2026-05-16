@@ -178,6 +178,7 @@ Both tools use the same Ollama Cloud API key configured for the provider. No loc
 | Command | Description |
 |---|---|
 | `/ollama-cloud-refresh` | Fetch models from the Ollama Cloud API, update cache, and re-register the provider |
+| `/ollama-webtools [on\|off\|enable\|disable]` | Enable or disable the `ollama_web_search` and `ollama_web_fetch` tools. Toggles if no argument given. |
 
 ## Development
 

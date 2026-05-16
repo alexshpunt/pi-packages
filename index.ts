@@ -130,17 +130,93 @@ export default async function (pi: ExtensionAPI) {
     });
   }
 
-  // Register web tools based on config (loaded on session_start so
-  // project-local .pi/ollama-cloud.json can take effect).
-  // Guard prevents double-registration on reload.
-  let webToolsRegistered = false;
-  pi.on("session_start", async (_event, ctx) => {
-    if (webToolsRegistered) return;
-    const config = loadConfig(ctx.cwd);
-    if (config.webTools !== false) {
-      webToolsRegistered = true;
+  // --- Web Tools Management ---
+
+  /**
+   * Ensure web tools are registered (idempotent).
+   * Returns true if any tools were newly registered.
+   */
+  function ensureWebToolsRegistered(): boolean {
+    const allTools = pi.getAllTools();
+    let registered = false;
+    if (!allTools.some((t) => t.name === "ollama_web_search")) {
       registerWebSearchTool(pi);
-      registerWebFetchTool(pi);
+      registered = true;
     }
+    if (!allTools.some((t) => t.name === "ollama_web_fetch")) {
+      registerWebFetchTool(pi);
+      registered = true;
+    }
+    return registered;
+  }
+
+  /**
+   * Add or remove web tools from the active tools set.
+   */
+  function setWebToolsActive(active: boolean) {
+    const currentActive = pi.getActiveTools();
+    const webToolNames = ["ollama_web_search", "ollama_web_fetch"];
+
+    if (active) {
+      const missing = webToolNames.filter((n) => !currentActive.includes(n));
+      if (missing.length > 0) {
+        pi.setActiveTools([...currentActive, ...missing]);
+      }
+    } else {
+      const filtered = currentActive.filter((t) => !webToolNames.includes(t));
+      if (filtered.length < currentActive.length) {
+        pi.setActiveTools(filtered);
+      }
+    }
+  }
+
+  // Module-level tracking across session restarts within the same extension
+  // instance. Resets on /reload or extension teardown, which is the desired
+  // behavior (session_start re-reads config for the new session).
+  let webToolsConfigured = false;
+  let webToolsEnabled = false;
+
+  pi.on("session_start", async (_event, ctx) => {
+    if (!webToolsConfigured) {
+      webToolsConfigured = true;
+      const config = loadConfig(ctx.cwd);
+      if (config.webTools !== false) {
+        webToolsEnabled = true;
+        ensureWebToolsRegistered();
+      }
+    }
+    // On every session start (including resume/fork/new), re-apply the
+    // runtime state. Tools may have been unregistered during teardown.
+    if (webToolsEnabled) {
+      ensureWebToolsRegistered();
+      setWebToolsActive(true);
+    }
+  });
+
+  pi.registerCommand("ollama-webtools", {
+    description:
+      "Enable or disable Ollama Cloud web tools (ollama_web_search, ollama_web_fetch). " +
+      "Accepts optional argument: on/off/enable/disable. Without argument, toggles.",
+    handler: async (args, ctx) => {
+      const arg = args.trim().toLowerCase();
+
+      if (arg === "on" || arg === "enable") {
+        webToolsEnabled = true;
+      } else if (arg === "off" || arg === "disable") {
+        webToolsEnabled = false;
+      } else {
+        // Toggle current state
+        webToolsEnabled = !webToolsEnabled;
+      }
+
+      if (webToolsEnabled) {
+        ensureWebToolsRegistered();
+        setWebToolsActive(true);
+      } else {
+        setWebToolsActive(false);
+      }
+
+      ctx.ui.notify(`Ollama Web Tools: ${webToolsEnabled ? "enabled" : "disabled"}`, "info");
+    },
   });
 }
