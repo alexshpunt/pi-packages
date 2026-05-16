@@ -82,15 +82,30 @@ Or add it to `~/.pi/agent/auth.json`:
 }
 ```
 
-### 3. Disable web tools (optional)
+### 3. Configure the extension (optional)
 
-If you want to use a different web search or fetch tool (e.g. Brave) by default, and need to avoid conflicts with the built-in Ollama Cloud tools, set the `PI_OLLAMA_WEB_TOOLS` environment variable to any falsy value:
+Extension settings can be set via JSON config files. Project-local settings override global/user-level settings.
 
-```bash
-export PI_OLLAMA_WEB_TOOLS=0
+| Location | Scope |
+|---|---|
+| `~/.pi/agent/ollama-cloud.json` | Global / user-level (all projects) |
+| `.pi/ollama-cloud.json` | Project-local (takes precedence) |
+
+**Available settings:**
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `webTools` | boolean | `true` | Set to `false` to prevent `ollama_web_search` and `ollama_web_fetch` from being registered |
+
+Example `ollama-cloud.json`:
+
+```json
+{
+  "webTools": false
+}
 ```
 
-Accepted disabling values are `0`, `false`, `no`, `off`, or an empty string. When disabled, `ollama_web_search` and `ollama_web_fetch` are not registered. The model provider and `/ollama-cloud-refresh` command remain active regardless.
+The `PI_OLLAMA_WEB_TOOLS` environment variable still works as an override above config files. Set it to `0`, `false`, `no`, or `off` to disable web tools regardless of config file settings.
 
 ### 4. Fetch models
 

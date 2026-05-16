@@ -24,6 +24,7 @@
  */
 
 import type { ExtensionAPI, ExtensionCommandContext, ProviderModelConfig } from "@mariozechner/pi-coding-agent";
+import { loadConfig } from "./config.ts";
 import {
   assembleModels,
   FALLBACK_MODELS,
@@ -34,16 +35,6 @@ import {
   writeCache,
 } from "./models.ts";
 import { registerWebFetchTool, registerWebSearchTool } from "./web-tools.ts";
-
-/**
- * Opt-out flag for the ollama_web_search and ollama_web_fetch tools.
- * When the value is one of "0", "false", "no", "off", or the empty string,
- * both web tool registrations are skipped. The model provider and
- * /ollama-cloud-refresh command remain active regardless.
- */
-const PI_OWT_RAW = process.env.PI_OLLAMA_WEB_TOOLS;
-const WEB_TOOLS_DISABLED =
-  PI_OWT_RAW !== undefined && ["0", "false", "no", "off", ""].includes(PI_OWT_RAW.toLowerCase());
 
 // --- Registrations ---
 
@@ -139,8 +130,17 @@ export default async function (pi: ExtensionAPI) {
     });
   }
 
-  if (!WEB_TOOLS_DISABLED) {
-    registerWebSearchTool(pi);
-    registerWebFetchTool(pi);
-  }
+  // Register web tools based on config (loaded on session_start so
+  // project-local .pi/ollama-cloud.json can take effect).
+  // Guard prevents double-registration on reload.
+  let webToolsRegistered = false;
+  pi.on("session_start", async (_event, ctx) => {
+    if (webToolsRegistered) return;
+    const config = loadConfig(ctx.cwd);
+    if (config.webTools !== false) {
+      webToolsRegistered = true;
+      registerWebSearchTool(pi);
+      registerWebFetchTool(pi);
+    }
+  });
 }
