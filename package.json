@@ -23,7 +23,8 @@
   "scripts": {
     "check": "biome check --write .",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "test": "vitest run"
   },
   "pi": {
     "extensions": [
@@ -36,6 +37,7 @@
     "@sinclair/typebox": "*"
   },
   "devDependencies": {
-    "@biomejs/biome": "2"
+    "@biomejs/biome": "2",
+    "vitest": "^4.1.6"
   }
 }
