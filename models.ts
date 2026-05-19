@@ -73,59 +73,6 @@ export function assembleModels(raw: Record<string, CachedOllamaModel>): Provider
 }
 
 // --- Fallback models (cold cache) ---
-export const FALLBACK_MODELS: ProviderModelConfig[] = [
-  {
-    id: "glm-5.1",
-    name: "GLM 5.1",
-    reasoning: false,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 202752,
-    maxTokens: 32768,
-    compat: { supportsDeveloperRole: false },
-  },
-  {
-    id: "gemma4:31b",
-    name: "Gemma 4 31B",
-    reasoning: false,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 262144,
-    maxTokens: 32768,
-    compat: { supportsDeveloperRole: false },
-  },
-  {
-    id: "deepseek-v4-pro",
-    name: "DeepSeek V4 Pro",
-    reasoning: true,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 1000000,
-    maxTokens: 32768,
-    compat: { supportsDeveloperRole: false },
-  },
-  {
-    id: "qwen3.5",
-    name: "Qwen 3.5",
-    reasoning: true,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 131072,
-    maxTokens: 32768,
-    compat: { supportsDeveloperRole: false },
-  },
-  {
-    id: "kimi-k2.6",
-    name: "Kimi K2.6",
-    reasoning: true,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 131072,
-    maxTokens: 32768,
-    compat: { supportsDeveloperRole: false },
-  },
-];
-
 // --- Cache I/O ---
 type CacheState =
   | { status: "fresh"; models: Record<string, CachedOllamaModel> }
@@ -205,7 +152,7 @@ async function fetchModelDetails(apiKey: string, id: string, timeoutMs = FETCH_T
   return res.data;
 }
 
-async function refreshOllamaCloudModels(params: {
+export async function refreshOllamaCloudModels(params: {
   apiKey: string;
   notify?: (message: string, level?: "info" | "error") => void;
   onProgress?: (progress: RefreshProgress) => void;

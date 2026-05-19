@@ -8,8 +8,9 @@ Registers Ollama Cloud as a model provider with dynamically fetched models, and 
 
 - **Dynamic model discovery** - Fetches the full model list from `ollama.com/v1/models`, then fetches per-model details via `/api/show` to determine capabilities, context length, and tool support.
 - **Curated thinking levels** - Maps Pi's thinking levels to Ollama Cloud's OpenAI-compatible `reasoning_effort` values via `thinking-levels.ts`, with per-model exceptions based on API testing.
-- **Persistent cache** - Raw API responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` so models are available immediately on startup without hitting the network.
-- **Startup refresh** - When the local cache is stale, the plugin uses it immediately and then runs the same visible refresh flow as `/ollama-cloud-refresh` once the Pi session UI is available. Missing/invalid caches use a small fallback list until refresh completes.
+- **Baked-in model list** - A generated model list (`models.generated.ts`) ships with the extension so models are available immediately on first launch without any network calls. Updated by running `npm run generate-models` and releasing a new version.
+- **Persistent cache** - Running `/ollama-cloud-refresh` fetches the latest models from the API and caches them to `~/.pi/agent/cache/ollama-cloud-models.json`. On subsequent launches, this disk cache takes precedence over the baked-in list.
+- **Auto-refresh on stale cache** - When the disk cache is older than 30 days, the extension uses it immediately but triggers a background refresh on `session_start` to pull in any new models.
 - **`/ollama-cloud-refresh` command** - Re-fetches the model list and updates the cache and provider registration live (no restart needed).
 - **`ollama_web_search` tool** - Search the web for real-time information using Ollama Cloud's `/api/web_search` endpoint. Returns titles, URLs, and content snippets.
 - **`ollama_web_fetch` tool** - Fetch and extract text content from a web page URL using Ollama Cloud's `/api/web_fetch` endpoint. Returns page title, content, and links.
@@ -107,9 +108,11 @@ Example `ollama-cloud.json`:
 
 The `PI_OLLAMA_WEB_TOOLS` environment variable still works as an override above config files. Set it to `0`, `false`, `no`, or `off` to disable web tools regardless of config file settings.
 
-### 4. Fetch models
+### 4. Fetch models (optional)
 
-On first launch the plugin registers a small hardcoded fallback list, then refreshes model metadata automatically with the same progress widget used by the manual command. If an existing cache is merely stale, that cached model list remains active while refresh runs. You can also run:
+On first launch the plugin uses a baked-in model list shipped with the extension — no network calls needed. If you want the very latest models, run `/ollama-cloud-refresh` to fetch from the API and cache the result to disk. After that, the disk cache is used on subsequent launches.
+
+If the disk cache is older than 30 days, the extension uses it immediately and refreshes in the background on the next session start. You can also run:
 
 ```
 /ollama-cloud-refresh
@@ -130,7 +133,7 @@ The plugin uses two Ollama Cloud API endpoints to build the model list:
 
 Only models with the `tools` capability are registered - these are the ones Pi can use for tool-calling.
 
-The raw `/api/show` responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` with a top-level `timestamp` value. If that local cache is older than 30 days, the plugin keeps using it immediately and triggers the visible refresh flow on `session_start`. If the cache is missing or invalid, the plugin registers a small hardcoded model list until refresh succeeds. If no key is available or refresh fails, the current registered list remains active until `/ollama-cloud-refresh` succeeds.
+The raw `/api/show` responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` with a top-level `timestamp` value. If that local cache is older than 30 days, the plugin keeps using it immediately and triggers a background refresh on `session_start`. If the cache is missing, the plugin uses the baked-in model list shipped with the extension (`models.generated.ts`).
 
 Model metadata is derived from the cached data:
 

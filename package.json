@@ -9,6 +9,7 @@
     "index.ts",
     "config.ts",
     "models.ts",
+    "models.generated.ts",
     "thinking-levels.ts",
     "utils.ts",
     "web-tools.ts",
@@ -24,7 +25,8 @@
     "check": "biome check --write .",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "generate-models": "npx tsx scripts/generate-models.ts"
   },
   "pi": {
     "extensions": [

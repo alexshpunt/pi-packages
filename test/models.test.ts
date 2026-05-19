@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assembleModels, FALLBACK_MODELS } from "../models.ts";
+import { assembleModels } from "../models.ts";
 import { resolve } from "../thinking-levels.ts";
 import { getContextLength } from "../utils.ts";
 
@@ -256,52 +256,6 @@ describe("resolve", () => {
     expect(resolve("gpt-oss:20b", ["tools"])).toBeUndefined();
     expect(resolve("qwen3:397b", ["tools"])).toBeUndefined();
     expect(resolve("minimax-m2.7", ["tools"])).toBeUndefined();
-  });
-});
-
-// ============================================================================
-// FALLBACK_MODELS
-// ============================================================================
-
-describe("FALLBACK_MODELS", () => {
-  it("has 5 fallback models", () => {
-    expect(FALLBACK_MODELS).toHaveLength(5);
-  });
-
-  it("all models have unique IDs", () => {
-    const ids = FALLBACK_MODELS.map((m) => m.id);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-
-  it("all models have compat.supportsDeveloperRole set to false", () => {
-    for (const m of FALLBACK_MODELS) {
-      expect(m.compat?.supportsDeveloperRole).toBe(false);
-    }
-  });
-
-  it("all models have zero costs", () => {
-    for (const m of FALLBACK_MODELS) {
-      expect(m.cost).toEqual({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
-    }
-  });
-
-  it("all models have required fields with sensible values", () => {
-    for (const m of FALLBACK_MODELS) {
-      expect(m.id).toBeTruthy();
-      expect(m.name).toBeTruthy();
-      expect(Array.isArray(m.input)).toBe(true);
-      expect(m.input.length).toBeGreaterThan(0);
-      expect(m.contextWindow).toBeGreaterThan(0);
-      expect(m.maxTokens).toBeGreaterThan(0);
-    }
-  });
-
-  it("non-reasoning models have no thinkingLevelMap", () => {
-    const nonReasoning = FALLBACK_MODELS.filter((m) => !m.reasoning);
-    expect(nonReasoning.length).toBeGreaterThan(0);
-    for (const m of nonReasoning) {
-      expect(m.thinkingLevelMap).toBeUndefined();
-    }
   });
 });
 

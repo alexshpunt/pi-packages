@@ -25,9 +25,9 @@
 
 import type { ExtensionAPI, ExtensionCommandContext, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
 import { loadConfig } from "./config.ts";
+import { GENERATED_MODELS } from "./models.generated.ts";
 import {
   assembleModels,
-  FALLBACK_MODELS,
   fetchModels,
   OLLAMA_BASE,
   type RefreshProgress,
@@ -115,8 +115,14 @@ function registerRefreshCommand(pi: ExtensionAPI) {
 
 export default async function (pi: ExtensionAPI) {
   const cacheState = readCacheState();
-  const needsStartupRefresh = cacheState.status !== "fresh";
-  const models = cacheState.status === "missing" ? FALLBACK_MODELS : assembleModels(cacheState.models);
+  // Auto-refresh only when the disk cache is stale (>30 days).
+  // When cache is missing, GENERATED_MODELS serves as the cache —
+  // it was built from the API at release time and is good enough.
+  const needsStartupRefresh = cacheState.status === "stale";
+  // GENERATED_MODELS ships with the package (36 tool-capable models from
+  // the build script). Used when no local cache exists. A fresh user cache
+  // from /ollama-cloud-refresh takes precedence over the generated list.
+  const models = cacheState.status === "missing" ? GENERATED_MODELS : assembleModels(cacheState.models);
 
   registerProvider(pi, models);
   registerRefreshCommand(pi);
