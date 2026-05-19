@@ -23,7 +23,7 @@
  * Only models with "tools" capability are registered.
  */
 
-import type { ExtensionAPI, ExtensionCommandContext, ProviderModelConfig } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
 import { loadConfig } from "./config.ts";
 import {
   assembleModels,

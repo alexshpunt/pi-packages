@@ -5,7 +5,7 @@ import {
   type ExtensionCommandContext,
   getAgentDir,
   type ProviderModelConfig,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import { resolve as resolveThinkingLevelMap } from "./thinking-levels.ts";
 import { concurrentMap, fetchJsonWithTimeout, getContextLength } from "./utils.ts";
 

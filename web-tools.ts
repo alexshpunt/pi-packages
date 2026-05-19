@@ -1,5 +1,5 @@
-import { AuthStorage, type ExtensionAPI, keyHint, truncateToVisualLines } from "@mariozechner/pi-coding-agent";
-import { Text, truncateToWidth } from "@mariozechner/pi-tui";
+import { AuthStorage, type ExtensionAPI, keyHint, truncateToVisualLines } from "@earendil-works/pi-coding-agent";
+import { Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { OLLAMA_BASE } from "./models.ts";
 
@@ -49,10 +49,10 @@ function createRenderResult() {
   return (
     result: { content: Array<{ type: string; text: string }>; isError?: boolean },
     options: { expanded: boolean; isPartial: boolean },
-    theme: import("@mariozechner/pi-coding-agent").Theme,
+    theme: import("@earendil-works/pi-coding-agent").Theme,
     context: {
       invalidate: () => void;
-      lastComponent: import("@mariozechner/pi-tui").Component | undefined;
+      lastComponent: import("@earendil-works/pi-tui").Component | undefined;
       state: { cachedWidth?: number; cachedLines?: string[]; cachedSkipped?: number };
     },
   ) => {
