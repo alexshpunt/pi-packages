@@ -88,9 +88,36 @@ describe("assembleModels", () => {
     expect(models[0].input).toEqual(["text", "image"]);
   });
 
-  it("sets compat.supportsDeveloperRole to false on every model", () => {
+  it("sets all compat flags explicitly on every model", () => {
     const models = assembleModels({ m: rawModel() });
-    expect(models[0].compat?.supportsDeveloperRole).toBe(false);
+    const compat = models[0].compat;
+
+    // Tested against the live API (think-experiment.md, docs/openai.md):
+    expect(compat?.supportsDeveloperRole).toBe(false);
+    expect(compat?.supportsReasoningEffort).toBe(true);
+    expect(compat?.thinkingFormat).toBe("openai");
+
+    // Verified against docs/openai.md:
+    // "store" is not listed, Ollama lists "max_tokens" not "max_completion_tokens",
+    // stream_options.include_usage is supported, tool_choice is not supported.
+    expect(compat?.supportsStore).toBe(false);
+    expect(compat?.maxTokensField).toBe("max_tokens");
+    expect(compat?.supportsUsageInStreaming).toBe(true);
+    expect(compat?.supportsStrictMode).toBe(false);
+
+    // Verified against docs/anthropic.md: prompt caching is "Not supported".
+    expect(compat?.cacheControlFormat).toBeUndefined();
+
+    // Standard OpenAI-compatible defaults:
+    expect(compat?.requiresToolResultName).toBe(false);
+    expect(compat?.requiresAssistantAfterToolResult).toBe(false);
+    expect(compat?.requiresThinkingAsText).toBe(false);
+    expect(compat?.requiresReasoningContentOnAssistantMessages).toBe(false);
+    expect(compat?.sendSessionAffinityHeaders).toBe(false);
+    expect(compat?.supportsLongCacheRetention).toBe(false);
+    expect(compat?.zaiToolStream).toBe(false);
+    expect(compat?.openRouterRouting).toEqual({});
+    expect(compat?.vercelGatewayRouting).toEqual({});
   });
 
   it("sets all costs to zero (subscription model, not per-token billing)", () => {

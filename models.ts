@@ -56,6 +56,52 @@ export interface RefreshProgress {
 }
 
 // --- Assembly: raw API data -> ProviderModelConfig[] ---
+
+/**
+ * Build an explicit OpenAICompletionsCompat for an Ollama Cloud model.
+ * Every flag is set explicitly so the contract is visible to maintainers.
+ *
+ * Ollama API reference: https://docs.ollama.com/api/openai-compatibility
+ * pi type definition: https://github.com/earendil-works/pi/blob/b94482762321ed0b9f8f245be57c84d786a7105d/packages/ai/src/types.ts#L361-L400
+ * pi compat resolution:  https://docs.ollama.com/api/openai-compatibility https://github.com/badlogic/pi-mono/blob/main/packages/ai/src/types.ts#L365-L425
+ */
+function buildCompat(): ProviderModelConfig["compat"] {
+  return {
+    // Ollama uses "system" role, not "developer" (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsDeveloperRole).
+    supportsDeveloperRole: false,
+    // reasoning_effort works (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsReasoningEffort, tested in think-experiment.md).
+    supportsReasoningEffort: true,
+    // "store" is not a supported field (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsStore).
+    supportsStore: false,
+    // Ollama lists "max_tokens", not "max_completion_tokens" (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#maxTokensField).
+    maxTokensField: "max_tokens",
+    // stream_options.include_usage is supported (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsUsageInStreaming).
+    supportsUsageInStreaming: true,
+    // Default: tool results don't need a name field (pi: types.ts#requiresToolResultName).
+    requiresToolResultName: false,
+    // Default: no assistant message required between tool result and user (pi: types.ts#requiresAssistantAfterToolResult).
+    requiresAssistantAfterToolResult: false,
+    // Ollama supports native thinking blocks (pi: types.ts#requiresThinkingAsText).
+    requiresThinkingAsText: false,
+    // DeepSeek-specific, not needed for Ollama (pi: types.ts#requiresReasoningContentOnAssistantMessages).
+    requiresReasoningContentOnAssistantMessages: false,
+    // reasoning_effort format works (pi: types.ts#thinkingFormat, tested in think-experiment.md).
+    thinkingFormat: "openai",
+    // Ollama does not support tool_choice, so strict mode is unavailable (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsStrictMode).
+    supportsStrictMode: false,
+    // Anthropic cache_control not relevant; Ollama has implicit KV cache only (pi: types.ts#cacheControlFormat).
+    cacheControlFormat: undefined,
+    // Session affinity headers not relevant for Ollama (pi: types.ts#sendSessionAffinityHeaders).
+    sendSessionAffinityHeaders: false,
+    // No explicit cache-retention API (pi: types.ts#supportsLongCacheRetention).
+    supportsLongCacheRetention: false,
+    // Not z.ai (pi: types.ts#zaiToolStream).
+    zaiToolStream: false,
+    openRouterRouting: {},
+    vercelGatewayRouting: {},
+  };
+}
+
 export function assembleModels(raw: Record<string, CachedOllamaModel>): ProviderModelConfig[] {
   return Object.entries(raw)
     .filter(([, data]) => data.capabilities?.includes("tools"))
@@ -68,7 +114,7 @@ export function assembleModels(raw: Record<string, CachedOllamaModel>): Provider
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
       contextWindow: getContextLength(data.model_info ?? {}),
       maxTokens: 32768,
-      compat: { supportsDeveloperRole: false },
+      compat: buildCompat(),
     }));
 }
 
