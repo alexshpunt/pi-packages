@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { GENERATED_MODELS } from "../models.generated.ts";
 import { assembleModels, fetchModelDetails, fetchModelIds } from "../models.ts";
 import { resolve } from "../thinking-levels.ts";
 import { getContextLength } from "../utils.ts";
@@ -213,6 +214,41 @@ describe("assembleModels", () => {
         xhigh: "max",
       });
     });
+  });
+});
+
+// ============================================================================
+// GENERATED_MODELS (baked-in cold-start list)
+// ============================================================================
+
+describe("GENERATED_MODELS", () => {
+  it("ships at least one model", () => {
+    expect(GENERATED_MODELS.length).toBeGreaterThan(0);
+  });
+
+  it("ships the full explicit compat shape from buildCompat", () => {
+    // The baked-in list must match assembleModels output so cold-start
+    // users get the same compat contract as /ollama-cloud-refresh users.
+    for (const m of GENERATED_MODELS) {
+      expect(m.compat).toMatchObject({
+        supportsDeveloperRole: false,
+        supportsReasoningEffort: true,
+        supportsStore: false,
+        maxTokensField: "max_tokens",
+        supportsUsageInStreaming: true,
+        requiresToolResultName: false,
+        requiresAssistantAfterToolResult: false,
+        requiresThinkingAsText: false,
+        requiresReasoningContentOnAssistantMessages: false,
+        thinkingFormat: "openai",
+        supportsStrictMode: false,
+        sendSessionAffinityHeaders: false,
+        supportsLongCacheRetention: false,
+        zaiToolStream: false,
+        openRouterRouting: {},
+        vercelGatewayRouting: {},
+      });
+    }
   });
 });
 
