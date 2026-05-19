@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-- Update `peerDependencies` to the new `@earendil-works/*` packages
+- Update `peerDependencies` and imports to the new `@earendil-works/*` packages
+- Add build script (`scripts/generate-models.ts`) to generate `models.generated.ts` with Ollama Cloud tool-capable models
+- Drop `FALLBACK_MODELS` in favor of GENERATED_MODELS which ships with the package
+- Update README to clarify baked-in model list and refresh behavior
+- Add configuration system (`config.ts`) with JSON config files (global + project-local) and `/ollama-webtools` command for runtime web tools toggling
+- Add test infrastructure (`vitest`) and model validation tests (`test/models.test.ts`)
 
 ## [0.4.1] - 2026-05-07
 
