@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AuthStorage,
   type ExtensionCommandContext,
   getAgentDir,
   type ProviderModelConfig,
@@ -16,9 +15,6 @@ const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 10000;
 
 export const OLLAMA_BASE = (process.env.OLLAMA_API_BASE || "https://ollama.com").replace(/\/+$/, "");
-
-// Initialize AuthStorage
-const authStorage = AuthStorage.create();
 
 // --- Raw API types ---
 /** Response from POST /api/show */
@@ -173,16 +169,13 @@ export function writeCache(models: Record<string, CachedOllamaModel>): void {
 }
 
 // --- Fetch Models ---
-export async function fetchModelIds(apiKey: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<string[]> {
+export async function fetchModelIds(timeoutMs = FETCH_TIMEOUT_MS): Promise<string[]> {
   const res = await fetchJsonWithTimeout<{ data: { id: string }[] }>(
     `${OLLAMA_BASE}/v1/models`,
-    { headers: { Authorization: `Bearer ${apiKey}` } },
+    {},
     timeoutMs,
   );
 
-  if (res.status === 401 || res.status === 403) {
-    throw new Error("Ollama Cloud authentication failed. " + "Check your API key in OLLAMA_API_KEY or auth.json.");
-  }
   if (res.status === 429) {
     throw new Error("Ollama Cloud rate limited. Try again shortly.");
   }
@@ -194,7 +187,6 @@ export async function fetchModelIds(apiKey: string, timeoutMs = FETCH_TIMEOUT_MS
 }
 
 export async function fetchModelDetails(
-  apiKey: string,
   id: string,
   timeoutMs = FETCH_TIMEOUT_MS,
 ): Promise<CachedOllamaModel> {
@@ -202,15 +194,12 @@ export async function fetchModelDetails(
     `${OLLAMA_BASE}/api/show`,
     {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model: id }),
     },
     timeoutMs,
   );
 
-  if (res.status === 401 || res.status === 403) {
-    throw new Error("Ollama Cloud authentication failed. " + "Check your API key in OLLAMA_API_KEY or auth.json.");
-  }
   if (res.status === 429) {
     throw new Error("Ollama Cloud rate limited. Try again shortly.");
   }
@@ -222,7 +211,6 @@ export async function fetchModelDetails(
 }
 
 export async function refreshOllamaCloudModels(params: {
-  apiKey: string;
   notify?: (message: string, level?: "info" | "error") => void;
   onProgress?: (progress: RefreshProgress) => void;
   workers?: number;
@@ -230,7 +218,7 @@ export async function refreshOllamaCloudModels(params: {
   const notify = params.notify ?? (() => undefined);
   const onProgress = params.onProgress ?? (() => undefined);
   onProgress({ stage: "list", message: "Fetching model list..." });
-  const modelIds = await fetchModelIds(params.apiKey);
+  const modelIds = await fetchModelIds();
   notify(`Found ${modelIds.length} models, fetching details...`);
   onProgress({ stage: "details", current: 0, total: modelIds.length, failed: 0, message: "Fetching model details" });
 
@@ -238,7 +226,7 @@ export async function refreshOllamaCloudModels(params: {
   let detailsFailed = 0;
   const detailResults = await concurrentMap(modelIds, params.workers ?? 8, async (id) => {
     try {
-      return [id, await fetchModelDetails(params.apiKey, id)] as const;
+      return [id, await fetchModelDetails(id)] as const;
     } catch (error) {
       detailsFailed++;
       throw error;
@@ -274,48 +262,15 @@ export async function refreshOllamaCloudModels(params: {
   return models;
 }
 
-async function getOllamaCloudApiKey(): Promise<string | undefined> {
-  return (await authStorage.getApiKey("ollama-cloud")) ?? process.env.OLLAMA_API_KEY;
-}
-
-async function refreshModelsFromAuth(
-  params: {
-    notify?: (message: string, level?: "info" | "error") => void;
-    onProgress?: (progress: RefreshProgress) => void;
-  } = {},
-): Promise<Record<string, CachedOllamaModel> | null> {
-  const apiKey = await getOllamaCloudApiKey();
-  if (!apiKey) return null;
-
-  return refreshOllamaCloudModels({
-    apiKey,
-    notify: params.notify,
-    onProgress: params.onProgress,
-  });
-}
-
 export async function fetchModels(
   ctx: Pick<ExtensionCommandContext, "ui">,
   onProgress?: (progress: RefreshProgress) => void,
 ): Promise<Record<string, CachedOllamaModel> | null> {
   try {
-    const result = await refreshModelsFromAuth({
+    return await refreshOllamaCloudModels({
       notify: (message, level) => ctx.ui.notify(message, level),
       onProgress,
     });
-    if (!result) {
-      ctx.ui.notify(
-        "No Ollama Cloud API key found. \n" +
-          "Please ensure your API key is set in either: \n" +
-          "- OLLAMA_API_KEY environment variable,\n" +
-          "- auth.json file (at ~/.pi/agent/auth.json) under 'ollama-cloud' key,\n" +
-          "- or via the CLI --api-key flag.\n" +
-          "Example auth.json entry: \n" +
-          '{ "ollama-cloud": { "type": "api_key", "key": "YOUR_API_KEY" } }',
-        "error",
-      );
-    }
-    return result;
   } catch (error) {
     ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
     return null;

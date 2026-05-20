@@ -5,48 +5,14 @@
  * the model catalog changes.
  *
  * Usage:
- *   OLLAMA_API_KEY=your-key npx tsx scripts/generate-models.ts
- *
- * The OLLAMA_API_KEY environment variable is optional if the key is
- * already stored in `~/.pi/agent/auth.json` (under the `ollama-cloud`
- * entry).
+ *   npx tsx scripts/generate-models.ts
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { writeFileSync } from "node:fs";
 import { assembleModels, refreshOllamaCloudModels } from "../models.ts";
-
-function resolveApiKey(): string | undefined {
-  // 1. Environment variable
-  if (process.env.OLLAMA_API_KEY) return process.env.OLLAMA_API_KEY;
-
-  // 2. auth.json (matches pi's AuthStorage pattern)
-  const authPath = join(
-    process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent"),
-    "auth.json",
-  );
-  if (existsSync(authPath)) {
-    try {
-      const auth: Record<string, { type: string; key: string }> = JSON.parse(readFileSync(authPath, "utf-8"));
-      return auth["ollama-cloud"]?.key;
-    } catch {
-      // Ignore parse errors.
-    }
-  }
-
-  return undefined;
-}
-
-const apiKey = resolveApiKey();
-if (!apiKey) {
-  console.error("OLLAMA_API_KEY not set");
-  process.exit(1);
-}
 
 console.log("Fetching Ollama Cloud models...");
 const raw = await refreshOllamaCloudModels({
-  apiKey,
   notify: (msg) => console.log(`  ${msg}`),
   onProgress: (p) => {
     if (p.stage === "details" && p.total) {

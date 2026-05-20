@@ -4,17 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-- Update `peerDependencies` and imports to the new `@earendil-works/*` packages
-- Add build script (`scripts/generate-models.ts`) to generate `models.generated.ts` with Ollama Cloud tool-capable models
-- Drop `FALLBACK_MODELS` in favor of GENERATED_MODELS which ships with the package
-- Update README to clarify baked-in model list and refresh behavior
-- Add configuration system (`config.ts`) with JSON config files (global + project-local) and `/ollama-webtools` command for runtime web tools toggling
-- Add test infrastructure (`vitest`) and model validation tests (`test/models.test.ts`)
-- Add HTTP status-aware error handling in model fetching and web tools (401/403 → auth error, 429 → rate limit)
-- Document web-tools.ts module boundaries in file header comment
-- Add explicit `buildCompat()` with all 17 `OpenAICompletionsCompat` flags set explicitly, verified against Ollama API docs
-- Set the provider display name to `Ollama Cloud` so it reads cleanly in `/login`, `/model`, and the model selector
-- Document `/login` as the recommended way to configure the API key
+- Update `peerDependencies` and imports to the new `@earendil-works/*` packages.
+- Add build script (`scripts/generate-models.ts`) to generate `models.generated.ts` with Ollama Cloud tool-capable models from live API data. The script requires no API key.
+- Drop `FALLBACK_MODELS` in favor of `GENERATED_MODELS` which ships with the package.
+- Remove `apiKey` requirement from `fetchModelIds` and `fetchModelDetails`. Ollama Cloud's public `/v1/models` and `/api/show` endpoints do not require authentication for model metadata. (#15)
+- Remove `getOllamaCloudApiKey`, `refreshModelsFromAuth`, and the "No API key found" notification path from `fetchModels`. Users can now browse model metadata without configuring a key.
+- Remove `401`/`403` error handling from the model metadata fetch functions.
+- Add configuration system (`config.ts`) with JSON config files (global + project-local) and `/ollama-webtools` command for runtime web tools toggling.
+- Add test infrastructure (`vitest`) and model validation tests (`test/models.test.ts`).
+- Add HTTP status-aware error handling in web tools (`401`/`403` → auth error, `429` → rate limit).
+- Add explicit `buildCompat()` with all 17 `OpenAICompletionsCompat` flags set explicitly, verified against Ollama API docs.
+- Set the provider display name to `Ollama Cloud` so it reads cleanly in `/login`, `/model`, and the model selector.
+- Document `/login` as the recommended way to configure the API key.
+- Update README to clarify baked-in model list and refresh behavior.
+- Document web-tools.ts module boundaries in file header comment.
 
 ## [0.4.1] - 2026-05-07
 

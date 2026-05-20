@@ -358,26 +358,10 @@ describe("fetchModelIds", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("throws auth error on 401", async () => {
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
-    await expect(fetchModelIds("bad-key")).rejects.toThrow(
-      "Ollama Cloud authentication failed",
-    );
-  });
-
-  it("throws auth error on 403", async () => {
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({ error: "forbidden" }), { status: 403 });
-    await expect(fetchModelIds("bad-key")).rejects.toThrow(
-      "Ollama Cloud authentication failed",
-    );
-  });
-
   it("throws rate limit error on 429", async () => {
     globalThis.fetch = async () =>
       new Response(JSON.stringify({ error: "too many requests" }), { status: 429 });
-    await expect(fetchModelIds("key")).rejects.toThrow(
+    await expect(fetchModelIds()).rejects.toThrow(
       "Ollama Cloud rate limited",
     );
   });
@@ -385,7 +369,7 @@ describe("fetchModelIds", () => {
   it("throws generic error on other failures", async () => {
     globalThis.fetch = async () =>
       new Response(JSON.stringify({ error: "server error" }), { status: 500 });
-    await expect(fetchModelIds("key")).rejects.toThrow(
+    await expect(fetchModelIds()).rejects.toThrow(
       "Failed to fetch model list",
     );
   });
@@ -395,7 +379,7 @@ describe("fetchModelIds", () => {
       new Response(JSON.stringify({ data: [{ id: "qwen3" }, { id: "gemma3" }] }), {
         status: 200,
       });
-    const ids = await fetchModelIds("good-key");
+    const ids = await fetchModelIds();
     expect(ids).toEqual(["qwen3", "gemma3"]);
   });
 });
@@ -407,18 +391,10 @@ describe("fetchModelDetails", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("throws auth error on 401", async () => {
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
-    await expect(fetchModelDetails("bad-key", "qwen3")).rejects.toThrow(
-      "Ollama Cloud authentication failed",
-    );
-  });
-
   it("throws rate limit error on 429", async () => {
     globalThis.fetch = async () =>
       new Response(JSON.stringify({ error: "too many requests" }), { status: 429 });
-    await expect(fetchModelDetails("key", "qwen3")).rejects.toThrow(
+    await expect(fetchModelDetails("qwen3")).rejects.toThrow(
       "Ollama Cloud rate limited",
     );
   });
@@ -426,7 +402,7 @@ describe("fetchModelDetails", () => {
   it("throws generic error on other failures", async () => {
     globalThis.fetch = async () =>
       new Response(JSON.stringify({ error: "not found" }), { status: 404 });
-    await expect(fetchModelDetails("key", "unknown")).rejects.toThrow(
+    await expect(fetchModelDetails("unknown")).rejects.toThrow(
       "Failed to fetch /api/show",
     );
   });
@@ -440,7 +416,7 @@ describe("fetchModelDetails", () => {
         }),
         { status: 200 },
       );
-    const details = await fetchModelDetails("good-key", "qwen3");
+    const details = await fetchModelDetails("qwen3");
     expect(details.capabilities).toContain("tools");
     expect(details.model_info).toBeDefined();
   });
