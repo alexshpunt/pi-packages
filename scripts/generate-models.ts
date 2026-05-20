@@ -6,6 +6,10 @@
  *
  * Usage:
  *   OLLAMA_API_KEY=your-key npx tsx scripts/generate-models.ts
+ *
+ * The OLLAMA_API_KEY environment variable is optional if the key is
+ * already stored in `~/.pi/agent/auth.json` (under the `ollama-cloud`
+ * entry).
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
