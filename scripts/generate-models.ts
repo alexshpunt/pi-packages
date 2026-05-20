@@ -5,7 +5,8 @@
  * the model catalog changes.
  *
  * Usage:
- *   npx tsx scripts/generate-models.ts
+ *   npm install  # ensure tsx is available
+ *   npm run generate-models
  */
 
 import { writeFileSync } from "node:fs";

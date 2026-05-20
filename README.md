@@ -10,7 +10,7 @@ Registers Ollama Cloud as a model provider with dynamically fetched models, and 
 - **Curated thinking levels** - Maps Pi's thinking levels to Ollama Cloud's OpenAI-compatible `reasoning_effort` values via `thinking-levels.ts`, with per-model exceptions based on API testing.
 - **Baked-in model list** - A generated model list (`models.generated.ts`) ships with the extension so models are available immediately on first launch without any network calls. Updated by running `npm run generate-models` and releasing a new version.
 - **Persistent cache** - Running `/ollama-cloud-refresh` fetches the latest models from the API and caches them to `~/.pi/agent/cache/ollama-cloud-models.json`. On subsequent launches, this disk cache takes precedence over the baked-in list.
-- **Auto-refresh on stale cache** - When the disk cache is older than 30 days, the extension uses it immediately but triggers a background refresh on `session_start` to pull in any new models.
+- **Auto-refresh on stale cache** - When the disk cache is older than 30 days, the extension uses it immediately and shows a visible refresh progress widget on the next `session_start` to pull in any new models.
 - **`/ollama-cloud-refresh` command** - Re-fetches the model list and updates the cache and provider registration live (no restart needed).
 - **`ollama_web_search` tool** - Search the web for real-time information using Ollama Cloud's `/api/web_search` endpoint. Returns titles, URLs, and content snippets.
 - **`ollama_web_fetch` tool** - Fetch and extract text content from a web page URL using Ollama Cloud's `/api/web_fetch` endpoint. Returns page title, content, and links.
@@ -114,7 +114,7 @@ The `PI_OLLAMA_WEB_TOOLS` environment variable still works as an override above 
 
 On first launch the plugin uses a baked-in model list shipped with the extension — no network calls needed. If you want the very latest models, run `/ollama-cloud-refresh` to fetch from the API and cache the result to disk. After that, the disk cache is used on subsequent launches.
 
-If the disk cache is older than 30 days, the extension uses it immediately and refreshes in the background on the next session start. You can also run:
+If the disk cache is older than 30 days, the extension uses it immediately and runs a visible refresh on the next session start (progress appears in the UI widget). You can also run:
 
 ```
 /ollama-cloud-refresh

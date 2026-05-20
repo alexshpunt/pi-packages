@@ -26,7 +26,7 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "vitest run",
-    "generate-models": "npx tsx scripts/generate-models.ts"
+    "generate-models": "tsx scripts/generate-models.ts"
   },
   "pi": {
     "extensions": [
@@ -40,6 +40,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2",
+    "tsx": "^4.19.0",
     "vitest": "^4.1.6"
   }
 }

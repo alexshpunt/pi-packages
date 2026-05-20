@@ -17,8 +17,11 @@
  * Raw /api/show responses are cached at <agentDir>/cache/ollama-cloud-models.json
  * so the provider assembly can be debugged and re-derived without re-fetching.
  *
- * Local cache entries include timestamp. Stale local caches are used immediately while a visible startup
- * refresh runs; missing/invalid caches use a small hardcoded model list until refresh completes.
+ * Startup behavior:
+ *   - Missing cache: uses baked-in GENERATED_MODELS (generated at release time from the API).
+ *   - Stale cache (>30 days): uses the cached data immediately and triggers a visible refresh
+ *     on session_start that shows progress in the UI widget.
+ *   - Fresh cache: uses cached data directly, no refresh triggered.
  *
  * Only models with "tools" capability are registered.
  */
@@ -212,9 +215,15 @@ export default async function (pi: ExtensionAPI) {
         webToolsEnabled = true;
       } else if (arg === "off" || arg === "disable") {
         webToolsEnabled = false;
-      } else {
+      } else if (arg === "") {
         // Toggle current state
         webToolsEnabled = !webToolsEnabled;
+      } else {
+        ctx.ui.notify(
+          `Unknown argument "${args.trim()}". Usage: /ollama-webtools [on|off|enable|disable]`,
+          "error",
+        );
+        return;
       }
 
       if (webToolsEnabled) {

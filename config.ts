@@ -51,7 +51,10 @@ export function loadConfig(cwd: string): OllamaCloudConfig {
   if (existsSync(globalPath)) {
     try {
       const content = readFileSync(globalPath, "utf-8");
-      globalConfig = JSON.parse(content);
+      const parsed = JSON.parse(content);
+      if (parsed != null && typeof parsed === "object" && !Array.isArray(parsed)) {
+        globalConfig = parsed as OllamaCloudConfig;
+      }
     } catch (err) {
       console.error(`[pi-ollama-cloud] Failed to load config from ${globalPath}: ${err}`);
     }
@@ -61,7 +64,10 @@ export function loadConfig(cwd: string): OllamaCloudConfig {
   if (existsSync(projectPath)) {
     try {
       const content = readFileSync(projectPath, "utf-8");
-      projectConfig = JSON.parse(content);
+      const parsed = JSON.parse(content);
+      if (parsed != null && typeof parsed === "object" && !Array.isArray(parsed)) {
+        projectConfig = parsed as OllamaCloudConfig;
+      }
     } catch (err) {
       console.error(`[pi-ollama-cloud] Failed to load config from ${projectPath}: ${err}`);
     }
