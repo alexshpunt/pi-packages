@@ -66,13 +66,15 @@ Sign up at [ollama.com](https://ollama.com) and generate an API key.
 
 ### 2. Configure the API key
 
-Either set the `OLLAMA_API_KEY` environment variable:
+The simplest way is the `/login` command inside Pi: run `/login`, choose **Use an API key**, pick **Ollama Cloud**, and paste your key. Pi stores it in `~/.pi/agent/auth.json` and `/logout` removes it.
+
+Alternatively, set the `OLLAMA_API_KEY` environment variable:
 
 ```bash
 export OLLAMA_API_KEY="your-key"
 ```
 
-Or add it to `~/.pi/agent/auth.json`:
+Or add it to `~/.pi/agent/auth.json` by hand:
 
 ```json
 {

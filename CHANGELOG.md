@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 - Add HTTP status-aware error handling in model fetching and web tools (401/403 → auth error, 429 → rate limit)
 - Document web-tools.ts module boundaries in file header comment
 - Add explicit `buildCompat()` with all 17 `OpenAICompletionsCompat` flags set explicitly, verified against Ollama API docs
+- Set the provider display name to `Ollama Cloud` so it reads cleanly in `/login`, `/model`, and the model selector
+- Document `/login` as the recommended way to configure the API key
 
 ## [0.4.1] - 2026-05-07
 
