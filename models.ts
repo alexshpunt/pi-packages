@@ -82,7 +82,9 @@ function buildCompat(): ProviderModelConfig["compat"] {
     // Ollama does not support tool_choice, so strict mode is unavailable (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsStrictMode).
     supportsStrictMode: false,
     // Anthropic cache_control not relevant; Ollama has implicit KV cache only (pi: types.ts#cacheControlFormat).
-    cacheControlFormat: undefined,
+    // Intentionally omitted: optional undefined fields are dropped by JSON.stringify,
+    // so keeping this out of buildCompat() keeps models.generated.ts structurally
+    // consistent with assembleModels() runtime output.
     // Session affinity headers not relevant for Ollama (pi: types.ts#sendSessionAffinityHeaders).
     sendSessionAffinityHeaders: false,
     // No explicit cache-retention API (pi: types.ts#supportsLongCacheRetention).

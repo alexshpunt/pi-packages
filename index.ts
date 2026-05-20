@@ -122,7 +122,7 @@ export default async function (pi: ExtensionAPI) {
   const cacheState = readCacheState();
   // Auto-refresh only when the disk cache is stale (>30 days).
   // When cache is missing, GENERATED_MODELS serves as the cache —
-  // it was built from the API at release time and is good enough.
+  // it is manually generated via `npm run generate-models` and committed to the repo.
   const needsStartupRefresh = cacheState.status === "stale";
   // GENERATED_MODELS ships with the package (36 tool-capable models from
   // the build script). Used when no local cache exists. A fresh user cache
