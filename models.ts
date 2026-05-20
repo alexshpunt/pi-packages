@@ -166,7 +166,17 @@ export function writeCache(models: Record<string, CachedOllamaModel>): void {
 
 // --- Fetch Models ---
 export async function fetchModelIds(timeoutMs = FETCH_TIMEOUT_MS): Promise<string[]> {
-  const res = await fetchJsonWithTimeout<{ data: { id: string }[] }>(`${OLLAMA_BASE}/v1/models`, {}, timeoutMs);
+  const headers: Record<string, string> = {};
+  const apiKey = process.env.OLLAMA_API_KEY;
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
+  const res = await fetchJsonWithTimeout<{ data: { id: string }[] }>(
+    `${OLLAMA_BASE}/v1/models`,
+    { headers },
+    timeoutMs,
+  );
 
   if (res.status === 429) {
     throw new Error("Ollama Cloud rate limited. Try again shortly.");
@@ -179,11 +189,17 @@ export async function fetchModelIds(timeoutMs = FETCH_TIMEOUT_MS): Promise<strin
 }
 
 export async function fetchModelDetails(id: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<CachedOllamaModel> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const apiKey = process.env.OLLAMA_API_KEY;
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
   const res = await fetchJsonWithTimeout<OllamaShowResponse>(
     `${OLLAMA_BASE}/api/show`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ model: id }),
     },
     timeoutMs,

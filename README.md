@@ -135,7 +135,7 @@ The plugin uses two Ollama Cloud API endpoints to build the model list:
 
 Only models with the `tools` capability are registered - these are the ones Pi can use for tool-calling.
 
-The raw `/api/show` responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` with a top-level `timestamp` value. If that local cache is older than 30 days, the plugin keeps using it immediately and triggers a background refresh on `session_start`. If the cache is missing, the plugin uses the baked-in model list shipped with the extension (`models.generated.ts`).
+The raw `/api/show` responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` with a top-level `timestamp` value. If that local cache is older than 30 days, the plugin keeps using it immediately and runs a visible refresh on `session_start` (progress appears in the UI widget). If the cache is missing, the plugin uses the baked-in model list shipped with the extension (`models.generated.ts`).
 
 Model metadata is derived from the cached data:
 
