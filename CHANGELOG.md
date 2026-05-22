@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## [0.5.0] - 2026-05-22
 
 - Update `peerDependencies` and imports to the new `@earendil-works/*` packages.
 - Add build script (`scripts/generate-models.ts`) to generate `models.generated.ts` with Ollama Cloud tool-capable models from live API data. The script requires no API key.
