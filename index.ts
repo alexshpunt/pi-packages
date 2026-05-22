@@ -205,42 +205,37 @@ export default async function (pi: ExtensionAPI) {
     }
   });
 
-  pi.registerCommand("ollama-webtools", {
-    description:
-      "Enable or disable Ollama Cloud web tools (ollama_web_search, ollama_web_fetch). " +
-      "Accepts optional argument: on/off/enable/disable. Without argument, toggles.",
-    handler: async (args, ctx) => {
-      const arg = args.trim().toLowerCase();
+  // Only register the runtime toggle command when the env var doesn't force tools off.
+  // PI_OLLAMA_WEB_TOOLS acts as a hard kill switch — no command to re-enable.
+  if (resolveWebToolsEnv() !== false) {
+    pi.registerCommand("ollama-webtools", {
+      description:
+        "Enable or disable Ollama Cloud web tools (ollama_web_search, ollama_web_fetch). " +
+        "Accepts optional argument: on/off/enable/disable. Without argument, toggles.",
+      handler: async (args, ctx) => {
+        const arg = args.trim().toLowerCase();
 
-      // Env var is a hard override: when PI_OLLAMA_WEB_TOOLS disables,
-      // refuse to enable at runtime (documents precedence in config.ts).
-      const envOverride = resolveWebToolsEnv();
-      const wantsEnable = arg === "on" || arg === "enable" || (arg === "" && !webToolsEnabled);
-      if (wantsEnable && envOverride === false) {
-        ctx.ui.notify("Cannot enable web tools: PI_OLLAMA_WEB_TOOLS environment variable forces them off", "error");
-        return;
-      }
+        if (arg === "on" || arg === "enable") {
+          webToolsEnabled = true;
+        } else if (arg === "off" || arg === "disable") {
+          webToolsEnabled = false;
+        } else if (arg === "") {
+          // Toggle current state
+          webToolsEnabled = !webToolsEnabled;
+        } else {
+          ctx.ui.notify(`Unknown argument "${args.trim()}". Usage: /ollama-webtools [on|off|enable|disable]`, "error");
+          return;
+        }
 
-      if (arg === "on" || arg === "enable") {
-        webToolsEnabled = true;
-      } else if (arg === "off" || arg === "disable") {
-        webToolsEnabled = false;
-      } else if (arg === "") {
-        // Toggle current state
-        webToolsEnabled = !webToolsEnabled;
-      } else {
-        ctx.ui.notify(`Unknown argument "${args.trim()}". Usage: /ollama-webtools [on|off|enable|disable]`, "error");
-        return;
-      }
+        if (webToolsEnabled) {
+          ensureWebToolsRegistered();
+          setWebToolsActive(true);
+        } else {
+          setWebToolsActive(false);
+        }
 
-      if (webToolsEnabled) {
-        ensureWebToolsRegistered();
-        setWebToolsActive(true);
-      } else {
-        setWebToolsActive(false);
-      }
-
-      ctx.ui.notify(`Ollama Web Tools: ${webToolsEnabled ? "enabled" : "disabled"}`, "info");
-    },
-  });
+        ctx.ui.notify(`Ollama Web Tools: ${webToolsEnabled ? "enabled" : "disabled"}`, "info");
+      },
+    });
+  }
 }
