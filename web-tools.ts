@@ -1,5 +1,15 @@
-import { AuthStorage, type ExtensionAPI, keyHint, truncateToVisualLines } from "@mariozechner/pi-coding-agent";
-import { Text, truncateToWidth } from "@mariozechner/pi-tui";
+/**
+ * Ollama Cloud web tools: ollama_web_search and ollama_web_fetch.
+ *
+ * Self-contained module. Depends on:
+ *   - models.ts       - only for OLLAMA_BASE URL constant
+ *   - pi-coding-agent - AuthStorage, ExtensionAPI, keyHint, truncateToVisualLines
+ *   - pi-tui          - Text, truncateToWidth
+ * Does NOT depend on provider registration or model fetching internals.
+ */
+
+import { AuthStorage, type ExtensionAPI, keyHint, truncateToVisualLines } from "@earendil-works/pi-coding-agent";
+import { Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { OLLAMA_BASE } from "./models.ts";
 
@@ -49,10 +59,10 @@ function createRenderResult() {
   return (
     result: { content: Array<{ type: string; text: string }>; isError?: boolean },
     options: { expanded: boolean; isPartial: boolean },
-    theme: import("@mariozechner/pi-coding-agent").Theme,
+    theme: import("@earendil-works/pi-coding-agent").Theme,
     context: {
       invalidate: () => void;
-      lastComponent: import("@mariozechner/pi-tui").Component | undefined;
+      lastComponent: import("@earendil-works/pi-tui").Component | undefined;
       state: { cachedWidth?: number; cachedLines?: string[]; cachedSkipped?: number };
     },
   ) => {
@@ -138,6 +148,25 @@ export function registerWebSearchTool(pi: ExtensionAPI) {
 
         if (!res.ok) {
           const errorText = await res.text().catch(() => "");
+          if (res.status === 401 || res.status === 403) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text:
+                    "Ollama Cloud search failed: authentication error. " +
+                    "Check your API key in OLLAMA_API_KEY or auth.json.",
+                },
+              ],
+              isError: true,
+            };
+          }
+          if (res.status === 429) {
+            return {
+              content: [{ type: "text", text: "Ollama Cloud search failed: rate limited. Try again shortly." }],
+              isError: true,
+            };
+          }
           return {
             content: [
               { type: "text", text: `Search API error (status ${res.status}): ${errorText || res.statusText}` },
@@ -198,6 +227,25 @@ export function registerWebFetchTool(pi: ExtensionAPI) {
 
         if (!res.ok) {
           const errorText = await res.text().catch(() => "");
+          if (res.status === 401 || res.status === 403) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text:
+                    "Ollama Cloud fetch failed: authentication error. " +
+                    "Check your API key in OLLAMA_API_KEY or auth.json.",
+                },
+              ],
+              isError: true,
+            };
+          }
+          if (res.status === 429) {
+            return {
+              content: [{ type: "text", text: "Ollama Cloud fetch failed: rate limited. Try again shortly." }],
+              isError: true,
+            };
+          }
           return {
             content: [{ type: "text", text: `Fetch API error (status ${res.status}): ${errorText || res.statusText}` }],
             isError: true,

@@ -1,13 +1,15 @@
 {
   "name": "pi-ollama-cloud",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "type": "module",
   "keywords": [
     "pi-package"
   ],
   "files": [
     "index.ts",
+    "config.ts",
     "models.ts",
+    "models.generated.ts",
     "thinking-levels.ts",
     "utils.ts",
     "web-tools.ts",
@@ -22,7 +24,9 @@
   "scripts": {
     "check": "biome check --write .",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "generate-models": "tsx scripts/generate-models.ts"
   },
   "pi": {
     "extensions": [
@@ -30,11 +34,13 @@
     ]
   },
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "*",
-    "@mariozechner/pi-tui": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
     "@sinclair/typebox": "*"
   },
   "devDependencies": {
-    "@biomejs/biome": "2"
+    "@biomejs/biome": "2",
+    "tsx": "^4.19.0",
+    "vitest": "^4.1.6"
   }
 }

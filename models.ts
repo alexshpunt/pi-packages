@@ -1,11 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  AuthStorage,
-  type ExtensionCommandContext,
-  getAgentDir,
-  type ProviderModelConfig,
-} from "@mariozechner/pi-coding-agent";
+import { type ExtensionCommandContext, getAgentDir, type ProviderModelConfig } from "@earendil-works/pi-coding-agent";
 import { resolve as resolveThinkingLevelMap } from "./thinking-levels.ts";
 import { concurrentMap, fetchJsonWithTimeout, getContextLength } from "./utils.ts";
 
@@ -16,9 +11,6 @@ const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 10000;
 
 export const OLLAMA_BASE = (process.env.OLLAMA_API_BASE || "https://ollama.com").replace(/\/+$/, "");
-
-// Initialize AuthStorage
-const authStorage = AuthStorage.create();
 
 // --- Raw API types ---
 /** Response from POST /api/show */
@@ -56,6 +48,54 @@ export interface RefreshProgress {
 }
 
 // --- Assembly: raw API data -> ProviderModelConfig[] ---
+
+/**
+ * Build an explicit OpenAICompletionsCompat for an Ollama Cloud model.
+ * Every flag is set explicitly so the contract is visible to maintainers.
+ *
+ * Ollama API reference: https://docs.ollama.com/api/openai-compatibility
+ * pi type definition: https://github.com/earendil-works/pi/blob/b94482762321ed0b9f8f245be57c84d786a7105d/packages/ai/src/types.ts#L361-L400
+ * pi compat resolution:  https://docs.ollama.com/api/openai-compatibility https://github.com/badlogic/pi-mono/blob/main/packages/ai/src/types.ts#L365-L425
+ */
+function buildCompat(): ProviderModelConfig["compat"] {
+  return {
+    // Ollama uses "system" role, not "developer" (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsDeveloperRole).
+    supportsDeveloperRole: false,
+    // reasoning_effort works (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsReasoningEffort, tested in think-experiment.md).
+    supportsReasoningEffort: true,
+    // "store" is not a supported field (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsStore).
+    supportsStore: false,
+    // Ollama lists "max_tokens", not "max_completion_tokens" (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#maxTokensField).
+    maxTokensField: "max_tokens",
+    // stream_options.include_usage is supported (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsUsageInStreaming).
+    supportsUsageInStreaming: true,
+    // Default: tool results don't need a name field (pi: types.ts#requiresToolResultName).
+    requiresToolResultName: false,
+    // Default: no assistant message required between tool result and user (pi: types.ts#requiresAssistantAfterToolResult).
+    requiresAssistantAfterToolResult: false,
+    // Ollama supports native thinking blocks (pi: types.ts#requiresThinkingAsText).
+    requiresThinkingAsText: false,
+    // DeepSeek-specific, not needed for Ollama (pi: types.ts#requiresReasoningContentOnAssistantMessages).
+    requiresReasoningContentOnAssistantMessages: false,
+    // reasoning_effort format works (pi: types.ts#thinkingFormat, tested in think-experiment.md).
+    thinkingFormat: "openai",
+    // Ollama does not support tool_choice, so strict mode is unavailable (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsStrictMode).
+    supportsStrictMode: false,
+    // Anthropic cache_control not relevant; Ollama has implicit KV cache only (pi: types.ts#cacheControlFormat).
+    // Explicitly undefined: JSON.stringify drops undefined values, keeping
+    // models.generated.ts structurally consistent with assembleModels() runtime output.
+    // Session affinity headers not relevant for Ollama (pi: types.ts#sendSessionAffinityHeaders).
+    sendSessionAffinityHeaders: false,
+    // No explicit cache-retention API (pi: types.ts#supportsLongCacheRetention).
+    supportsLongCacheRetention: false,
+    // Not z.ai (pi: types.ts#zaiToolStream).
+    zaiToolStream: false,
+    cacheControlFormat: undefined,
+    openRouterRouting: {},
+    vercelGatewayRouting: {},
+  };
+}
+
 export function assembleModels(raw: Record<string, CachedOllamaModel>): ProviderModelConfig[] {
   return Object.entries(raw)
     .filter(([, data]) => data.capabilities?.includes("tools"))
@@ -67,64 +107,12 @@ export function assembleModels(raw: Record<string, CachedOllamaModel>): Provider
       input: (data.capabilities?.includes("vision") ? ["text", "image"] : ["text"]) as ("text" | "image")[],
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
       contextWindow: getContextLength(data.model_info ?? {}),
+      // No per-model limit exposed by the API (https://docs.ollama.com/api-reference/show-model-details,
+      // https://github.com/ollama/ollama/issues/7222). 32768 matches most Ollama Cloud context windows.
       maxTokens: 32768,
-      compat: { supportsDeveloperRole: false },
+      compat: buildCompat(),
     }));
 }
-
-// --- Fallback models (cold cache) ---
-export const FALLBACK_MODELS: ProviderModelConfig[] = [
-  {
-    id: "glm-5.1",
-    name: "GLM 5.1",
-    reasoning: false,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 202752,
-    maxTokens: 32768,
-    compat: { supportsDeveloperRole: false },
-  },
-  {
-    id: "gemma4:31b",
-    name: "Gemma 4 31B",
-    reasoning: false,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 262144,
-    maxTokens: 32768,
-    compat: { supportsDeveloperRole: false },
-  },
-  {
-    id: "deepseek-v4-pro",
-    name: "DeepSeek V4 Pro",
-    reasoning: true,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 1000000,
-    maxTokens: 32768,
-    compat: { supportsDeveloperRole: false },
-  },
-  {
-    id: "qwen3.5",
-    name: "Qwen 3.5",
-    reasoning: true,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 131072,
-    maxTokens: 32768,
-    compat: { supportsDeveloperRole: false },
-  },
-  {
-    id: "kimi-k2.6",
-    name: "Kimi K2.6",
-    reasoning: true,
-    input: ["text"],
-    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 131072,
-    maxTokens: 32768,
-    compat: { supportsDeveloperRole: false },
-  },
-];
 
 // --- Cache I/O ---
 type CacheState =
@@ -179,34 +167,57 @@ export function writeCache(models: Record<string, CachedOllamaModel>): void {
 }
 
 // --- Fetch Models ---
-async function fetchModelIds(apiKey: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<string[]> {
+export async function fetchModelIds(timeoutMs = FETCH_TIMEOUT_MS): Promise<string[]> {
+  const headers: Record<string, string> = {};
+  const apiKey = process.env.OLLAMA_API_KEY;
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
   const res = await fetchJsonWithTimeout<{ data: { id: string }[] }>(
     `${OLLAMA_BASE}/v1/models`,
-    { headers: { Authorization: `Bearer ${apiKey}` } },
+    { headers },
     timeoutMs,
   );
-  if (!res.ok || !res.data)
+
+  if (res.status === 429) {
+    throw new Error("Ollama Cloud rate limited. Try again shortly.");
+  }
+  if (!res.ok || !res.data) {
     throw new Error(`Failed to fetch model list: ${res.status}${res.error ? ` - ${res.error}` : ""}`);
+  }
+
   return res.data.data.map((m) => m.id);
 }
 
-async function fetchModelDetails(apiKey: string, id: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<CachedOllamaModel> {
+export async function fetchModelDetails(id: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<CachedOllamaModel> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const apiKey = process.env.OLLAMA_API_KEY;
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
   const res = await fetchJsonWithTimeout<OllamaShowResponse>(
     `${OLLAMA_BASE}/api/show`,
     {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ model: id }),
     },
     timeoutMs,
   );
-  if (!res.ok || !res.data)
+
+  if (res.status === 429) {
+    throw new Error("Ollama Cloud rate limited. Try again shortly.");
+  }
+  if (!res.ok || !res.data) {
     throw new Error(`Failed to fetch /api/show for ${id}: ${res.status}${res.error ? ` - ${res.error}` : ""}`);
+  }
+
   return res.data;
 }
 
-async function refreshOllamaCloudModels(params: {
-  apiKey: string;
+export async function refreshOllamaCloudModels(params: {
   notify?: (message: string, level?: "info" | "error") => void;
   onProgress?: (progress: RefreshProgress) => void;
   workers?: number;
@@ -214,7 +225,7 @@ async function refreshOllamaCloudModels(params: {
   const notify = params.notify ?? (() => undefined);
   const onProgress = params.onProgress ?? (() => undefined);
   onProgress({ stage: "list", message: "Fetching model list..." });
-  const modelIds = await fetchModelIds(params.apiKey);
+  const modelIds = await fetchModelIds();
   notify(`Found ${modelIds.length} models, fetching details...`);
   onProgress({ stage: "details", current: 0, total: modelIds.length, failed: 0, message: "Fetching model details" });
 
@@ -222,7 +233,7 @@ async function refreshOllamaCloudModels(params: {
   let detailsFailed = 0;
   const detailResults = await concurrentMap(modelIds, params.workers ?? 8, async (id) => {
     try {
-      return [id, await fetchModelDetails(params.apiKey, id)] as const;
+      return [id, await fetchModelDetails(id)] as const;
     } catch (error) {
       detailsFailed++;
       throw error;
@@ -258,48 +269,15 @@ async function refreshOllamaCloudModels(params: {
   return models;
 }
 
-async function getOllamaCloudApiKey(): Promise<string | undefined> {
-  return (await authStorage.getApiKey("ollama-cloud")) ?? process.env.OLLAMA_API_KEY;
-}
-
-async function refreshModelsFromAuth(
-  params: {
-    notify?: (message: string, level?: "info" | "error") => void;
-    onProgress?: (progress: RefreshProgress) => void;
-  } = {},
-): Promise<Record<string, CachedOllamaModel> | null> {
-  const apiKey = await getOllamaCloudApiKey();
-  if (!apiKey) return null;
-
-  return refreshOllamaCloudModels({
-    apiKey,
-    notify: params.notify,
-    onProgress: params.onProgress,
-  });
-}
-
 export async function fetchModels(
   ctx: Pick<ExtensionCommandContext, "ui">,
   onProgress?: (progress: RefreshProgress) => void,
 ): Promise<Record<string, CachedOllamaModel> | null> {
   try {
-    const result = await refreshModelsFromAuth({
+    return await refreshOllamaCloudModels({
       notify: (message, level) => ctx.ui.notify(message, level),
       onProgress,
     });
-    if (!result) {
-      ctx.ui.notify(
-        "No Ollama Cloud API key found. \n" +
-          "Please ensure your API key is set in either: \n" +
-          "- OLLAMA_API_KEY environment variable,\n" +
-          "- auth.json file (at ~/.pi/agent/auth.json) under 'ollama-cloud' key,\n" +
-          "- or via the CLI --api-key flag.\n" +
-          "Example auth.json entry: \n" +
-          '{ "ollama-cloud": { "type": "api_key", "key": "YOUR_API_KEY" } }',
-        "error",
-      );
-    }
-    return result;
   } catch (error) {
     ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
     return null;

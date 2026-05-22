@@ -17,16 +17,21 @@
  * Raw /api/show responses are cached at <agentDir>/cache/ollama-cloud-models.json
  * so the provider assembly can be debugged and re-derived without re-fetching.
  *
- * Local cache entries include timestamp. Stale local caches are used immediately while a visible startup
- * refresh runs; missing/invalid caches use a small hardcoded model list until refresh completes.
+ * Startup behavior:
+ *   - Missing cache: uses baked-in GENERATED_MODELS (manually generated via
+ *     `npm run generate-models` and committed to the repo).
+ *   - Stale cache (>30 days): uses the cached data immediately and triggers a visible refresh
+ *     on session_start that shows progress in the UI widget.
+ *   - Fresh cache: uses cached data directly, no refresh triggered.
  *
  * Only models with "tools" capability are registered.
  */
 
-import type { ExtensionAPI, ExtensionCommandContext, ProviderModelConfig } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import { loadConfig, resolveWebToolsEnv } from "./config.ts";
+import { GENERATED_MODELS } from "./models.generated.ts";
 import {
   assembleModels,
-  FALLBACK_MODELS,
   fetchModels,
   OLLAMA_BASE,
   type RefreshProgress,
@@ -35,20 +40,11 @@ import {
 } from "./models.ts";
 import { registerWebFetchTool, registerWebSearchTool } from "./web-tools.ts";
 
-/**
- * Opt-out flag for the ollama_web_search and ollama_web_fetch tools.
- * When the value is one of "0", "false", "no", "off", or the empty string,
- * both web tool registrations are skipped. The model provider and
- * /ollama-cloud-refresh command remain active regardless.
- */
-const PI_OWT_RAW = process.env.PI_OLLAMA_WEB_TOOLS;
-const WEB_TOOLS_DISABLED =
-  PI_OWT_RAW !== undefined && ["0", "false", "no", "off", ""].includes(PI_OWT_RAW.toLowerCase());
-
 // --- Registrations ---
 
 function registerProvider(pi: ExtensionAPI, models: ProviderModelConfig[]) {
   pi.registerProvider("ollama-cloud", {
+    name: "Ollama Cloud",
     baseUrl: `${OLLAMA_BASE}/v1`,
     apiKey: "OLLAMA_API_KEY",
     api: "openai-completions",
@@ -124,8 +120,14 @@ function registerRefreshCommand(pi: ExtensionAPI) {
 
 export default async function (pi: ExtensionAPI) {
   const cacheState = readCacheState();
-  const needsStartupRefresh = cacheState.status !== "fresh";
-  const models = cacheState.status === "missing" ? FALLBACK_MODELS : assembleModels(cacheState.models);
+  // Auto-refresh only when the disk cache is stale (>30 days).
+  // When cache is missing, GENERATED_MODELS serves as the cache —
+  // it is manually generated via `npm run generate-models` and committed to the repo.
+  const needsStartupRefresh = cacheState.status === "stale";
+  // GENERATED_MODELS ships with the package (36 tool-capable models from
+  // the build script). Used when no local cache exists. A fresh user cache
+  // from /ollama-cloud-refresh takes precedence over the generated list.
+  const models = cacheState.status === "missing" ? GENERATED_MODELS : assembleModels(cacheState.models);
 
   registerProvider(pi, models);
   registerRefreshCommand(pi);
@@ -139,8 +141,101 @@ export default async function (pi: ExtensionAPI) {
     });
   }
 
-  if (!WEB_TOOLS_DISABLED) {
-    registerWebSearchTool(pi);
-    registerWebFetchTool(pi);
+  // --- Web Tools Management ---
+
+  /**
+   * Ensure web tools are registered (idempotent).
+   * Returns true if any tools were newly registered.
+   */
+  function ensureWebToolsRegistered(): boolean {
+    const allTools = pi.getAllTools();
+    let registered = false;
+    if (!allTools.some((t) => t.name === "ollama_web_search")) {
+      registerWebSearchTool(pi);
+      registered = true;
+    }
+    if (!allTools.some((t) => t.name === "ollama_web_fetch")) {
+      registerWebFetchTool(pi);
+      registered = true;
+    }
+    return registered;
+  }
+
+  /**
+   * Add or remove web tools from the active tools set.
+   */
+  function setWebToolsActive(active: boolean) {
+    const currentActive = pi.getActiveTools();
+    const webToolNames = ["ollama_web_search", "ollama_web_fetch"];
+
+    if (active) {
+      const missing = webToolNames.filter((n) => !currentActive.includes(n));
+      if (missing.length > 0) {
+        pi.setActiveTools([...currentActive, ...missing]);
+      }
+    } else {
+      const filtered = currentActive.filter((t) => !webToolNames.includes(t));
+      if (filtered.length < currentActive.length) {
+        pi.setActiveTools(filtered);
+      }
+    }
+  }
+
+  // Module-level tracking across session restarts within the same extension
+  // instance. The config file is read once, on the first session_start;
+  // later sessions reuse webToolsEnabled (including any /ollama-webtools
+  // override). Restart pi or /reload to pick up config file changes.
+  let webToolsConfigured = false;
+  let webToolsEnabled = false;
+
+  pi.on("session_start", async (_event, ctx) => {
+    if (!webToolsConfigured) {
+      webToolsConfigured = true;
+      const config = loadConfig(ctx.cwd);
+      if (config.webTools !== false) {
+        webToolsEnabled = true;
+        ensureWebToolsRegistered();
+      }
+    }
+    // On every session start (including resume/fork/new), re-apply the
+    // runtime state. Tools may have been unregistered during teardown.
+    if (webToolsEnabled) {
+      ensureWebToolsRegistered();
+      setWebToolsActive(true);
+    }
+  });
+
+  // Only register the runtime toggle command when the env var doesn't force tools off.
+  // PI_OLLAMA_WEB_TOOLS acts as a hard kill switch — no command to re-enable.
+  if (resolveWebToolsEnv() !== false) {
+    pi.registerCommand("ollama-webtools", {
+      description:
+        "Enable or disable Ollama Cloud web tools (ollama_web_search, ollama_web_fetch). " +
+        "Accepts optional argument: on/off/enable/disable. Without argument, toggles.",
+      handler: async (args, ctx) => {
+        const arg = args.trim().toLowerCase();
+
+        if (arg === "on" || arg === "enable") {
+          webToolsEnabled = true;
+        } else if (arg === "off" || arg === "disable") {
+          webToolsEnabled = false;
+        } else if (arg === "") {
+          // Toggle current state
+          webToolsEnabled = !webToolsEnabled;
+        } else {
+          ctx.ui.notify(`Unknown argument "${args.trim()}". Usage: /ollama-webtools [on|off|enable|disable]`, "error");
+          return;
+        }
+
+        if (webToolsEnabled) {
+          ensureWebToolsRegistered();
+          setWebToolsActive(true);
+        } else {
+          setWebToolsActive(false);
+        }
+
+        ctx.ui.notify(`Ollama Web Tools: ${webToolsEnabled ? "enabled" : "disabled"}`, "info");
+      },
+    });
   }
 }

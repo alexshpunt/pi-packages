@@ -8,8 +8,9 @@ Registers Ollama Cloud as a model provider with dynamically fetched models, and 
 
 - **Dynamic model discovery** - Fetches the full model list from `ollama.com/v1/models`, then fetches per-model details via `/api/show` to determine capabilities, context length, and tool support.
 - **Curated thinking levels** - Maps Pi's thinking levels to Ollama Cloud's OpenAI-compatible `reasoning_effort` values via `thinking-levels.ts`, with per-model exceptions based on API testing.
-- **Persistent cache** - Raw API responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` so models are available immediately on startup without hitting the network.
-- **Startup refresh** - When the local cache is stale, the plugin uses it immediately and then runs the same visible refresh flow as `/ollama-cloud-refresh` once the Pi session UI is available. Missing/invalid caches use a small fallback list until refresh completes.
+- **Baked-in model list** - A generated model list (`models.generated.ts`) ships with the extension so models are available immediately on first launch without any network calls. Updated by running `npm run generate-models` and releasing a new version.
+- **Persistent cache** - Running `/ollama-cloud-refresh` fetches the latest models from the API and caches them to `~/.pi/agent/cache/ollama-cloud-models.json`. On subsequent launches, this disk cache takes precedence over the baked-in list.
+- **Auto-refresh on stale cache** - When the disk cache is older than 30 days, the extension uses it immediately and shows a visible refresh progress widget on the next `session_start` to pull in any new models.
 - **`/ollama-cloud-refresh` command** - Re-fetches the model list and updates the cache and provider registration live (no restart needed).
 - **`ollama_web_search` tool** - Search the web for real-time information using Ollama Cloud's `/api/web_search` endpoint. Returns titles, URLs, and content snippets.
 - **`ollama_web_fetch` tool** - Fetch and extract text content from a web page URL using Ollama Cloud's `/api/web_fetch` endpoint. Returns page title, content, and links.
@@ -65,13 +66,15 @@ Sign up at [ollama.com](https://ollama.com) and generate an API key.
 
 ### 2. Configure the API key
 
-Either set the `OLLAMA_API_KEY` environment variable:
+The simplest way is the `/login` command inside Pi: run `/login`, choose **Use an API key**, pick **Ollama Cloud**, and paste your key. Pi stores it in `~/.pi/agent/auth.json` and `/logout` removes it.
+
+Alternatively, set the `OLLAMA_API_KEY` environment variable:
 
 ```bash
 export OLLAMA_API_KEY="your-key"
 ```
 
-Or add it to `~/.pi/agent/auth.json`:
+Or add it to `~/.pi/agent/auth.json` by hand:
 
 ```json
 {
@@ -82,19 +85,36 @@ Or add it to `~/.pi/agent/auth.json`:
 }
 ```
 
-### 3. Disable web tools (optional)
+### 3. Configure the extension (optional)
 
-If you want to use a different web search or fetch tool (e.g. Brave) by default, and need to avoid conflicts with the built-in Ollama Cloud tools, set the `PI_OLLAMA_WEB_TOOLS` environment variable to any falsy value:
+Extension settings can be set via JSON config files. Project-local settings override global/user-level settings.
 
-```bash
-export PI_OLLAMA_WEB_TOOLS=0
+| Location | Scope |
+|---|---|
+| `~/.pi/agent/ollama-cloud.json` | Global / user-level (all projects) |
+| `.pi/ollama-cloud.json` | Project-local (takes precedence) |
+
+**Available settings:**
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `webTools` | boolean | `true` | Set to `false` to prevent `ollama_web_search` and `ollama_web_fetch` from being registered |
+
+Example `ollama-cloud.json`:
+
+```json
+{
+  "webTools": false
+}
 ```
 
-Accepted disabling values are `0`, `false`, `no`, `off`, or an empty string. When disabled, `ollama_web_search` and `ollama_web_fetch` are not registered. The model provider and `/ollama-cloud-refresh` command remain active regardless.
+The `PI_OLLAMA_WEB_TOOLS` environment variable still works as an override above config files. Set it to `0`, `false`, `no`, or `off` to disable web tools regardless of config file settings.
 
-### 4. Fetch models
+### 4. Fetch models (optional)
 
-On first launch the plugin registers a small hardcoded fallback list, then refreshes model metadata automatically with the same progress widget used by the manual command. If an existing cache is merely stale, that cached model list remains active while refresh runs. You can also run:
+On first launch the plugin uses a baked-in model list shipped with the extension — no network calls needed. If you want the very latest models, run `/ollama-cloud-refresh` to fetch from the API and cache the result to disk. After that, the disk cache is used on subsequent launches.
+
+If the disk cache is older than 30 days, the extension uses it immediately and runs a visible refresh on the next session start (progress appears in the UI widget). You can also run:
 
 ```
 /ollama-cloud-refresh
@@ -115,7 +135,7 @@ The plugin uses two Ollama Cloud API endpoints to build the model list:
 
 Only models with the `tools` capability are registered - these are the ones Pi can use for tool-calling.
 
-The raw `/api/show` responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` with a top-level `timestamp` value. If that local cache is older than 30 days, the plugin keeps using it immediately and triggers the visible refresh flow on `session_start`. If the cache is missing or invalid, the plugin registers a small hardcoded model list until refresh succeeds. If no key is available or refresh fails, the current registered list remains active until `/ollama-cloud-refresh` succeeds.
+The raw `/api/show` responses are cached at `~/.pi/agent/cache/ollama-cloud-models.json` with a top-level `timestamp` value. If that local cache is older than 30 days, the plugin keeps using it immediately and runs a visible refresh on `session_start` (progress appears in the UI widget). If the cache is missing, the plugin uses the baked-in model list shipped with the extension (`models.generated.ts`).
 
 Model metadata is derived from the cached data:
 
@@ -163,6 +183,7 @@ Both tools use the same Ollama Cloud API key configured for the provider. No loc
 | Command | Description |
 |---|---|
 | `/ollama-cloud-refresh` | Fetch models from the Ollama Cloud API, update cache, and re-register the provider |
+| `/ollama-webtools [on\|off\|enable\|disable]` | Enable or disable the `ollama_web_search` and `ollama_web_fetch` tools. Toggles if no argument given. |
 
 ## Development
 
@@ -220,5 +241,5 @@ Each publish also gets automatic [provenance attestation](https://docs.npmjs.com
 
 ## Notes
 
-- The extension sets `supportsDeveloperRole: false` on all models so the system prompt always uses `role: "system"`. Without this, pi sends the prompt as `role: "developer"` for thinking-capable models, which some models (e.g. GLM-5.1) ignore entirely - the prompt simply isn't read.
 - The fetch timeout is 10 seconds per request. On slow connections, some model detail fetches may time out - the plugin reports how many succeeded vs failed.
+- `deepseek-v4` occasionally emits raw `<｜DSML｜tool_calls｜>` markup as plain text instead of structured tool calls, then stops. This is DeepSeek's native tool-call format leaking through Ollama Cloud's OpenAI-compatible endpoint, so it looks like an upstream Ollama issue rather than something this extension can fix. If you hit it, retry or switch models.
