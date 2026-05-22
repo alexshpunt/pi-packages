@@ -33,6 +33,28 @@ const DEFAULT_CONFIG: OllamaCloudConfig = {
   webTools: true,
 };
 
+// --- Validation ---
+
+/** Allowed config keys and their expected types for runtime validation. */
+const CONFIG_SCHEMA: Record<keyof OllamaCloudConfig, "boolean"> = {
+  webTools: "boolean",
+};
+
+/**
+ * Validate a parsed JSON object against the known schema.
+ * Unknown keys are silently dropped; values with wrong types fall back to undefined.
+ */
+function sanitizeConfig(raw: Record<string, unknown>): OllamaCloudConfig {
+  const out: OllamaCloudConfig = {};
+  for (const [key, expectedType] of Object.entries(CONFIG_SCHEMA)) {
+    const value = raw[key];
+    if (typeof value === expectedType) {
+      (out as Record<string, unknown>)[key] = value;
+    }
+  }
+  return out;
+}
+
 // --- Loader ---
 
 /**
@@ -55,7 +77,7 @@ export function loadConfig(cwd: string): OllamaCloudConfig {
       // Silently skip files that parse to null, arrays, or primitives —
       // malformed config should not crash the extension (defaults apply).
       if (parsed != null && typeof parsed === "object" && !Array.isArray(parsed)) {
-        globalConfig = parsed as OllamaCloudConfig;
+        globalConfig = sanitizeConfig(parsed as Record<string, unknown>);
       }
     } catch (err) {
       console.error(`[pi-ollama-cloud] Failed to load config from ${globalPath}: ${err}`);
@@ -69,7 +91,7 @@ export function loadConfig(cwd: string): OllamaCloudConfig {
       const parsed = JSON.parse(content);
       // Same guard as global config: null/array/primitive parses are ignored.
       if (parsed != null && typeof parsed === "object" && !Array.isArray(parsed)) {
-        projectConfig = parsed as OllamaCloudConfig;
+        projectConfig = sanitizeConfig(parsed as Record<string, unknown>);
       }
     } catch (err) {
       console.error(`[pi-ollama-cloud] Failed to load config from ${projectPath}: ${err}`);
@@ -97,7 +119,7 @@ export function loadConfig(cwd: string): OllamaCloudConfig {
  * Returns undefined when not set (no override),
  * true/false when explicitly set.
  */
-function resolveWebToolsEnv(): boolean | undefined {
+export function resolveWebToolsEnv(): boolean | undefined {
   const raw = process.env.PI_OLLAMA_WEB_TOOLS;
   if (raw === undefined) return undefined;
 

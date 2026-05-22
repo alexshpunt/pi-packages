@@ -28,7 +28,7 @@
  */
 
 import type { ExtensionAPI, ExtensionCommandContext, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
-import { loadConfig } from "./config.ts";
+import { loadConfig, resolveWebToolsEnv } from "./config.ts";
 import { GENERATED_MODELS } from "./models.generated.ts";
 import {
   assembleModels,
@@ -211,6 +211,15 @@ export default async function (pi: ExtensionAPI) {
       "Accepts optional argument: on/off/enable/disable. Without argument, toggles.",
     handler: async (args, ctx) => {
       const arg = args.trim().toLowerCase();
+
+      // Env var is a hard override: when PI_OLLAMA_WEB_TOOLS disables,
+      // refuse to enable at runtime (documents precedence in config.ts).
+      const envOverride = resolveWebToolsEnv();
+      const wantsEnable = arg === "on" || arg === "enable" || (arg === "" && !webToolsEnabled);
+      if (wantsEnable && envOverride === false) {
+        ctx.ui.notify("Cannot enable web tools: PI_OLLAMA_WEB_TOOLS environment variable forces them off", "error");
+        return;
+      }
 
       if (arg === "on" || arg === "enable") {
         webToolsEnabled = true;
