@@ -2,14 +2,14 @@
 
 [![npm version](https://img.shields.io/npm/v/pi-claude-bridge)](https://www.npmjs.com/package/pi-claude-bridge)
 
-Pi extension that integrates Claude Code via the [Agent SDK](https://github.com/anthropics/claude-agent-sdk-typescript).
-
-> Built on [claude-agent-sdk-pi](https://github.com/prateekmedia/claude-agent-sdk-pi) by Prateek Sunal — the provider skeleton, tool name mapping, and settings loading originate from that project. This fork adds streaming, MCP tool bridging, custom pi tool bridging, session resume/persistence, context sync, thinking support, skills forwarding, and the AskClaude tool.
+Pi extension that integrates Claude Code via the [Agent SDK](https://github.com/anthropics/claude-agent-sdk-typescript). Based initially on [claude-agent-sdk-pi](https://github.com/prateekmedia/claude-agent-sdk-pi) by Prateek Sunal. This fork adds streaming, MCP tool bridging, custom pi tool bridging, session resume/persistence, context sync, thinking support, skills forwarding, and the AskClaude tool.
 
 1. **Provider** — Use Opus/Sonnet/Haiku as models in pi, with all tool calls flowing through pi's TUI
 2. **AskClaude tool** — Delegate tasks or questions to Claude Code when using another provider
 
-Uses your Claude Max/Pro subscription. I believe this is compliant with Anthropic's terms because only the real Claude Code is touching the API and it's to enable [local development](https://x.com/trq212/status/2024212380142752025) not to steal API calls for some other commerical purpose. That said, obviously this extension is not endorsed or supported by Anthropic.
+
+> **Important note:** Starting June 15, 2026 [Anthropic has announced](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan) they will no longer allow tools based on the Agent SDK (like this one) to pull from your regular subscription quota. Instead they pull from a monthly credit equal to your subscription fee (so $100 of usage credits on a $100/month Max plan). I'm not sure how valuable this extension will be once that happens. If there are easier ways to pull from that $100 bucket connecting to the API directly without the Agent SDK overhead, that's probably a better approach. (Alternatively there are other extensions focused on spoofing the official Claude Code client to keep using subscription quota.)
+
 <p>
 <a href="assets/claude-bridge1.png"><img src="assets/claude-bridge1.png" width="49%"></a>&nbsp;
 <a href="assets/claude-bridge2.png"><img src="assets/claude-bridge2.png" width="49%"></a>

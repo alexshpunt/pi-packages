@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 — 2026-06-05
 
 - **Add: claude-opus-4-8 model** — migrated pi imports/dev peers from deprecated `@mariozechner/*` packages to `@earendil-works/*` 0.78.x so the official pi-ai registry supplies Opus 4.8. The `opus` shortcut now resolves to 4.8; 4.7/4.6 remain available for explicit pinning.
+- **Docs: Agent SDK quota warning** — note Anthropic's announced June 15, 2026 Agent SDK billing/quota change.
+- **Tests: isolate AskClaude config** — AskClaude integration tests now use project-local test config so they are unaffected by a user's global `askClaude.enabled` setting.
+- **Tests: harden shell integration tests** — use explicit alternate provider/model settings and pre-increment counters under `set -e`.
 
 ## 0.4.0 — 2026-05-04
 
