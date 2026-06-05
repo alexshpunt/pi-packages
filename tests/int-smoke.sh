@@ -15,7 +15,18 @@ TIMEOUT=60
 PASS=0
 FAIL=0
 
-trap kill_descendants EXIT
+TEST_CWD_PREFIX="$LOGDIR/smoke-cwd."
+TEST_CWD=$(mktemp -d "$TEST_CWD_PREFIX"XXXXXX)
+mkdir -p "$TEST_CWD/.pi"
+printf '{"askClaude":{"enabled":true}}\n' > "$TEST_CWD/.pi/claude-bridge.json"
+cd "$TEST_CWD"
+cleanup() {
+  if [[ "${TEST_CWD:-}" == "$TEST_CWD_PREFIX"* && ${#TEST_CWD} -gt ${#TEST_CWD_PREFIX} && -d "$TEST_CWD" ]]; then
+    rm -rf -- "$TEST_CWD"
+  fi
+  kill_descendants
+}
+trap cleanup EXIT
 
 run() {
   local name="$1"; shift

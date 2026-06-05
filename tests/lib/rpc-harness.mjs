@@ -22,10 +22,11 @@ if (existsSync(ENV_FILE)) process.loadEnvFile(ENV_FILE);
  * @param {string} opts.name - Test name (used for log files)
  * @param {string[]} opts.args - Additional pi CLI args (after --mode rpc)
  * @param {Object} opts.env - Extra env vars to set on the pi process
+ * @param {string} opts.cwd - Working directory for the pi process (default: project root)
  * @param {number} opts.defaultTimeout - Default timeout for send/wait operations (default: 30000)
  */
 export function createRpcHarness(opts) {
-	const { name, args = [], env = {}, defaultTimeout = 30_000 } = opts;
+	const { name, args = [], env = {}, cwd = DIR, defaultTimeout = 30_000 } = opts;
 
 	const LOGDIR = `${DIR}/.test-output`;
 	mkdirSync(LOGDIR, { recursive: true });
@@ -49,6 +50,7 @@ export function createRpcHarness(opts) {
 		rpcLog = createWriteStream(RPC_LOG, { flags: "a" });
 		const spawnArgs = ["--no-session", "-ne", "-e", DIR, "--mode", "rpc", ...args];
 		pi = spawn("pi", spawnArgs, {
+			cwd,
 			stdio: ["pipe", "pipe", "pipe"],
 			env: { ...process.env, PATH: cleanPath, CLAUDE_BRIDGE_DEBUG: "1", CLAUDE_BRIDGE_DEBUG_PATH: DEBUG_LOG, ...env },
 		});

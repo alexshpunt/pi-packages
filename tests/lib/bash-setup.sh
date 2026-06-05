@@ -30,8 +30,9 @@ setup_test_env() {
 		LOGFILE=""
 	fi
 
-	# Clean PATH
+	# Clean PATH and run pi from the project root so project-local config is visible.
 	PATH=$(__clean_path)
+	cd "$DIR"
 
 	# Export for use in tests
 	export DIR LOGDIR DEBUG_LOG LOGFILE PATH

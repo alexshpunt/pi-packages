@@ -13,7 +13,9 @@
 
 console.log("=== session-resume-test.mjs ===");
 
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createRpcHarness, requireEnv } from "./lib/rpc-harness.mjs";
 
 const OTHER_PROVIDER = requireEnv("CLAUDE_BRIDGE_TESTING_ALT_PROVIDER");
@@ -27,10 +29,16 @@ const WORD_A = `alpha${Math.random().toString(36).slice(2, 6)}`;
 const WORD_B = `beta${Math.random().toString(36).slice(2, 6)}`;
 const WORD_C = `gamma${Math.random().toString(36).slice(2, 6)}`;
 
+const TEST_CWD_PREFIX = join(tmpdir(), "pi-claude-bridge-session-resume-");
+const TEST_CWD = mkdtempSync(TEST_CWD_PREFIX);
+mkdirSync(join(TEST_CWD, ".pi"));
+writeFileSync(join(TEST_CWD, ".pi", "claude-bridge.json"), '{"askClaude":{"enabled":true}}\n');
+
 // Use harness but with custom args - start on non-provider model
 const harness = createRpcHarness({
 	name: "session-resume",
 	args: ["--model", `${OTHER_PROVIDER}/${OTHER_MODEL}`],
+	cwd: TEST_CWD,
 	defaultTimeout: TIMEOUT,
 });
 
@@ -73,7 +81,12 @@ function finish(code, msg) {
 		console.log(`  CC CLI:     .test-output/cc-cli-logs/  (look for *-askclaude-*.log near the failing turn)`);
 		console.log(`  Note: logs are overwritten on next test run — copy them now if you need to investigate.`);
 	}
-	stop().then(() => process.exit(code));
+	stop().then(() => {
+		if (TEST_CWD.startsWith(TEST_CWD_PREFIX) && TEST_CWD.length > TEST_CWD_PREFIX.length) {
+			rmSync(TEST_CWD, { recursive: true, force: true });
+		}
+		process.exit(code);
+	});
 }
 
 // Start pi
