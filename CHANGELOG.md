@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+- Fix `apiKey` registered as a literal string instead of an environment variable reference. Changed `apiKey: "OLLAMA_API_KEY"` to `apiKey: "$OLLAMA_API_KEY"` in `registerProvider`, resolving the deprecation warning emitted by pi v0.77.0+ and making the `OLLAMA_API_KEY` env var work alongside `auth.json` (env var takes priority, falls back to `auth.json`). Thanks @mandusm (#21).
+
 ## [0.5.0] - 2026-05-22
 
 - Update `peerDependencies` and imports to the new `@earendil-works/*` packages.
