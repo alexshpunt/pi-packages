@@ -12,6 +12,22 @@
 import { writeFileSync } from "node:fs";
 import { assembleModels, refreshOllamaCloudModels } from "../models.ts";
 
+// Models announced for retirement by Ollama (effective 2026-06-16):
+// https://docs.ollama.com/cloud#deprecations. Excluded from the generated
+// list so we don't ship support for them by default, but
+// `/ollama-cloud-refresh` will still surface them until they are fully
+// removed from the API.
+const RETIRED_MODEL_IDS = new Set<string>([
+  "kimi-k2-thinking",
+  "kimi-k2:1t",
+  "minimax-m2",
+  "glm-4.6",
+  "qwen3-next:80b",
+  "qwen3-vl:235b",
+  "qwen3-vl:235b-instruct",
+  "cogito-2.1:671b",
+]);
+
 console.log("Fetching Ollama Cloud models...");
 const raw = await refreshOllamaCloudModels({
   notify: (msg) => console.log(`  ${msg}`),
@@ -22,8 +38,12 @@ const raw = await refreshOllamaCloudModels({
   },
 });
 
-const models = assembleModels(raw);
-console.log(`\nAssembled ${models.length} tool-capable models.`);
+const assembled = assembleModels(raw);
+const models = assembled.filter((m) => !RETIRED_MODEL_IDS.has(m.id));
+const retired = assembled.length - models.length;
+console.log(
+  `\nAssembled ${assembled.length} tool-capable models (${retired} retired, ${models.length} shipped).`,
+);
 
 // Stable serialization: sort models by id and object keys so field order
 // changes in the source don't produce gratuitous diffs. `id` and `name`
