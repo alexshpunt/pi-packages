@@ -370,7 +370,15 @@ function syncSharedSession(
 	const priorMessages = messages.slice(0, -1); // everything before the new user prompt
 
 	// REUSE path
-	if (sharedSession && !sharedSession.needsRebuild) {
+	//
+	// Guard on priorMessages.length >= cursor: a shorter incoming context cannot
+	// be a continuation of the cached session. pi's compaction path calls
+	// streamSimple with a synthetic single-message context (priorMessages.length
+	// === 0); without this guard missed = [].slice(cursor) === [] falsely hits
+	// REUSE and resumes the full main session under a summarization prompt, which
+	// hangs /compact forever. Falling through rebuilds a fresh CC session for the
+	// synthetic prompt. See issue #25.
+	if (sharedSession && !sharedSession.needsRebuild && priorMessages.length >= sharedSession.cursor) {
 		const missed = priorMessages.slice(sharedSession.cursor);
 		const trailingAssistantOnly =
 			missed.length === 1 && (missed[0] as { role?: string }).role === "assistant";
@@ -423,6 +431,19 @@ function syncSharedSession(
 	debug(`syncResult: path=rebuild sessionId=${session.sessionId} priors=${priorMessages.length} ${previousSessionId === undefined ? "first" : preserveId ? "preserved" : "rotated-post-abort"}`);
 	return { sessionId: session.sessionId };
 }
+
+export const __test = {
+	resetSharedSession() {
+		sharedSession = null;
+	},
+	setSharedSession(state: SessionState | null) {
+		sharedSession = state;
+	},
+	getSharedSession() {
+		return sharedSession;
+	},
+	syncSharedSession,
+};
 
 // --- Provider helpers: tool name mapping ---
 

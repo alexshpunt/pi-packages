@@ -1,5 +1,9 @@
 # Changelog
 
+## UNRELEASED
+
+- **Fix: pi `/compact` no longer reuses the main Claude Code session for synthetic compaction prompts (issue #25)** — guard `syncSharedSession`'s REUSE path so shorter contexts cannot resume a cached session whose cursor is beyond the incoming history. This prevents `/compact` from hanging by appending the summarization prompt onto the full pre-compact session. Added a focused unit regression test.
+
 ## 0.5.0 — 2026-06-05
 
 - **Add: claude-opus-4-8 model** — migrated pi imports/dev peers from deprecated `@mariozechner/*` packages to `@earendil-works/*` 0.78.x so the official pi-ai registry supplies Opus 4.8. The `opus` shortcut now resolves to 4.8; 4.7/4.6 remain available for explicit pinning.
