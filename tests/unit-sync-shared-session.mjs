@@ -24,11 +24,12 @@ describe("syncSharedSession", () => {
 	it("does not reuse a cached main session for a shorter synthetic compact context", () => {
 		const cwd = mkdtempSync(join(tmpdir(), "sync-shared-session-"));
 		try {
-			__test.setSharedSession({
+			const mainSession = {
 				sessionId: "11111111-1111-4111-8111-111111111111",
 				cursor: 42,
 				cwd,
-			});
+			};
+			__test.setSharedSession(mainSession);
 
 			const result = __test.syncSharedSession([
 				{
@@ -43,6 +44,12 @@ describe("syncSharedSession", () => {
 				null,
 				"synthetic compact contexts have no prior messages and must start a fresh Claude Code session instead of resuming the main session",
 			);
+			assert.equal(
+				result.preserveSharedSession,
+				true,
+				"the fresh synthetic Claude Code session must not replace the cached main session when it completes",
+			);
+			assert.deepEqual(__test.getSharedSession(), mainSession);
 		} finally {
 			rmSync(cwd, { recursive: true, force: true });
 		}

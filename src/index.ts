@@ -283,6 +283,7 @@ async function* wrapPromptStream(blocks: ContentBlockParam[]): AsyncIterable<SDK
 
 interface SyncResult {
 	sessionId: string | null;
+	preserveSharedSession?: boolean;
 }
 
 /**
@@ -372,12 +373,10 @@ function syncSharedSession(
 	// REUSE path
 	//
 	// Guard on priorMessages.length >= cursor: a shorter incoming context cannot
-	// be a continuation of the cached session. pi's compaction path calls
-	// streamSimple with a synthetic single-message context (priorMessages.length
-	// === 0); without this guard missed = [].slice(cursor) === [] falsely hits
-	// REUSE and resumes the full main session under a summarization prompt, which
-	// hangs /compact forever. Falling through rebuilds a fresh CC session for the
-	// synthetic prompt. See issue #25.
+	// be a continuation of the cached session. This is the general invariant for
+	// pi-side history rewrites such as /compact and session_tree: without it,
+	// missed = [].slice(cursor) can falsely hit REUSE and resume an unrelated
+	// longer CC session. See issue #25.
 	if (sharedSession && !sharedSession.needsRebuild && priorMessages.length >= sharedSession.cursor) {
 		const missed = priorMessages.slice(sharedSession.cursor);
 		const trailingAssistantOnly =
@@ -390,6 +389,11 @@ function syncSharedSession(
 			debug(`syncResult: path=reuse sessionId=${sharedSession.sessionId} cursor=${sharedSession.cursor}`);
 			return { sessionId: sharedSession.sessionId };
 		}
+	}
+	if (sharedSession && !sharedSession.needsRebuild && priorMessages.length < sharedSession.cursor) {
+		debug(`Case 1 synthetic: clean start for shorter context, preserving shared session ${sharedSession.sessionId.slice(0, 8)}, cursor=${sharedSession.cursor}`);
+		debug(`syncResult: path=clean-start preserve-shared sessionId=${sharedSession.sessionId} cursor=${sharedSession.cursor}`);
+		return { sessionId: null, preserveSharedSession: true };
 	}
 
 	// REBUILD path
@@ -432,6 +436,7 @@ function syncSharedSession(
 	return { sessionId: session.sessionId };
 }
 
+// @internal
 export const __test = {
 	resetSharedSession() {
 		sharedSession = null;
@@ -951,7 +956,8 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 
 	const { mcpTools, customToolNameToSdk, customToolNameToPi } = resolveMcpTools(context, askClaudeToolName);
 	const cwd = (options as { cwd?: string } | undefined)?.cwd ?? process.cwd();
-	const { sessionId: resumeSessionId } = syncSharedSession(context.messages, cwd, customToolNameToSdk, model.id);
+	const syncResult = syncSharedSession(context.messages, cwd, customToolNameToSdk, model.id);
+	const { sessionId: resumeSessionId } = syncResult;
 	const promptBlocks = extractUserPromptBlocks(context.messages);
 	let promptText = extractUserPrompt(context.messages) ?? "";
 
@@ -1093,7 +1099,13 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 
 			// --- Capture session ID ---
 			const sessionId = capturedSessionId ?? sharedSession?.sessionId;
-			if (sessionId) {
+			if (syncResult.preserveSharedSession) {
+				if (capturedSessionId && capturedSessionId !== sharedSession?.sessionId) {
+					deleteSession(capturedSessionId, cwd, process.env.CLAUDE_CONFIG_DIR);
+					debug(`provider: query done, deleted ephemeral session ${capturedSessionId.slice(0, 8)} to preserve shared session`);
+				}
+				debug(`provider: query done, ignoring captured session ${capturedSessionId?.slice(0, 8) ?? "none"} to preserve shared session`);
+			} else if (sessionId) {
 				const cursor = Math.max(context.messages.length, ctx().latestCursor, sharedSession?.cursor ?? 0);
 				debug(`provider: query done, session=${sessionId.slice(0, 8)}, cursor=${cursor}`);
 				sharedSession = { sessionId, cursor, cwd };

@@ -67,11 +67,20 @@ try {
 	if (compactIdx === -1) {
 		throw new Error("no `session_compact:` debug marker — handler not subscribed?");
 	}
+	const preEventLog = fullLog.slice(0, compactIdx);
 	const postEventLog = fullLog.slice(compactIdx);
 
+	const preCompactSessionIds = [...preEventLog.matchAll(/syncResult: path=(?:reuse|rebuild) sessionId=([a-f0-9-]+)/g)]
+		.map((m) => m[1]);
+	const preCompactSessionId = preCompactSessionIds.at(-1);
+	if (!preCompactSessionId) {
+		throw new Error("no pre-compact shared sessionId found in debug log");
+	}
+	console.log(`  Pre-compact sessionId: ${preCompactSessionId}`);
+
 	// Capture both the path and the rebuild flavor (preserved | rotated-post-abort | first).
-	const syncResults = [...postEventLog.matchAll(/syncResult: path=(reuse|rebuild|clean-start)(?: sessionId=\S+ priors=\d+ (\S+))?/g)]
-		.map((m) => ({ path: m[1], flavor: m[2] }));
+	const syncResults = [...postEventLog.matchAll(/syncResult: path=(reuse|rebuild|clean-start)(?: sessionId=([a-f0-9-]+) priors=\d+ (\S+))?/g)]
+		.map((m) => ({ path: m[1], sessionId: m[2], flavor: m[3] }));
 	console.log(`  Post-event syncResults: ${JSON.stringify(syncResults)}`);
 
 	if (syncResults.length === 0) {
@@ -82,6 +91,11 @@ try {
 
 	// First syncResult after the event must NOT reuse — pi's history has
 	// shrunk and CC's session JSONL is now stale.
+	if (first.path === "clean-start") {
+		throw new Error(
+			"first syncResult after session_compact was clean-start. The compact summarization " +
+			"call landed after the event marker, so this test cannot verify Turn 4's rebuild.");
+	}
 	if (first.path === "reuse") {
 		throw new Error(
 			"bridge took REUSE path after session_compact — CC will resume the pre-compact session. " +
@@ -99,6 +113,13 @@ try {
 			`post-compact rebuild used flavor=${first.flavor}, expected "preserved". ` +
 			`Compact has no concurrent CC writer — it should rebuild in place (deleteSession + ` +
 			`createSession with the same UUID), not rotate. Rotating leaks orphan JSONL files.`);
+	}
+	if (first.path === "rebuild" && first.sessionId !== preCompactSessionId) {
+		throw new Error(
+			`post-compact rebuild preserved sessionId=${first.sessionId}, but expected the original ` +
+			`pre-compact sessionId=${preCompactSessionId}. This means the compact summarization ` +
+			`session replaced sharedSession before the session_compact handler ran, orphaning the ` +
+			`main pre-compact JSONL.`);
 	}
 
 	finish(0, "PASS");

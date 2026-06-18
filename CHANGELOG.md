@@ -2,7 +2,7 @@
 
 ## UNRELEASED
 
-- **Fix: pi `/compact` no longer reuses the main Claude Code session for synthetic compaction prompts (issue #25)** — guard `syncSharedSession`'s REUSE path so shorter contexts cannot resume a cached session whose cursor is beyond the incoming history. This prevents `/compact` from hanging by appending the summarization prompt onto the full pre-compact session. Added a focused unit regression test.
+- **Fix: preserve shared Claude Code sessions across shorter synthetic contexts (issue #25)** — shorter pi contexts are not continuations of the cached session, so they now start clean instead of resuming unrelated longer history, and their fresh SDK session is deleted instead of being adopted as the main shared session when the query completes. This fixes `/compact` hangs while preserving the original main session UUID for the post-compact rebuild, and also backstops other pi-side history rewrites such as `session_tree`. Added focused unit and integration regression coverage.
 
 ## 0.5.0 — 2026-06-05
 
