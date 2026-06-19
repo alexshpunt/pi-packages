@@ -2,6 +2,11 @@
 
 ## UNRELEASED
 
+- **Fix: prevent split-turn `/compact` hangs** — bridge now owns compaction and uses an isolated Claude Code summary subprocesses instead of the live provider stream path, so pi's concurrent split-turn summaries no longer overwrite shared stream state. If the takeover fails, compaction is cancelled rather than falling back to the known-buggy native path. Persistent failures may cause repeated auto-compaction cancellations without progress, but at least the user is notified that something is wrong.
+- **Fix: preserve cumulative file-op carry-forward across extension-provided compactions** — re-inject prior compaction file ops from `session_before_compact` branch entries so `<read-files>`/`<modified-files>` stay cumulative despite pi's current `fromHook` seeding gate. This appears to be an upstream Pi issue with extension-owned compactions.
+- **Fix: clear stale active queries before terminal stream events** — defensively clears/drains provider state before final success/error events and logs any stream overwrite before a terminal event. Not clear if this is needed, but included with logging to see if we missed anything in Issue #18
+- **Tests: add compact takeover regressions** — compaction baseline and split-turn integration tests plus real second-compaction file-op carry-forward integration test.
+- **Bump: pi dev and peer dependencies to 0.79+** — required for the current exported `compact()` API used by the bridge takeover.
 - **Fix: preserve shared Claude Code sessions across shorter synthetic contexts (issue #25)** — shorter pi contexts are not continuations of the cached session, so they now start clean instead of resuming unrelated longer history, and their fresh SDK session is deleted instead of being adopted as the main shared session when the query completes. This fixes `/compact` hangs while preserving the original main session UUID for the post-compact rebuild, and also backstops other pi-side history rewrites such as `session_tree`. Added focused unit and integration regression coverage.
 
 ## 0.5.0 — 2026-06-05
