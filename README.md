@@ -25,6 +25,12 @@ pi install npm:pi-claude-bridge
 
 Use `/model` to select `claude-bridge/claude-opus-4-8`, `claude-bridge/claude-opus-4-7`, `claude-bridge/claude-opus-4-6`, `claude-bridge/claude-sonnet-4-6`, or `claude-bridge/claude-haiku-4-5`.
 
+Models with a >200K advertised window (Opus 4.6+, Sonnet 4.6) automatically use their full 1M context window. The bridge appends a `[1m]` suffix at the Claude Code CLI `--model` boundary, which is what enables the expanded window — without it the CLI defaults to 200K and long sessions hit a spurious `Prompt is too long` once context crosses ~200K, even though pi's status bar shows headroom. The `[1m]` suffix is visible in model display names in the picker. Haiku 4.5 (200K) is unaffected.
+
+**1M context costs:** 1M usage consumes usage credits on some plans. Standard 200K context on all models remains included. To disable 1M entirely, set `CLAUDE_CODE_DISABLE_1M_CONTEXT=1` before starting pi.
+
+**Extension providers and models.json:** pi's `modelOverrides` in `~/.pi/agent/models.json` do not currently apply to extension-registered providers (like claude-bridge). Overriding `contextWindow` or other fields requires editing `src/models.ts` directly.
+
 Behind the scenes, pi's tools are bridged to Claude Code but it should all work like normal in pi. Bash commands get a 120-second default timeout (matching Claude Code's default) since pi's bash has no timeout by default. Skills in pi are copied over to Claude Code's system prompt so should work as they would with any other pi provider.
 
 ## AskClaude Tool
