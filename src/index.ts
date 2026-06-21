@@ -10,7 +10,7 @@ import { appendFileSync, mkdirSync, realpathSync, statSync } from "fs";
 import { homedir } from "os";
 import { dirname, join } from "path";
 import { PROVIDER_ID, messageContentToText, convertPiMessages } from "./convert.js";
-import { buildModels, claudeCodeModelId, resolveModel as _resolveModel } from "./models.js";
+import { buildModels, claudeCodeModelId, resolveModel as _resolveModel, applyLongContext } from "./models.js";
 import { MCP_SERVER_NAME, MCP_TOOL_PREFIX, extractSkillsBlock } from "./skills.js";
 import { verifyWrittenSession as _verifyWrittenSession } from "./session-verify.js";
 import { extractAllToolResults as _extractAllToolResults, type McpResult } from "./extract-tool-results.js";
@@ -1177,7 +1177,8 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 			?? REASONING_TO_EFFORT[options.reasoning]
 		: undefined;
 
-	const extraArgs: Record<string, string | null> = { model: claudeCodeModelId(model) };
+	const longContextModels = new Set(providerSettings.enableLongContextModels ?? []);
+	const extraArgs: Record<string, string | null> = { model: claudeCodeModelId(model, longContextModels.has(model.id)) };
 	if (strictMcpConfigEnabled) extraArgs["strict-mcp-config"] = null;
 	// Opus 4.7 defaults thinking.display to "omitted" (empty thinking text in stream).
 	// Force summarized so thinking_delta events arrive. See anthropics/claude-agent-sdk-python#830.
@@ -1394,7 +1395,9 @@ async function promptAndWait(
 	const requestedModel = options?.model ?? "opus";
 	const model = resolveModel(requestedModel);
 	const modelId = model?.id ?? requestedModel;
-	const cliModel = model ? claudeCodeModelId(model) : modelId;
+	const providerSettings = loadConfig(cwd).provider ?? {};
+	const longContextModels = new Set(providerSettings.enableLongContextModels ?? []);
+	const cliModel = model ? claudeCodeModelId(model, longContextModels.has(model.id)) : modelId;
 
 	// Session resume for shared mode — reuse provider's session if it exists,
 	// otherwise create one from pi's context.
@@ -1425,7 +1428,7 @@ async function promptAndWait(
 	const effort = options?.thinking && options.thinking !== "off"
 		? REASONING_TO_EFFORT[options.thinking] : undefined;
 
-	const claudeExecutable = loadConfig(cwd).provider?.pathToClaudeCodeExecutable;
+	const claudeExecutable = providerSettings.pathToClaudeCodeExecutable;
 
 	const extraArgs: Record<string, string | null> = {
 		"strict-mcp-config": null,
@@ -1551,6 +1554,11 @@ export default function (pi: ExtensionAPI) {
 
 	const config = loadConfig(process.cwd());
 	debug("loadConfig:", JSON.stringify(config));
+	// Registered contextWindow must match what we send the CLI: long-context models
+	// are registered at 1M only when opted into enableLongContextModels (which is
+	// also what appends [1m]); otherwise capped at 200K so pi's status/compaction
+	// reflects the bare-id 200K runtime. See applyLongContext in models.js.
+	const registeredModels = applyLongContext(MODELS, new Set(config.provider?.enableLongContextModels ?? []));
 
 	// Reset shared session on pi session lifecycle events
 	const clearSession = (event: string) => {
@@ -1637,7 +1645,7 @@ export default function (pi: ExtensionAPI) {
 			baseUrl: "claude-bridge",
 			apiKey: "not-used",
 			api: "claude-bridge",
-			models: MODELS,
+			models: registeredModels,
 			// Cast: pi-ai AssistantMessageEventStream diamond dep between pi-coding-agent and pi-agent-core
 			streamSimple: streamClaudeAgentSdk as any,
 		});

@@ -25,9 +25,25 @@ pi install npm:pi-claude-bridge
 
 Use `/model` to select `claude-bridge/claude-opus-4-8`, `claude-bridge/claude-opus-4-7`, `claude-bridge/claude-opus-4-6`, `claude-bridge/claude-sonnet-4-6`, or `claude-bridge/claude-haiku-4-5`.
 
-Models with a >200K advertised window (Opus 4.6+, Sonnet 4.6) automatically use their full 1M context window. The bridge appends a `[1m]` suffix at the Claude Code CLI `--model` boundary, which is what enables the expanded window — without it the CLI defaults to 200K and long sessions hit a spurious `Prompt is too long` once context crosses ~200K, even though pi's status bar shows headroom. The `[1m]` suffix is visible in model display names in the picker. Haiku 4.5 (200K) is unaffected.
+### 1M context window
 
-**1M context costs:** 1M usage consumes usage credits on some plans. Standard 200K context on all models remains included. To disable 1M entirely, set `CLAUDE_CODE_DISABLE_1M_CONTEXT=1` before starting pi.
+1M context is **opt-in per model**. By default every model runs on its 200K window. To enable 1M for specific models, list their bare ids under `provider.enableLongContextModels` in `~/.pi/agent/claude-bridge.json` or `.pi/claude-bridge.json` (project overrides global):
+
+```json
+{
+  "provider": {
+    "enableLongContextModels": ["claude-opus-4-8", "claude-opus-4-6"]
+  }
+}
+```
+
+**Whether you need to opt in — and whether it costs extra — depends on both the model and your plan** (per Anthropic's [paid-plan context docs](https://support.claude.com/en/articles/8606394-how-large-is-the-context-window-on-paid-claude-plans)):
+
+- **Opus 4.6/4.7/4.8 on Max/Team/Enterprise**: auto-upgraded to 1M with the bare id (default since Claude Code v2.1.75), covered by your subscription — **do not opt in**. An explicit `opus[1m]` is redundant and has been reported to trip the usage-credits gate on Max 5x ([claude-code#39841](https://github.com/anthropics/claude-code/issues/39841)).
+- **Opus 4.6/4.7/4.8 on Pro**: 1M requires usage credits to be enabled; without them the request fails with `Usage credits are required for long context requests`.
+- **Sonnet 4.6 on any plan**: 1M is metered via usage credits on *every* plan, including Max (except usage-based Enterprise). Opting in means every Sonnet turn spends credits — only do it deliberately.
+
+**Registered context window:** the bridge registers each model with pi at the window it actually requests from Claude Code — 1M for opted-in long-context models (which send `[1m]`), 200K otherwise (the bare-id default). This keeps pi's status bar and auto-compaction threshold honest, so you won't hit a spurious `Prompt is too long` / credit gate at ~200K while pi reports headroom (the original issue #24/#17 class). One caveat the bridge can't resolve: on Max/Team/Enterprise a bare Opus id is auto-upgraded to 1M by Claude Code, so an *unlisted* Opus registers at 200K but runs at 1M — pi will compact earlier than the true headroom allows (wasteful, not a hard failure). Max users who want accurate 1M budgeting for Opus can list it in `enableLongContextModels`, accepting the small risk from #39841; otherwise leave it unlisted and accept early compaction.
 
 **Extension providers and models.json:** pi's `modelOverrides` in `~/.pi/agent/models.json` do not currently apply to extension-registered providers (like claude-bridge). Overriding `contextWindow` or other fields requires editing `src/models.ts` directly.
 

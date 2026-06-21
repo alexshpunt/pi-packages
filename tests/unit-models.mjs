@@ -5,7 +5,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { MODEL_IDS_IN_ORDER, buildModels, claudeCodeModelId, resolveModel } from "../src/models.js";
+import { MODEL_IDS_IN_ORDER, buildModels, claudeCodeModelId, resolveModel, applyLongContext } from "../src/models.js";
 
 // Simulated pi-ai registry entry — extra fields mimic the ones pi-ai exposes
 // that must not leak into the provider-registered MODELS array.
@@ -46,21 +46,62 @@ describe("MODELS projection", () => {
 		}
 	});
 
-	it("appends [1m] to display names but keeps ids bare for >200K-context models", () => {
+	it("keeps display names bare regardless of context window", () => {
+		// 1M is opt-in per model via provider.enableLongContextModels, so the static
+		// picker name never advertises it.
 		const oneM = (id) => ({ ...mockPiAiModel(id), contextWindow: 1000000 });
 		const models = buildModels(MODEL_IDS_IN_ORDER.map(oneM));
 		assert.deepEqual(models.map((m) => m.id), MODEL_IDS_IN_ORDER);
-		for (const m of models) {
-			assert.ok(m.name.endsWith("[1m]"), `${m.name} should end with [1m]`);
-			assert.equal(m.contextWindow, 1000000);
-		}
+		assert.ok(models.every((m) => !m.name.includes("[1m]")));
+	});
+});
+
+describe("claudeCodeModelId", () => {
+	const oneMModel = { id: "claude-opus-4-8", contextWindow: 1000000 };
+	const twoHundredKModel = { id: "claude-haiku-4-5", contextWindow: 200000 };
+
+	it("appends [1m] only when opted in AND 1M-capable", () => {
+		assert.equal(claudeCodeModelId(oneMModel, true), "claude-opus-4-8[1m]");
 	});
 
-	it("leaves <=200K-context display names unsuffixed", () => {
-		// mockPiAiModel pins contextWindow at exactly 200000 (the default window).
-		const models = buildModels(MODEL_IDS_IN_ORDER.map(mockPiAiModel));
-		assert.deepEqual(models.map((m) => m.id), MODEL_IDS_IN_ORDER);
-		assert.ok(models.every((m) => !m.name.endsWith("[1m]")));
+	it("stays bare when capable but not opted in (default)", () => {
+		assert.equal(claudeCodeModelId(oneMModel, false), "claude-opus-4-8");
+	});
+
+	it("stays bare when opted in but only 200K-capable (Haiku)", () => {
+		assert.equal(claudeCodeModelId(twoHundredKModel, true), "claude-haiku-4-5");
+	});
+
+	it("does not double-suffix an id that already contains [1m]", () => {
+		assert.equal(claudeCodeModelId({ id: "claude-opus-4-8[1m]", contextWindow: 1000000 }, true), "claude-opus-4-8[1m]");
+	});
+});
+
+describe("applyLongContext (registered contextWindow)", () => {
+	const oneM = (id) => ({ ...mockPiAiModel(id), contextWindow: 1000000 });
+	const models = buildModels(MODEL_IDS_IN_ORDER.map(oneM));
+
+	it("caps unlisted long-context models to 200K so pi's budget matches the bare-id runtime", () => {
+		const registered = applyLongContext(models, new Set());
+		for (const m of registered) {
+			assert.equal(m.contextWindow, 200000, `${m.id} should register at 200K`);
+		}
+		// Does not mutate the source table used for id resolution.
+		assert.equal(models.find((m) => m.id === "claude-opus-4-8").contextWindow, 1000000);
+	});
+
+	it("keeps 1M for opted-in long-context models (matches the [1m] CLI id)", () => {
+		const registered = applyLongContext(models, new Set(["claude-opus-4-8", "claude-sonnet-4-6"]));
+		assert.equal(registered.find((m) => m.id === "claude-opus-4-8").contextWindow, 1000000);
+		assert.equal(registered.find((m) => m.id === "claude-sonnet-4-6").contextWindow, 1000000);
+		// Unlisted long-context siblings stay capped.
+		assert.equal(registered.find((m) => m.id === "claude-opus-4-7").contextWindow, 200000);
+	});
+
+	it("leaves Haiku (200K native) at 200K whether listed or not", () => {
+		const bare200K = buildModels(MODEL_IDS_IN_ORDER.map(mockPiAiModel)); // haiku=200K
+		assert.equal(applyLongContext(bare200K, new Set(["claude-haiku-4-5"])).find((m) => m.id === "claude-haiku-4-5").contextWindow, 200000);
+		assert.equal(applyLongContext(bare200K, new Set()).find((m) => m.id === "claude-haiku-4-5").contextWindow, 200000);
 	});
 });
 
@@ -88,11 +129,9 @@ describe("resolveModel", () => {
 		const oneMModels = buildModels(MODEL_IDS_IN_ORDER.map(oneM));
 		const model = resolveModel(oneMModels, "opus");
 		assert.equal(model.id, "claude-opus-4-8");
-		assert.equal(claudeCodeModelId(model), "claude-opus-4-8[1m]");
-	});
-
-	it("claudeCodeModelId leaves 200K models bare", () => {
-		const model = models.find((m) => m.id === "claude-haiku-4-5");
-		assert.equal(claudeCodeModelId(model), "claude-haiku-4-5");
+		// Opted in → [1m] applied at the CLI boundary.
+		assert.equal(claudeCodeModelId(model, true), "claude-opus-4-8[1m]");
+		// Default (not opted in) → bare.
+		assert.equal(claudeCodeModelId(model, false), "claude-opus-4-8");
 	});
 });

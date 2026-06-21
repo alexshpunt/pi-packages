@@ -25,6 +25,13 @@ export interface Config {
 		settingSources?: SettingSource[];
 		strictMcpConfig?: boolean;
 		pathToClaudeCodeExecutable?: string;
+		// Bare model ids (e.g. "claude-opus-4-8") to opt into 1M (long) context for.
+		// Only long-context-capable models (>200K advertised window: Opus 4.6+,
+		// Sonnet 4.6) are affected; Haiku 4.5 (200K) and any id not listed stay on
+		// the 200K default. 1M is metered on every plan for Sonnet (including Max)
+		// and included for Opus on Max/Team/Enterprise — opt in per model accordingly.
+		// See README.
+		enableLongContextModels?: string[];
 	};
 }
 
