@@ -6,10 +6,7 @@ export const MODEL_IDS_IN_ORDER = ["claude-opus-4-8", "claude-opus-4-7", "claude
 
 // Project pi-ai's model entries down to the fields pi's registerProvider expects,
 // and keep MODEL_IDS_IN_ORDER ordering. IDs missing from pi-ai are silently dropped.
-//
-// Display names are bare: whether a model runs in 1M context is a per-cwd config
-// decision (provider.longContextExtraUsage), so the static picker can't truthfully
-// advertise it. See README "1M context window" for the capability/entitlement matrix.
+// Context-dependent display labels are applied after plan/long-context config is known.
 export function buildModels<T extends { id: string; [key: string]: any }>(piAiModels: T[]) {
 	return MODEL_IDS_IN_ORDER
 		.map((id) => piAiModels.find((m) => m.id === id))
@@ -67,5 +64,12 @@ export function applyLongContext<T extends { id: string; contextWindow?: number 
 		if (plan === "max" && m.id.includes("opus") && hasOneMContext(m)) return m;
 		const capped = Math.min(m.contextWindow ?? 200_000, 200_000);
 		return capped === m.contextWindow ? m : { ...m, contextWindow: capped };
+	});
+}
+
+export function applyOneMDisplayNames<T extends { name: string; contextWindow?: number | null }>(models: T[]): T[] {
+	return models.map((m) => {
+		if (!hasOneMContext(m) || /\b1M\b/i.test(m.name)) return m;
+		return { ...m, name: `${m.name} 1M` };
 	});
 }

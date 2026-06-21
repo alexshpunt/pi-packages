@@ -5,7 +5,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { MODEL_IDS_IN_ORDER, buildModels, claudeCodeModelId, resolveModel, applyLongContext } from "../src/models.js";
+import { MODEL_IDS_IN_ORDER, applyLongContext, applyOneMDisplayNames, buildModels, claudeCodeModelId, resolveModel } from "../src/models.js";
 
 // Simulated pi-ai registry entry — extra fields mimic the ones pi-ai exposes
 // that must not leak into the provider-registered MODELS array.
@@ -46,13 +46,11 @@ describe("MODELS projection", () => {
 		}
 	});
 
-	it("keeps display names bare regardless of context window", () => {
-		// 1M is opt-in via provider.longContextExtraUsage, so the static
-		// picker name never advertises it.
+	it("leaves display names bare before plan-specific context is applied", () => {
 		const oneM = (id) => ({ ...mockPiAiModel(id), contextWindow: 1000000 });
 		const models = buildModels(MODEL_IDS_IN_ORDER.map(oneM));
 		assert.deepEqual(models.map((m) => m.id), MODEL_IDS_IN_ORDER);
-		assert.ok(models.every((m) => !m.name.includes("[1m]")));
+		assert.ok(models.every((m) => !m.name.includes("1M")));
 	});
 });
 
@@ -121,6 +119,27 @@ describe("applyLongContext (registered contextWindow)", () => {
 		const bare200K = buildModels(MODEL_IDS_IN_ORDER.map(mockPiAiModel)); // haiku=200K
 		assert.equal(applyLongContext(bare200K, new Set(["claude-haiku-4-5"]), "max").find((m) => m.id === "claude-haiku-4-5").contextWindow, 200000);
 		assert.equal(applyLongContext(bare200K, new Set(), "pro").find((m) => m.id === "claude-haiku-4-5").contextWindow, 200000);
+	});
+});
+
+describe("applyOneMDisplayNames", () => {
+	const modelWithRealisticWindows = (id) => ({
+		...mockPiAiModel(id),
+		contextWindow: id.includes("haiku") ? 200000 : 1000000,
+	});
+	const models = buildModels(MODEL_IDS_IN_ORDER.map(modelWithRealisticWindows));
+
+	it("labels Max-plan Opus display names as 1M", () => {
+		const registered = applyOneMDisplayNames(applyLongContext(models, new Set(), "max"));
+		assert.equal(registered.find((m) => m.id === "claude-opus-4-8").name, "claude-opus-4-8 1M");
+		assert.equal(registered.find((m) => m.id === "claude-sonnet-4-6").name, "claude-sonnet-4-6");
+		assert.equal(registered.find((m) => m.id === "claude-haiku-4-5").name, "claude-haiku-4-5");
+	});
+
+	it("labels explicit long-context extra-usage display names as 1M", () => {
+		const registered = applyOneMDisplayNames(applyLongContext(models, new Set(["claude-sonnet-4-6"]), "pro"));
+		assert.equal(registered.find((m) => m.id === "claude-sonnet-4-6").name, "claude-sonnet-4-6 1M");
+		assert.equal(registered.find((m) => m.id === "claude-opus-4-8").name, "claude-opus-4-8");
 	});
 });
 
