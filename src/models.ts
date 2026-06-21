@@ -8,7 +8,7 @@ export const MODEL_IDS_IN_ORDER = ["claude-opus-4-8", "claude-opus-4-7", "claude
 // and keep MODEL_IDS_IN_ORDER ordering. IDs missing from pi-ai are silently dropped.
 //
 // Display names are bare: whether a model runs in 1M context is a per-cwd config
-// decision (provider.enableLongContextModels), so the static picker can't truthfully
+// decision (provider.longContextExtraUsage), so the static picker can't truthfully
 // advertise it. See README "1M context window" for the capability/entitlement matrix.
 export function buildModels<T extends { id: string; [key: string]: any }>(piAiModels: T[]) {
 	return MODEL_IDS_IN_ORDER
@@ -27,7 +27,7 @@ export function buildModels<T extends { id: string; [key: string]: any }>(piAiMo
 // A model is 1M-*capable* when its advertised window exceeds 200K. Capability is
 // not entitlement: Sonnet 4.6's 1M is metered on every plan (including Max), while
 // Opus 1M is included on Max/Team/Enterprise. Capability only gates whether opting
-// in via provider.enableLongContextModels has any effect.
+// in via provider.longContextExtraUsage has any effect.
 export function hasOneMContext(model: { contextWindow?: number | null }): boolean {
 	return (model.contextWindow ?? 0) > 200_000;
 }

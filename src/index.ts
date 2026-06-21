@@ -10,7 +10,7 @@ import { appendFileSync, mkdirSync, realpathSync, statSync } from "fs";
 import { homedir } from "os";
 import { dirname, join } from "path";
 import { PROVIDER_ID, messageContentToText, convertPiMessages } from "./convert.js";
-import { buildModels, claudeCodeModelId, resolveModel as _resolveModel, applyLongContext } from "./models.js";
+import { buildModels, claudeCodeModelId, hasOneMContext, resolveModel as _resolveModel, applyLongContext } from "./models.js";
 import { MCP_SERVER_NAME, MCP_TOOL_PREFIX, extractSkillsBlock } from "./skills.js";
 import { verifyWrittenSession as _verifyWrittenSession } from "./session-verify.js";
 import { extractAllToolResults as _extractAllToolResults, type McpResult } from "./extract-tool-results.js";
@@ -1177,7 +1177,11 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 			?? REASONING_TO_EFFORT[options.reasoning]
 		: undefined;
 
-	const longContextModels = new Set(providerSettings.enableLongContextModels ?? []);
+	const longContextModels = new Set(
+		providerSettings.longContextExtraUsage
+			? MODELS.filter(m => hasOneMContext(m)).map(m => m.id)
+			: [] as string[]
+	);
 	const extraArgs: Record<string, string | null> = { model: claudeCodeModelId(model, longContextModels.has(model.id)) };
 	if (strictMcpConfigEnabled) extraArgs["strict-mcp-config"] = null;
 	// Opus 4.7 defaults thinking.display to "omitted" (empty thinking text in stream).
@@ -1396,7 +1400,11 @@ async function promptAndWait(
 	const model = resolveModel(requestedModel);
 	const modelId = model?.id ?? requestedModel;
 	const providerSettings = loadConfig(cwd).provider ?? {};
-	const longContextModels = new Set(providerSettings.enableLongContextModels ?? []);
+	const longContextModels = new Set(
+		providerSettings.longContextExtraUsage
+			? MODELS.filter(m => hasOneMContext(m)).map(m => m.id)
+			: [] as string[]
+	);
 	const cliModel = model ? claudeCodeModelId(model, longContextModels.has(model.id)) : modelId;
 
 	// Session resume for shared mode — reuse provider's session if it exists,
@@ -1554,13 +1562,13 @@ export default function (pi: ExtensionAPI) {
 
 	const config = loadConfig(process.cwd());
 	debug("loadConfig:", JSON.stringify(config));
-	// Registered contextWindow must match what we send the CLI. plan (default "pro")
-	// tells the bridge whether a bare Opus id auto-upgrades to 1M at runtime
-	// (Max-tier plans), so an unlisted Opus registers 1M WITHOUT sending [1m].
-	// enableLongContextModels is the separate explicit-[1m] lever. See README and
+	// longContextExtraUsage is the explicit opt-in for credit-costing 1M. See README and
 	// applyLongContext in models.js.
 	const plan = config.provider?.plan ?? "pro";
-	const registeredModels = applyLongContext(MODELS, new Set(config.provider?.enableLongContextModels ?? []), plan);
+	const extraUsageIds = config.provider?.longContextExtraUsage
+		? new Set(MODELS.filter(m => hasOneMContext(m)).map(m => m.id))
+		: new Set<string>();
+	const registeredModels = applyLongContext(MODELS, extraUsageIds, plan);
 
 	// Reset shared session on pi session lifecycle events
 	const clearSession = (event: string) => {

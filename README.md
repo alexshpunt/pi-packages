@@ -27,17 +27,7 @@ Use `/model` to select `claude-bridge/claude-opus-4-8`, `claude-bridge/claude-op
 
 ### 1M context window
 
-1M context is **opt-in per model**. By default every model runs on its 200K window. To enable 1M for specific models, list their bare ids under `provider.enableLongContextModels` in `~/.pi/agent/claude-bridge.json` or `.pi/claude-bridge.json` (project overrides global):
-
-```json
-{
-  "provider": {
-    "enableLongContextModels": ["claude-opus-4-8", "claude-opus-4-6"]
-  }
-}
-```
-
-**Set `provider.plan` to match your subscription** (default `"pro"`). This controls the context window pi *reports* for Opus when you haven't listed it above — it must match what Claude Code actually runs, or pi's status bar and auto-compaction threshold will be wrong:
+By default every model runs at 200K. Configure in `~/.pi/agent/claude-bridge.json` (or `.pi/claude-bridge.json`, project overrides global):
 
 ```json
 {
@@ -47,18 +37,8 @@ Use `/model` to select `claude-bridge/claude-opus-4-8`, `claude-bridge/claude-op
 }
 ```
 
-- **`"pro"`** (default) — bare Opus runs at 200K, so pi registers 200K. Use for Pro, Team Standard, or Enterprise subscription seats.
-- **`"max"`** — Claude Code auto-upgrades a bare Opus id to 1M (default since v2.1.75), so pi registers 1M **without appending `[1m]`**, avoiding the usage-credits gate an explicit `opus[1m]` can trip on Max 5x ([claude-code#39841](https://github.com/anthropics/claude-code/issues/39841)). Use for Max, Team Premium, Enterprise pay-as-you-go, or the Anthropic API.
-
-`plan` only affects Opus (the only family that auto-upgrades with a bare id); Sonnet and Haiku are unaffected. It never appends `[1m]` — that's solely `enableLongContextModels`'s job — so on Max you get accurate 1M budgeting for Opus without the `[1m]` risk.
-
-**Whether you need to opt in — and whether it costs extra — depends on both the model and your plan** (per Anthropic's [paid-plan context docs](https://support.claude.com/en/articles/8606394-how-large-is-the-context-window-on-paid-claude-plans)):
-
-- **Opus 4.6/4.7/4.8 on Max/Team/Enterprise**: auto-upgraded to 1M with the bare id (covered by your subscription) — set `provider.plan: "max"` for accurate reporting; don't list Opus in `enableLongContextModels`, since an explicit `opus[1m]` is redundant and reportedly trips the usage-credits gate on Max 5x ([claude-code#39841](https://github.com/anthropics/claude-code/issues/39841)).
-- **Opus 4.6/4.7/4.8 on Pro**: set `provider.plan: "pro"` (the default). 1M requires usage credits; list Opus in `enableLongContextModels` only if credits are enabled, otherwise the request fails with `Usage credits are required for long context requests`.
-- **Sonnet 4.6 on any plan**: 1M is metered via usage credits on *every* plan, including Max (except usage-based Enterprise). Opting in means every Sonnet turn spends credits — only do it deliberately.
-
-**Registered context window:** the bridge registers each model with pi at the window it actually requests from Claude Code — 1M for opted-in long-context models (which send `[1m]`) and for bare Opus when `plan` is `"max"` (auto-upgraded by CC); 200K otherwise. This keeps pi's status bar and auto-compaction threshold honest, preventing the original issue #24/#17 "Prompt is too long" / credit-gate class where pi reports headroom while CC runs at 200K.
+- **`plan`** (default `"pro"`) — set to `"max"` if your subscription auto-upgrades Opus to 1M (Max, Team Premium, Enterprise pay-as-you-go, or the Anthropic API). Leave `"pro"` for Pro, Team Standard, or Enterprise subscription seats. Only affects Opus.
+- **`longContextExtraUsage`** — set to `true` to enable 1M on all capable models (uses "extra usage" credits — Sonnet 1M costs credits on every plan; Opus 1M costs credits on Pro but is included on Max, so on Max use `plan` instead).
 
 **Extension providers and models.json:** pi's `modelOverrides` in `~/.pi/agent/models.json` do not currently apply to extension-registered providers (like claude-bridge). Overriding `contextWindow` or other fields requires editing `src/models.ts` directly.
 

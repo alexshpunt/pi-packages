@@ -47,7 +47,7 @@ describe("MODELS projection", () => {
 	});
 
 	it("keeps display names bare regardless of context window", () => {
-		// 1M is opt-in per model via provider.enableLongContextModels, so the static
+		// 1M is opt-in via provider.longContextExtraUsage, so the static
 		// picker name never advertises it.
 		const oneM = (id) => ({ ...mockPiAiModel(id), contextWindow: 1000000 });
 		const models = buildModels(MODEL_IDS_IN_ORDER.map(oneM));
@@ -110,9 +110,9 @@ describe("applyLongContext (registered contextWindow)", () => {
 		assert.equal(registered.find((m) => m.id === "claude-sonnet-4-6").contextWindow, 200000);
 	});
 
-	it("plan max does not append [1m] (decoupled from enableLongContextModels, avoids #39841)", () => {
+	it("plan max does not append [1m] (decoupled from longContextExtraUsage, avoids #39841)", () => {
 		// Unlisted Opus on max registers 1M but the CLI id stays bare — only
-		// enableLongContextModels membership drives the [1m] suffix, never plan.
+		// longContextExtraUsage membership drives the [1m] suffix, never plan.
 		const opus = applyLongContext(models, new Set(), "max").find((m) => m.id === "claude-opus-4-8");
 		assert.equal(claudeCodeModelId(opus, false), "claude-opus-4-8");
 	});

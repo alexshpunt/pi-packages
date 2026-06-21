@@ -32,13 +32,12 @@ export interface Config {
 		// Enterprise pay-as-you-go, or Anthropic API. Only Opus auto-upgrades; Sonnet
 		// and Haiku are unaffected. See README.
 		plan?: "pro" | "max";
-		// Bare model ids (e.g. "claude-opus-4-8") to opt into 1M (long) context for.
-		// Only long-context-capable models (>200K advertised window: Opus 4.6+,
-		// Sonnet 4.6) are affected; Haiku 4.5 (200K) and any id not listed stay on
-		// the 200K default. 1M is metered on every plan for Sonnet (including Max)
-		// and included for Opus on Max/Team/Enterprise — opt in per model accordingly.
-		// See README.
-		enableLongContextModels?: string[];
+		// Set to true to opt into 1M context usage that costs credits ("extra usage"
+		// in Anthropic billing). Applies to all 1M-capable models (Opus 4.6/4.7/4.8,
+		// Sonnet 4.6). Sonnet 1M is metered on every plan (including Max); Opus 1M
+		// is metered on Pro but included on Max (use plan setting instead).
+		// Defaults to false (200K for every model).
+		longContextExtraUsage?: boolean;
 	};
 }
 
