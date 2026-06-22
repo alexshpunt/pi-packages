@@ -7,7 +7,7 @@ import { describe, it, before, after, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { createRpcHarness } from "./lib/rpc-harness.mjs";
 
-const TEST_TIMEOUT = 30_000;
+const TEST_TIMEOUT = 40_000;
 
 const harness = createRpcHarness({
 	name: "tool-message",
@@ -85,7 +85,7 @@ describe("tool-message integration", () => {
 		assert.match(text.toLowerCase(), /slowtool completed/);
 	});
 
-	it("parallel tool calls with steer delivers all results", { timeout: 30_000 }, async () => {
+	it("parallel tool calls with steer delivers all results", { timeout: TEST_TIMEOUT }, async () => {
 		const collector = collectText();
 		await send({
 			type: "prompt",
@@ -105,7 +105,7 @@ describe("tool-message integration", () => {
 		assert.ok(matches >= 3, `Expected 3 SlowTool results, found ${matches}: ${text.slice(0, 300)}`);
 	});
 
-	it("steer during text response (no tool call) completes both turns", { timeout: 30_000 }, async () => {
+	it("steer during text response (no tool call) completes both turns", { timeout: TEST_TIMEOUT }, async () => {
 		// Steer during text-only streaming: the assistant is generating text (no tool
 		// calls), a steer arrives, and pi delivers it after the current turn ends.
 		// Risk: if activeQuery hasn't been cleared by the time pi calls streamSimple

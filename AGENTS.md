@@ -1,19 +1,20 @@
 # Agent Guidelines
 
+## Commit
+
+Do **not** auto-commit.
+
 ## Changelog
 
-Add an entry to an `## UNRELEASED` section at the top of `CHANGELOG.md` for
-every non-docs change, using the existing format:
+Maintain an entry in the `## UNRELEASED` section at the top of `CHANGELOG.md` for every significant change, using the existing format:
 
 ```
 - **Tag: summary** — detail
 ```
 
-Do not add changelog entries for docs-only changes.
+Do not add changelog entries for docs-only changes. If multiple entries in the UNRELEASED section pertain to the same feature, try to combine them into one entry,
 
 Tags: `Add`, `Fix`, `Refactor`, `Tests`, `Bump`, `Deprecate`, `Remove`.
-
-Do **not** auto-commit.
 
 ## Tests
 
