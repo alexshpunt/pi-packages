@@ -1041,14 +1041,20 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 	const lastMsgRole = context.messages[context.messages.length - 1]?.role;
 	debug(`provider: streamClaudeAgentSdk called, activeQuery=${!!ctx().activeQuery}, lastMsgRole=${lastMsgRole}, isReentrant=${ctx().activeQuery !== null}`);
 
+	const activeQuery = ctx().activeQuery !== null;
+	const allResults = activeQuery ? extractAllToolResults(context) : [];
+	const isReentrantUserQuery = activeQuery && lastMsgRole === "user" && allResults.length === 0 && context.messages.length === 1;
+	if (isReentrantUserQuery) {
+		debug(`provider: active query user-only call treated as reentrant fresh query, waitingHandlers=${ctx().pendingToolCalls.size}`);
+	}
+
 	// --- Tool result delivery ---
 	// Pi appends tool results to context and calls back. Extract this turn's results
 	// (everything after the last assistant message) and match against waiting MCP
 	// handlers. Results that arrive before their handler get queued in pendingResults.
-	if (ctx().activeQuery) {
+	if (activeQuery && !isReentrantUserQuery) {
 		claimCurrentPiStream(stream, "tool-result");
 		ctx().resetTurnState(model);
-		const allResults = extractAllToolResults(context);
 		debug(`provider: tool results, ${allResults.length} results, ${ctx().pendingToolCalls.size} waiting handlers, ctx.msgs=${context.messages.length}`);
 		for (const result of allResults) {
 			const id = result.toolCallId;
@@ -1113,7 +1119,7 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 	// --- Fresh query ---
 
 	// 1. Determine reentrancy and push parent context if needed.
-	const isReentrant = ctx().activeQuery !== null;
+	const isReentrant = activeQuery;
 	if (isReentrant) pushContext();
 	debug(`provider: fresh query setup, isReentrant=${isReentrant}, stackDepth=${stackDepth()}`);
 
