@@ -13,15 +13,23 @@
 
 console.log("=== int-session-compact.mjs ===");
 
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createRpcHarness } from "./lib/rpc-harness.mjs";
 
 const TIMEOUT = 180_000;
 const BRIDGE_MODEL = "claude-bridge/claude-haiku-4-5";
 
+const testAgentDir = mkdtempSync(join(tmpdir(), "session-compact-agent-"));
+writeFileSync(join(testAgentDir, "settings.json"), JSON.stringify({
+	compaction: { keepRecentTokens: 50 },
+}));
+
 const harness = createRpcHarness({
 	name: "session-compact",
 	args: ["--model", BRIDGE_MODEL],
+	env: { PI_CODING_AGENT_DIR: testAgentDir },
 	defaultTimeout: TIMEOUT,
 });
 
@@ -36,7 +44,10 @@ function finish(code, msg) {
 		console.log(`  RPC log:    ${RPC_LOG}`);
 		console.log(`  Debug log:  ${DEBUG_LOG}`);
 	}
-	stop().then(() => process.exit(code));
+	stop().then(() => {
+		rmSync(testAgentDir, { recursive: true, force: true });
+		process.exit(code);
+	});
 }
 
 start();

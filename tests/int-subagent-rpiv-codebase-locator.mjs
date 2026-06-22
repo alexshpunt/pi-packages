@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-// Reproduction/regression for foreground rpiv-pi codebase-locator Agent calls
-// hanging while claude-bridge has the parent Claude Code query active and the
-// Agent MCP handler pending.
+// Reproduction/regression for rpiv-pi codebase-locator subagents hanging while
+// claude-bridge has a parent Claude Code query active.
 //
 // This intentionally bypasses /skill:discover and invokes the same underlying
 // mechanism directly: @tintinweb/pi-subagents Agent tool + rpiv-pi's pinned
@@ -19,6 +18,8 @@ const BRIDGE_MODEL = "claude-bridge/claude-haiku-4-5";
 const TEST_TIMEOUT = 240_000;
 const SUBAGENTS_DIR = resolve(DIR, "../pi-subagents");
 const RPIV_LOCATOR_FIXTURE = resolve(DIR, "tests/fixtures/rpiv-pi-v0.6.0-agents/codebase-locator.md");
+const REENTRANT_MARKER = /provider: active query user-only call treated as reentrant fresh query/g;
+const STUCK_MARKER = /MCP handlers still waiting after delivering 0 results|tool handler\(s\) still waiting|currentPiStream overwritten/;
 
 assert.ok(existsSync(SUBAGENTS_DIR), `missing pinned pi-subagents checkout: ${SUBAGENTS_DIR}`);
 const subagentsPackage = JSON.parse(readFileSync(join(SUBAGENTS_DIR, "package.json"), "utf8"));
@@ -64,10 +65,26 @@ function finish(code, msg) {
 	});
 }
 
-start();
-await new Promise((r) => setTimeout(r, 2000));
+function debugLog() {
+	try { return readFileSync(DEBUG_LOG, "utf8"); } catch { return ""; }
+}
 
-try {
+function reentrantCount() {
+	return [...debugLog().matchAll(REENTRANT_MARKER)].length;
+}
+
+async function waitForReentrantCountAbove(count, label) {
+	const deadline = Date.now() + TEST_TIMEOUT;
+	while (Date.now() < deadline) {
+		const current = reentrantCount();
+		if (current > count) return current;
+		await new Promise((r) => setTimeout(r, 250));
+	}
+	throw new Error(`${label}: timed out waiting for reentrant subagent query (count stayed ${count})`);
+}
+
+async function runAgentPrompt({ background, expectedMarker }) {
+	const beforeReentrant = reentrantCount();
 	const collector = collectText();
 	await send({
 		type: "prompt",
@@ -77,38 +94,38 @@ Call it with:
 - subagent_type: codebase-locator
 - description: rpiv locator
 - model: ${BRIDGE_MODEL}
-- max_turns: 3
-- run_in_background: false
+- max_turns: 8
+- run_in_background: ${background ? "true" : "false"}
 - prompt: Find files related to RPIV_LOCATOR_SENTINEL in this repository. Return only file paths and matching line anchors. Do not ask questions.
 
-After the Agent tool returns, reply exactly PARENT-SAW-RPIV-CODEBASE-LOCATOR.`,
+After the Agent tool returns, do not use more tools. ${background ? "Write 80 short numbered lines about keeping background work separate, then" : "Then"} reply exactly ${expectedMarker}.`,
 	}, TEST_TIMEOUT);
 
 	await waitForMatch(
 		(msg) => msg.type === "tool_execution_start" && JSON.stringify(msg).includes("Agent"),
-		"Agent tool_execution_start",
+		`${background ? "background" : "foreground"} Agent tool_execution_start`,
 		TEST_TIMEOUT,
 	);
 	await waitForEvent("agent_end", TEST_TIMEOUT);
 	const text = collector.stop();
 	assert.match(
 		text,
-		/PARENT-SAW-RPIV-CODEBASE-LOCATOR/,
-		`parent did not report Agent result completion. Text: ${text.slice(0, 500)}`,
+		new RegExp(expectedMarker),
+		`parent did not report ${background ? "background" : "foreground"} Agent completion. Text: ${text.slice(0, 500)}`,
 	);
+	await waitForReentrantCountAbove(beforeReentrant, background ? "background Agent" : "foreground Agent");
+}
 
-	const debugLog = readFileSync(DEBUG_LOG, "utf8");
-	assert.match(debugLog, /mcp handler: Agent \[toolu_/, "debug log never showed the parent Agent MCP handler");
-	assert.match(
-		debugLog,
-		/provider: fresh query setup, isReentrant=true/,
-		"debug log never showed the subagent taking the reentrant fresh-query path",
-	);
-	assert.doesNotMatch(
-		debugLog,
-		/MCP handlers still waiting after delivering 0 results|tool handler\(s\) still waiting|currentPiStream overwritten/,
-		"debug log contains stuck-handler/stream-overwrite signature",
-	);
+start();
+await new Promise((r) => setTimeout(r, 2000));
+
+try {
+	await runAgentPrompt({ background: false, expectedMarker: "PARENT-SAW-FOREGROUND-RPIV-CODEBASE-LOCATOR" });
+	await runAgentPrompt({ background: true, expectedMarker: "PARENT-STARTED-BACKGROUND-RPIV-CODEBASE-LOCATOR" });
+
+	const log = debugLog();
+	assert.match(log, /mcp handler: Agent \[toolu_/, "debug log never showed the parent Agent MCP handler");
+	assert.doesNotMatch(log, STUCK_MARKER, "debug log contains stuck-handler/stream-overwrite signature");
 
 	finish(0, "PASS");
 } catch (err) {
