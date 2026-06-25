@@ -382,6 +382,7 @@ async function runIsolatedSummary(
 					if (block.type === "text" && typeof block.text === "string") assistantText += block.text;
 				}
 			} else if (message.type === "result") {
+				logServedContextWindow("compact summary", message, model);
 				if (message.subtype === "success") {
 					finalText = message.result || assistantText;
 				} else {
@@ -736,6 +737,20 @@ function updateUsage(output: AssistantMessage, usage: Record<string, number | un
 	debug(`usage: in=${output.usage.input} out=${output.usage.output} cacheRead=${output.usage.cacheRead} cacheWrite=${output.usage.cacheWrite} total=${output.usage.totalTokens} cachePct=${cachePct}% model=${model.id}`);
 }
 
+// Log the *served* context window reported by an SDK result message
+// (modelUsage[id].contextWindow), which can differ from the window pi
+// registered (model.contextWindow) when the runtime entitlement doesn't
+// match the docs — e.g. bare Opus served 200K on Pro, or [1m] not honored.
+// The result message's modelUsage is otherwise discarded; this makes the
+// gap observable. See issue #18.
+function logServedContextWindow(label: string, message: SDKMessage, model: Model<any>): void {
+	const modelUsage = (message as any).modelUsage as Record<string, { contextWindow?: number; maxOutputTokens?: number }> | undefined;
+	if (!modelUsage) return;
+	for (const [k, v] of Object.entries(modelUsage)) {
+		debug(`${label}: served contextWindow=${v.contextWindow ?? "?"} maxOutputTokens=${v.maxOutputTokens ?? "?"} servedModel=${k} registered=${model.contextWindow}`);
+	}
+}
+
 // --- Effort level mapping ---
 // Pi reasoning levels → CC SDK effort levels
 
@@ -1004,6 +1019,7 @@ async function consumeQuery(
 				processAssistantMessage(message, model, customToolNameToPi, queryCtx);
 				break;
 			case "result":
+				logServedContextWindow("result", message, model);
 				if (!queryCtx.turnSawStreamEvent && message.subtype === "success") {
 					ensureTurnStarted(queryCtx);
 					const text = message.result || "";
@@ -1198,7 +1214,10 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 			?? REASONING_TO_EFFORT[options.reasoning]
 		: undefined;
 
-	const extraArgs: Record<string, string | null> = { model: claudeCodeModelId(model, longContextExtraUsageIds.has(model.id)) };
+	// cliModel is the actual id sent to Claude Code (may carry [1m]); model.id is the
+	// pi-registered id. Log cliModel so debug lines reflect what CC actually received.
+	const cliModel = claudeCodeModelId(model, longContextExtraUsageIds.has(model.id));
+	const extraArgs: Record<string, string | null> = { model: cliModel };
 	if (strictMcpConfigEnabled) extraArgs["strict-mcp-config"] = null;
 	// Opus 4.7 defaults thinking.display to "omitted" (empty thinking text in stream).
 	// Force summarized so thinking_delta events arrive. See anthropics/claude-agent-sdk-python#830.
@@ -1235,7 +1254,7 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 	};
 
 	debug("provider: fresh query",
-		`model=${model.id} msgs=${context.messages.length} tools=${mcpTools.length}`,
+		`model=${cliModel} msgs=${context.messages.length} tools=${mcpTools.length}`,
 		`resume=${resumeSessionId?.slice(0, 8) ?? "none"} effort=${effort ?? "default"}`,
 		`appendSys=${appendSystemPrompt} strictMcp=${strictMcpConfigEnabled}`,
 		`prompt=${promptText.slice(0, 60)}${promptBlocks ? " [+images]" : ""}`);
@@ -1322,7 +1341,7 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 					const contQuery = query({ prompt: steerPrompt, options: contOptions });
 					queryCtx.activeQuery = contQuery;
 
-					debug(`provider: continuation query, model=${model.id}, resume=${resumeId.slice(0, 8)}, prompt=${steerPrompt.slice(0, 60)}`);
+					debug(`provider: continuation query, model=${cliModel}, resume=${resumeId.slice(0, 8)}, prompt=${steerPrompt.slice(0, 60)}`);
 
 					try {
 						const { capturedSessionId: contSid } = await consumeQuery(contQuery, customToolNameToPi, model, () => wasAborted, queryCtx);
@@ -1348,7 +1367,7 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 			finalizeCurrentStream(queryCtx, queryCtx.turnOutput?.stopReason);
 		})
 		.catch((error) => {
-			debug(`provider: query error, model=${model.id}, aborted=${Boolean(options?.signal?.aborted)}, error=`, error);
+			debug(`provider: query error, model=${cliModel}, aborted=${Boolean(options?.signal?.aborted)}, error=`, error);
 			if ((wasAborted || options?.signal?.aborted) && sharedSession) {
 				sharedSession = { ...sharedSession, needsRebuild: true, forceRotate: true };
 			} else {
