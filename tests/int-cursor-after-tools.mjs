@@ -23,8 +23,7 @@ test("turn 2 reuses session after tool-using turn 1 (no spurious rebuild)", { ti
 		defaultTimeout: 60_000,
 	});
 
-	harness.start();
-	await new Promise((r) => setTimeout(r, 2000));
+	await harness.startAndWait();
 
 	try {
 		// Turn 1: force a tool call

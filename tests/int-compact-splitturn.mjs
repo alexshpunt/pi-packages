@@ -55,25 +55,9 @@ const harness = createRpcHarness({
 	defaultTimeout: TEST_TIMEOUT,
 });
 
-const { start, stop, send, promptAndWait, DEBUG_LOG, RPC_LOG } = harness;
+const { startAndWait, stop, send, promptAndWait, DEBUG_LOG, RPC_LOG } = harness;
 
-let finishing = false;
-function finish(code, msg) {
-	if (finishing) return;
-	finishing = true;
-	console.log(msg);
-	if (code !== 0) {
-		console.log(`  RPC log:    ${RPC_LOG}`);
-		console.log(`  Debug log:  ${DEBUG_LOG}`);
-	}
-	stop().then(() => {
-		rmSync(testAgentDir, { recursive: true, force: true });
-		process.exit(code);
-	});
-}
-
-start();
-await new Promise((r) => setTimeout(r, 2000));
+await startAndWait();
 
 try {
 	// Two substantive turns so messagesToSummarize (prior turn) and
@@ -120,7 +104,13 @@ try {
 		throw new Error(`post-compact prompt did not return expected marker. Got: ${after.slice(0, 200)}`);
 	}
 
-	finish(0, "PASS");
+	console.log("PASS");
 } catch (e) {
-	finish(1, `FAIL: ${e.message}\n${e.stack}`);
+	process.exitCode = 1;
+	console.log(`FAIL: ${e.message}\n${e.stack}`);
+	console.log(`  RPC log:    ${RPC_LOG}`);
+	console.log(`  Debug log:  ${DEBUG_LOG}`);
+} finally {
+	await stop();
+	rmSync(testAgentDir, { recursive: true, force: true });
 }

@@ -16,24 +16,22 @@ const harness = createRpcHarness({
 });
 
 describe("tool-message integration", () => {
-	const { start, stop, send, waitForEvent, waitForMatch, collectText, promptAndWait, DEBUG_LOG, RPC_LOG } = harness;
+	const { startAndWait, stop, send, waitForEvent, waitForMatch, collectText, promptAndWait, DEBUG_LOG, RPC_LOG } = harness;
 
 	// --- Lifecycle ---
 
 	before(async () => {
-		harness.start();
-		await new Promise((r) => setTimeout(r, 2000));
+		await startAndWait();
 	});
 
 	afterEach(async () => {
 		if (harness.pi().exitCode !== null) {
-			harness.start();
-			await new Promise((r) => setTimeout(r, 2000));
+			await startAndWait();
 		}
 	});
 
 	after(async () => {
-		await harness.stop();
+		await stop();
 		console.log(`  RPC log: ${RPC_LOG}`);
 		console.log(`  Debug log: ${DEBUG_LOG}`);
 	});

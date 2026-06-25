@@ -46,24 +46,7 @@ const harness = createRpcHarness({
 	defaultTimeout: TEST_TIMEOUT,
 });
 
-const { start, stop, send, waitForEvent, waitForMatch, collectText, DEBUG_LOG, RPC_LOG } = harness;
-
-let finishing = false;
-function finish(code, msg) {
-	if (finishing) return;
-	finishing = true;
-	console.log(msg);
-	if (code !== 0) {
-		console.log(`  RPC log:    ${RPC_LOG}`);
-		console.log(`  Debug log:  ${DEBUG_LOG}`);
-		try { console.log(`  Debug tail:\n${readFileSync(DEBUG_LOG, "utf8").slice(-6000)}`); } catch {}
-	}
-	stop().then(() => {
-		rmSync(testAgentDir, { recursive: true, force: true });
-		rmSync(testProjectDir, { recursive: true, force: true });
-		process.exit(code);
-	});
-}
+const { startAndWait, stop, send, waitForEvent, waitForMatch, collectText, DEBUG_LOG, RPC_LOG } = harness;
 
 function debugLog() {
 	try { return readFileSync(DEBUG_LOG, "utf8"); } catch { return ""; }
@@ -116,8 +99,7 @@ After the Agent tool returns, do not use more tools. ${background ? "Write 80 sh
 	await waitForReentrantCountAbove(beforeReentrant, background ? "background Agent" : "foreground Agent");
 }
 
-start();
-await new Promise((r) => setTimeout(r, 2000));
+await startAndWait();
 
 try {
 	await runAgentPrompt({ background: false, expectedMarker: "PARENT-SAW-FOREGROUND-RPIV-CODEBASE-LOCATOR" });
@@ -127,7 +109,15 @@ try {
 	assert.match(log, /mcp handler: Agent \[toolu_/, "debug log never showed the parent Agent MCP handler");
 	assert.doesNotMatch(log, STUCK_MARKER, "debug log contains stuck-handler/stream-overwrite signature");
 
-	finish(0, "PASS");
+	console.log("PASS");
 } catch (err) {
-	finish(1, `FAIL: ${err.message}\n${err.stack}`);
+	process.exitCode = 1;
+	console.log(`FAIL: ${err.message}\n${err.stack}`);
+	console.log(`  RPC log:    ${RPC_LOG}`);
+	console.log(`  Debug log:  ${DEBUG_LOG}`);
+	try { console.log(`  Debug tail:\n${readFileSync(DEBUG_LOG, "utf8").slice(-6000)}`); } catch {}
+} finally {
+	await stop();
+	rmSync(testAgentDir, { recursive: true, force: true });
+	rmSync(testProjectDir, { recursive: true, force: true });
 }

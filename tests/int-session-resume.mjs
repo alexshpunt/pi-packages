@@ -42,7 +42,7 @@ const harness = createRpcHarness({
 	defaultTimeout: TIMEOUT,
 });
 
-const { DIR, start, stop, send, addListener, collectText, DEBUG_LOG, RPC_LOG } = harness;
+const { startAndWait, stop, send, addListener, collectText, DEBUG_LOG, RPC_LOG } = harness;
 
 let lastToolResult = null;
 
@@ -73,31 +73,14 @@ async function promptAndWait(message) {
 	return collector.stop();
 }
 
-function finish(code, msg) {
-	console.log(msg);
-	if (code !== 0) {
-		console.log(`  RPC log:    ${RPC_LOG}`);
-		console.log(`  Debug log:  ${DEBUG_LOG}`);
-		console.log(`  CC CLI:     .test-output/cc-cli-logs/  (look for *-askclaude-*.log near the failing turn)`);
-		console.log(`  Note: logs are overwritten on next test run — copy them now if you need to investigate.`);
-	}
-	stop().then(() => {
-		if (TEST_CWD.startsWith(TEST_CWD_PREFIX) && TEST_CWD.length > TEST_CWD_PREFIX.length) {
-			rmSync(TEST_CWD, { recursive: true, force: true });
-		}
-		process.exit(code);
-	});
-}
-
 // Start pi
-harness.start();
-await new Promise((r) => setTimeout(r, 2000));
+await startAndWait();
 
 try {
   // Turn 1: Non-provider prompt — establishes context before our provider is used
   console.log("Turn 1: Non-provider prompt (establish context)...");
   const text1 = await promptAndWait(`The secret word is '${WORD_A}'. Acknowledge and be very brief.`);
-  if (!text1) finish(1, "FAIL: Turn 1 produced no text");
+  if (!text1) throw new Error("Turn 1 produced no text");
   console.log(`  Response: ${text1.slice(0, 80)}`);
 
   // Switch to provider — first provider turn with prior history (Case 2)
@@ -113,8 +96,8 @@ try {
   );
   console.log(`  Response: ${text2.slice(0, 80)}`);
   const lower2 = text2.toLowerCase();
-  if (!lower2.includes(WORD_A)) finish(1, `FAIL: Turn 2 response missing '${WORD_A}': ${text2}`);
-  if (!lower2.includes(WORD_B)) finish(1, `FAIL: Turn 2 response missing '${WORD_B}': ${text2}`);
+  if (!lower2.includes(WORD_A)) throw new Error(`Turn 2 response missing '${WORD_A}': ${text2}`);
+  if (!lower2.includes(WORD_B)) throw new Error(`Turn 2 response missing '${WORD_B}': ${text2}`);
 
   // Switch to other model — creates missed messages
   console.log(`Switching to ${OTHER_PROVIDER}/${OTHER_MODEL}...`);
@@ -123,7 +106,7 @@ try {
   // Turn 3: Non-provider prompt — adds context that provider must see on switch-back
   console.log("Turn 3: Non-provider prompt (creates missed messages)...");
   const text3 = await promptAndWait(`The third word is '${WORD_C}'. Acknowledge briefly.`);
-  if (!text3) finish(1, "FAIL: Turn 3 produced no text");
+  if (!text3) throw new Error("Turn 3 produced no text");
   console.log(`  Response: ${text3.slice(0, 80)}`);
 
   // Switch back to provider — context includes all prior turns (Case 4)
@@ -138,9 +121,9 @@ try {
   );
   console.log(`  Response: ${text4.slice(0, 80)}`);
   const lower4 = text4.toLowerCase();
-  if (!lower4.includes(WORD_A)) finish(1, `FAIL: Turn 4 response missing '${WORD_A}': ${text4}`);
-  if (!lower4.includes(WORD_B)) finish(1, `FAIL: Turn 4 response missing '${WORD_B}': ${text4}`);
-  if (!lower4.includes(WORD_C)) finish(1, `FAIL: Turn 4 response missing '${WORD_C}': ${text4}`);
+  if (!lower4.includes(WORD_A)) throw new Error(`Turn 4 response missing '${WORD_A}': ${text4}`);
+  if (!lower4.includes(WORD_B)) throw new Error(`Turn 4 response missing '${WORD_B}': ${text4}`);
+  if (!lower4.includes(WORD_C)) throw new Error(`Turn 4 response missing '${WORD_C}': ${text4}`);
 
   // Turn 5: Abort mid-stream — session should be invalidated, next turn should recover
   console.log("Turn 5: Abort mid-stream (session recovery)...");
@@ -159,9 +142,9 @@ try {
   );
   console.log(`  Response: ${text6.slice(0, 80)}`);
   const lower6 = text6.toLowerCase();
-  if (!lower6.includes(WORD_A)) finish(1, `FAIL: Turn 6 response missing '${WORD_A}': ${text6}`);
-  if (!lower6.includes(WORD_B)) finish(1, `FAIL: Turn 6 response missing '${WORD_B}': ${text6}`);
-  if (!lower6.includes(WORD_C)) finish(1, `FAIL: Turn 6 response missing '${WORD_C}': ${text6}`);
+  if (!lower6.includes(WORD_A)) throw new Error(`Turn 6 response missing '${WORD_A}': ${text6}`);
+  if (!lower6.includes(WORD_B)) throw new Error(`Turn 6 response missing '${WORD_B}': ${text6}`);
+  if (!lower6.includes(WORD_C)) throw new Error(`Turn 6 response missing '${WORD_C}': ${text6}`);
 
   // Turn 7: AskClaude shared mode — should see WORD_C which was only told to the non-provider model
   console.log(`Switching to ${OTHER_PROVIDER}/${OTHER_MODEL}...`);
@@ -173,7 +156,7 @@ try {
     'Use the AskClaude tool with prompt="What was the third word mentioned earlier? Reply with just the word."'
   );
   console.log(`  AskClaude result: ${(lastToolResult || "").slice(0, 120)}`);
-  if (!lastToolResult?.toLowerCase().includes(WORD_C)) finish(1, `FAIL: Turn 7 AskClaude tool result missing '${WORD_C}': ${lastToolResult}`);
+  if (!lastToolResult?.toLowerCase().includes(WORD_C)) throw new Error(`Turn 7 AskClaude tool result missing '${WORD_C}': ${lastToolResult}`);
 
   // Turn 8: AskClaude isolated mode — should NOT see conversation history
   console.log("Turn 8: AskClaude isolated mode (should not see context)...");
@@ -182,7 +165,7 @@ try {
     'Use the AskClaude tool with prompt="What was the third word mentioned earlier? If you don\'t know, say UNKNOWN." and isolated=true'
   );
   console.log(`  AskClaude result: ${(lastToolResult || "").slice(0, 120)}`);
-  if (lastToolResult?.toLowerCase().includes(WORD_C)) finish(1, `FAIL: Turn 8 isolated AskClaude should not know '${WORD_C}': ${lastToolResult}`);
+  if (lastToolResult?.toLowerCase().includes(WORD_C)) throw new Error(`Turn 8 isolated AskClaude should not know '${WORD_C}': ${lastToolResult}`);
 
   // sessionId stability: sessionId should stay stable across normal
   // rebuilds (Case 2 → Case 4 → Case 3). It's allowed to rotate exactly
@@ -200,13 +183,23 @@ try {
     sessionIds.add(match[2]);
     if (match[3] === "rotated-post-abort") rotatedPostAbort.push(match[2]);
   }
-  if (sessionIds.size === 0) finish(1, "FAIL: no syncResult markers found in debug log");
-  if (sessionIds.size > 2) finish(1, `FAIL: expected ≤2 distinct sessionIds (one pre-abort, one post-abort rotation), got ${sessionIds.size}: ${[...sessionIds].join(", ")}`);
-  if (rotatedPostAbort.length !== 1) finish(1, `FAIL: expected exactly 1 post-abort rotation, got ${rotatedPostAbort.length}`);
+  if (sessionIds.size === 0) throw new Error("no syncResult markers found in debug log");
+  if (sessionIds.size > 2) throw new Error(`expected ≤2 distinct sessionIds (one pre-abort, one post-abort rotation), got ${sessionIds.size}: ${[...sessionIds].join(", ")}`);
+  if (rotatedPostAbort.length !== 1) throw new Error(`expected exactly 1 post-abort rotation, got ${rotatedPostAbort.length}`);
   console.log(`  sessionIds observed: ${sessionIds.size} (expected 2 due to 1 post-abort rotation)`);
 
-  finish(0, "PASS");
+  console.log("PASS");
 } catch (e) {
-  finish(1, `FAIL: ${e.message}`);
+  process.exitCode = 1;
+  console.log(`FAIL: ${e.message}\n${e.stack}`);
+  console.log(`  RPC log:    ${RPC_LOG}`);
+  console.log(`  Debug log:  ${DEBUG_LOG}`);
+  console.log(`  CC CLI:     .test-output/cc-cli-logs/  (look for *-askclaude-*.log near the failing turn)`);
+  console.log(`  Note: logs are overwritten on next test run — copy them now if you need to investigate.`);
+} finally {
+  await stop();
+  if (TEST_CWD.startsWith(TEST_CWD_PREFIX) && TEST_CWD.length > TEST_CWD_PREFIX.length) {
+    rmSync(TEST_CWD, { recursive: true, force: true });
+  }
 }
 

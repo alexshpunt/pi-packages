@@ -24,7 +24,7 @@ const harness = createRpcHarness({
 	defaultTimeout: TIMEOUT,
 });
 
-const { start, stop, send, promptAndWait, DEBUG_LOG, RPC_LOG } = harness;
+const { startAndWait, stop, send, promptAndWait, DEBUG_LOG, RPC_LOG } = harness;
 
 function assertMentions(summary, file) {
 	if (!summary.includes(file)) {
@@ -43,24 +43,7 @@ async function forceDiscardableHistory(file, marker) {
 	);
 }
 
-let finishing = false;
-function finish(code, msg) {
-	if (finishing) return;
-	finishing = true;
-	console.log(msg);
-	if (code !== 0) {
-		console.log(`  RPC log:    ${RPC_LOG}`);
-		console.log(`  Debug log:  ${DEBUG_LOG}`);
-		try { console.log(`  Debug tail: ${readFileSync(DEBUG_LOG, "utf8").slice(-3000)}`); } catch {}
-	}
-	stop().then(() => {
-		rmSync(testAgentDir, { recursive: true, force: true });
-		process.exit(code);
-	});
-}
-
-start();
-await new Promise((r) => setTimeout(r, 2000));
+await startAndWait();
 
 try {
 	console.log("Round 1: force a read of file A into compacted history...");
@@ -80,7 +63,14 @@ try {
 	assertMentions(second.summary, "tests/fixtures/compact-file-a.txt");
 	assertMentions(second.summary, "tests/fixtures/compact-file-b.txt");
 
-	finish(0, "PASS");
+	console.log("PASS");
 } catch (e) {
-	finish(1, `FAIL: ${e.message}\n${e.stack}`);
+	process.exitCode = 1;
+	console.log(`FAIL: ${e.message}\n${e.stack}`);
+	console.log(`  RPC log:    ${RPC_LOG}`);
+	console.log(`  Debug log:  ${DEBUG_LOG}`);
+	try { console.log(`  Debug tail: ${readFileSync(DEBUG_LOG, "utf8").slice(-3000)}`); } catch {}
+} finally {
+	await stop();
+	rmSync(testAgentDir, { recursive: true, force: true });
 }

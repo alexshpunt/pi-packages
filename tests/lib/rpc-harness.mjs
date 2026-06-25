@@ -74,6 +74,11 @@ export function createRpcHarness(opts) {
 		});
 	}
 
+	async function startAndWait(ms = 2000) {
+		start();
+		await new Promise((r) => setTimeout(r, ms));
+	}
+
 	function stop() {
 		pi?.kill();
 		return new Promise((r) => rpcLog?.end(r));
@@ -159,6 +164,7 @@ export function createRpcHarness(opts) {
 		DEBUG_LOG,
 		pi: () => pi,
 		start,
+		startAndWait,
 		stop,
 		addListener,
 		clearListeners,

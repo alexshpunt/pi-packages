@@ -27,23 +27,7 @@ const harness = createRpcHarness({
 	defaultTimeout: TEST_TIMEOUT,
 });
 
-const { start, stop, send, promptAndWait, waitForMatch, DEBUG_LOG, RPC_LOG } = harness;
-
-let finishing = false;
-function finish(code, msg) {
-	if (finishing) return;
-	finishing = true;
-	console.log(msg);
-	if (code !== 0) {
-		console.log(`  RPC log:    ${RPC_LOG}`);
-		console.log(`  Debug log:  ${DEBUG_LOG}`);
-		try { console.log(`  Debug tail: ${readFileSync(DEBUG_LOG, "utf8").slice(-4000)}`); } catch {}
-	}
-	stop().then(() => {
-		rmSync(testAgentDir, { recursive: true, force: true });
-		process.exit(code);
-	});
-}
+const { startAndWait, stop, send, promptAndWait, waitForMatch, DEBUG_LOG, RPC_LOG } = harness;
 
 function assert(condition, message) {
 	if (!condition) throw new Error(message);
@@ -58,8 +42,7 @@ function assertReadFile(details, suffix) {
 	);
 }
 
-start();
-await new Promise((r) => setTimeout(r, 2000));
+await startAndWait();
 
 try {
 	console.log("Seed turn A: force file A read while auto-compaction is disabled...");
@@ -160,7 +143,14 @@ try {
 	console.log(`  summary:      ${endEvent.result.summary.slice(0, 80).replace(/\n/g, " ")}...`);
 	console.log(`  tokensBefore: ${endEvent.result.tokensBefore}`);
 	console.log(`  readFiles:    ${JSON.stringify(endEvent.result.details.readFiles)}`);
-	finish(0, "PASS");
+	console.log("PASS");
 } catch (e) {
-	finish(1, `FAIL: ${e.message}\n${e.stack}`);
+	process.exitCode = 1;
+	console.log(`FAIL: ${e.message}\n${e.stack}`);
+	console.log(`  RPC log:    ${RPC_LOG}`);
+	console.log(`  Debug log:  ${DEBUG_LOG}`);
+	try { console.log(`  Debug tail: ${readFileSync(DEBUG_LOG, "utf8").slice(-4000)}`); } catch {}
+} finally {
+	await stop();
+	rmSync(testAgentDir, { recursive: true, force: true });
 }
