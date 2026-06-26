@@ -2,6 +2,7 @@
 
 ## UNRELEASED
 
+- **Add: preserve reported reasoning usage tokens** — Claude Code SDK `reasoning_tokens`/`thinking_tokens` counts are now retained on pi usage objects and included in usage debug logs.
 - **Add: log served Claude Code context windows (issue #18)** — provider and compact-summary results now log the SDK-reported context window/max output tokens alongside pi's registered window, provider query logs show the actual CLI model id, and an integration test verifies the served-window log.
 - **Tests: simplify RPC integration cleanup** — replace manual finish/process-exit helpers with try/finally cleanup and add a default `startAndWait()` RPC harness helper for startup waits.
 - **Fix: route subagent calls as reentrant queries (issue #19)** — user-only provider calls that arrive while a parent Claude Code query is active now start a nested bridge query instead of being mistaken for empty tool-result delivery, covering foreground and background subagents regardless of inherited context size or pending-handler timing. Also added regression tests that load `@tintinweb/pi-subagents` and rpiv-pi's `codebase-locator`
