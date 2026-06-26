@@ -51,7 +51,7 @@ You could also create skills or add something to AGENTS.md to e.g. "Always call 
 
 ## Configuration
 
-Config: `~/.pi/agent/claude-bridge.json` (global) or `.pi/claude-bridge.json` (project; merged over global).
+Config: `~/.pi/agent/claude-bridge.json` (global) or the project Pi config directory, usually `.pi/claude-bridge.json` (project; merged over global).
 
 ```json
 {

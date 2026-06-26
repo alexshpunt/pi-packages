@@ -2,6 +2,8 @@
 
 ## UNRELEASED
 
+- **Refactor: align with pi 0.80 APIs** — use the pi-ai compat catalog import required by pi's extension loader, honor pi's exported `CONFIG_DIR_NAME` for project config, log compaction `reason`/`willRetry` metadata, and raise pi peer/dev dependencies to 0.80+.
+- **Tests: shorten text-steer integration prompt** — keep the no-tool steer regression under the test timeout while still injecting steer during active text streaming.
 - **Add: preserve reported reasoning usage tokens** — Claude Code SDK `reasoning_tokens`/`thinking_tokens` counts are now retained on pi usage objects and included in usage debug logs.
 - **Add: log served Claude Code context windows (issue #18)** — provider and compact-summary results now log the SDK-reported context window/max output tokens alongside pi's registered window, provider query logs show the actual CLI model id, and an integration test verifies the served-window log.
 - **Tests: simplify RPC integration cleanup** — replace manual finish/process-exit helpers with try/finally cleanup and add a default `startAndWait()` RPC harness helper for startup waits.

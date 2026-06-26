@@ -111,7 +111,7 @@ describe("tool-message integration", () => {
 		const collector = collectText();
 		await send({
 			type: "prompt",
-			message: "Write at least 5 detailed paragraphs about the history of computing, from Babbage to modern times. Do NOT call any tools. Do NOT stop early.",
+			message: "Write exactly 12 short numbered sentences about the history of computing, from Babbage to modern times. Do NOT call any tools.",
 		});
 		// Wait until text is actually streaming before injecting the steer
 		await waitForMatch(

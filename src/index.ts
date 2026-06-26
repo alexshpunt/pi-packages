@@ -1,5 +1,6 @@
-import { calculateCost, getModels, StringEnum, type AssistantMessage, type AssistantMessageEventStream, type Context, type Model, type SimpleStreamOptions, type Tool } from "@earendil-works/pi-ai";
+import { calculateCost, StringEnum, type AssistantMessage, type AssistantMessageEventStream, type Context, type Model, type SimpleStreamOptions, type Tool } from "@earendil-works/pi-ai";
 import * as piAi from "@earendil-works/pi-ai";
+import { getModels } from "@earendil-works/pi-ai/compat";
 import { buildSessionContext, compact, keyHint, type CompactionEntry, type ExtensionAPI, type ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import { createSdkMcpServer, query, type EffortLevel, type SDKMessage, type SDKUserMessage, type SettingSource } from "@anthropic-ai/claude-agent-sdk";
 import type { Base64ImageSource, ContentBlockParam, MessageParam } from "@anthropic-ai/sdk/resources";
@@ -341,7 +342,7 @@ async function runIsolatedSummary(
 		const cwd = (options as { cwd?: string } | undefined)?.cwd ?? process.cwd();
 		const claudeExecutable = loadConfig(cwd).provider?.pathToClaudeCodeExecutable;
 		const cliModel = claudeCodeModelId(model, longContextExtraUsageIds.has(model.id));
-		debug(`compact summary: spawn model=${cliModel} promptLen=${promptText.length}`);
+		debug(`compact summary: spawn model=${cliModel} registeredModel=${model.id} promptLen=${promptText.length}`);
 
 		sdkQuery = query({
 			prompt: promptText,
@@ -1624,8 +1625,9 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_before_compact", async (event, ctx) => {
 		if (ctx.model?.baseUrl !== "claude-bridge") return undefined;
 		debug(
-			`session_before_compact: takeover isSplitTurn=${event.preparation.isSplitTurn} ` +
-			`messages=${event.preparation.messagesToSummarize.length} turnPrefix=${event.preparation.turnPrefixMessages.length}`,
+			`session_before_compact: takeover reason=${event.reason} willRetry=${event.willRetry} ` +
+			`isSplitTurn=${event.preparation.isSplitTurn} messages=${event.preparation.messagesToSummarize.length} ` +
+			`turnPrefix=${event.preparation.turnPrefixMessages.length}`,
 		);
 		try {
 			reinjectPriorCompactionFileOps(event.branchEntries, event.preparation);
@@ -1666,7 +1668,7 @@ export default function (pi: ExtensionAPI) {
 			sharedSession = { ...sharedSession, needsRebuild: true };
 		}
 	};
-	pi.on("session_compact", () => markRebuild("session_compact"));
+	pi.on("session_compact", (event) => markRebuild(`session_compact:${event.reason}:willRetry=${event.willRetry}`));
 	pi.on("session_tree", () => markRebuild("session_tree"));
 
 	// --- Provider ---
