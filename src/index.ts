@@ -340,7 +340,8 @@ async function runIsolatedSummary(
 		const promptText = extractIsolatedSummaryPrompt(context.messages);
 		const cwd = (options as { cwd?: string } | undefined)?.cwd ?? process.cwd();
 		const claudeExecutable = loadConfig(cwd).provider?.pathToClaudeCodeExecutable;
-		debug(`compact summary: spawn model=${model.id} promptLen=${promptText.length}`);
+		const cliModel = claudeCodeModelId(model, longContextExtraUsageIds.has(model.id));
+		debug(`compact summary: spawn model=${cliModel} promptLen=${promptText.length}`);
 
 		sdkQuery = query({
 			prompt: promptText,
@@ -353,7 +354,7 @@ async function runIsolatedSummary(
 				skills: [],
 				persistSession: false,
 				systemPrompt: context.systemPrompt,
-				model: model.id,
+				model: cliModel,
 				maxTurns: 1,
 				...(claudeExecutable ? { pathToClaudeCodeExecutable: claudeExecutable } : {}),
 				...makeCliDebugOptions("compact-summary"),
