@@ -21,32 +21,49 @@ export function buildModels<T extends { id: string; [key: string]: any }>(piAiMo
 		}));
 }
 
-// A model is 1M-*capable* when its advertised window exceeds 200K. Capability is
-// not entitlement: Sonnet 4.6's 1M is metered on every plan (including Max), while
-// Opus 1M is included on Max/Team/Enterprise. Capability only gates whether a
-// 1M opt-in can have any effect.
-export function hasOneMContext(model: { contextWindow?: number | null }): boolean {
-	return (model.contextWindow ?? 0) > 200_000;
+export type LongContextSettings = {
+	plan: "pro" | "max";
+	longContextExtraUsage: boolean;
+};
+
+export type ClaudeCodeRuntimeModel = {
+	cliModelId: string;
+	contextWindow: number;
+};
+
+const TWO_HUNDRED_K_CONTEXT = 200_000;
+const ONE_M_CONTEXT = 1_000_000;
+
+// Measured Claude Agent SDK subscription/OAuth behavior. Do not infer this from
+// pi-ai's advertised contextWindow: bare Opus 4.7 serves 1M, bare Opus 4.8 does
+// not, and [1m] entitlement differs by model. See diag/CONTEXT-SIZE.md.
+export function resolveClaudeCodeRuntimeModel(modelId: string, settings: LongContextSettings): ClaudeCodeRuntimeModel {
+	switch (modelId) {
+		case "claude-opus-4-8":
+			return { cliModelId: "claude-opus-4-8[1m]", contextWindow: ONE_M_CONTEXT };
+		case "claude-opus-4-7":
+			return { cliModelId: "claude-opus-4-7", contextWindow: ONE_M_CONTEXT };
+		case "claude-opus-4-6": {
+			const useOneM = settings.plan === "max" || settings.longContextExtraUsage;
+			return {
+				cliModelId: useOneM ? "claude-opus-4-6[1m]" : "claude-opus-4-6",
+				contextWindow: useOneM ? ONE_M_CONTEXT : TWO_HUNDRED_K_CONTEXT,
+			};
+		}
+		case "claude-sonnet-4-6":
+			return {
+				cliModelId: settings.longContextExtraUsage ? "claude-sonnet-4-6[1m]" : "claude-sonnet-4-6",
+				contextWindow: settings.longContextExtraUsage ? ONE_M_CONTEXT : TWO_HUNDRED_K_CONTEXT,
+			};
+		case "claude-haiku-4-5":
+			return { cliModelId: "claude-haiku-4-5", contextWindow: TWO_HUNDRED_K_CONTEXT };
+		default:
+			throw new Error(`No measured Claude Code context policy for model ${modelId}`);
+	}
 }
 
-export function resolveOneMEnabledIds<T extends { id: string; contextWindow?: number | null }>(
-	models: T[],
-	plan: "pro" | "max",
-	longContextExtraUsage: boolean,
-): Set<string> {
-	return new Set(models
-		.filter((m) => hasOneMContext(m))
-		.filter((m) => longContextExtraUsage || (plan === "max" && m.id.includes("opus")))
-		.map((m) => m.id));
-}
-
-// Append [1m] to the CLI model id only when the model is 1M-capable AND enabled
-// for 1M. The [1m] suffix is what tells the Claude Code CLI to open its 1M
-// window; the bare id can be served as 200K even on Max. Unlike the
-// context-1m-2025-08-07 beta (issue #24), the model-id path works under
-// Pro/Max subscription (OAuth) auth, where the CLI ignores custom betas.
-export function claudeCodeModelId(model: { id: string; contextWindow?: number | null }, oneMEnabled: boolean): string {
-	return oneMEnabled && hasOneMContext(model) && !model.id.includes("[1m]") ? `${model.id}[1m]` : model.id;
+export function claudeCodeModelId(model: { id: string }, settings: LongContextSettings): string {
+	return resolveClaudeCodeRuntimeModel(model.id, settings).cliModelId;
 }
 
 export function resolveModel<T extends { id: string }>(models: T[], input: string): T | undefined {
@@ -56,19 +73,15 @@ export function resolveModel<T extends { id: string }>(models: T[], input: strin
 
 // Produce the model metadata registered with pi. The registered contextWindow must
 // match the window the bridge actually requests from Claude Code, or pi's status
-// bar and auto-compaction threshold will misreport: registering 1M while the CLI
-// runs at 200K recreates the "pi shows headroom but CC errors with Prompt is too
-// long" bug (issue #24, #17, #18). `oneMEnabledModelIds` must match the models
-// that will be sent to Claude Code with [1m]. Everything else is capped to 200K.
+// bar and auto-compaction threshold will misreport. The runtime policy is based
+// on measured SDK behavior - see diag/CONTEXT-SIZE.md
 export function applyLongContext<T extends { id: string; name: string; contextWindow?: number | null }>(
 	models: T[],
-	oneMEnabledModelIds: Set<string>,
+	settings: LongContextSettings,
 ): T[] {
 	return models.map((m) => {
-		const contextWindow = oneMEnabledModelIds.has(m.id) && hasOneMContext(m)
-			? m.contextWindow
-			: Math.min(m.contextWindow ?? 200_000, 200_000);
-		const name = hasOneMContext({ contextWindow }) && !/\b1M\b/i.test(m.name) ? `${m.name} 1M` : m.name;
+		const { contextWindow } = resolveClaudeCodeRuntimeModel(m.id, settings);
+		const name = contextWindow > TWO_HUNDRED_K_CONTEXT && !/\b1M\b/i.test(m.name) ? `${m.name} 1M` : m.name;
 		return contextWindow === m.contextWindow && name === m.name ? m : { ...m, contextWindow, name };
 	});
 }
