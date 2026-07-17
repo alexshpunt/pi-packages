@@ -157,6 +157,7 @@ Pi's thinking levels are mapped to Ollama Cloud's OpenAI-compatible `reasoning_e
 | `DEFAULT` | Most thinking models | off, low, medium, high, xhigh | `minimal` hidden (duplicate of low) |
 | `GPT_OSS` | `gpt-oss*` | low, medium, high | Can't disable thinking, no off or xhigh |
 | `QWEN3` | `qwen3*` (except `qwen3-vl*`) | off, medium | Binary-only (think/nothink), no gradation |
+| `GLM_52` | `glm-5.2` | off, high, xhigh | GLM supports disabled thinking; Ollama's model page confirms `high` and `max` reasoning efforts |
 | `NO_OFF` | `qwen3-vl*`, `kimi-k2-thinking`, `minimax*` | low, medium, high, xhigh | "none" doesn't disable thinking on these models |
 
 See [docs/think-experiment.md](docs/think-experiment.md) for the testing methodology and results.

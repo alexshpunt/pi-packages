@@ -191,6 +191,18 @@ describe("assembleModels", () => {
       });
     });
 
+    it("assigns GLM_52 to glm-5.2 (off/high/xhigh only)", () => {
+      const models = assembleModels({ "glm-5.2": rawModel({ capabilities: ["tools", "thinking"] }) });
+      expect(models[0].thinkingLevelMap).toEqual({
+        off: "none",
+        minimal: null,
+        low: null,
+        medium: null,
+        high: "high",
+        xhigh: "max",
+      });
+    });
+
     it("assigns NO_OFF to kimi-k2-thinking (none does not disable thinking)", () => {
       const models = assembleModels({ "kimi-k2-thinking": rawModel({ capabilities: ["tools", "thinking"] }) });
       expect(models[0].thinkingLevelMap).toEqual({
@@ -290,6 +302,12 @@ describe("resolve", () => {
   it("returns NO_OFF for qwen3-vl prefix (none does not disable thinking)", () => {
     expect(resolve("qwen3-vl:235b", ["tools", "thinking", "vision"])).toEqual({
       off: null, minimal: null, low: "low", medium: "medium", high: "high", xhigh: "max",
+    });
+  });
+
+  it("returns GLM_52 for glm-5.2 (off/high/xhigh only)", () => {
+    expect(resolve("glm-5.2", ["tools", "thinking"])).toEqual({
+      off: "none", minimal: null, low: null, medium: null, high: "high", xhigh: "max",
     });
   });
 
