@@ -13,9 +13,8 @@
  *
  * Gating: the CI step runs only when secrets.OLLAMA_CLOUD_API_KEY is set, and
  * exports it as OLLAMA_API_KEY. Locally, set OLLAMA_API_KEY or have an
- * ollama-cloud entry in auth.json. Exits non-zero on any failure; exits 0 with
- * a "skipped" message when no key is resolvable (so a bare local run does not
- * error).
+ * ollama-cloud entry in auth.json. Exits non-zero on any failure, including
+ * when no key is resolvable (so a broken resolution path is not masked).
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -71,10 +70,9 @@ async function main() {
   const storedKey = readStoredOllamaCloudKey();
   const apiKey = await getCloudApiKey(fakeCtx(storedKey));
   if (!apiKey) {
-    console.log("SKIP: no Ollama Cloud API key (set OLLAMA_API_KEY or add ollama-cloud to auth.json).");
-    return;
+    fail("no Ollama Cloud API key resolved. Set OLLAMA_API_KEY or add an ollama-cloud entry to auth.json.");
   }
-  console.log(`Resolved API key (via ${storedKey ? "auth.json" : "OLLAMA_API_KEY env"}).`);
+  console.log(`PASS: getCloudApiKey resolved a key (via ${storedKey ? "auth.json" : "OLLAMA_API_KEY env"}).`);
 
   // --- web_search ---
   const searchRes = await fetchJsonWithTimeout<SearchResponse>(
