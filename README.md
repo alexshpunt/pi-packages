@@ -1,6 +1,6 @@
 # pi-ollama-cloud
 
-Ollama Cloud provider plugin for [Pi](https://github.com/badlogic/pi-mono) coding agent.
+Ollama Cloud provider plugin for the [Pi](https://pi.dev) coding agent.
 
 Registers Ollama Cloud as a model provider with dynamically fetched models, and provides `ollama_web_search` and `ollama_web_fetch` tools that use the [Ollama Cloud web search API](https://docs.ollama.com/capabilities/web-search) - no local Ollama server required.
 
