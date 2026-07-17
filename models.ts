@@ -30,7 +30,6 @@ const FETCH_TIMEOUT_MS = 10000;
 const CLOUD_BASE_URL = "https://ollama.com";
 const envBase = typeof process !== "undefined" ? process.env?.OLLAMA_API_BASE : undefined;
 if (envBase && !/^https:\/\/ollama\.com\b/i.test(envBase)) {
-  // eslint-disable-next-line no-console
   console.warn(
     `[pi-ollama-cloud] Ignoring OLLAMA_API_BASE=${envBase}; ` +
       `this extension always targets ${CLOUD_BASE_URL}. ` +
