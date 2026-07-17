@@ -6,8 +6,7 @@ import { getCloudApiKey } from "../web-tools.ts";
 
 /**
  * Build a fake ExtensionContext whose modelRegistry.getApiKeyForProvider
- * returns the given key. We do NOT import AuthStorage: it is not exported on
- * pi 0.80.8+ and the import would fail.
+ * returns the given key.
  */
 function fakeCtx(storedKey: string | undefined): Pick<ExtensionContext, "modelRegistry"> {
   return {
