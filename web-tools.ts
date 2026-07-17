@@ -20,9 +20,10 @@ import {
   type ExtensionAPI,
   type ExtensionContext,
   keyHint,
+  type Theme,
   truncateToVisualLines,
 } from "@earendil-works/pi-coding-agent";
-import { Text, truncateToWidth } from "@earendil-works/pi-tui";
+import { type Component, Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { OLLAMA_BASE } from "./models.ts";
 import { fetchJsonWithTimeout } from "./utils.ts";
@@ -136,10 +137,10 @@ function createRenderResult() {
   return (
     result: { content: Array<{ type: string; text: string }>; isError?: boolean },
     options: { expanded: boolean; isPartial: boolean },
-    theme: import("@earendil-works/pi-coding-agent").Theme,
+    theme: Theme,
     context: {
       invalidate: () => void;
-      lastComponent: import("@earendil-works/pi-tui").Component | undefined;
+      lastComponent: Component | undefined;
       state: { cachedWidth?: number; cachedLines?: string[]; cachedSkipped?: number };
     },
   ) => {
