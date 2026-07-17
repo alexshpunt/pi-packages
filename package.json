@@ -10,6 +10,7 @@
     "config.ts",
     "models.ts",
     "models.generated.ts",
+    "pricing.generated.ts",
     "thinking-levels.ts",
     "utils.ts",
     "web-tools.ts",
@@ -27,7 +28,7 @@
     "format": "biome format --write .",
     "test": "vitest run",
     "smoke:web-tools": "tsx scripts/smoke-web-tools.ts",
-    "generate-models": "tsx scripts/generate-models.ts && biome format --write models.generated.ts"
+    "generate-models": "tsx scripts/generate-pricing.ts && tsx scripts/generate-models.ts && biome format --write models.generated.ts pricing.generated.ts"
   },
   "pi": {
     "extensions": [
