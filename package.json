@@ -26,6 +26,7 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "vitest run",
+    "smoke:web-tools": "tsx scripts/smoke-web-tools.ts",
     "generate-models": "tsx scripts/generate-models.ts && biome format --write models.generated.ts"
   },
   "pi": {
