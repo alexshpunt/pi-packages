@@ -142,7 +142,7 @@ Model metadata is derived from the cached data:
 | Field | Source |
 |---|---|
 | `reasoning` | `capabilities` includes `"thinking"` |
-| `thinkingLevelMap` | [`thinking-levels.ts`](thinking-levels.ts) with 4 maps (DEFAULT, GPT_OSS, QWEN3, NO_OFF) based on API testing |
+| `thinkingLevelMap` | [`thinking-levels.ts`](thinking-levels.ts) with 5 maps (DEFAULT, GPT_OSS, QWEN3, GLM_52, NO_OFF) based on API testing |
 | `input` | `["text", "image"]` if `capabilities` includes `"vision"`, else `["text"]` |
 | `contextWindow` | `model_info.*.context_length` (falls back to 128000) |
 | `maxTokens` | Fixed at 32768 |
