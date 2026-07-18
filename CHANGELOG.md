@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.7.0] - 2026-07-18
 
 - Fix extension crash on pi 0.80.8+ where `AuthStorage` is no longer exported by `@earendil-works/pi-coding-agent`. Web tools now resolve the API key through the tool execution context's `modelRegistry.getApiKeyForProvider()`, preserving runtime/CLI overrides and the registered `apiKey: "$OLLAMA_API_KEY"` config. Thanks @badlogic for the cross-version analysis (#34, #35, #37).
 - Restore the `OLLAMA_API_KEY` env-var fallback in `ollama_web_search` and `ollama_web_fetch`. Thanks @cawilliamson (#26).
