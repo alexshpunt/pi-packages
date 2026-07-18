@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+- Fix extension crash on pi 0.80.8+ where `AuthStorage` is no longer exported by `@earendil-works/pi-coding-agent`. Web tools now resolve the API key through the tool execution context's `modelRegistry.getApiKeyForProvider()`, preserving runtime/CLI overrides and the registered `apiKey: "$OLLAMA_API_KEY"` config. Thanks @badlogic for the cross-version analysis (#34, #35, #37).
+- Restore the `OLLAMA_API_KEY` env-var fallback in `ollama_web_search` and `ollama_web_fetch`. Thanks @cawilliamson (#26).
+- Add a 15s timeout to web search/fetch requests and preserve tool-cancellation by extending `fetchJsonWithTimeout` with an external `AbortSignal`.
+- Always target `https://ollama.com` and warn when `OLLAMA_API_BASE` is set to a non-cloud host, instead of silently querying a local Ollama daemon. Thanks @valueforvalue (#32, #33).
+- Add a `glm-5.2` thinking level map exposing `off`, `high`, and `xhigh` (`reasoning_effort: "none"`, `"high"`, `"max"`). Thanks @Thinkscape (#29).
+- Add estimated per-token pricing for Ollama Cloud models so `/cost` shows comparable usage. Prices are generated from [models.dev](https://models.dev) (the same source pi uses) via `scripts/generate-pricing.ts` into `pricing.generated.ts`, not hand-typed, and regenerate with the catalog via `npm run generate-models`. Prices are pinned to the installed package version: `/ollama-cloud-refresh` updates the model list and metadata but does not re-fetch prices, so newly added models register with zero cost until the next release. Not actual subscription charges. Thanks @DxTa (#9).
+- Refresh the generated model catalog from the live Ollama Cloud API. Adds `glm-5.2` (1M context, text-only) and `kimi-k2.7-code` (262K context, text + image). `deepseek-v4-pro` context window is now 524288 (was 1048576).
+- Retire models deprecated per https://docs.ollama.com/cloud#deprecations: July 15, 2026 batch (`deepseek-v3.1:671b`, `deepseek-v3.2`, `devstral-2:123b`, `devstral-small-2:24b`, `ministral-3:14b`, `ministral-3:3b`, `ministral-3:8b`, `gemini-3-flash-preview`, `gemma3:12b`, `gemma3:27b`, `gemma3:4b`, `glm-4.7`, `glm-5`, `minimax-m2.1`, `qwen3-coder-next`, `qwen3-coder:480b`) and June 30 (`rnj-1:8b`). The shipped catalog goes from 30 to 18 models.
+- Bump `@earendil-works/pi-coding-agent` runtime dependency to 0.80.10.
+
 ## [0.6.0] - 2026-06-05
 
 - Fix `apiKey` registered as a literal string instead of an environment variable reference. Changed `apiKey: "OLLAMA_API_KEY"` to `apiKey: "$OLLAMA_API_KEY"` in `registerProvider`, resolving the deprecation warning emitted by pi v0.77.0+ and making the `OLLAMA_API_KEY` env var work alongside `auth.json` (env var takes priority, falls back to `auth.json`). Thanks @mandusm (#21).

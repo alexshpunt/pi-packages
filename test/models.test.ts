@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { GENERATED_MODELS } from "../models.generated.ts";
+import { MODEL_PRICING } from "../pricing.generated.ts";
 import { assembleModels, fetchModelDetails, fetchModelIds } from "../models.ts";
 import { resolve } from "../thinking-levels.ts";
 import { getContextLength } from "../utils.ts";
@@ -121,9 +122,15 @@ describe("assembleModels", () => {
     expect(compat?.vercelGatewayRouting).toEqual({});
   });
 
-  it("sets all costs to zero (subscription model, not per-token billing)", () => {
+  it("zeros cost for models with no models.dev pricing mapping", () => {
     const models = assembleModels({ m: rawModel() });
     expect(models[0].cost).toEqual({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
+  });
+
+  it("prices mapped models from the generated models.dev table", () => {
+    const models = assembleModels({ "glm-5.1": rawModel({ capabilities: ["tools", "thinking"] }) });
+    expect(models[0].cost).toEqual(MODEL_PRICING["glm-5.1"]);
+    expect(models[0].cost.input).toBeGreaterThan(0);
   });
 
   it("extracts contextWindow from model_info using .context_length suffix", () => {
@@ -186,6 +193,18 @@ describe("assembleModels", () => {
         minimal: null,
         low: "low",
         medium: "medium",
+        high: "high",
+        xhigh: "max",
+      });
+    });
+
+    it("assigns GLM_52 to glm-5.2 (off/high/xhigh only)", () => {
+      const models = assembleModels({ "glm-5.2": rawModel({ capabilities: ["tools", "thinking"] }) });
+      expect(models[0].thinkingLevelMap).toEqual({
+        off: "none",
+        minimal: null,
+        low: null,
+        medium: null,
         high: "high",
         xhigh: "max",
       });
@@ -290,6 +309,12 @@ describe("resolve", () => {
   it("returns NO_OFF for qwen3-vl prefix (none does not disable thinking)", () => {
     expect(resolve("qwen3-vl:235b", ["tools", "thinking", "vision"])).toEqual({
       off: null, minimal: null, low: "low", medium: "medium", high: "high", xhigh: "max",
+    });
+  });
+
+  it("returns GLM_52 for glm-5.2 (off/high/xhigh only)", () => {
+    expect(resolve("glm-5.2", ["tools", "thinking"])).toEqual({
+      off: "none", minimal: null, low: null, medium: null, high: "high", xhigh: "max",
     });
   });
 

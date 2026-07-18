@@ -3,15 +3,30 @@
  *
  * Self-contained module. Depends on:
  *   - models.ts       - only for OLLAMA_BASE URL constant
- *   - pi-coding-agent - AuthStorage, ExtensionAPI, keyHint, truncateToVisualLines
+ *   - pi-coding-agent - ExtensionAPI, ExtensionContext, keyHint, truncateToVisualLines
  *   - pi-tui          - Text, truncateToWidth
+ *   - utils.ts        - fetchJsonWithTimeout
  * Does NOT depend on provider registration or model fetching internals.
+ *
+ * API key resolution: each tool's execute() receives an ExtensionContext whose
+ * modelRegistry resolves the registered provider's key (runtime/CLI overrides,
+ * the registered apiKey: "$OLLAMA_API_KEY" config, and stored auth.json). The
+ * OLLAMA_API_KEY env var is a fallback for when the provider is not yet
+ * registered at tool-call time. This avoids direct AuthStorage access, which is
+ * not part of the public pi-coding-agent API on 0.80.8+.
  */
 
-import { AuthStorage, type ExtensionAPI, keyHint, truncateToVisualLines } from "@earendil-works/pi-coding-agent";
-import { Text, truncateToWidth } from "@earendil-works/pi-tui";
+import {
+  type ExtensionAPI,
+  type ExtensionContext,
+  keyHint,
+  type Theme,
+  truncateToVisualLines,
+} from "@earendil-works/pi-coding-agent";
+import { type Component, Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { OLLAMA_BASE } from "./models.ts";
+import { fetchJsonWithTimeout } from "./utils.ts";
 
 // --- Types ---
 
@@ -31,10 +46,21 @@ interface FetchResponse {
 
 // --- Helpers ---
 
-const authStorage = AuthStorage.create();
+const WEB_TOOLS_TIMEOUT_MS = 15000;
 
-async function getCloudApiKey(): Promise<string | undefined> {
-  return authStorage.getApiKey("ollama-cloud") ?? process.env.OLLAMA_API_KEY;
+/**
+ * Resolve the Ollama Cloud API key for a tool execution.
+ *
+ * Prefers the canonical provider auth chain (ctx.modelRegistry.getApiKeyForProvider),
+ * which honors runtime/CLI key overrides, the registered
+ * apiKey: "$OLLAMA_API_KEY" config, and stored auth.json credentials. Falls back
+ * to the OLLAMA_API_KEY env var for the case where the provider is not yet
+ * registered at tool-call time.
+ *
+ * Exported for unit testing.
+ */
+export async function getCloudApiKey(ctx: Pick<ExtensionContext, "modelRegistry">): Promise<string | undefined> {
+  return (await ctx.modelRegistry.getApiKeyForProvider("ollama-cloud")) ?? process.env.OLLAMA_API_KEY;
 }
 
 function noApiKeyError() {
@@ -49,6 +75,58 @@ function noApiKeyError() {
   };
 }
 
+/** Search error response for a non-ok result, mapping distinct status codes. */
+function searchError(status: number, error?: string) {
+  if (status === 401 || status === 403) {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text:
+            "Ollama Cloud search failed: authentication error. " + "Check your API key in OLLAMA_API_KEY or auth.json.",
+        },
+      ],
+      isError: true,
+    };
+  }
+  if (status === 429) {
+    return {
+      content: [{ type: "text" as const, text: "Ollama Cloud search failed: rate limited. Try again shortly." }],
+      isError: true,
+    };
+  }
+  return {
+    content: [{ type: "text" as const, text: `Search API error (status ${status}): ${error || "unknown error"}` }],
+    isError: true,
+  };
+}
+
+/** Fetch error response for a non-ok result, mapping distinct status codes. */
+function fetchError(status: number, error?: string) {
+  if (status === 401 || status === 403) {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text:
+            "Ollama Cloud fetch failed: authentication error. " + "Check your API key in OLLAMA_API_KEY or auth.json.",
+        },
+      ],
+      isError: true,
+    };
+  }
+  if (status === 429) {
+    return {
+      content: [{ type: "text" as const, text: "Ollama Cloud fetch failed: rate limited. Try again shortly." }],
+      isError: true,
+    };
+  }
+  return {
+    content: [{ type: "text" as const, text: `Fetch API error (status ${status}): ${error || "unknown error"}` }],
+    isError: true,
+  };
+}
+
 const PREVIEW_LINES = 8;
 
 /**
@@ -59,10 +137,10 @@ function createRenderResult() {
   return (
     result: { content: Array<{ type: string; text: string }>; isError?: boolean },
     options: { expanded: boolean; isPartial: boolean },
-    theme: import("@earendil-works/pi-coding-agent").Theme,
+    theme: Theme,
     context: {
       invalidate: () => void;
-      lastComponent: import("@earendil-works/pi-tui").Component | undefined;
+      lastComponent: Component | undefined;
       state: { cachedWidth?: number; cachedLines?: string[]; cachedSkipped?: number };
     },
   ) => {
@@ -107,6 +185,18 @@ function createRenderResult() {
   };
 }
 
+/** Validate a parsed web_search response: must have a results array. */
+function isSearchResponse(data: unknown): data is SearchResponse {
+  return data != null && typeof data === "object" && Array.isArray((data as SearchResponse).results);
+}
+
+/** Validate a parsed web_fetch response: must have string title/content and a links array. */
+function isFetchResponse(data: unknown): data is FetchResponse {
+  if (data == null || typeof data !== "object") return false;
+  const d = data as FetchResponse;
+  return typeof d.title === "string" && typeof d.content === "string" && Array.isArray(d.links);
+}
+
 // --- Registrations ---
 
 export function registerWebSearchTool(pi: ExtensionAPI) {
@@ -128,12 +218,13 @@ export function registerWebSearchTool(pi: ExtensionAPI) {
         }),
       ),
     }),
-    async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
-      const apiKey = await getCloudApiKey();
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+      const apiKey = await getCloudApiKey(ctx);
       if (!apiKey) return noApiKeyError();
 
-      try {
-        const res = await fetch(`${OLLAMA_BASE}/api/web_search`, {
+      const res = await fetchJsonWithTimeout<SearchResponse>(
+        `${OLLAMA_BASE}/api/web_search`,
+        {
           method: "POST",
           headers: {
             Authorization: `Bearer ${apiKey}`,
@@ -143,53 +234,27 @@ export function registerWebSearchTool(pi: ExtensionAPI) {
             query: params.query,
             max_results: params.max_results ?? 5,
           }),
-          signal,
-        });
+        },
+        WEB_TOOLS_TIMEOUT_MS,
+        signal,
+      );
 
-        if (!res.ok) {
-          const errorText = await res.text().catch(() => "");
-          if (res.status === 401 || res.status === 403) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text:
-                    "Ollama Cloud search failed: authentication error. " +
-                    "Check your API key in OLLAMA_API_KEY or auth.json.",
-                },
-              ],
-              isError: true,
-            };
-          }
-          if (res.status === 429) {
-            return {
-              content: [{ type: "text", text: "Ollama Cloud search failed: rate limited. Try again shortly." }],
-              isError: true,
-            };
-          }
-          return {
-            content: [
-              { type: "text", text: `Search API error (status ${res.status}): ${errorText || res.statusText}` },
-            ],
-            isError: true,
-          };
-        }
-
-        const data = (await res.json()) as SearchResponse;
-        const formatted = data.results
-          .map((r, i) => `${i + 1}. ${r.title}\n   URL: ${r.url}\n   ${r.content}`)
-          .join("\n\n");
-
+      if (!res.ok) return searchError(res.status, res.error);
+      if (!isSearchResponse(res.data)) {
         return {
-          content: [{ type: "text", text: formatted || "No results found." }],
-          details: { results: data.results },
-        };
-      } catch (err) {
-        return {
-          content: [{ type: "text", text: `Web search failed: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: "text", text: "Web search failed: unexpected response shape from the API." }],
           isError: true,
         };
       }
+
+      const formatted = res.data.results
+        .map((r, i) => `${i + 1}. ${r.title}\n   URL: ${r.url}\n   ${r.content}`)
+        .join("\n\n");
+
+      return {
+        content: [{ type: "text", text: formatted || "No results found." }],
+        details: { results: res.data.results },
+      };
     },
     renderCall(args, theme, _context) {
       const display = args.query ? `ollama_web_search("${args.query}")` : "ollama_web_search";
@@ -210,69 +275,47 @@ export function registerWebFetchTool(pi: ExtensionAPI) {
     parameters: Type.Object({
       url: Type.String({ description: "URL to fetch and extract content from", format: "uri" }),
     }),
-    async execute(_toolCallId, params, signal, _onUpdate, _ctx) {
-      const apiKey = await getCloudApiKey();
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+      const apiKey = await getCloudApiKey(ctx);
       if (!apiKey) return noApiKeyError();
 
-      try {
-        const res = await fetch(`${OLLAMA_BASE}/api/web_fetch`, {
+      const res = await fetchJsonWithTimeout<FetchResponse>(
+        `${OLLAMA_BASE}/api/web_fetch`,
+        {
           method: "POST",
           headers: {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ url: params.url }),
-          signal,
-        });
+        },
+        WEB_TOOLS_TIMEOUT_MS,
+        signal,
+      );
 
-        if (!res.ok) {
-          const errorText = await res.text().catch(() => "");
-          if (res.status === 401 || res.status === 403) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text:
-                    "Ollama Cloud fetch failed: authentication error. " +
-                    "Check your API key in OLLAMA_API_KEY or auth.json.",
-                },
-              ],
-              isError: true,
-            };
-          }
-          if (res.status === 429) {
-            return {
-              content: [{ type: "text", text: "Ollama Cloud fetch failed: rate limited. Try again shortly." }],
-              isError: true,
-            };
-          }
-          return {
-            content: [{ type: "text", text: `Fetch API error (status ${res.status}): ${errorText || res.statusText}` }],
-            isError: true,
-          };
-        }
-
-        const data = (await res.json()) as FetchResponse;
-        const formatted = [
-          `Title: ${data.title}`,
-          "",
-          "Content:",
-          data.content,
-          "",
-          `Links found: ${data.links?.length ?? 0}`,
-          ...(data.links?.slice(0, 10).map((l) => `  - ${l}`) ?? []),
-        ].join("\n");
-
+      if (!res.ok) return fetchError(res.status, res.error);
+      if (!isFetchResponse(res.data)) {
         return {
-          content: [{ type: "text", text: formatted }],
-          details: { title: data.title, content: data.content, links: data.links },
-        };
-      } catch (err) {
-        return {
-          content: [{ type: "text", text: `Web fetch failed: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: "text", text: "Web fetch failed: unexpected response shape from the API." }],
           isError: true,
         };
       }
+
+      const data = res.data;
+      const formatted = [
+        `Title: ${data.title}`,
+        "",
+        "Content:",
+        data.content,
+        "",
+        `Links found: ${data.links?.length ?? 0}`,
+        ...(data.links?.slice(0, 10).map((l) => `  - ${l}`) ?? []),
+      ].join("\n");
+
+      return {
+        content: [{ type: "text", text: formatted }],
+        details: { title: data.title, content: data.content, links: data.links },
+      };
     },
     renderCall(args, theme, _context) {
       const display = args.url ? `ollama_web_fetch("${args.url}")` : "ollama_web_fetch";

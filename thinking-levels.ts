@@ -14,6 +14,7 @@
  *   - GPT-OSS: no off mode, only low/medium/high
  *   - Qwen 3.x (non-VL): binary-only (think/nothink) - off works
  *   - Qwen 3 VL: "none" doesn't disable thinking - off is hidden
+ *   - GLM 5.2: off/high/max are exposed; low/medium are hidden
  *   - Kimi K2 Thinking: "none" doesn't disable thinking - off is hidden
  *   - MiniMax M2.x: "none" doesn't disable thinking - off is hidden
  *
@@ -56,6 +57,17 @@ export const QWEN3: ThinkingLevelMap = {
   xhigh: null,
 };
 
+/** GLM 5.2: Ollama's model page confirms support for "high" and "max" reasoning efforts.
+ *  https://ollama.com/library/glm-5.2 */
+export const GLM_52: ThinkingLevelMap = {
+  off: "none",
+  minimal: null,
+  low: null,
+  medium: null,
+  high: "high",
+  xhigh: "max",
+};
+
 /** "none" doesn't disable thinking - off is hidden.
  *  Used by kimi and minimax families. */
 export const NO_OFF: ThinkingLevelMap = {
@@ -75,6 +87,7 @@ export function resolve(id: string, capabilities: string[]): ThinkingLevelMap | 
   if (!capabilities.includes("thinking")) return undefined;
 
   if (id.startsWith("gpt-oss")) return GPT_OSS;
+  if (id === "glm-5.2") return GLM_52;
   if (id.startsWith("qwen3-vl")) return NO_OFF;
   if (id.startsWith("qwen3")) return QWEN3;
   if (id === "kimi-k2-thinking") return NO_OFF;

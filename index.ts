@@ -124,9 +124,8 @@ export default async function (pi: ExtensionAPI) {
   // When cache is missing, GENERATED_MODELS serves as the cache —
   // it is manually generated via `npm run generate-models` and committed to the repo.
   const needsStartupRefresh = cacheState.status === "stale";
-  // GENERATED_MODELS ships with the package (36 tool-capable models from
-  // the build script). Used when no local cache exists. A fresh user cache
-  // from /ollama-cloud-refresh takes precedence over the generated list.
+  // GENERATED_MODELS ships with the package. Used when no local cache exists. A
+  // fresh user cache from /ollama-cloud-refresh takes precedence over the generated list.
   const models = cacheState.status === "missing" ? GENERATED_MODELS : assembleModels(cacheState.models);
 
   registerProvider(pi, models);

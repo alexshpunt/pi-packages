@@ -2,9 +2,23 @@ export async function fetchJsonWithTimeout<T>(
   url: string,
   init: RequestInit,
   timeoutMs: number,
+  externalSignal?: AbortSignal,
 ): Promise<{ ok: boolean; status: number; data: T | null; error?: string }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  // Link an external abort signal (e.g. a tool's cancellation signal) so the
+  // request aborts on either the timeout or the caller aborting. Cleanup runs
+  // in the finally block on both the happy and error paths.
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+    }
+  }
+
   try {
     const res = await fetch(url, { ...init, signal: controller.signal });
     const text = await res.text();
@@ -25,6 +39,9 @@ export async function fetchJsonWithTimeout<T>(
     return { ok: false, status: 0, data: null, error: error instanceof Error ? error.message : String(error) };
   } finally {
     clearTimeout(timeout);
+    if (externalSignal && !externalSignal.aborted) {
+      externalSignal.removeEventListener("abort", onExternalAbort);
+    }
   }
 }
 
