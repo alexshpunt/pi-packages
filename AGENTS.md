@@ -20,7 +20,9 @@ block per record while cc-session-io stores one record per message.
 Better still, prove it with a live probe. `tests/int-cc-contracts.mjs` pins each
 undocumented behavior we depend on against the installed CC/SDK and is the right
 home for a new assumption; `diag/capture-proxy.mjs` captures the actual request
-bodies when the question is what CC sends.
+bodies when the question is what CC sends. Before relying on an SDK option, grep
+`node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts` — it documents every
+settings field.
 
 The same skepticism applies to any *rate* computed from the debug log. Before
 believing one, check the metric against a case whose answer you know: the
