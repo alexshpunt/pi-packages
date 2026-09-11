@@ -26,6 +26,7 @@
  */
 
 import { writeFileSync } from "node:fs";
+import { MODEL_MAX_OUTPUT_TOKENS } from "../limits.generated.ts";
 import { fetchModelIds, OLLAMA_BASE } from "../models.ts";
 import { concurrentMap, fetchJsonWithTimeout } from "../utils.ts";
 
@@ -108,9 +109,8 @@ async function probeAll(): Promise<ProbeResult> {
 async function probeOne(targetId: string): Promise<ProbeResult> {
   // The generated table ships at runtime; merge the single fresh limit into its
   // current contents so an unchanged catalog is not re-probed every time.
-  const { MODEL_MAX_OUTPUT_TOKENS: existing } = await import("../limits.generated.ts");
   const probe = await probeMaxTokens(targetId);
-  const limits = { ...existing };
+  const limits = { ...MODEL_MAX_OUTPUT_TOKENS };
   let failed = 0;
   if (probe === undefined) {
     // Indeterminate (timeout, billing, rate limit): the probe does not prove
