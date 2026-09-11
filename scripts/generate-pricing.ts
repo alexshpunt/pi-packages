@@ -41,9 +41,14 @@ export interface ModelPrice {
  * One row of the model pricing table: model name (anchor text — the `href`
  * points at the family library page and is not unique per row), then input,
  * cached input, and output prices.
+ *
+ * A row with no quoted cache price (some models list a `-` when they offer no
+ * cache discount) still matches; its cacheRead is normalized to the input price
+ * in parsePricingRows. The regex hard-codes the column order
+ * (Input / Cached input / Output).
  */
 const ROW_RE =
-  /<td[^>]*><a href="\/library\/[^"]+"[^>]*>([^<]+)<\/a><\/td>\s*<td[^>]*>\$([\d.]+)<\/td>\s*<td[^>]*>\$([\d.]+)<\/td>\s*<td[^>]*>\$([\d.]+)<\/td>/g;
+  /<td[^>]*><a href="\/library\/[^"]+"[^>]*>([^<]+)<\/a><\/td>\s*<td[^>]*>\$([\d.]+)<\/td>\s*<td[^>]*>(?:\$([\d.]+)|-)<\/td>\s*<td[^>]*>\$([\d.]+)<\/td>/g;
 
 const ZERO: ModelPrice = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
@@ -71,7 +76,9 @@ function parsePricingRows(html: string): Map<string, ModelPrice> {
     const [, name, input, cacheRead, output] = match;
     const price = {
       input: Number(input),
-      cacheRead: Number(cacheRead),
+      // A `-` in the cached-input column means the model offers no cache
+      // discount, so the cache read price equals the input price.
+      cacheRead: cacheRead === undefined ? Number(input) : Number(cacheRead),
       output: Number(output),
       cacheWrite: 0,
     };
