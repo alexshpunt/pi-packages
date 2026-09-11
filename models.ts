@@ -109,7 +109,7 @@ function buildCompat(): ProviderModelConfig["compat"] {
     requiresThinkingAsText: false,
     // DeepSeek-specific, not needed for Ollama (pi: types.ts#requiresReasoningContentOnAssistantMessages).
     requiresReasoningContentOnAssistantMessages: false,
-    // reasoning_effort format works (pi: types.ts#supportingReasoningEffort).
+    // reasoning_effort format works (pi: types.ts#thinkingFormat).
     thinkingFormat: "openai",
     // Ollama does not support tool_choice, so strict mode is unavailable (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsStrictMode).
     supportsStrictMode: false,
