@@ -361,15 +361,17 @@ describe("resolve", () => {
     });
   });
 
-  it("treats an empty reasoning_options list as non-binary", () => {
-    // minimax-m2.5 ships an empty [] in reason.
+  it("falls back to DEFAULT for an empty reasoning_options list", () => {
+    // minimax-m2.5 ships [] in models.dev — no verified options, so DEFAULT is
+    // safer than a degenerate map whose only selectable level can be a
+    // leaking off toggle.
     expect(resolve("minimax-m2.5", ["tools", "thinking"])).toEqual({
       off: "none",
       minimal: null,
-      low: null,
-      medium: null,
-      high: null,
-      xhigh: null,
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "max",
     });
   });
 

@@ -121,7 +121,9 @@ export function resolve(id: string, capabilities: string[]): ThinkingLevelMap | 
   const matchedKey = MODEL_REASONING_OPTIONS[id] !== undefined ? id : colon > 0 ? id.slice(0, colon) : "";
   const options = MODEL_REASONING_OPTIONS[matchedKey];
   // Defensive: models.dev can emit a null reasoning_options (treated as
-  // absent by the generator); never hand null to buildMap.
-  if (options === undefined || options === null) return DEFAULT;
+  // absent by the generator), and an empty array carries no verified
+  // options (e.g. minimax-m2.5). Both fall back to DEFAULT rather than a
+  // degenerate map whose only selectable level can be a leaking off.
+  if (options === undefined || options === null || options.length === 0) return DEFAULT;
   return buildMap(options, matchedKey);
 }
