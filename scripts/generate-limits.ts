@@ -101,13 +101,25 @@ async function probeAll(): Promise<ProbeResult> {
 
   const limits: Record<string, number> = {};
   let failed = 0;
-  for (const result of results) {
+  // concurrentMap pre-allocates its result array by index, so results map
+  // back onto modelIds and rejected probes keep their model id instead of
+  // reporting an unusable "unknown".
+  for (const [index, result] of results.entries()) {
+    const id = modelIds[index];
     if (result.status === "fulfilled" && result.value.limit !== undefined) {
       limits[result.value.id] = result.value.limit;
     } else {
       failed++;
-      const id = result.status === "fulfilled" ? result.value.id : "unknown";
-      console.warn(`  no limit for ${id}; runtime will fall back to 32768`);
+      // Indeterminate (timeout, billing, rate limit): the probe does not
+      // prove the model is gone, so keep any existing model-specific limit
+      // rather than dropping it to the 32768 runtime fallback. Models that
+      // were removed from the catalog are excluded automatically because
+      // only current model ids are probed here.
+      const cached = MODEL_MAX_OUTPUT_TOKENS[id];
+      if (cached !== undefined) {
+        limits[id] = cached;
+      }
+      console.warn(`  no limit for ${id}; keeping its existing limit if any`);
     }
   }
   return { limits, probed: modelIds.length, failed };
