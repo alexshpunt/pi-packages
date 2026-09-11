@@ -44,7 +44,24 @@ export const DEFAULT: ThinkingLevelMap = {
  * Confirmed against the current catalog by scripts/../test probing; the API
  * and models.dev do not expose this behavior.
  */
-const OFF_NULL = new Set(["gpt-oss:20b", "gpt-oss:120b", "minimax-m2.7"]);
+/**
+ * Models where a live probe of `reasoning_effort:"none"` still produced
+ * reasoning (i.e. thinking cannot be disabled), so the `off` level is hidden.
+ * Confirmed against the current catalog by scripts/../test probing; the API
+ * and models.dev do not expose this behavior.
+ *
+ * Exact ids hide only the named variant; family prefixes cover future model
+ * revisions in the same family. gpt-oss is a family-wide prefix because both
+ * probed variants leak and the behavior is documented for the family.
+ * minimax is NOT matched family-wide here: minimax-m3 was probed to honor
+ * `none`, so only the verified-leaking minimax-m2.7 is pinned by exact id.
+ */
+const OFF_NULL_EXACT = new Set(["minimax-m2.7"]);
+const OFF_NULL_FAMILIES = ["gpt-oss"];
+
+function hidesOff(id: string): boolean {
+  return OFF_NULL_EXACT.has(id) || OFF_NULL_FAMILIES.some((prefix) => id.startsWith(prefix));
+}
 
 /**
  * Map a models.dev `effort` value onto the Pi level key and the reasoning_effort
@@ -63,12 +80,13 @@ const EFFORT_TO_LEVEL: Record<string, { key: "minimal" | "low" | "medium" | "hig
 /**
  * Build a ThinkingLevelMap from models.dev reasoning_options.
  * Levels come from `effort` values (mapped via EFFORT_TO_LEVEL); `off` defaults
- * to "none" (probe-derived, see file header) and is hidden only via OFF_NULL.
+ * to "none" (probe-derived, see file header) and is hidden only via the
+ * OFF_NULL exact/family sets (see hidesOff).
  * A toggle-only model is binary (on/off) and exposes a single "medium" level.
  */
 function buildMap(options: readonly ModelsDevReasoningOption[], id: string): ThinkingLevelMap {
   const map: ThinkingLevelMap = {
-    off: OFF_NULL.has(id) ? null : "none",
+    off: hidesOff(id) ? null : "none",
     minimal: null,
     low: null,
     medium: null,
@@ -92,11 +110,6 @@ function buildMap(options: readonly ModelsDevReasoningOption[], id: string): Thi
 /**
  * Resolve the thinking level map for a model.
  * Looks up the model id (exact, then `:tag` family) in the generated models.dev
- * table, falling back to DEFAULT for models with no entry.
- */
-/**
- * Resolve the thinking level map for a model.
- * Looks up the model id (exact, then `:tag` family) in the generated models.dev
  * table, falling back to DEFAULT for models with no entry. The matched key is
  * the one passed to buildMap so the OFF_NULL set (keyed on bare family names)
  * applies to tagged ids that resolve through a family match.
@@ -107,6 +120,8 @@ export function resolve(id: string, capabilities: string[]): ThinkingLevelMap | 
   const colon = id.lastIndexOf(":");
   const matchedKey = MODEL_REASONING_OPTIONS[id] !== undefined ? id : colon > 0 ? id.slice(0, colon) : "";
   const options = MODEL_REASONING_OPTIONS[matchedKey];
-  if (options === undefined) return DEFAULT;
+  // Defensive: models.dev can emit a null reasoning_options (treated as
+  // absent by the generator); never hand null to buildMap.
+  if (options === undefined || options === null) return DEFAULT;
   return buildMap(options, matchedKey);
 }
