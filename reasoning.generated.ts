@@ -6,7 +6,7 @@ export type ModelsDevReasoningOption =
   | { type: "toggle" }
   | {
       type: "effort";
-      values: Array<"none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "default" | null>;
+      values: Array<"none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "ultra" | "default" | null>;
     };
 
 export const MODEL_REASONING_OPTIONS: Record<string, ModelsDevReasoningOption[]> = {

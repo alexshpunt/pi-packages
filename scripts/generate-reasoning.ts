@@ -32,8 +32,40 @@ export type ModelsDevReasoningOption =
   | { type: "toggle" }
   | {
       type: "effort";
-      values: Array<"none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "default" | null>;
+      values: Array<"none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "ultra" | "default" | null>;
     };
+
+/** Valid effort values the generated union accepts (used for payload checks). */
+const EFFORT_VALUES = new Set(["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]);
+
+function isModelsDevData(
+  value: unknown,
+): value is Record<string, { models: Record<string, { reasoning_options?: ModelsDevReasoningOption[] }> }> {
+  if (typeof value !== "object" || value === null) return false;
+  // Only the ollama-cloud provider is consumed; validate it in the shape this
+  // script relies on, leaving unrelated providers unchecked.
+  const provider = (value as Record<string, unknown>)["ollama-cloud"];
+  if (typeof provider !== "object" || provider === null || !("models" in provider)) return false;
+  const models = (provider as Record<string, unknown>).models;
+  if (typeof models !== "object" || models === null) return false;
+  for (const model of Object.values(models as Record<string, unknown>)) {
+    if (typeof model !== "object" || model === null) return false;
+    const options = (model as { reasoning_options?: unknown }).reasoning_options;
+    if (options === undefined || options === null) continue;
+    if (!Array.isArray(options)) return false;
+    for (const option of options) {
+      if (typeof option !== "object" || option === null) return false;
+      const { type, values } = option as { type?: unknown; values?: unknown };
+      if (type !== "toggle") {
+        if (type !== "effort" || !Array.isArray(values)) return false;
+        for (const v of values) {
+          if (v !== null && v !== "default" && !EFFORT_VALUES.has(v as string)) return false;
+        }
+      }
+    }
+  }
+  return true;
+}
 
 async function fetchModelsDev(): Promise<
   Record<string, { models: Record<string, { reasoning_options?: ModelsDevReasoningOption[] }> }>
@@ -45,7 +77,11 @@ async function fetchModelsDev(): Promise<
     if (!res.ok) {
       throw new Error(`models.dev returned ${res.status}`);
     }
-    return await res.json();
+    const data: unknown = await res.json();
+    if (!isModelsDevData(data)) {
+      throw new Error("models.dev response failed validation; refusing to overwrite reasoning.generated.ts");
+    }
+    return data;
   } finally {
     clearTimeout(timer);
   }
@@ -68,7 +104,7 @@ async function main(): Promise<void> {
     "",
     "export type ModelsDevReasoningOption =",
     '  | { type: "toggle" }',
-    '  | { type: "effort"; values: Array<"none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "default" | null> };',
+    '  | { type: "effort"; values: Array<"none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "ultra" | "default" | null> };',
     "",
     "export const MODEL_REASONING_OPTIONS: Record<string, ModelsDevReasoningOption[]> = {",
   ];

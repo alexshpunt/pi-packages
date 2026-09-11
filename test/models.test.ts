@@ -348,6 +348,31 @@ describe("resolve", () => {
     });
   });
 
+  it("applies OFF_NULL to a tagged id that resolves to its family", () => {
+    // minimax-m2.7:latest has no models.dev entry; it matches the family
+    // minimax-m2.7, so OFF_NULL must still hide the off toggle.
+    expect(resolve("minimax-m2.7:latest", ["tools", "thinking"])).toEqual({
+      off: null,
+      minimal: null,
+      low: null,
+      medium: "medium",
+      high: null,
+      xhigh: null,
+    });
+  });
+
+  it("treats an empty reasoning_options list as non-binary", () => {
+    // minimax-m2.5 ships an empty [] in reason.
+    expect(resolve("minimax-m2.5", ["tools", "thinking"])).toEqual({
+      off: "none",
+      minimal: null,
+      low: null,
+      medium: null,
+      high: null,
+      xhigh: null,
+    });
+  });
+
   it("maps effort values onto the matching levels", () => {
     // glm-5.2: effort = [high, max] -> high + extra-high only.
     expect(resolve("glm-5.2", ["tools", "thinking"])).toEqual({

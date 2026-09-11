@@ -76,7 +76,7 @@ function buildMap(options: readonly ModelsDevReasoningOption[], id: string): Thi
     xhigh: null,
   };
 
-  if (options.every((option) => option.type === "toggle")) {
+  if (options.length > 0 && options.every((option) => option.type === "toggle")) {
     // Binary on/off model: no graded effort, expose a single level.
     return { ...map, medium: "medium" };
   }
@@ -94,11 +94,19 @@ function buildMap(options: readonly ModelsDevReasoningOption[], id: string): Thi
  * Looks up the model id (exact, then `:tag` family) in the generated models.dev
  * table, falling back to DEFAULT for models with no entry.
  */
+/**
+ * Resolve the thinking level map for a model.
+ * Looks up the model id (exact, then `:tag` family) in the generated models.dev
+ * table, falling back to DEFAULT for models with no entry. The matched key is
+ * the one passed to buildMap so the OFF_NULL set (keyed on bare family names)
+ * applies to tagged ids that resolve through a family match.
+ */
 export function resolve(id: string, capabilities: string[]): ThinkingLevelMap | undefined {
   if (!capabilities.includes("thinking")) return undefined;
 
   const colon = id.lastIndexOf(":");
-  const options = MODEL_REASONING_OPTIONS[id] ?? (colon > 0 ? MODEL_REASONING_OPTIONS[id.slice(0, colon)] : undefined);
+  const matchedKey = MODEL_REASONING_OPTIONS[id] !== undefined ? id : colon > 0 ? id.slice(0, colon) : "";
+  const options = MODEL_REASONING_OPTIONS[matchedKey];
   if (options === undefined) return DEFAULT;
-  return buildMap(options, id);
+  return buildMap(options, matchedKey);
 }
