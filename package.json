@@ -35,7 +35,7 @@
     "smoke:web-tools": "tsx scripts/smoke-web-tools.ts",
     "generate-models": "tsx scripts/generate-pricing.ts && tsx scripts/generate-reasoning.ts && tsx scripts/generate-models.ts && biome format --write models.generated.ts pricing.generated.ts reasoning.generated.ts",
     "generate-limits": "tsx scripts/generate-limits.ts",
-    "generate-reasoning": "tsx scripts/generate-reasoning.ts"
+    "generate-reasoning": "tsx scripts/generate-reasoning.ts && biome format --write reasoning.generated.ts"
   },
   "pi": {
     "extensions": [
