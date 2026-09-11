@@ -113,9 +113,11 @@ async function probeOne(targetId: string): Promise<ProbeResult> {
   const limits = { ...existing };
   let failed = 0;
   if (probe === undefined) {
+    // Indeterminate (timeout, billing, rate limit): the probe does not prove
+    // the model is gone, so keep any existing model-specific limit rather than
+    // dropping the entry to the 32768 runtime fallback.
     failed = 1;
-    delete limits[targetId];
-    console.warn(`  no limit for ${targetId}; runtime will fall back to 32768`);
+    console.warn(`  no limit for ${targetId}; keeping its existing limit if any`);
   } else {
     limits[targetId] = probe;
     console.log(`  ${targetId} -> ${probe}`);
