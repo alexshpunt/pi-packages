@@ -99,7 +99,7 @@ describe("assembleModels", () => {
     // the static type is a union over all APIs, so narrow it for the assertions.
     const compat = models[0].compat as OpenAICompletionsCompat | undefined;
 
-    // Tested against the live API (think-experiment.md, docs/openai.md):
+    // Tested against the live API (docs/openai.md):
     expect(compat?.supportsDeveloperRole).toBe(false);
     expect(compat?.supportsReasoningEffort).toBe(true);
     expect(compat?.thinkingFormat).toBe("openai");
@@ -162,7 +162,7 @@ describe("assembleModels", () => {
   });
 
   describe("thinking level maps", () => {
-    it("assigns GPT_OSS map to gpt-oss models", () => {
+    it("maps gpt-oss models from models.dev (effort low/medium/high, off hidden)", () => {
       const models = assembleModels({
         "gpt-oss:20b": rawModel({ capabilities: ["tools", "thinking"] }),
         "gpt-oss:120b": rawModel({ capabilities: ["tools", "thinking"] }),
@@ -179,27 +179,22 @@ describe("assembleModels", () => {
       }
     });
 
-    it("assigns QWEN3 (binary think/nothink) to qwen3 non-VL models", () => {
-      const models = assembleModels({
-        "qwen3:397b": rawModel({ capabilities: ["tools", "thinking"] }),
-        "qwen3-next:80b": rawModel({ capabilities: ["tools", "thinking"] }),
+    it("maps toggle-only models (gemma4) to a binary on/off map", () => {
+      const models = assembleModels({ "gemma4:31b": rawModel({ capabilities: ["tools", "thinking"] }) });
+      expect(models[0].thinkingLevelMap).toEqual({
+        off: "none",
+        minimal: null,
+        low: null,
+        medium: "medium",
+        high: null,
+        xhigh: null,
       });
-      for (const m of models) {
-        expect(m.thinkingLevelMap).toEqual({
-          off: "none",
-          minimal: null,
-          low: null,
-          medium: "medium",
-          high: null,
-          xhigh: null,
-        });
-      }
     });
 
-    it("assigns NO_OFF to qwen3-vl models (none does not disable thinking)", () => {
-      const models = assembleModels({ "qwen3-vl:235b": rawModel({ capabilities: ["tools", "thinking", "vision"] }) });
+    it("assigns DEFAULT to models with no models.dev reasoning entry", () => {
+      const models = assembleModels({ "deepseek-v4.1-flash": rawModel({ capabilities: ["tools", "thinking"] }) });
       expect(models[0].thinkingLevelMap).toEqual({
-        off: null,
+        off: "none",
         minimal: null,
         low: "low",
         medium: "medium",
@@ -208,7 +203,7 @@ describe("assembleModels", () => {
       });
     });
 
-    it("assigns GLM_52 to glm-5.2 (off/high/xhigh only)", () => {
+    it("maps glm-5.2 effort (high/xhigh only)", () => {
       const models = assembleModels({ "glm-5.2": rawModel({ capabilities: ["tools", "thinking"] }) });
       expect(models[0].thinkingLevelMap).toEqual({
         off: "none",
@@ -220,27 +215,15 @@ describe("assembleModels", () => {
       });
     });
 
-    it("assigns NO_OFF to kimi-k2-thinking (none does not disable thinking)", () => {
-      const models = assembleModels({ "kimi-k2-thinking": rawModel({ capabilities: ["tools", "thinking"] }) });
-      expect(models[0].thinkingLevelMap).toEqual({
-        off: null,
-        minimal: null,
-        low: "low",
-        medium: "medium",
-        high: "high",
-        xhigh: "max",
-      });
-    });
-
-    it("assigns NO_OFF to minimax models (none does not disable thinking)", () => {
+    it("hides off for minimax-m2.7 (none does not disable thinking)", () => {
       const models = assembleModels({ "minimax-m2.7": rawModel({ capabilities: ["tools", "thinking"] }) });
       expect(models[0].thinkingLevelMap).toEqual({
         off: null,
         minimal: null,
-        low: "low",
+        low: null,
         medium: "medium",
-        high: "high",
-        xhigh: "max",
+        high: null,
+        xhigh: null,
       });
     });
   });
@@ -292,7 +275,16 @@ describe("resolve", () => {
     expect(resolve("any-model", ["tools", "vision"])).toBeUndefined();
   });
 
-  it("returns DEFAULT for unrecognized thinking models", () => {
+  it("returns DEFAULT for models with no models.dev reasoning entry", () => {
+    // deepseek-v4.1-flash is not yet in the models.dev ollama-cloud table.
+    expect(resolve("deepseek-v4.1-flash", ["tools", "thinking"])).toEqual({
+      off: "none",
+      minimal: null,
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "max",
+    });
     expect(resolve("unknown-model", ["tools", "thinking"])).toEqual({
       off: "none",
       minimal: null,
@@ -303,7 +295,9 @@ describe("resolve", () => {
     });
   });
 
-  it("returns GPT_OSS for gpt-oss prefix", () => {
+  it("maps gpt-oss effort levels and hides off (none does not disable thinking)", () => {
+    // gpt-oss:20b / gpt-oss:120b: models.dev effort = [low, medium, high];
+    // OFF_NULL hides off because live probing shows "none" still reasons.
     expect(resolve("gpt-oss:20b", ["tools", "thinking"])).toEqual({
       off: null,
       minimal: null,
@@ -322,8 +316,9 @@ describe("resolve", () => {
     });
   });
 
-  it("returns QWEN3 for qwen3 models (except qwen3-vl)", () => {
-    expect(resolve("qwen3:397b", ["tools", "thinking"])).toEqual({
+  it("maps toggle-only models to a binary on/off map", () => {
+    // gemma4:31b and qwen3.5:397b: models.dev reasoning_options = [toggle] only.
+    expect(resolve("gemma4:31b", ["tools", "thinking"])).toEqual({
       off: "none",
       minimal: null,
       low: null,
@@ -331,7 +326,7 @@ describe("resolve", () => {
       high: null,
       xhigh: null,
     });
-    expect(resolve("qwen3-next:80b", ["tools", "thinking"])).toEqual({
+    expect(resolve("qwen3.5:397b", ["tools", "thinking"])).toEqual({
       off: "none",
       minimal: null,
       low: null,
@@ -341,18 +336,20 @@ describe("resolve", () => {
     });
   });
 
-  it("returns NO_OFF for qwen3-vl prefix (none does not disable thinking)", () => {
-    expect(resolve("qwen3-vl:235b", ["tools", "thinking", "vision"])).toEqual({
+  it("hides off for minimax-m2.7 (none does not disable thinking), binary map otherwise", () => {
+    // minimax-m2.7: models.dev = [toggle]; OFF_NULL hides off (live probe leaks).
+    expect(resolve("minimax-m2.7", ["tools", "thinking"])).toEqual({
       off: null,
       minimal: null,
-      low: "low",
+      low: null,
       medium: "medium",
-      high: "high",
-      xhigh: "max",
+      high: null,
+      xhigh: null,
     });
   });
 
-  it("returns GLM_52 for glm-5.2 (off/high/xhigh only)", () => {
+  it("maps effort values onto the matching levels", () => {
+    // glm-5.2: effort = [high, max] -> high + extra-high only.
     expect(resolve("glm-5.2", ["tools", "thinking"])).toEqual({
       off: "none",
       minimal: null,
@@ -361,27 +358,17 @@ describe("resolve", () => {
       high: "high",
       xhigh: "max",
     });
-  });
-
-  it("returns NO_OFF for kimi-k2-thinking (exact match only)", () => {
-    expect(resolve("kimi-k2-thinking", ["tools", "thinking"])).toEqual({
-      off: null,
-      minimal: null,
-      low: "low",
-      medium: "medium",
-      high: "high",
-      xhigh: "max",
-    });
-    // kimi-k2.5 and kimi-k2.6 support "none" correctly — DEFAULT, not NO_OFF
-    expect(resolve("kimi-k2.5", ["tools", "thinking"])).toEqual({
+    // glm-5.3 / glm-5.3-flash: effort = [low, high, max] -> low, high, extra-high.
+    expect(resolve("glm-5.3", ["tools", "thinking"])).toEqual({
       off: "none",
       minimal: null,
       low: "low",
-      medium: "medium",
+      medium: null,
       high: "high",
       xhigh: "max",
     });
-    expect(resolve("kimi-k2.6", ["tools", "thinking"])).toEqual({
+    // minimax-m3: toggle + effort = [low, medium, high, max] -> all but minimal.
+    expect(resolve("minimax-m3", ["tools", "thinking"])).toEqual({
       off: "none",
       minimal: null,
       low: "low",
@@ -391,17 +378,16 @@ describe("resolve", () => {
     });
   });
 
-  it("returns NO_OFF for minimax prefix", () => {
-    for (const id of ["minimax-m2.1", "minimax-m2.5", "minimax-m2.7"]) {
-      expect(resolve(id, ["tools", "thinking"])).toEqual({
-        off: null,
-        minimal: null,
-        low: "low",
-        medium: "medium",
-        high: "high",
-        xhigh: "max",
-      });
-    }
+  it("resolves a :tag family to the family's reasoning options", () => {
+    // deepseek-v4-pro:0813 -> models.dev family "deepseek-v4-pro" (effort [high, max]).
+    expect(resolve("deepseek-v4-pro:0813", ["tools", "thinking"])).toEqual({
+      off: "none",
+      minimal: null,
+      low: null,
+      medium: null,
+      high: "high",
+      xhigh: "max",
+    });
   });
 
   it("returns undefined when thinking is absent regardless of prefix", () => {
