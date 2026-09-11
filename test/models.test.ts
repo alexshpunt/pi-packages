@@ -375,6 +375,28 @@ describe("resolve", () => {
     });
   });
 
+  it("ignores inherited Object keys when looking up reasoning options", () => {
+    // A model id like "constructor" must not resolve to the inherited
+    // constructor function reached via plain-object property access.
+    expect(resolve("constructor", ["tools", "thinking"])).toEqual({
+      off: "none",
+      minimal: null,
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "max",
+    });
+    // ... including the family path ("constructor:latest" -> "constructor").
+    expect(resolve("constructor:latest", ["tools", "thinking"])).toEqual({
+      off: "none",
+      minimal: null,
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: "max",
+    });
+  });
+
   it("maps effort values onto the matching levels", () => {
     // glm-5.2: effort = [high, max] -> high + extra-high only.
     expect(resolve("glm-5.2", ["tools", "thinking"])).toEqual({
