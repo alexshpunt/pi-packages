@@ -2,9 +2,16 @@
  * Thinking level mapping for Ollama Cloud models.
  *
  * Maps Pi's thinking levels to Ollama Cloud's OpenAI-compatible
- * `reasoning_effort` values. The API accepts "none", "low", "medium", "high",
- * "xhigh", "ultra", and "max". On simple prompts, "max" can be a no-op over
- * "high", but on harder prompts it can increase thinking substantially.
+ * `reasoning_effort` values. The API accepts "minimal", "none", "low",
+ * "medium", "high", "xhigh", "ultra", and "max". On simple prompts, "max" can
+ * be a no-op over "high", but on harder prompts it can increase thinking
+ * substantially.
+ *
+ * Every value EFFORT_TO_LEVEL can send was verified against the live chat
+ * completions API (2026-09-11: "minimal", "xhigh", and "ultra" probed across
+ * gpt-oss, deepseek-v4, glm, minimax, and qwen thinking models, all accepted
+ * with graded reasoning), so a future models.dev row that lists them passes
+ * through a value the endpoint demonstrably accepts.
  *
  * The per-model level support comes from models.dev: scripts/generate-reasoning.ts
  * fetches the `ollama-cloud` provider's `reasoning_options` into
