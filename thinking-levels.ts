@@ -10,6 +10,8 @@
  * fetches the `ollama-cloud` provider's `reasoning_options` into
  * reasoning.generated.ts (the same data source pi uses for its built-in
  * providers), and resolve() maps a model's effort values onto Pi's levels.
+ * We fall back to models.dev because the Cloud API does not yet expose
+ * per-model supported levels (tracked upstream: https://github.com/ollama/ollama/issues/18385).
  *
  * The API exposes only a boolean `thinking` capability plus a global effort
  * vocabulary, and models.dev does not reliably encode the `none` behavior, so

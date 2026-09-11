@@ -150,7 +150,7 @@ Pi's thinking levels are mapped to Ollama Cloud's OpenAI-compatible `reasoning_e
 
 Per-model support is sourced from models.dev: [`scripts/generate-reasoning.ts`](scripts/generate-reasoning.ts) fetches the `ollama-cloud` provider's `reasoning_options` into `reasoning.generated.ts`, and `resolve()` maps each model's effort values onto Pi's levels. Models with `effort` values expose those grades; `toggle`-only models expose a single on/off level. Models with no models.dev entry fall back to `DEFAULT`.
 
-Because the API reports only a boolean `thinking` capability and models.dev does not reliably encode the `none` behavior, the `off` switch is handled via a small override table in `thinking-levels.ts`: it defaults to enabled, and is hidden only for models verified (by live probing) not to honor `reasoning_effort:"none"` - currently `gpt-oss:20b`, `gpt-oss:120b`, and `minimax-m2.7`.
+Because the API reports only a boolean `thinking` capability and models.dev does not reliably encode the `none` behavior, the `off` switch is handled via a small override table in `thinking-levels.ts`: it defaults to enabled, and is hidden only for models verified (by live probing) not to honor `reasoning_effort:"none"` - currently `gpt-oss:20b`, `gpt-oss:120b`, and `minimax-m2.7`. The per-model metadata gaps behind the models.dev sourcing are tracked upstream in [ollama/ollama#18385](https://github.com/ollama/ollama/issues/18385).
 
 ## Tools
 

@@ -14,7 +14,9 @@
  *
  * The /api/show endpoint does not expose an output limit
  * (https://docs.ollama.com/api-reference/show-model-details,
- * https://github.com/ollama/ollama/issues/7222), so each model is probed with
+ * https://github.com/ollama/ollama/issues/7222; see also upstream request to
+ * expose per-model metadata, https://github.com/ollama/ollama/issues/18385),
+ * so each model is probed with
  * a minimal chat completion: an ascending max_tokens tier plus a stop
  * sequence. A rejected request reports the exact limit in the error message:
  *   max_tokens (100000) exceeds model's maximum output tokens (65536) for model ...

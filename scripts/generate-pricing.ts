@@ -10,7 +10,8 @@
  * parser dependency needed). Ollama Cloud is subscription-billed, so these are
  * NOT actual charges; they make `/cost` show comparable usage. Prices are never
  * hand-typed: this script fetches them and writes pricing.generated.ts (do not
- * edit by hand).
+ * edit by hand). We scrape because the Cloud API exposes no pricing field
+ * (tracked upstream: https://github.com/ollama/ollama/issues/18385).
  *
  * The pricing table lists one row per model family with bare or tagged names
  * (e.g. `deepseek-v4-flash`, `gpt-oss:120b`), while the live catalog can hold
