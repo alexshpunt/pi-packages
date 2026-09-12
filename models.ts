@@ -93,7 +93,7 @@ function buildCompat(): ProviderModelConfig["compat"] {
   return {
     // Ollama uses "system" role, not "developer" (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsDeveloperRole).
     supportsDeveloperRole: false,
-    // reasoning_effort works (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsReasoningEffort, tested in think-experiment.md).
+    // reasoning_effort works (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsReasoningEffort).
     supportsReasoningEffort: true,
     // "store" is not a supported field (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsStore).
     supportsStore: false,
@@ -109,7 +109,7 @@ function buildCompat(): ProviderModelConfig["compat"] {
     requiresThinkingAsText: false,
     // DeepSeek-specific, not needed for Ollama (pi: types.ts#requiresReasoningContentOnAssistantMessages).
     requiresReasoningContentOnAssistantMessages: false,
-    // reasoning_effort format works (pi: types.ts#thinkingFormat, tested in think-experiment.md).
+    // reasoning_effort format works (pi: types.ts#thinkingFormat).
     thinkingFormat: "openai",
     // Ollama does not support tool_choice, so strict mode is unavailable (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsStrictMode).
     supportsStrictMode: false,

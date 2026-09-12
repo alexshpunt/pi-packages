@@ -4,11 +4,19 @@
  * limits.generated.ts. Run manually (or via CI) and commit the output.
  *
  * Usage:
- *   OLLAMA_API_KEY=<key> npm run generate-limits
+ *   OLLAMA_API_KEY=<key> npm run generate-limits          # probe every model
+ *   OLLAMA_API_KEY=<key> npm run generate-limits <model>  # probe one model, merge into the table
+ *
+ * When a single model id is given, only that model is probed and its limit is
+ * merged into the existing limits.generated.ts, leaving every other entry
+ * untouched. This is the intended workflow when the catalog gains a model:
+ * probe the newcomer instead of re-probing all 20.
  *
  * The /api/show endpoint does not expose an output limit
  * (https://docs.ollama.com/api-reference/show-model-details,
- * https://github.com/ollama/ollama/issues/7222), so each model is probed with
+ * https://github.com/ollama/ollama/issues/7222; see also upstream request to
+ * expose per-model metadata, https://github.com/ollama/ollama/issues/18385),
+ * so each model is probed with
  * a minimal chat completion: an ascending max_tokens tier plus a stop
  * sequence. A rejected request reports the exact limit in the error message:
  *   max_tokens (100000) exceeds model's maximum output tokens (65536) for model ...
@@ -18,6 +26,7 @@
  */
 
 import { writeFileSync } from "node:fs";
+import { MODEL_MAX_OUTPUT_TOKENS } from "../limits.generated.ts";
 import { fetchModelIds, OLLAMA_BASE } from "../models.ts";
 import { concurrentMap, fetchJsonWithTimeout } from "../utils.ts";
 
@@ -69,28 +78,87 @@ if (!process.env.OLLAMA_API_KEY) {
   process.exit(1);
 }
 
-console.log("Fetching Ollama Cloud models...");
-const modelIds = await fetchModelIds();
-console.log(`Probing ${modelIds.length} models for max output tokens...`);
+const targetId = process.argv[2];
 
-const results = await concurrentMap(modelIds, 8, async (id) => ({ id, limit: await probeMaxTokens(id) }));
+interface ProbeResult {
+  limits: Record<string, number>;
+  /** Models probed fresh in the run that wrote the file. */
+  probed: number;
+  /**
+   * Indeterminate probes. A successful run may still carry these forward
+   * (option (b): only hard-fail when nothing usable came back), but any
+   * count above zero is reported loudly so the merge is never silent.
+   */
+  failed: number;
+}
 
-const limits: Record<string, number> = {};
-let failed = 0;
-for (const result of results) {
-  if (result.status === "fulfilled" && result.value.limit !== undefined) {
-    limits[result.value.id] = result.value.limit;
-  } else {
-    failed++;
-    const id = result.status === "fulfilled" ? result.value.id : "unknown";
-    console.warn(`  no limit for ${id}; runtime will fall back to 32768`);
+async function probeAll(): Promise<ProbeResult> {
+  console.log("Fetching Ollama Cloud models...");
+  const modelIds = await fetchModelIds();
+  console.log(`Probing ${modelIds.length} models for max output tokens...`);
+
+  const results = await concurrentMap(modelIds, 8, async (id) => ({ id, limit: await probeMaxTokens(id) }));
+
+  const limits: Record<string, number> = {};
+  let failed = 0;
+  // concurrentMap pre-allocates its result array by index, so results map
+  // back onto modelIds and rejected probes keep their model id instead of
+  // reporting an unusable "unknown".
+  for (const [index, result] of results.entries()) {
+    const id = modelIds[index];
+    if (result.status === "fulfilled" && result.value.limit !== undefined) {
+      limits[result.value.id] = result.value.limit;
+    } else {
+      failed++;
+      // Indeterminate (timeout, billing, rate limit): the probe does not
+      // prove the model is gone, so keep any existing model-specific limit
+      // rather than dropping it to the 32768 runtime fallback. Models that
+      // were removed from the catalog are excluded automatically because
+      // only current model ids are probed here.
+      const cached = MODEL_MAX_OUTPUT_TOKENS[id];
+      if (cached !== undefined) {
+        limits[id] = cached;
+      }
+      console.warn(`  no limit for ${id}; keeping its existing limit if any`);
+    }
   }
+  return { limits, probed: modelIds.length, failed };
+}
+
+async function probeOne(targetId: string): Promise<ProbeResult> {
+  // The generated table ships at runtime; merge the single fresh limit into its
+  // current contents so an unchanged catalog is not re-probed every time.
+  const probe = await probeMaxTokens(targetId);
+  const limits = { ...MODEL_MAX_OUTPUT_TOKENS };
+  let failed = 0;
+  if (probe === undefined) {
+    // Indeterminate (timeout, billing, rate limit): the probe does not prove
+    // the model is gone, so keep any existing model-specific limit rather than
+    // dropping the entry to the 32768 runtime fallback.
+    failed = 1;
+    console.warn(`  no limit for ${targetId}; keeping its existing limit if any`);
+  } else {
+    limits[targetId] = probe;
+    console.log(`  ${targetId} -> ${probe}`);
+  }
+  return { limits, probed: 1, failed };
+}
+
+const { limits, probed, failed } = targetId ? await probeOne(targetId) : await probeAll();
+
+// Fail loudly when nothing usable came back. A stray indeterminate probe on a
+// known-slow model is tolerated (existing limits are carried forward and the
+// warning above is loud), but aborting the write entirely is worse than
+// shipping a table that cannot probe anything fresh.
+if (probed > 0 && probed === failed) {
+  console.error(`generate-limits: no usable probe data for ${probed} model(s); refusing to write limits.generated.ts.`);
+  process.exit(1);
 }
 
 const out = [
   "// Auto-generated by scripts/generate-limits.ts",
   "// Do not edit manually.",
-  `// Probed models: ${Object.keys(limits).length} (${failed} failed)`,
+  `// Entries: ${Object.keys(limits).length}`,
   "",
   "export const MODEL_MAX_OUTPUT_TOKENS: Record<string, number> = {",
   ...Object.keys(limits)
@@ -101,4 +169,4 @@ const out = [
 ].join("\n");
 
 writeFileSync("limits.generated.ts", out);
-console.log(`Wrote limits.generated.ts (${Object.keys(limits).length} models, ${failed} failed).`);
+console.log(`Wrote limits.generated.ts (${Object.keys(limits).length} entries; probed ${probed}, ${failed} failed).`);

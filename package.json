@@ -13,6 +13,7 @@
     "models.ts",
     "models.generated.ts",
     "pricing.generated.ts",
+    "reasoning.generated.ts",
     "thinking-levels.ts",
     "usage.ts",
     "utils.ts",
@@ -32,8 +33,9 @@
     "format": "biome format --write .",
     "test": "vitest run",
     "smoke:web-tools": "tsx scripts/smoke-web-tools.ts",
-    "generate-models": "tsx scripts/generate-pricing.ts && tsx scripts/generate-models.ts && biome format --write models.generated.ts pricing.generated.ts",
-    "generate-limits": "tsx scripts/generate-limits.ts && biome format --write limits.generated.ts"
+    "generate-models": "tsx scripts/generate-pricing.ts && tsx scripts/generate-reasoning.ts && tsx scripts/generate-models.ts && biome format --write models.generated.ts pricing.generated.ts reasoning.generated.ts",
+    "generate-limits": "tsx scripts/generate-limits.ts",
+    "generate-reasoning": "tsx scripts/generate-reasoning.ts && biome format --write reasoning.generated.ts"
   },
   "pi": {
     "extensions": [
@@ -51,6 +53,6 @@
     "@types/node": "^26.1.2",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "tsx": "^4.19.0",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.11"
   }
 }
