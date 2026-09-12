@@ -192,12 +192,26 @@ describe("assembleModels", () => {
     });
 
     it("assigns DEFAULT to models with no models.dev reasoning entry", () => {
-      const models = assembleModels({ "deepseek-v4.1-flash": rawModel({ capabilities: ["tools", "thinking"] }) });
+      const models = assembleModels({ "mistral-large-3:675b": rawModel({ capabilities: ["tools", "thinking"] }) });
       expect(models[0].thinkingLevelMap).toEqual({
         off: "none",
         minimal: null,
         low: "low",
         medium: "medium",
+        high: "high",
+        xhigh: "max",
+      });
+    });
+
+    it("maps deepseek-v4.1-flash effort (low/high/max, no medium)", () => {
+      // models.dev lists efforts [low, high, max] for this model; medium is
+      // unsupported, so it maps to null instead of the DEFAULT passthrough.
+      const models = assembleModels({ "deepseek-v4.1-flash": rawModel({ capabilities: ["tools", "thinking"] }) });
+      expect(models[0].thinkingLevelMap).toEqual({
+        off: "none",
+        minimal: null,
+        low: "low",
+        medium: null,
         high: "high",
         xhigh: "max",
       });
@@ -276,8 +290,9 @@ describe("resolve", () => {
   });
 
   it("returns DEFAULT for models with no models.dev reasoning entry", () => {
-    // deepseek-v4.1-flash is not yet in the models.dev ollama-cloud table.
-    expect(resolve("deepseek-v4.1-flash", ["tools", "thinking"])).toEqual({
+    // mistral-large-3:675b has no models.dev ollama-cloud entry (and no
+    // family entry either), so resolve() cannot even match its tagged id.
+    expect(resolve("mistral-large-3:675b", ["tools", "thinking"])).toEqual({
       off: "none",
       minimal: null,
       low: "low",
