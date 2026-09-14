@@ -122,9 +122,11 @@ function buildCompat(): ProviderModelConfig["compat"] {
     supportsLongCacheRetention: false,
     // Not z.ai (pi: types.ts#zaiToolStream).
     zaiToolStream: false,
+    // openRouterRouting / vercelGatewayRouting deliberately omitted: pi-ai's
+    // OpenAI transport does `if (model.compat?.openRouterRouting) params.provider = ...`,
+    // so `{}` is truthy and sends a stray `provider: {}` on every Ollama request.
+    // Both fields are OpenRouter / Vercel-gateway only. Same for empty objects.
     cacheControlFormat: undefined,
-    openRouterRouting: {},
-    vercelGatewayRouting: {},
   };
 }
 

@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+- Omit empty `openRouterRouting` / `vercelGatewayRouting` from `buildCompat`. pi-ai treats those objects as truthy and would send `provider: {}` on every Ollama chat completion. Fixes #60.
+
 ## [0.12.0] - 2026-09-11
 
 - Source per-model thinking levels from models.dev instead of hardcoded maps. `scripts/generate-reasoning.ts` fetches the `ollama-cloud` provider's `reasoning_options` into `reasoning.generated.ts`, and `thinking-levels.ts` maps each model's effort values onto Pi's levels (toggle-only models become a binary on/off map; models with no models.dev entry fall back to `DEFAULT`). The `off` switch is handled by a small override table for models verified not to honor `reasoning_effort:"none"` (`gpt-oss:20b`, `gpt-oss:120b`, `minimax-m2.7`). Removed the now-stale per-family maps and the `docs/think-experiment.md` doc.
