@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-- Omit empty `openRouterRouting` / `vercelGatewayRouting` from `buildCompat`. pi-ai treats those objects as truthy and would send `provider: {}` on every Ollama chat completion. Fixes #60.
+- Omit empty `openRouterRouting` / `vercelGatewayRouting` from `buildCompat` (set to `undefined`, not `{}`): pi-ai reads the raw `model.compat` and treats `{}` as truthy, sending a stray `provider: {}` on every Ollama chat completion. Fixes #60. Thanks @0xbentang (#61).
 
 ## [0.12.0] - 2026-09-11
 
