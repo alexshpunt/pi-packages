@@ -123,8 +123,9 @@ describe("assembleModels", () => {
     expect(compat?.sendSessionAffinityHeaders).toBe(false);
     expect(compat?.supportsLongCacheRetention).toBe(false);
     expect(compat?.zaiToolStream).toBe(false);
-    expect(compat?.openRouterRouting).toEqual({});
-    expect(compat?.vercelGatewayRouting).toEqual({});
+    // Omitted on purpose: empty objects are truthy in pi-ai and would send provider: {}.
+    expect(compat?.openRouterRouting).toBeUndefined();
+    expect(compat?.vercelGatewayRouting).toBeUndefined();
   });
 
   it("zeros cost for models with no models.dev pricing mapping", () => {
@@ -271,8 +272,6 @@ describe("GENERATED_MODELS", () => {
         sendSessionAffinityHeaders: false,
         supportsLongCacheRetention: false,
         zaiToolStream: false,
-        openRouterRouting: {},
-        vercelGatewayRouting: {},
       });
     }
   });

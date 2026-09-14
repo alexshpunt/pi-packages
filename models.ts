@@ -113,18 +113,28 @@ function buildCompat(): ProviderModelConfig["compat"] {
     thinkingFormat: "openai",
     // Ollama does not support tool_choice, so strict mode is unavailable (ollama: docs.ollama.com/api/openai-compatibility, pi: types.ts#supportsStrictMode).
     supportsStrictMode: false,
-    // Anthropic cache_control not relevant; Ollama has implicit KV cache only (pi: types.ts#cacheControlFormat).
-    // Explicitly undefined: JSON.stringify drops undefined values, keeping
-    // models.generated.ts structurally consistent with assembleModels() runtime output.
     // Session affinity headers not relevant for Ollama (pi: types.ts#sendSessionAffinityHeaders).
     sendSessionAffinityHeaders: false,
     // No explicit cache-retention API (pi: types.ts#supportsLongCacheRetention).
     supportsLongCacheRetention: false,
     // Not z.ai (pi: types.ts#zaiToolStream).
     zaiToolStream: false,
+    // Anthropic cache_control not relevant; Ollama has implicit KV cache only (pi: types.ts#cacheControlFormat).
+    // Explicitly undefined: JSON.stringify drops undefined values, keeping
+    // models.generated.ts structurally consistent with assembleModels() runtime output.
     cacheControlFormat: undefined,
-    openRouterRouting: {},
-    vercelGatewayRouting: {},
+    // OpenRouter / Vercel AI Gateway routing prefs. pi-ai's OpenAI transport
+    // truthiness-checks the raw model.compat (not the resolved getCompat() value)
+    // and forwards it verbatim: `if (model.compat?.openRouterRouting)
+    // params.provider = ...` in packages/ai/src/api/openai-completions.ts. `{}` is
+    // truthy, so baking it in sent a stray `provider: {}` on every Ollama request.
+    // Express "none" as undefined, never `{}`; undefined is falsy at the wire site
+    // and JSON.stringify drops it from models.generated.ts. The boolean flags above
+    // stay explicit `false` on purpose: omitting a boolean makes getCompat() fall
+    // back to detectCompat's generic-OpenAI defaults, which are wrong for Ollama
+    // (e.g. maxTokensField -> "max_completion_tokens", supportsStrictMode -> true).
+    openRouterRouting: undefined,
+    vercelGatewayRouting: undefined,
   };
 }
 
