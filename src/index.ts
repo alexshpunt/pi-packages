@@ -1,7 +1,7 @@
 import { calculateCost, createAssistantMessageEventStream, type AssistantMessage, type AssistantMessageEventStream, type Context, type ImageContent, type Model, type SimpleStreamOptions, type TextContent, type Tool, type UserMessage } from "@earendil-works/pi-ai";
 import { getModels } from "@earendil-works/pi-ai/compat";
 import { buildSessionContext, compact, generateBranchSummary, keyHint, type BranchSummaryResult, type CompactionEntry, type ExtensionAPI, type ExtensionContext, type ExtensionUIContext } from "@earendil-works/pi-coding-agent";
-import { query, type EffortLevel, type FastModeDisabledReason, type SDKMessage, type SDKResultMessage, type SettingSource } from "@anthropic-ai/claude-agent-sdk";
+import { query, type EffortLevel, type SDKMessage, type SettingSource } from "@anthropic-ai/claude-agent-sdk";
 import type { Base64ImageSource, ContentBlockParam } from "@anthropic-ai/sdk/resources";
 import { Text } from "@earendil-works/pi-tui";
 import { createSession, deleteSession, openSession, repairToolPairing } from "cc-session-io";
@@ -9,7 +9,7 @@ import { appendFileSync, mkdirSync, realpathSync, statSync } from "fs";
 import { homedir } from "os";
 import { dirname, join } from "path";
 import { PROVIDER_ID, messageContentToText, convertPiMessages } from "./convert.js";
-import { applyLongContext, buildModels, claudeCodeModelId, isFastModeModel, type LongContextSettings, resolveModel as _resolveModel, withFastModeVariants } from "./models.js";
+import { applyLongContext, buildModels, claudeCodeModelId, type LongContextSettings, resolveModel as _resolveModel } from "./models.js";
 import { MCP_SERVER_NAME, MCP_TOOL_PREFIX, renderSkillsBlock } from "./skills.js";
 import { verifyWrittenSession as _verifyWrittenSession } from "./session-verify.js";
 import { extractAllToolResults as _extractAllToolResults, type McpResult } from "./extract-tool-results.js";
@@ -851,40 +851,6 @@ function showStartupNoticeOnce(): void {
 	piUI?.notify([title, ...bullets, "─".repeat(64)].join("\n"), "info");
 }
 
-// A fast model entry that Claude Code declines to serve fast still answers, at
-// standard speed, so the state CC reports on each result is the only sign.
-// Announced once per cause rather than per turn: every turn is a fresh CC
-// process that runs into the same cause again.
-const shownFastModeNotices = new Set<string>();
-
-const FAST_MODE_OFF_HINTS: Partial<Record<FastModeDisabledReason, string>> = {
-	extra_usage_disabled: "fast mode bills usage credits only; turn them on at claude.ai Settings > Usage",
-	free: "fast mode needs a paid plan or purchased API credits",
-	preference: "your organization has disabled fast mode",
-	not_first_party: "fast mode is only served by the Anthropic API, not Bedrock, Vertex or Foundry",
-	disabled_by_env: "CLAUDE_CODE_DISABLE_FAST_MODE is set",
-	model_not_allowed: "the model is not in your organization's allowed models",
-};
-
-function notifyFastModeOnce(noticeKey: string, text: string): void {
-	if (shownFastModeNotices.has(noticeKey)) return;
-	shownFastModeNotices.add(noticeKey);
-	piUI?.notify(text, "warning");
-}
-
-function reportFastModeState(message: SDKResultMessage, model: Model<any>): void {
-	if (!isFastModeModel(model)) return;
-	const state = message.fast_mode_state;
-	const reason = message.fast_mode_disabled_reason;
-	debug(`fast mode: state=${state ?? "unreported"} reason=${reason ?? "none"} model=${model.id}`);
-	if (state === "cooldown") {
-		notifyFastModeOnce("cooldown", "Claude fast mode hit its rate limit; requests fall back to standard speed until it cools down");
-	} else if (state === "off") {
-		const hint = reason ? FAST_MODE_OFF_HINTS[reason] ?? reason : "the model does not support it";
-		notifyFastModeOnce(`off:${reason ?? "unsupported"}`, `Claude fast mode is off (${hint}); ${model.id} runs at standard speed`);
-	}
-}
-
 // Captures of what pi assembled per agent; see src/prompt-capture.ts for why this
 // is keyed rather than held in a single slot. One process-wide instance, shared
 // across every extension module instance: isolated subagents re-evaluate this
@@ -1362,12 +1328,10 @@ async function consumeQuery(
 		//   ended empty.
 		// - rate-limit events: notifications to the user, which are most likely to
 		//   fire during exactly the long tool-using turns the guard was skipping.
-		//   Fast-mode notices are user notifications for the same reason.
 		let resultError: string | undefined;
 		if (message.type === "result") {
 			queryCtx.promptStream?.end();
 			logServedContextWindow("result", message, model);
-			reportFastModeState(message, model);
 			resultError = resultErrorText(message);
 			if (resultError !== undefined) {
 				// Consume the rejection alongside the failure it caused, so a later
@@ -1413,12 +1377,6 @@ async function consumeQuery(
 					piUI?.notify(`Claude rate limit warning: ${percent}% used (${info.rateLimitType ?? ""})`, "warning");
 				}
 			}
-			continue;
-		}
-		// Claude Code's own fast-mode notice, e.g. "Fast mode disabled · usage credits
-		// exhausted" when it retried a rejected fast request at standard speed.
-		if (message.type === "system" && message.subtype === "notification" && message.key.startsWith("fast-mode")) {
-			notifyFastModeOnce(message.key, `Claude: ${message.text}`);
 			continue;
 		}
 		if (!queryCtx.currentPiStream || !queryCtx.turnOutput) continue;
@@ -1753,11 +1711,6 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 	// threshold with CC's, including CC's anti-thrashing guard (issue #8).
 	// Manual /compact in CC still works (we never invoke it).
 	const childEnv = { ...process.env, ...CC_CHILD_ENV };
-	// Fast mode is per picker entry (see withFastModeVariants). It rides flag
-	// settings because that is the only tier Claude Code honors for an SDK host.
-	// Set explicitly either way: the preset loads the user's ~/.claude settings,
-	// so a standard entry must not pick up a `fastMode` saved there by CC's `/fast`.
-	const fastMode = isFastModeModel(model);
 	const queryOptions: NonNullable<Parameters<typeof query>[0]["options"]> = {
 		cwd,
 		env: childEnv,
@@ -1777,7 +1730,6 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 			...claudeCodeSettings(providerSettings),
 			claudeMdExcludes: CLAUDE_MD_EXCLUDES,
 			includeGitInstructions: false,
-			fastMode,
 		},
 		systemPrompt: {
 			type: "preset", preset: "claude_code",
@@ -1793,7 +1745,7 @@ function streamClaudeAgentSdk(model: Model<any>, context: Context, options?: Sim
 
 	debug("provider: fresh query",
 		`model=${cliModel} msgs=${context.messages.length} tools=${mcpTools.length}`,
-		`resume=${resumeSessionId?.slice(0, 8) ?? "none"} effort=${effort ?? "default"} fast=${fastMode}`,
+		`resume=${resumeSessionId?.slice(0, 8) ?? "none"} effort=${effort ?? "default"}`,
 		`ctxFiles=${promptCapture?.contextFiles.length ?? 0} strictMcp=${strictMcpConfigEnabled}`,
 		`prompt=${promptText.slice(0, 60)}${promptBlocks ? " [+images]" : ""}`);
 
@@ -2124,7 +2076,7 @@ export default function (pi: ExtensionAPI) {
 		longContextExtraUsage: providerSettings.longContextExtraUsage ?? false,
 		forceTwoHundredK,
 	};
-	const registeredModels = applyLongContext(withFastModeVariants(MODELS), longContextSettings);
+	const registeredModels = applyLongContext(MODELS, longContextSettings);
 	if (registeredModels.length === 0) {
 		console.error("claude-bridge: no models available from pi-ai's anthropic catalog — update @earendil-works/pi-ai (requires >=0.86.1)");
 	}

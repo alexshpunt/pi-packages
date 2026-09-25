@@ -55,50 +55,6 @@ export function buildModels<T extends { id: string; [key: string]: any }>(piAiMo
 		}));
 }
 
-// Fast mode (research preview): the same model at up to 2.5x output speed, at
-// premium per-token rates that a subscription pays from usage credits only,
-// never from the plan's included usage. Claude Code serves it to an Agent SDK
-// host only when the host opts in through flag settings (`settings.fastMode`);
-// a `fastMode` in the user's own ~/.claude settings is refused there
-// (fast_mode_disabled_reason "sdk_opt_in_required"). Each supported model gets
-// its own picker entry, so speed is chosen like a model and never inherited.
-// Supported set per https://platform.claude.com/docs/en/build-with-claude/fast-mode,
-// matching Claude Code 2.1.282's catalog. Claude Code sends no `speed` for any
-// other model even with the flag, so a new fast model needs adding here.
-//
-// The marker goes after "claude-" (claude-fast-opus-5-5), not at the end. pi
-// resolves a partial `--model` pattern to the matching id that sorts highest,
-// and an id extending another sorts above it: with claude-opus-5-5-fast,
-// `claude-bridge/opus` resolved to claude-opus-5-fast and `opus-5-5` to
-// claude-opus-5-5-fast, silently moving those users onto usage credits.
-// "claude-fast-" sorts below every "claude-opus-" id, so existing patterns keep
-// their standard model and fast mode takes an exact id or a `fast` pattern.
-const FAST_MODE_PREFIX = "claude-fast-";
-const FAST_MODE_MODELS = new Set([
-	"claude-opus-5-5",
-	"claude-opus-5",
-	"claude-opus-4-8",
-]);
-
-// Insert a fast entry right after each supported model, so the picker shows
-// the pair together. Runs on the projected list, after buildModels' sort.
-export function withFastModeVariants<T extends { id: string; name: string }>(models: T[]): T[] {
-	return models.flatMap((m) => FAST_MODE_MODELS.has(m.id)
-		? [m, { ...m, id: m.id.replace(/^claude-/, FAST_MODE_PREFIX), name: `${m.name} Fast` }]
-		: [m]);
-}
-
-export function isFastModeModel(model: { id: string }): boolean {
-	return model.id.startsWith(FAST_MODE_PREFIX)
-		&& FAST_MODE_MODELS.has(`claude-${model.id.slice(FAST_MODE_PREFIX.length)}`);
-}
-
-// The Claude Code model a picker entry runs on: a fast entry is its base model
-// with fast mode turned on, so every per-model policy keys on the base id.
-function baseModelId(model: { id: string }): string {
-	return isFastModeModel(model) ? `claude-${model.id.slice(FAST_MODE_PREFIX.length)}` : model.id;
-}
-
 export type LongContextSettings = {
 	plan: "pro" | "max";
 	longContextExtraUsage: boolean;
@@ -145,7 +101,7 @@ export function resolveClaudeCodeRuntimeModel(
 	model: { id: string },
 	settings: LongContextSettings,
 ): ClaudeCodeRuntimeModel {
-	const modelId = baseModelId(model);
+	const modelId = model.id;
 	if (settings.forceTwoHundredK?.includes(modelId)) {
 		return { cliModelId: modelId, contextWindow: TWO_HUNDRED_K_CONTEXT };
 	}
