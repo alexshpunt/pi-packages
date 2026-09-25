@@ -1,5 +1,9 @@
 # Changelog
 
+## UNRELEASED
+
+- **Remove: fast mode models** — the `claude-bridge/claude-fast-*` picker entries and the `claude-bridge/fast` shortcut added in 0.9.0 are gone, along with the notices relayed when Claude Code declined to serve fast mode. On a subscription fast mode bills usage credits only, never the plan's included usage, so with no credits every turn sent a fast request that was rejected and retried at standard speed. The provider path no longer sets `settings.fastMode` at all, as before 0.9.0. A session saved on a fast entry has to be switched to its standard model (e.g. `claude-bridge/claude-opus-5-5`).
+
 ## 0.9.0 — 2026-09-25
 
 - **Add: published as `@buyong/pi-claude-bridge`, with release automation** — this fork publishes under its own scope, since `pi-claude-bridge` on npm belongs to the upstream repository; install with `pi install npm:@buyong/pi-claude-bridge`. `npm run release` (release-it) picks the version, stamps the `UNRELEASED` changelog section, and commits, tags and pushes after a confirmation at each step; the pushed `v*` tag runs `.github/workflows/publish.yml`, which publishes to npm through trusted publishing (OIDC, with provenance) and creates the GitHub Release from the changelog section. Prereleases publish under their identifier's dist-tag, never `latest`.
