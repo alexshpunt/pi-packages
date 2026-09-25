@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## 0.9.1 — 2026-09-25
 
 - **Remove: fast mode models** — the `claude-bridge/claude-fast-*` picker entries and the `claude-bridge/fast` shortcut added in 0.9.0 are gone, along with the notices relayed when Claude Code declined to serve fast mode. On a subscription fast mode bills usage credits only, never the plan's included usage, so with no credits every turn sent a fast request that was rejected and retried at standard speed. The provider path no longer sets `settings.fastMode` at all, as before 0.9.0. A session saved on a fast entry has to be switched to its standard model (e.g. `claude-bridge/claude-opus-5-5`).
 
