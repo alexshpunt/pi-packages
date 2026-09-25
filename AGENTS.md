@@ -52,14 +52,13 @@ Tags: `Add`, `Fix`, `Refactor`, `Tests`, `Bump`, `Deprecate`, `Remove`.
 
 ## Release
 
-No build step — the package ships `src` TypeScript as-is (see `files` in `package.json`). To cut version `X.Y.Z`:
+No build step — the package ships `src` TypeScript as-is (see `files` in `package.json`). Releases are cut by the user, never by an agent: `npm run release` on a clean `main` asks for the version, then confirms commit, tag and push one at a time (release-it, `.release-it.json`). Along the way it:
 
-1. **Changelog** — rename the `## UNRELEASED` section to `## X.Y.Z — YYYY-MM-DD`.
-2. **Bump** — set `version` to `X.Y.Z` in `package.json`.
-3. **Commit** — `git commit -m "Release X.Y.Z"` (changelog + package.json only).
-4. **Tag** — `git tag vX.Y.Z` (note the `v` prefix).
-5. **Push commit and tag together** — `git push --follow-tags`. 
-6. **Publish** — `npm login` and `npm publish`.
+1. **Checks** — fails unless `## UNRELEASED` has entries, then runs `typecheck` and `test:unit`.
+2. **Bumps** — `package.json`/`package-lock.json` to `X.Y.Z`, and renames `## UNRELEASED` to `## X.Y.Z — YYYY-MM-DD` (`scripts/changelog.mjs`).
+3. **Commits, tags, pushes** — `Release X.Y.Z`, annotated tag `vX.Y.Z`, pushed together.
+
+The pushed tag triggers `.github/workflows/publish.yml`, which re-runs the checks, publishes to npm through trusted publishing (OIDC, no token) and creates the GitHub Release from that version's changelog section.
 
 ## Tests
 

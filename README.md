@@ -1,6 +1,6 @@
 # pi-claude-bridge
 
-[![npm version](https://img.shields.io/npm/v/pi-claude-bridge)](https://www.npmjs.com/package/pi-claude-bridge)
+[![npm version](https://img.shields.io/npm/v/@buyoung/pi-claude-bridge)](https://www.npmjs.com/package/@buyoung/pi-claude-bridge)
 
 Pi extension that integrates Claude Code via the [Agent SDK](https://github.com/anthropics/claude-agent-sdk-typescript). Based initially on [claude-agent-sdk-pi](https://github.com/prateekmedia/claude-agent-sdk-pi) by Prateek Sunal. This fork adds streaming, MCP tool bridging, custom pi tool bridging, session resume/persistence, context sync, thinking support, skills forwarding, and many correctness fixes.
 
@@ -18,7 +18,7 @@ Pi extension that integrates Claude Code via the [Agent SDK](https://github.com/
 ## Install
 
 ```
-pi install npm:pi-claude-bridge
+pi install npm:@buyoung/pi-claude-bridge
 ```
 
 Requires pi 0.86.1 or newer (`pi-ai`, `pi-coding-agent`, `pi-tui`). With an older pi-ai the model picker comes up empty, and the bridge logs which dependency to update.

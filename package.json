@@ -1,5 +1,5 @@
 {
-  "name": "pi-claude-bridge",
+  "name": "@buyoung/pi-claude-bridge",
   "version": "0.8.0",
   "private": false,
   "description": "Pi extension that uses Claude Code (via Agent SDK) as a model provider and adds an AskClaude tool.",
@@ -14,7 +14,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/elidickinson/pi-claude-bridge.git"
+    "url": "git+https://github.com/buYoung/pi-claude-bridge.git"
   },
   "engines": {
     "node": ">=20"
@@ -25,11 +25,15 @@
     "LICENSE",
     "assets"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test:unit": "node --import tsx --import ./tests/lib/setup.mjs --test tests/unit-*.mjs",
     "test": "set -a && [ -f .env.test ] && . .env.test; set +a && npm run test:unit && tests/int-smoke.sh && tests/int-multi-turn.sh && tests/int-cache.sh && node --import tsx --test tests/int-*.mjs",
     "test:usage": "tests/usage-test.sh",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "release": "node scripts/release.mjs"
   },
   "type": "module",
   "dependencies": {
@@ -49,7 +53,10 @@
     "@earendil-works/pi-ai": "^0.87.1",
     "@earendil-works/pi-coding-agent": "^0.87.1",
     "@earendil-works/pi-tui": "^0.87.1",
+    "@inquirer/prompts": "8.5.2",
     "@types/node": "^24.13.2",
+    "release-it": "21.0.1",
+    "semver": "7.8.5",
     "tsx": "^4.22.4",
     "typebox": "^1.3.7",
     "typescript": "^6.0.3"
