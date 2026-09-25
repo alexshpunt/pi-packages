@@ -45,7 +45,8 @@ export class InquirerPrompt {
 		}
 		if (typeof task !== "function") throw new Error(`Missing task: ${namespace}.${prompt}`);
 		this.tagName = context.tagName;
-		const answer = await requireAnswer(confirm({ message: definition.message(context), default: false }), prompt);
+		// `(Y/n)`: Enter approves the displayed action, push (and the publish it triggers) included.
+		const answer = await requireAnswer(confirm({ message: definition.message(context), default: true }), prompt);
 		// Returning false would skip only this step and let release-it run the next one.
 		if (answer !== true) throw new ReleaseStopped(`Declined ${prompt}.`);
 		this.attempted.push(prompt);
