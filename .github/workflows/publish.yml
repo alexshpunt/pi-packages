@@ -1,0 +1,64 @@
+# Publishes to npm and creates the GitHub Release when `npm run release` pushes a v* tag.
+#
+# npm auth is trusted publishing (OIDC): no token is stored. The package's trusted
+# publisher on npmjs.com must name this repository and this file (publish.yml) exactly,
+# or `npm publish` fails with E404. Provenance is attached automatically.
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub Release
+      id-token: write # npm trusted publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # Node 24 bundles npm >= 11.5.1, the minimum for trusted publishing.
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          # No dependency cache in a job that can mint publish credentials.
+          package-manager-cache: false
+
+      - name: Check tag matches package.json version
+        run: |
+          package_version="$(node -p 'require("./package.json").version')"
+          if [ "$GITHUB_REF_NAME" != "v$package_version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $package_version"
+            exit 1
+          fi
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:unit
+
+      - name: Extract release notes from CHANGELOG.md
+        run: node scripts/changelog.mjs notes "${GITHUB_REF_NAME#v}" > "$RUNNER_TEMP/release-notes.md"
+
+      - name: Publish to npm
+        run: |
+          # A prerelease goes out under its identifier (1.0.0-beta.2 -> beta) so it never
+          # becomes `latest`; a numeric identifier (1.0.0-0) falls back to `next`.
+          dist_tag="$(node -p '
+            const id = require("semver").prerelease(require("./package.json").version)?.[0];
+            id === undefined ? "latest" : typeof id === "string" ? id : "next"
+          ')"
+          npm publish --tag "$dist_tag"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease_flag=""
+          case "$GITHUB_REF_NAME" in *-*) prerelease_flag="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md" $prerelease_flag

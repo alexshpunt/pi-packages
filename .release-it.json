@@ -1,0 +1,23 @@
+{
+  "$schema": "https://unpkg.com/release-it@21.0.1/schema/release-it.json",
+  "git": {
+    "commit": true,
+    "tag": true,
+    "push": true,
+    "requireBranch": "main",
+    "requireUpstream": true,
+    "tagName": "v${version}",
+    "tagMatch": "v[0-9]*",
+    "commitMessage": "Release ${version}"
+  },
+  "npm": {
+    "publish": false,
+    "versionArgs": ["--ignore-scripts"]
+  },
+  "github": { "release": false },
+  "gitlab": { "release": false },
+  "hooks": {
+    "before:init": ["node scripts/changelog.mjs check", "npm run typecheck", "npm run test:unit"],
+    "after:bump": "node scripts/changelog.mjs stamp ${version}"
+  }
+}
