@@ -1,5 +1,9 @@
 # Changelog
 
+## UNRELEASED
+
+- **Add: Claude Sonnet 5.5 (`claude-bridge/claude-sonnet-5-5`)** — Claude Code 2.1.284 added the model, so the Agent SDK goes to `^0.3.284` and `@anthropic-ai/sdk` to `^0.129.0` (types only); `tests/int-cc-contracts.mjs` passes unchanged. pi-ai 0.87.1, the latest release, does not list it yet, so the bridge registers an interim entry built from Sonnet 5's (Anthropic documents the same 1M context, 128K output and effort levels) and steps aside once pi-ai lists the id; requests go out as `claude-sonnet-5-5` either way. It is registered at 200K until measured and added to the 1M list (see `diag/CONTEXT-SIZE.md`), and as the newest Sonnet it is what the `sonnet` pattern now selects, so `claude-bridge/sonnet` moves from Sonnet 5 (1M) to Sonnet 5.5 (200K).
+
 ## 0.9.1 — 2026-09-25
 
 - **Remove: fast mode models** — the `claude-bridge/claude-fast-*` picker entries and the `claude-bridge/fast` shortcut added in 0.9.0 are gone, along with the notices relayed when Claude Code declined to serve fast mode. On a subscription fast mode bills usage credits only, never the plan's included usage, so with no credits every turn sent a fast request that was rejected and retried at standard speed. The provider path no longer sets `settings.fastMode` at all, as before 0.9.0. A session saved on a fast entry has to be switched to its standard model (e.g. `claude-bridge/claude-opus-5-5`).
