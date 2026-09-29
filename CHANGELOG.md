@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## 0.10.0 — 2026-09-29
 
 - **Add: Claude Sonnet 5.5 (`claude-bridge/claude-sonnet-5-5`)** — Claude Code 2.1.284 added the model, so the Agent SDK goes to `^0.3.284` and `@anthropic-ai/sdk` to `^0.129.0` (types only); `tests/int-cc-contracts.mjs` passes unchanged. pi-ai 0.87.1, the latest release, does not list it yet, so the bridge registers an interim entry built from Sonnet 5's (Anthropic documents the same 1M context, 128K output and effort levels) and steps aside once pi-ai lists the id; requests go out as `claude-sonnet-5-5` either way. It gets 1M context: upstream measured the bare and `[1m]` ids serving 1M on Pro with and without Extra Usage and added it to the 1M list (see `diag/CONTEXT-SIZE.md`). As the newest Sonnet it is what the `sonnet` pattern now selects, so `claude-bridge/sonnet` moves from Sonnet 5 to Sonnet 5.5, both at 1M.
 - **Fix: make mid-turn compaction rebuilds session-safe (issue #101)** — Restart parked queries from pi's rewritten history, with separate Claude Code mirrors per pi session. Prevents compaction loops and subagents taking over the parent's conversation; covered by `tests/int-compact-midturn-rebuild.mjs` and `tests/unit-cross-session-turns.mjs`. Thanks @andreypopp (PR #128), @chigkim, and @QuBiit0.
