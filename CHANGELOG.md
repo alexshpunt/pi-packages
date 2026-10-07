@@ -2,7 +2,7 @@
 
 ## UNRELEASED
 
-- **Fix: synthetic failure notices no longer stream as assistant output (#162)** — Claude Code reports an API failure or subscription limit as a `<synthetic>` assistant message just before the failing result. The bridge streamed that report as ordinary text, so a consumer that fails over only before output is visible (pi-model-fallback-alias) saw the turn as committed and never reached the next provider. The wording stays on the failed turn, which the error event carries; the text is no longer streamed.
+- **Fix: synthetic failure notices no longer stream as assistant output (#162)** — keeps pre-output failover working for consumers like pi-model-fallback-alias; the notice text stays on the failed turn's error event.
 - **Fix: system prompt sections survive prompt capture (issue #153)** — pi 0.99.2+ adds an `mcp_servers` section through its MCP extension. The transcript replay now ranks unlisted sections after the built-ins, matching pi's builder, so the capture key matches instead of failing every turn; and recorded sections are projected to Claude Code instead of being silently dropped. The failure message points at a section-order divergence instead of blaming extension load order.
 - **Fix: duplicate AGENTS.md instructions (#151)** — Exclude Claude Code's native copy, matching the existing CLAUDE.md exclusions.
 
