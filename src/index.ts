@@ -1376,6 +1376,10 @@ function processAssistantMessage(message: SDKMessage, model: Model<any>, customT
 	// but emit no events, so the turn still reads as a call that produced no output.
 	// Issue #162.
 	if (assistantMsg.model === "<synthetic>") {
+		// The report can follow a stalled stream whose non-streaming retry also failed;
+		// drop the abandoned partial blocks (unsigned thinking, a tool call CC will never
+		// dispatch) the way the fallback path below would.
+		if (c.turnSawStreamEvent && c.turnStreamOpen) dropAbandonedStreamBlocks(c, "synthetic failure report");
 		debug(`processAssistantMessage: <synthetic> message, keeping ${assistantMsg.content.length} block(s) off the stream`);
 		for (const block of assistantMsg.content) {
 			if (block.type === "text" && block.text) c.turnBlocks.push({ type: "text", text: block.text });
