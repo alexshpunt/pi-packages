@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## 0.10.1 — 2026-10-08
 
 - **Remove: interim Claude Sonnet 5.5 entry, now that pi-ai lists it** — pi-ai 0.99.1 brings `claude-sonnet-5-5` with 1M context, so the entry 0.10.0 built from Sonnet 5's metadata is gone and pi-ai's own metadata applies; dev peers move to `^0.99.1`. With pi-ai 0.99.1 or later, Sonnet 5.5 keeps its 1M context and stays what `claude-bridge/sonnet` selects; on older pi-ai it no longer appears in `/model` until pi is updated.
 - **Fix: synthetic failure notices no longer stream as assistant output (#162)** — keeps pre-output failover working for consumers like pi-model-fallback-alias; the notice text stays on the failed turn's error event. A notice following a stalled stream also drops the dead stream's abandoned partial blocks.
