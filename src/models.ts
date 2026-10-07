@@ -1,7 +1,7 @@
 // Model selection + display-order policy for the model picker. The picker is
 // driven by pi-ai's anthropic catalog: models appear (and disappear) with it,
-// no per-model code here beyond interim entries for ids pi-ai has yet to list.
-// Extracted from index.ts so tests can import without activating the extension.
+// no per-model code here. Extracted from index.ts so tests can import without
+// activating the extension.
 // `resolveModel` resolves family shortcuts (opus/sonnet/fable) to the newest
 // matching id regardless of sort order; sort order only drives picker display.
 
@@ -53,29 +53,6 @@ export function buildModels<T extends { id: string; [key: string]: any }>(piAiMo
 			thinkingLevelMap,
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 		}));
-}
-
-// Interim picker entries for models Claude Code already serves but pi-ai's
-// catalog does not list yet. Each copies a listed model's metadata (effort map,
-// output limit, input types) under the new id, and that id is what the bridge
-// sends to Claude Code. An entry steps aside as soon as pi-ai lists its id, so
-// pi-ai's own metadata wins; delete it once the pi floor ships the id. Context
-// still follows the measured policy below: registered at 200K until added.
-const INTERIM_CATALOG_MODELS = [
-	// Added in Claude Code 2.1.284; missing from pi-ai 0.87.1. Anthropic documents
-	// the same 1M context, 128K output and effort levels as Sonnet 5.
-	{ id: "claude-sonnet-5-5", name: "Claude Sonnet 5.5", derivedFromId: "claude-sonnet-5" },
-];
-
-// Runs on pi-ai's raw catalog, before buildModels, so an interim entry is
-// filtered, sorted, projected and resolved exactly like a catalog entry.
-export function withInterimCatalogModels<T extends { id: string; name: string }>(piAiModels: T[]): T[] {
-	const listedIds = new Set(piAiModels.map((m) => m.id));
-	const interimModels = INTERIM_CATALOG_MODELS.flatMap(({ id, name, derivedFromId }) => {
-		const sourceModel = listedIds.has(id) ? undefined : piAiModels.find((m) => m.id === derivedFromId);
-		return sourceModel ? [{ ...sourceModel, id, name }] : [];
-	});
-	return [...piAiModels, ...interimModels];
 }
 
 export type LongContextSettings = {
