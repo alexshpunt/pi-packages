@@ -1,0 +1,18 @@
+{
+  "name": "pi-packages",
+  "private": true,
+  "packageManager": "pnpm@10.29.2",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "check": "turbo run typecheck lint",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "turbo": "2.11.8"
+  }
+}

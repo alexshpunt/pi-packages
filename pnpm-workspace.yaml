@@ -1,0 +1,18 @@
+packages:
+  - apps/*
+  - packages/*
+
+# One version of the Pi host packages and the toolchain for every workspace package.
+catalog:
+  "@biomejs/biome": 2.5.15
+  "@earendil-works/pi-agent-core": 1.2.0
+  "@earendil-works/pi-ai": 1.2.0
+  "@earendil-works/pi-coding-agent": 1.2.0
+  "@earendil-works/pi-tui": 1.2.0
+  "@types/node": 26.6.5
+  "@typescript/native-preview": 7.0.0-dev.20260707.2
+
+# Transitive dependencies of the Pi host packages; type checking does not need their install scripts.
+ignoredBuiltDependencies:
+  - "@google/genai"
+  - protobufjs

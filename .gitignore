@@ -1,0 +1,6 @@
+node_modules/
+.turbo/
+*.tgz
+*.log
+.DS_Store
+.codemap/
