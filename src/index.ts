@@ -272,12 +272,27 @@ const historyRewrittenBySession = new Set<string>();
  *  cwd, and a worktree cwd clears it), while the serving instance — whose
  *  streamSimple the pi sessions actually call — is whoever registered first.
  *  A fresh instance must forward its session's rewrites to the serving one.
- *  Symbol.for: one registry per process, like SHARED_CAPTURES_KEY below. */
+ *  Symbol.for: one registry per process, like SHARED_CAPTURES_KEY below.
+ *  pi-claude-compact also calls these hooks: its boundary compactions
+ *  (turn_end, agent_before_settle) rewrite the history without a
+ *  session_compact event. */
 const MARK_REBUILD_HOOKS_KEY = Symbol.for("claude-bridge:markRebuildHooks");
 type MarkRebuildHook = (piSession: string | null, event: string) => void;
 const markRebuildHooks: Set<MarkRebuildHook> =
 	((globalThis as Record<symbol, unknown>)[MARK_REBUILD_HOOKS_KEY] as Set<MarkRebuildHook> | undefined) ?? new Set();
 (globalThis as Record<symbol, unknown>)[MARK_REBUILD_HOOKS_KEY] = markRebuildHooks;
+
+/** Set by pi-claude-compact: each loaded instance registers the pi sessions it
+ *  serves. While it owns a session, its engine compacts that session and the
+ *  takeover below stands down. */
+const CLAUDE_COMPACT_REGISTRY_KEY = Symbol.for("pi-claude-compact");
+
+function claudeCompactOwnsCompaction(piSession: string): boolean {
+	const registry = (globalThis as Record<symbol, unknown>)[CLAUDE_COMPACT_REGISTRY_KEY] as
+		| { ownsCompaction?: (piSession: string) => boolean }
+		| undefined;
+	return registry?.ownsCompaction?.(piSession) === true;
+}
 
 /** pi mutated its messages array out from under us: force the next
  *  syncSharedSession down REBUILD, and arm the discard above. `piSession`
@@ -2482,6 +2497,11 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_before_compact", async (event, ctx) => {
 		if (ctx.model?.baseUrl !== "claude-bridge") return undefined;
+		// Its summary call still comes back through the one-off path in streamClaudeAgentSdk.
+		if (claudeCompactOwnsCompaction(ctx.sessionManager.getSessionId())) {
+			debug(`session_before_compact: deferring to pi-claude-compact reason=${event.reason}`);
+			return undefined;
+		}
 		debug(
 			`session_before_compact: takeover reason=${event.reason} willRetry=${event.willRetry} ` +
 			`isSplitTurn=${event.preparation.isSplitTurn} messages=${event.preparation.messagesToSummarize.length} ` +

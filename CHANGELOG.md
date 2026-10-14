@@ -1,5 +1,9 @@
 # Changelog
 
+## UNRELEASED
+
+- **Add: defer compaction to pi-claude-compact** — While `@buyong/pi-claude-compact` is loaded and enabled for the pi session being compacted, the `session_before_compact` takeover for bridge models stands down and that extension's Claude Code-style engine compacts instead. Its summary requests still reach Claude Code through the isolated one-off path (`cacheRetention: "none"`), and its boundary compactions (after a turn, or before the run settles to recover from a media-size error) report the history rewrite through the existing `claude-bridge:markRebuildHooks` registry, so parked queries rebuild as they do after `session_compact`.
+
 ## 0.10.1 — 2026-10-08
 
 - **Remove: interim Claude Sonnet 5.5 entry, now that pi-ai lists it** — pi-ai 0.99.1 brings `claude-sonnet-5-5` with 1M context, so the entry 0.10.0 built from Sonnet 5's metadata is gone and pi-ai's own metadata applies; dev peers move to `^0.99.1`. With pi-ai 0.99.1 or later, Sonnet 5.5 keeps its 1M context and stays what `claude-bridge/sonnet` selects; on older pi-ai it no longer appears in `/model` until pi is updated.
