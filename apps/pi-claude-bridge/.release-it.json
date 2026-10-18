@@ -6,18 +6,19 @@
     "push": true,
     "requireBranch": "main",
     "requireUpstream": true,
-    "tagName": "v${version}",
-    "tagMatch": "v[0-9]*",
-    "commitMessage": "Release ${version}"
+    "tagName": "pi-claude-bridge-v${version}",
+    "tagMatch": "pi-claude-bridge-v[0-9]*",
+    "commitsPath": ".",
+    "commitMessage": "chore(bridge ${version} 배포): ${branchName}\n\n1. bridge 패키지 버전과 변경 이력 갱신"
   },
   "npm": {
     "publish": false,
-    "versionArgs": ["--ignore-scripts"]
+    "versionArgs": ["--ignore-scripts", "--package-lock=false", "--workspaces-update=false"]
   },
   "github": { "release": false },
   "gitlab": { "release": false },
   "hooks": {
-    "before:init": ["node scripts/changelog.mjs check", "npm run typecheck", "npm run test:unit"],
+    "before:init": ["node scripts/changelog.mjs check", "pnpm run typecheck", "pnpm run test:unit"],
     "after:bump": "node scripts/changelog.mjs stamp ${version}"
   }
 }

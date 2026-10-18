@@ -1,6 +1,6 @@
 {
   "name": "@buyong/pi-claude-bridge",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "private": false,
   "description": "Pi extension that uses Claude Code (via Agent SDK) as a model provider and adds an AskClaude tool.",
   "keywords": [
@@ -14,7 +14,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/buYoung/pi-claude-bridge.git"
+    "url": "git+https://github.com/buYoung/pi-packages.git",
+    "directory": "apps/pi-claude-bridge"
+  },
+  "homepage": "https://github.com/buYoung/pi-packages/tree/main/apps/pi-claude-bridge#readme",
+  "bugs": {
+    "url": "https://github.com/buYoung/pi-packages/issues"
   },
   "engines": {
     "node": ">=20"
@@ -26,11 +31,12 @@
     "assets"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "test:unit": "node --import tsx --import ./tests/lib/setup.mjs --test tests/unit-*.mjs",
-    "test": "set -a && [ -f .env.test ] && . .env.test; set +a; CLAUDE_BRIDGE_TEST_LOG_DIR=$(mktemp -d); export CLAUDE_BRIDGE_TEST_LOG_DIR; npm run test:unit && tests/int-smoke.sh && tests/int-multi-turn.sh && tests/int-cache.sh && node --import tsx --test tests/int-*.mjs && node tests/lib/check-deadlock-logs.mjs \"$CLAUDE_BRIDGE_TEST_LOG_DIR\"",
+    "test": "set -a && [ -f .env.test ] && . .env.test; set +a; CLAUDE_BRIDGE_TEST_LOG_DIR=$(mktemp -d); export CLAUDE_BRIDGE_TEST_LOG_DIR; pnpm run test:unit && tests/int-smoke.sh && tests/int-multi-turn.sh && tests/int-cache.sh && node --import tsx --test tests/int-*.mjs && node tests/lib/check-deadlock-logs.mjs \"$CLAUDE_BRIDGE_TEST_LOG_DIR\"",
     "test:usage": "tests/usage-test.sh",
     "typecheck": "tsc --noEmit",
     "release": "node scripts/release.mjs"
@@ -43,22 +49,22 @@
     "change-case": "^5.4.4"
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": ">=0.86.1",
-    "@earendil-works/pi-coding-agent": ">=0.86.1",
-    "@earendil-works/pi-tui": ">=0.86.1",
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
     "typebox": "*"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.129.0",
-    "@earendil-works/pi-ai": "^0.99.1",
-    "@earendil-works/pi-coding-agent": "^0.99.1",
-    "@earendil-works/pi-tui": "^0.99.1",
+    "@earendil-works/pi-ai": "catalog:",
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
     "@inquirer/prompts": "8.5.2",
-    "@types/node": "^24.13.2",
+    "@types/node": "catalog:",
     "release-it": "21.0.1",
     "semver": "7.8.5",
     "tsx": "^4.22.4",
-    "typebox": "^1.3.7",
+    "typebox": "catalog:",
     "typescript": "^6.0.3"
   },
   "pi": {

@@ -158,7 +158,9 @@ describe("applyLongContext", () => {
 	});
 
 	it("haiku shortcut and no-match still resolve", () => {
-		assert.equal(resolveModel(models, "haiku")?.id, "claude-haiku-4-5");
+		const newestHaiku = models.find((model) => model.id.includes("haiku"));
+		assert.ok(newestHaiku, "catalog contains a haiku model");
+		assert.equal(resolveModel(models, "haiku")?.id, newestHaiku.id);
 		assert.equal(resolveModel(models, "gpt-9"), undefined);
 	});
 

@@ -30,13 +30,15 @@ Tags: `Add`, `Fix`, `Refactor`, `Tests`, `Bump`, `Deprecate`, `Remove`.
 
 ## Release
 
-No build step — the package ships `src` TypeScript as-is (see `files` in `package.json`). Releases are cut by the user, never by an agent: `npm run release` on a clean `main` asks for the version, then confirms commit, tag and push one at a time (release-it, `.release-it.json`). Along the way it:
+No build step — the package ships `src` TypeScript as-is (see `files` in `package.json`). Releases are cut by the user, never by an agent: `pnpm --filter @buyong/pi-claude-bridge release` from the monorepo root on a clean tracked/index `main` asks for the version, then confirms commit, tag and push one at a time (release-it, `.release-it.json`). The branch must track `origin/main`. Along the way it:
 
 1. **Checks** — fails unless `## UNRELEASED` has entries, then runs `typecheck` and `test:unit`.
-2. **Bumps** — `package.json`/`package-lock.json` to `X.Y.Z`, and renames `## UNRELEASED` to `## X.Y.Z — YYYY-MM-DD` (`scripts/changelog.mjs`).
-3. **Commits, tags, pushes** — `Release X.Y.Z`, annotated tag `vX.Y.Z`, pushed together.
+2. **Bumps** — the app's `package.json` to `X.Y.Z`, and renames `## UNRELEASED` to `## X.Y.Z — YYYY-MM-DD` (`scripts/changelog.mjs`). Do not create a package-lock; the root `pnpm-lock.yaml` owns dependency resolution and does not store the app's own version.
+3. **Commits, tags, pushes** — use the monorepo commit format and annotated tag `pi-claude-bridge-vX.Y.Z`; push only `main` and that tag atomically, never all historical tags.
 
-The pushed tag triggers `.github/workflows/publish.yml`, which re-runs the checks, publishes to npm through trusted publishing (OIDC, no token) and creates the GitHub Release from that version's changelog section.
+The pushed tag triggers the repository-root `.github/workflows/pi-packages.yml`, which re-runs the checks, packs with pnpm to resolve catalog references, publishes the tarball to npm through trusted publishing (OIDC, no token), and creates the GitHub Release from that version's changelog section.
+
+Do not configure an upstream remote or automatic synchronization without an explicit request. Follow `docs/upstream.md` only when the user asks to import upstream changes.
 
 ## Tests
 

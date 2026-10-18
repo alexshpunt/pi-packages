@@ -1,0 +1,142 @@
+name: Pi packages
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["pi-*-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+      has-packages: ${{ steps.targets.outputs.has-packages }}
+      is-release: ${{ steps.targets.outputs.is-release }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Select affected apps or the tagged release
+        id: targets
+        run: node scripts/select-pi-packages.mjs
+
+  checks:
+    needs: select
+    if: needs.select.outputs.has-packages == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
+    name: Check ${{ matrix.slug }}
+    env:
+      PACKAGE_NAME: ${{ matrix.name }}
+      PACKAGE_DIR: ${{ matrix.path }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter "$PACKAGE_NAME" typecheck
+      - run: pnpm --filter "$PACKAGE_NAME" run --if-present test:unit
+      - name: Check the distributable package
+        run: pnpm --dir "$PACKAGE_DIR" pack --pack-destination "$RUNNER_TEMP/package"
+
+  publish:
+    needs: [select, checks]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && needs.select.outputs.is-release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
+    name: Publish ${{ matrix.slug }}
+    concurrency:
+      group: publish-${{ matrix.slug }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      PACKAGE_NAME: ${{ matrix.name }}
+      PACKAGE_DIR: ${{ matrix.path }}
+      PACKAGE_SLUG: ${{ matrix.slug }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          # Trusted publishing requires npm >= 11.5.1.
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+
+      - name: Validate release metadata and extract notes
+        id: metadata
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const pkg = JSON.parse(fs.readFileSync(path.join(process.env.PACKAGE_DIR, 'package.json'), 'utf8'));
+          const version = pkg.version;
+          const match = typeof version === 'string' && version.match(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/);
+          if (!match || match[4]?.split('.').some(id => !id || /^0\d+$/.test(id)) || match[5]?.split('.').some(id => !id)) {
+            throw new Error('package.json must contain a valid semantic version');
+          }
+          if (pkg.name !== process.env.PACKAGE_NAME || pkg.private === true || process.env.GITHUB_REF_NAME !== `${process.env.PACKAGE_SLUG}-v${version}`) {
+            throw new Error('Release tag does not match the selected public package');
+          }
+          const repositoryURL = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;
+          if (repositoryURL?.replace(/^git\+/, '').replace(/\.git$/, '') !== `https://github.com/${process.env.GITHUB_REPOSITORY}`) {
+            throw new Error('package.json repository must match this GitHub repository for npm provenance');
+          }
+          const lines = fs.readFileSync(path.join(process.env.PACKAGE_DIR, 'CHANGELOG.md'), 'utf8').split('\n');
+          const start = lines.findIndex(line => line === `## ${version}` || line.startsWith(`## ${version} `));
+          const end = lines.findIndex((line, index) => index > start && line.startsWith('## '));
+          const notes = start < 0 ? '' : lines.slice(start + 1, end < 0 ? undefined : end).join('\n').trim();
+          if (!notes) throw new Error(`CHANGELOG.md needs a nonempty ## ${version} section`);
+          fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'release-notes.md'), notes + '\n');
+          const identifier = match[4]?.split('.')[0];
+          const distTag = identifier === undefined ? 'latest' : /^\d+$/.test(identifier) ? 'next' : identifier;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `dist-tag=${distTag}\nprerelease=${identifier !== undefined}\n`);
+          NODE
+
+      - name: Pack with resolved workspace and catalog references
+        run: pnpm --dir "$PACKAGE_DIR" pack --pack-destination "$RUNNER_TEMP/package"
+      - name: Publish the selected package to npm through OIDC
+        env:
+          DIST_TAG: ${{ steps.metadata.outputs.dist-tag }}
+        run: |
+          tarballs=("$RUNNER_TEMP/package/"*.tgz)
+          if [ "${#tarballs[@]}" -ne 1 ] || [ ! -f "${tarballs[0]}" ]; then
+            echo "::error::Expected exactly one package tarball"
+            exit 1
+          fi
+          npm publish "${tarballs[0]}" --tag "$DIST_TAG"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IS_PRERELEASE: ${{ steps.metadata.outputs.prerelease }}
+        run: |
+          flags=()
+          if [ "$IS_PRERELEASE" = true ]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md" "${flags[@]}"

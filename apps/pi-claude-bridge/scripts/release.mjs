@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Interactive release: choose the version, then confirm commit, tag and push one at a time.
 //
-//   npm run release
+//   pnpm --filter @buyong/pi-claude-bridge release
 //
-// Nothing is published from here. Pushing the `v*` tag triggers
-// .github/workflows/publish.yml, which publishes to npm and creates the GitHub Release.
+// Nothing is published from here. Pushing the `pi-claude-bridge-v*` tag triggers
+// the repository-root .github/workflows/pi-packages.yml.
 // Each confirmation is `(Y/n)`: Enter approves it, push included. Declining or cancelling
 // stops the whole flow and leaves what was done in place (no automatic rollback); the
 // state report at the end says exactly what remains.
@@ -35,9 +35,10 @@ const readPackageVersion = () => JSON.parse(readFileSync(packageJsonPath, "utf8"
 // Piped stderr keeps an expected probe failure (a missing tag) off the terminal.
 const git = (...args) =>
 	execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-// The bump writes package.json and package-lock.json and the after:bump hook writes
-// CHANGELOG.md. `git add . --update` stages tracked files only, so each must be tracked.
-const releaseInputs = ["package.json", "package-lock.json", "CHANGELOG.md"];
+// The bump writes package.json, and after:bump writes CHANGELOG.md. pnpm importers
+// do not store the app version, so a version-only bump does not change the root lockfile.
+// `git add . --update` stages tracked app files only; the workspace lock must also exist.
+const releaseInputs = ["package.json", "CHANGELOG.md", "../../pnpm-lock.yaml"];
 let headBefore;
 let hasReportedReleaseError = false;
 
@@ -124,7 +125,7 @@ try {
 		throw new Error("An interactive terminal is required; no release work was started.");
 	}
 	if (process.argv.length > 2) {
-		throw new Error("Run `npm run release` without arguments; choose the version in the prompt.");
+		throw new Error("Run `pnpm --filter @buyong/pi-claude-bridge release` without arguments; choose the version in the prompt.");
 	}
 	process.chdir(root);
 	// The commit takes the whole index, so a change staged anywhere would ride along.
@@ -142,7 +143,13 @@ try {
 		throw new Error("The version is read from package.json; keep the npm plugin and its version bump on in .release-it.json.");
 	}
 	if (options.npm.publish !== false || options.github?.release || options.gitlab?.release) {
-		throw new Error("Publishing belongs to .github/workflows/publish.yml; keep npm.publish and hosted releases off in .release-it.json.");
+		throw new Error("Publishing belongs to the repository-root .github/workflows/pi-packages.yml; keep npm.publish and hosted releases off in .release-it.json.");
+	}
+	if (git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}") !== "origin/main") {
+		throw new Error("Releases must track origin/main in the pi-packages repository.");
+	}
+	if (options.git.tagName !== "pi-claude-bridge-v${version}") {
+		throw new Error("Keep the pi-claude-bridge-v${version} tag namespace in .release-it.json.");
 	}
 	checkReleaseInputsTracked();
 	// With --update, untracked files stay out of the release commit; --all would sweep them in.
@@ -152,6 +159,7 @@ try {
 	const currentVersion = readPackageVersion();
 	if (!semver.valid(currentVersion)) throw new Error("package.json needs a valid version.");
 	const selectedVersion = await chooseVersion(currentVersion);
+	const tagName = `pi-claude-bridge-v${selectedVersion}`;
 	try {
 		await release(
 			{
@@ -162,7 +170,15 @@ try {
 				increment: selectedVersion,
 				// The clean check above replaces release-it's own, so it does not install
 				// exit/SIGINT handlers that reset the commit and delete the tag after a stop.
-				git: { ...options.git, requireCleanWorkingDir: false },
+				git: {
+					...options.git,
+					requireCleanWorkingDir: false,
+					pushRepo: "",
+					pushArgs: [
+						"--atomic", "--no-follow-tags", "origin", "HEAD:refs/heads/main",
+						`refs/tags/${tagName}:refs/tags/${tagName}`,
+					],
+				},
 				plugins: {
 					[guardPath]: { currentVersion, selectedVersion },
 					...options.plugins,

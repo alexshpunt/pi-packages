@@ -1,6 +1,8 @@
 # Changelog
 
-## UNRELEASED
+## 0.11.0 — 2026-10-18
+
+- **Refactor: move into pi-packages** — Keep the `@buyong/pi-claude-bridge` npm identity while preserving the source history under `apps/pi-claude-bridge`. Development uses the root pnpm workspace; releases use package-specific tags and the monorepo's npm trusted publisher. Repository, support, and contributor links now point to the monorepo. Upstream updates remain manual and are documented rather than automatically connected.
 
 - **Add: defer compaction to pi-claude-compact** — While `@buyong/pi-claude-compact` is loaded and enabled for the pi session being compacted, the `session_before_compact` takeover for bridge models stands down and that extension's Claude Code-style engine compacts instead. Its summary requests still reach Claude Code through the isolated one-off path (`cacheRetention: "none"`), and its boundary compactions (after a turn, or before the run settles to recover from a media-size error) report the history rewrite through the existing `claude-bridge:markRebuildHooks` registry, so parked queries rebuild as they do after `session_compact`.
 
