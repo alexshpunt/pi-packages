@@ -1,6 +1,6 @@
 {
   "name": "@buyong/pi-ollama-cloud",
-  "version": "0.13.0",
+  "version": "0.13.2",
   "description": "Ollama Cloud provider, web search and fetch tools, and usage status for Pi.",
   "license": "MIT",
   "engines": {
