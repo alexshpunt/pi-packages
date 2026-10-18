@@ -1,0 +1,65 @@
+{
+  "name": "@buyong/pi-ollama-cloud",
+  "version": "0.13.0",
+  "type": "module",
+  "keywords": [
+    "pi-package"
+  ],
+  "files": [
+    "index.ts",
+    "config.ts",
+    "cache.ts",
+    "limits.generated.ts",
+    "models.ts",
+    "models.generated.ts",
+    "pricing.generated.ts",
+    "reasoning.generated.ts",
+    "thinking-levels.ts",
+    "usage.ts",
+    "utils.ts",
+    "web-tools.ts",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buYoung/pi-ollama-cloud.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "check": "biome check --write . && tsgo --noEmit",
+    "lint": "biome check .",
+    "typecheck": "tsgo --noEmit",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "smoke:web-tools": "tsx scripts/smoke-web-tools.ts",
+    "generate-models": "tsx scripts/generate-pricing.ts && tsx scripts/generate-reasoning.ts && tsx scripts/generate-models.ts && biome format --write models.generated.ts pricing.generated.ts reasoning.generated.ts",
+    "generate-limits": "tsx scripts/generate-limits.ts",
+    "generate-reasoning": "tsx scripts/generate-reasoning.ts && biome format --write reasoning.generated.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "@sinclair/typebox": "*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2",
+    "@earendil-works/pi-ai": "1.0.4",
+    "@earendil-works/pi-coding-agent": "1.0.4",
+    "@earendil-works/pi-tui": "1.0.4",
+    "@types/node": "^26.1.2",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "tsx": "^4.19.0",
+    "vitest": "^4.1.11"
+  }
+}

@@ -1,0 +1,143 @@
+# CHANGELOG
+
+All notable changes to this project will be documented in this file.
+
+## [Unreleased]
+
+## [0.13.1] - 2026-10-10
+
+- Add `mistral-large-4` to the generated model catalog with image and tool support, on/off reasoning controls, official pricing, a 1048576-token context window, and a probed 262144-token output limit.
+- Prepare the fork for publication as `@buyong/pi-ollama-cloud`, with the fork repository URL, public npm access, updated installation examples, and first-publication and trusted-publishing instructions.
+
+## [0.13.0] - 2026-10-07
+
+- Fix the usage command and status bar after Ollama moved quota data to `/api/balance`, supporting both legacy remaining-percentage windows and the included-balance allowance shape. Show allowance renewal dates and purchased credits when returned, and optionally display request totals from the documented `/api/usage` histogram endpoint.
+
+## [0.12.3] - 2026-10-06
+
+- Keep the usage indicator accurate when turning it off or switching providers, and show clearer errors for connection problems and invalid responses.
+- Hide unsupported reasoning controls on affected gpt-oss models and limit disk space used by web-tool caching.
+- Keep Ollama Cloud models compatible with Pi 1.0.
+- Allow model-limit updates to use the API key configured in Pi, with `OLLAMA_API_KEY` as a fallback.
+- Run the test suite successfully before publishing a release.
+
+## [0.12.2] - 2026-09-27
+
+- Refresh the model catalog for the September 25, 2026 retirements (`deepseek-v4-flash:0731`, `glm-5.1`, `qwen3.5:397b`): dropped from the generated catalog and pricing, 20 -> 17 models. Recommended replacements per Ollama: `deepseek-v4.1-flash`, `glm-5.3`, and `glm-5.3-flash` / `deepseek-v4.1-flash`.
+
+## [0.12.1] - 2026-09-14
+
+- Omit empty `openRouterRouting` / `vercelGatewayRouting` from `buildCompat` (set to `undefined`, not `{}`): pi-ai reads the raw `model.compat` and treats `{}` as truthy, sending a stray `provider: {}` on every Ollama chat completion. Fixes #60. Thanks @0xbentang (#61).
+
+## [0.12.0] - 2026-09-11
+
+- Source per-model thinking levels from models.dev instead of hardcoded maps. `scripts/generate-reasoning.ts` fetches the `ollama-cloud` provider's `reasoning_options` into `reasoning.generated.ts`, and `thinking-levels.ts` maps each model's effort values onto Pi's levels (toggle-only models become a binary on/off map; models with no models.dev entry fall back to `DEFAULT`). The `off` switch is handled by a small override table for models verified not to honor `reasoning_effort:"none"` (`gpt-oss:20b`, `gpt-oss:120b`, `minimax-m2.7`). Removed the now-stale per-family maps and the `docs/think-experiment.md` doc.
+- `generate-models` now also refreshes `reasoning.generated.ts` (runs `generate-pricing`, `generate-reasoning`, then `generate-models`).
+- Fix `generate-pricing` mis-dropping models whose pricing-page cached-input cell is `-` (no cache rate): those rows now match and their `cacheRead` equals `input`. This restored pricing for `mistral-large-3:675b`, `nemotron-3-nano:30b`, and `qwen3.5:397b`, which the earlier regex had left at zero cost.
+- Refresh the model catalog: added `deepseek-v4.1-flash` (probed max output 393216).
+
+## [0.11.0] - 2026-09-07
+
+- Fix `/ollama-cloud-usage` and the usage status bar failing with "unexpected response shape" after the undocumented `/api/usage` endpoint flipped between a single `limits.monthly` bucket and `limits.session` plus `limits.weekly` (the shape has flip-flopped repeatedly as of 2026-09). Any bucket present (`monthly`, `session`, `weekly`) is accepted alone or in combination, and whichever are present are displayed as `5h`/`7d`/`30d` segments. Thanks @johanngyger (#56).
+- Cache `ollama_web_search` results (24h) and `ollama_web_fetch` pages (24h success / 15 min failure) on disk under the pi agent home, so repeated queries and page reads cost 0 API calls. Expired entries are pruned on write, the cache is capped at 500 entries per kind (oldest evicted beyond the cap; `PI_OLLAMA_SEARCH_MAX_ENTRIES`), a partially corrupted cache file is validated per entry and degrades to "no cache" instead of crashing tool calls, and the file is written with `0600` permissions since it stores page content and URLs that can embed credentials. Tune with `PI_OLLAMA_SEARCH_TTL_HOURS`, `PI_OLLAMA_SEARCH_FAIL_TTL_MINUTES`, `PI_OLLAMA_SEARCH_MAX_ENTRIES`, and `PI_OLLAMA_SEARCH_CACHE_PATH`.
+- Bound web tool context usage: search snippets truncate to 500 chars with `[truncated]`/`[complete]` markers, `expand=<index>` returns a truncated result's full content from the cached search (0 extra API calls), and `ollama_web_fetch` pages long pages in 3000-char chunks via `offset`/`full` with a `Continue:` hint for the next offset (`PI_OLLAMA_SEARCH_SNIPPET_CHARS`/`PI_OLLAMA_SEARCH_CHUNK_CHARS` to tune).
+- Add `refresh=true` to both web tools to bypass the cache (including a cached failure) and re-call the API; the fresh result replaces the cache entry.
+- Failed page fetches are negative-cached for 15 min with a diagnostic message (likely cause + next steps) instead of a bare error. Auth (401/403), rate-limit (429), transport (timeout/abort/network), server (5xx), and unexpected-response-shape failures are never cached — search reports transport errors as `transport error` instead of a confusing `status 0` — so retrying after a fixed key, an expired rate-limit window, or a transient server blip re-calls the API immediately.
+- Note: `ollama_web_fetch` tool results now carry `details: { title, totalChars, links }` (previously `{ title, content, links }`); paged content is read via the tool output text, not `details.content`.
+
+## [0.10.0] - 2026-09-03
+
+- **Breaking:** Adapt to the changed `/api/usage` response shape. The endpoint now returns a single `limits.monthly` bucket (replacing `limits.session` and `limits.weekly`) and adds an `activity.models` array. `UsageData`, `isUsageResponse`, `formatUsage`, and `formatUsageStatusColored` now read the monthly limit; the status bar shows a single `30d` segment instead of `5h`/`7d`.
+- Refreshed the generated catalog from the live API: added `deepseek-v4-pro:0813`, `glm-5.3`, and `glm-5.3-flash`; removed `deepseek-v4-flash:preview` and `deepseek-v4-pro`, which are no longer listed.
+- Source per-token pricing from the official model table on ollama.com/pricing instead of models.dev estimates, which no longer track Ollama's published rates (up to ~13x off per model). `scripts/generate-pricing.ts` now scrapes the pricing page (the table is server-rendered; no JSON endpoint exists) and matches catalog IDs to pricing rows by exact or `:tag`-family match, replacing the `OLLAMA_TO_MODELSDEV` mapping. Regenerated `pricing.generated.ts` with the official rates, including new models (`glm-5.3`, `glm-5.3-flash`, `deepseek-v4-pro:0813`). Fixes #51. Thanks @Hackbard (#52).
+- Probe per-model max output tokens against the live API via `scripts/generate-limits.ts` into `limits.generated.ts`, replacing the fixed 32768 default for known models (unprobed models still fall back to 32768). The probe timeout is 60s so slow first-token models are not dropped from the table. Thanks @f440 (#49).
+
+## [0.9.0] - 2026-08-11
+
+- Add `/ollama-cloud-usage` command to show Ollama Cloud session (5h) and weekly (7d) usage limits, per-model request counts, and the 4-week activity cost, fetched from the undocumented `/api/usage` endpoint with the already-resolved API key.
+- Add a footer usage status bar (`5h ▕███░░░░░░░▏ 34% 7d ▕████░░░░░░▏ 45%`) while an `ollama-cloud` model is active, refreshing every 5 minutes and after each agent turn (throttled so it never exceeds one /api/usage call per 5 minutes). Segments are colored by usage level (green <60%, yellow 60-79%, red 80%+). The quota-bar concept is inspired by `@entelligentsia/pi-ollama-cloud-usage-tracker`. Off by default; enable with `/ollama-usage-status on` or `"usageStatus": true` in `ollama-cloud.json`.
+- Add `/ollama-usage-status [on|off|enable|disable]` to toggle the footer usage status bar at runtime (toggles without an argument).
+- Document the exported usage API (`fetchUsage`, `formatUsageStatusColored`, `getCloudApiKey`, validators) so custom status bars can reuse it.
+
+## [0.8.0] - 2026-08-09
+
+- **Breaking:** Migrate model refresh to pi's native `refreshModels` mechanism. Remove the `/ollama-cloud-refresh` command and the manual `~/.pi/agent/cache/ollama-cloud-models.json` cache. The catalog now refreshes automatically on startup, on `/model` open, and via `pi update --models`, persisted through pi's own `FileModelsStore`. Users should delete the orphaned cache file after upgrade: `rm ~/.pi/agent/cache/ollama-cloud-models.json`.
+- The shipped `GENERATED_MODELS` list is now a first-launch fallback; releases are no longer required for model freshness (only for deprecation or pricing changes).
+- Refresh the generated catalog from the live API: add `deepseek-v4-flash:0731`, `deepseek-v4-flash:preview`, and `kimi-k3`; remove `kimi-k2.5` and `minimax-m2.5`, which are no longer listed. Refresh models.dev pricing, including the new models. Thanks @noruthedev (#43).
+- Requires a pi version with the `stored`/`publish` `RefreshModelsContext` (pi 0.84.0+). Add `@earendil-works/pi-ai` as a peer dependency.
+- Web tools now throw on errors instead of returning an `isError` result, aligning with pi 0.84.0's `AgentToolResult` contract.
+- Fix `ollama_web_fetch` failing on pages where the API returns `links: null` (e.g. GitHub PR pages); the response is now accepted and rendered without a links list.
+- Refresh robustness: add a 4-hour cooldown so repeated `/model` opens don't re-fetch the catalog; on a partial refresh failure, keep the last-good catalog and surface the error instead of silently returning an incomplete list.
+- Add `tsgo --noEmit` type-checking to `npm run check` and CI.
+
+## [0.7.0] - 2026-07-18
+
+- Fix extension crash on pi 0.80.8+ where `AuthStorage` is no longer exported by `@earendil-works/pi-coding-agent`. Web tools now resolve the API key through the tool execution context's `modelRegistry.getApiKeyForProvider()`, preserving runtime/CLI overrides and the registered `apiKey: "$OLLAMA_API_KEY"` config. Thanks @badlogic for the cross-version analysis (#34, #35, #37).
+- Restore the `OLLAMA_API_KEY` env-var fallback in `ollama_web_search` and `ollama_web_fetch`. Thanks @cawilliamson (#26).
+- Add a 15s timeout to web search/fetch requests and preserve tool-cancellation by extending `fetchJsonWithTimeout` with an external `AbortSignal`.
+- Always target `https://ollama.com` and warn when `OLLAMA_API_BASE` is set to a non-cloud host, instead of silently querying a local Ollama daemon. Thanks @valueforvalue (#32, #33).
+- Add a `glm-5.2` thinking level map exposing `off`, `high`, and `xhigh` (`reasoning_effort: "none"`, `"high"`, `"max"`). Thanks @Thinkscape (#29).
+- Add estimated per-token pricing for Ollama Cloud models so `/cost` shows comparable usage. Prices are generated from [models.dev](https://models.dev) (the same source pi uses) via `scripts/generate-pricing.ts` into `pricing.generated.ts`, not hand-typed, and regenerate with the catalog via `npm run generate-models`. Prices are pinned to the installed package version: `/ollama-cloud-refresh` updates the model list and metadata but does not re-fetch prices, so newly added models register with zero cost until the next release. Not actual subscription charges. Thanks @DxTa (#9).
+- Refresh the generated model catalog from the live Ollama Cloud API. Adds `glm-5.2` (1M context, text-only) and `kimi-k2.7-code` (262K context, text + image). `deepseek-v4-pro` context window is now 524288 (was 1048576).
+- Retire models deprecated per https://docs.ollama.com/cloud#deprecations: July 15, 2026 batch (`deepseek-v3.1:671b`, `deepseek-v3.2`, `devstral-2:123b`, `devstral-small-2:24b`, `ministral-3:14b`, `ministral-3:3b`, `ministral-3:8b`, `gemini-3-flash-preview`, `gemma3:12b`, `gemma3:27b`, `gemma3:4b`, `glm-4.7`, `glm-5`, `minimax-m2.1`, `qwen3-coder-next`, `qwen3-coder:480b`) and June 30 (`rnj-1:8b`). The shipped catalog goes from 30 to 18 models.
+- Bump `@earendil-works/pi-coding-agent` runtime dependency to 0.80.10.
+
+## [0.6.0] - 2026-06-05
+
+- Fix `apiKey` registered as a literal string instead of an environment variable reference. Changed `apiKey: "OLLAMA_API_KEY"` to `apiKey: "$OLLAMA_API_KEY"` in `registerProvider`, resolving the deprecation warning emitted by pi v0.77.0+ and making the `OLLAMA_API_KEY` env var work alongside `auth.json` (env var takes priority, falls back to `auth.json`). Thanks @mandusm (#21).
+- Make `scripts/generate-models.ts` produce a stable output: sort models by `id` and each object's keys alphabetically (with `id` and `name` first), so regenerating the catalog produces minimal diffs. Thanks @shyim for the idea (#22).
+- Exclude models announced for retirement (effective 2026-06-16) from the generated `GENERATED_MODELS` list: `kimi-k2-thinking`, `kimi-k2:1t`, `minimax-m2`, `glm-4.6`, `qwen3-next:80b`, `qwen3-vl:235b`, `qwen3-vl:235b-instruct`, `cogito-2.1:671b`. See https://docs.ollama.com/cloud#deprecations. `/ollama-cloud-refresh` will still register them from the live API until Ollama removes them.
+
+## [0.5.0] - 2026-05-22
+
+- Update `peerDependencies` and imports to the new `@earendil-works/*` packages.
+- Add build script (`scripts/generate-models.ts`) to generate `models.generated.ts` with Ollama Cloud tool-capable models from live API data. The script requires no API key.
+- Drop `FALLBACK_MODELS` in favor of `GENERATED_MODELS` which ships with the package.
+- Remove `apiKey` requirement from `fetchModelIds` and `fetchModelDetails`. Ollama Cloud's public `/v1/models` and `/api/show` endpoints do not require authentication for model metadata. (#15)
+- Remove `getOllamaCloudApiKey`, `refreshModelsFromAuth`, and the "No API key found" notification path from `fetchModels`. Users can now browse model metadata without configuring a key.
+- Remove `401`/`403` error handling from the model metadata fetch functions.
+- Add configuration system (`config.ts`) with JSON config files (global + project-local) and `/ollama-webtools` command for runtime web tools toggling.
+- Add test infrastructure (`vitest`) and model validation tests (`test/models.test.ts`).
+- Add HTTP status-aware error handling in web tools (`401`/`403` → auth error, `429` → rate limit).
+- Add explicit `buildCompat()` with all 17 `OpenAICompletionsCompat` flags set explicitly, verified against Ollama API docs.
+- Set the provider display name to `Ollama Cloud` so it reads cleanly in `/login`, `/model`, and the model selector.
+- Document `/login` as the recommended way to configure the API key.
+- Update README to clarify baked-in model list and refresh behavior.
+- Document web-tools.ts module boundaries in file header comment.
+
+## [0.4.1] - 2026-05-07
+
+- Add `renderCall` to `ollama_web_search` and `ollama_web_fetch` tools so the TUI displays the query/URL in the tool call header instead of just the bare tool name. (#12)
+
+## [0.4.0] - 2026-05-06
+
+- Fix `/api/chat` requests not disabling thinking when Pi's thinking level is set to `off`. Maps Pi `off` to `reasoning_effort: "none"` on models where the API respects it, hides the `off` level on models where it doesn't (gpt-oss, kimi-k2-thinking, minimax, qwen3-vl). (#6)
+- Add `thinking-levels.ts` with curated per-model thinking level maps (DEFAULT, GPT_OSS, QWEN3, NO_OFF), validated against all 24 thinking-capable models via automated experiment (see docs/think-experiment.md).
+- Fix system prompt (AGENTS.md content) not being read by GLM models by setting `supportsDeveloperRole: false` on all registered models.
+- Rename smoke test to test, add lint step.
+- Treat stale local model caches as usable for immediate startup while triggering the same visible refresh flow as `/ollama-cloud-refresh` on `session_start`; use fallback models only when the cache is missing or invalid.
+- Add a single-line `/ollama-cloud-refresh` progress widget showing the current stage, count, percentage, failures, and progress bar.
+- Add thinking on/off assertions to the CI test workflow.
+
+## [0.3.1] - 2026-05-05
+
+- Fix `OLLAMA_API_KEY` env var not being respected by `fetchModels` and web tools. pi-ai does not know about the `ollama-cloud` provider ID, so `AuthStorage.getApiKey()` alone misses the env var. Added explicit `process.env.OLLAMA_API_KEY` fallback.
+- Switch web tools to `AuthStorage.create()` for API key lookup, matching the `models.ts` auth pattern from v0.2.1.
+- Add null-safe access to `data.details?.family` in `resolveThinkingLevelMap`.
+- Change `OLLAMA_BASE` from `export let` to `export const` to prevent accidental mutation.
+- Fix fallback model IDs to use real Ollama Cloud identifiers (`glm-5.1`, `gemma4:31b`) instead of synthetic `:cloud` suffixes.
+- Add smoke test workflow for CI.
+
+## [0.3.0] - 2026-05-04
+
+- Derive `thinkingLevelMap` from pi's built-in model definitions instead of hardcoding model-family mappings. The extension now picks up thinking level metadata automatically when pi-mono adds or updates it for any model.
+- Add family-based fallback matching: when an Ollama Cloud model ID doesn't match a pi model ID exactly, the extension now tries matching by model family (via Ollama's `details.family` field). For example, `gemma4:31b` correctly picks up Gemma 4's thinking level map from pi.
+
+## [0.2.1] - 2026-04-29
+
+- Fix API key retrieval by using `AuthStorage` instead of `ctx.modelRegistry.getApiKeyForProvider`. The provider-level API key lookup was failing, causing auth to only work when an environment variable was set. Now reads from `auth.json` directly via the pi `AuthStorage` class.
+
+## [0.2.0] - 2026-04-28
+
+- Add `PI_OLLAMA_WEB_TOOLS` environment variable to optionally disable `ollama_web_search` and `ollama_web_fetch` tool registrations. Set to `0`, `false`, `no`, `off`, or an empty string to opt-out. The model provider and `/ollama-cloud-refresh` command remain active regardless.
+
