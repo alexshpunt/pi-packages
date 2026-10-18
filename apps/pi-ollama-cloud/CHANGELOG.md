@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- npm 이름과 공개 모듈 경로를 유지하면서 전체 Git 이력을 `pi-packages` 모노레포로 편입하고 패키지 저장소·지원 링크를 갱신합니다.
+- Pi 호스트 의존성과 TypeBox를 공통 catalog에 맞추고, 생성 스크립트의 출력 위치를 앱 경로에 고정합니다.
+- 기존 단위 테스트, 최신 Pi 호환성 검사와 실서비스 검사를 공통 CI로 이전합니다. 배포물의 모델 응답을 확인한 뒤 앱별 태그로 npm과 GitHub Release를 배포합니다.
+- 설치 전환·설정·검증·유지보수 문서를 정리하고 `check`를 파일을 수정하지 않는 검사로 변경합니다.
+
 ## [0.13.1] - 2026-10-10
 
 - Add `mistral-large-4` to the generated model catalog with image and tool support, on/off reasoning controls, official pricing, a 1048576-token context window, and a probed 262144-token output limit.

@@ -32,7 +32,7 @@ if (isRelease) {
       encoding: "utf8",
     }).split("\0").filter(Boolean);
     const hasSharedChanges = changedFiles.some((path) =>
-      /^(?:package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.npmrc$|packages\/|scripts\/|\.github\/workflows\/pi-packages\.yml$)/.test(path),
+      /^(?:package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|biome\.json$|turbo\.json$|\.npmrc$|packages\/|scripts\/|\.github\/workflows\/pi-packages\.yml$)/.test(path),
     );
     selectedApps = hasSharedChanges ? apps : apps.filter((app) => changedFiles.some((path) => path.startsWith(`${app.path}/`)));
   }

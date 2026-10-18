@@ -52,14 +52,122 @@ jobs:
           package-manager-cache: false
       - uses: pnpm/action-setup@v4
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter "$PACKAGE_NAME" run --if-present lint
       - run: pnpm --filter "$PACKAGE_NAME" typecheck
       - run: pnpm --filter "$PACKAGE_NAME" run --if-present test:unit
       - name: Check the distributable package
         run: pnpm --dir "$PACKAGE_DIR" pack --pack-destination "$RUNNER_TEMP/package"
 
-  publish:
+  ollama-latest:
+    needs: select
+    if: contains(fromJSON(needs.select.outputs.matrix).include.*.slug, 'pi-ollama-cloud')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    name: Check pi-ollama-cloud with latest Pi
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      # Only this disposable checkout is updated; publishing uses the committed lockfile.
+      - name: Install latest host packages
+        run: >-
+          pnpm --filter @buyong/pi-ollama-cloud add --save-dev
+          @earendil-works/pi-ai@latest @earendil-works/pi-coding-agent@latest
+          @earendil-works/pi-tui@latest typebox@latest
+      - run: pnpm --filter @buyong/pi-ollama-cloud typecheck
+      - run: pnpm --filter @buyong/pi-ollama-cloud test:unit
+
+  ollama-smoke:
     needs: [select, checks]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && needs.select.outputs.is-release == 'true'
+    if: github.event_name != 'pull_request' && contains(fromJSON(needs.select.outputs.matrix).include.*.slug, 'pi-ollama-cloud')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    name: Smoke pi-ollama-cloud
+    env:
+      OLLAMA_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+      IS_RELEASE: ${{ needs.select.outputs.is-release }}
+      PI_CODING_AGENT_DIR: ${{ runner.temp }}/ollama-agent
+    defaults:
+      run:
+        working-directory: apps/pi-ollama-cloud
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Require credentials for releases
+        run: |
+          if [ -z "$OLLAMA_API_KEY" ]; then
+            if [ "$IS_RELEASE" = true ]; then
+              echo "::error::Set OLLAMA_CLOUD_API_KEY before releasing pi-ollama-cloud"
+              exit 1
+            fi
+            echo "Ollama live smoke skipped: OLLAMA_CLOUD_API_KEY is not configured." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/setup-node@v7
+        if: env.OLLAMA_API_KEY != ''
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+        if: env.OLLAMA_API_KEY != ''
+      - run: pnpm install --frozen-lockfile
+        if: env.OLLAMA_API_KEY != ''
+      - name: Pack and extract the release contents
+        if: env.OLLAMA_API_KEY != ''
+        run: |
+          pnpm pack --pack-destination "$RUNNER_TEMP/ollama-package"
+          mkdir -p "$RUNNER_TEMP/ollama-extracted"
+          tar -xzf "$RUNNER_TEMP/ollama-package/"*.tgz -C "$RUNNER_TEMP/ollama-extracted"
+      - name: Basic provider smoke from the packed extension
+        if: env.OLLAMA_API_KEY != ''
+        run: >-
+          pnpm exec pi --no-extensions --no-skills --no-prompt-templates --no-themes
+          --no-context-files --no-mcp --no-session
+          -e "$RUNNER_TEMP/ollama-extracted/package/index.ts"
+          --model "ollama-cloud/gemma4:31b" --no-tools -p "Say hi in one word"
+      - name: Thinking off from the packed extension
+        if: env.OLLAMA_API_KEY != ''
+        run: |
+          pnpm exec pi --no-extensions --no-skills --no-prompt-templates --no-themes \
+            --no-context-files --no-mcp --no-session \
+            -e "$RUNNER_TEMP/ollama-extracted/package/index.ts" \
+            --thinking off --model "ollama-cloud/glm-5.2" --no-tools --mode json -p 'hi' \
+            > "$RUNNER_TEMP/ollama-thinking.jsonl"
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const events = readFileSync(`${process.env.RUNNER_TEMP}/ollama-thinking.jsonl`, 'utf8')
+            .trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+          const replies = events.filter(event => event.type === 'message_end' && event.message?.role === 'assistant')
+            .map(event => event.message);
+          if (!replies.length || replies.some(reply => ['error', 'aborted'].includes(reply.stopReason))) {
+            throw new Error('Thinking-off smoke did not receive a successful assistant reply');
+          }
+          if (replies.some(reply => reply.content.some(block => block.type === 'thinking'))) {
+            throw new Error('Thinking block found when thinking is off');
+          }
+          if (!replies.some(reply => reply.content.some(block => block.type === 'text' && block.text.trim()))) {
+            throw new Error('Thinking-off smoke returned no text');
+          }
+          console.log('PASS: text response without thinking');
+          NODE
+      - name: Web tools smoke
+        if: env.OLLAMA_API_KEY != ''
+        run: pnpm run smoke:web-tools
+
+  publish:
+    needs: [select, checks, ollama-latest, ollama-smoke]
+    if: >-
+      always() && !cancelled() && github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/') && needs.select.outputs.is-release == 'true' &&
+      needs.checks.result == 'success' &&
+      (!contains(fromJSON(needs.select.outputs.matrix).include.*.slug, 'pi-ollama-cloud') ||
+      (needs.ollama-latest.result == 'success' && needs.ollama-smoke.result == 'success'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -108,7 +216,10 @@ jobs:
             throw new Error('package.json repository must match this GitHub repository for npm provenance');
           }
           const lines = fs.readFileSync(path.join(process.env.PACKAGE_DIR, 'CHANGELOG.md'), 'utf8').split('\n');
-          const start = lines.findIndex(line => line === `## ${version}` || line.startsWith(`## ${version} `));
+          const headings = [`## ${version}`, `## [${version}]`];
+          const matches = lines.flatMap((line, index) => headings.some(heading => line === heading || line.startsWith(`${heading} `)) ? [index] : []);
+          if (matches.length !== 1) throw new Error(`CHANGELOG.md needs exactly one section for ${version}`);
+          const start = matches[0];
           const end = lines.findIndex((line, index) => index > start && line.startsWith('## '));
           const notes = start < 0 ? '' : lines.slice(start + 1, end < 0 ? undefined : end).join('\n').trim();
           if (!notes) throw new Error(`CHANGELOG.md needs a nonempty ## ${version} section`);

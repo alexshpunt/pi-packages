@@ -172,5 +172,5 @@ const out = [
   "",
 ].join("\n");
 
-writeFileSync("limits.generated.ts", out);
+writeFileSync(new URL("../limits.generated.ts", import.meta.url), out);
 console.log(`Wrote limits.generated.ts (${Object.keys(limits).length} entries; probed ${probed}, ${failed} failed).`);

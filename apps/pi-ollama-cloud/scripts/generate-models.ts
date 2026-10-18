@@ -79,5 +79,5 @@ const out = [
   "",
 ].join("\n");
 
-writeFileSync("models.generated.ts", out);
+writeFileSync(new URL("../models.generated.ts", import.meta.url), out);
 console.log(`Wrote models.generated.ts (${models.length} models).`);

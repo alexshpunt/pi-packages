@@ -1,6 +1,6 @@
 # Development Rules
 
-Canonical instructions for local coding agents (Pi, Copilot coding agent). Claude Code does not read this file directly; add a `CLAUDE.md` importing `@AGENTS.md` if you want it to.
+Package-specific guidance for `apps/pi-ollama-cloud`. The monorepo's common policies apply as well. Runtime modules and public submodule paths remain at the package root; this migration is not a move to `src/`.
 
 ## Conversational Style
 
@@ -34,12 +34,12 @@ This is a Pi extension. The split is intentional, do not collapse it:
 - `utils.ts` — Cross-cutting helpers (`fetchJsonWithTimeout`, `concurrentMap`, `getContextLength`). Keep small.
 - `scripts/generate-models.ts` — Generator script. Runs against the live API to refresh `models.generated.ts`. Not shipped at runtime.
 - `scripts/generate-pricing.ts` — Generator script. Fetches the model pricing table from `https://ollama.com/pricing` plus the Ollama model list and writes `pricing.generated.ts` by matching catalog IDs to pricing rows. Not shipped at runtime.
-- `scripts/generate-reasoning.ts` — Generator script. Fetches the `ollama-cloud` provider's `reasoning_options` from `https://models.dev/api.json` and writes `reasoning.generated.ts` (the reasoning-level data source; the same models.dev data pi uses for built-in providers). Runs before `generate-models` in the `npm run generate-models` chain. Not shipped at runtime.
-- `scripts/generate-limits.ts` — Generator script. Probes per-model max output tokens against the live chat completions API (reads Pi's `ollama-cloud` API key from `auth.json`, falling back to `OLLAMA_API_KEY`) and writes `limits.generated.ts`. Must be rerun whenever the model catalog changes so new models get probed limits — run it BEFORE `npm run generate-models` when new models appear, because `generate-models` bakes `maxTokens` from `limits.generated.ts` into the catalog. Not shipped at runtime.
-- `models.generated.ts` — Generated output of `scripts/generate-models.ts`. **Do not edit by hand.** Regenerate via `npm run generate-models` and commit the result.
+- `scripts/generate-reasoning.ts` — Generator script. Fetches the `ollama-cloud` provider's `reasoning_options` from `https://models.dev/api.json` and writes `reasoning.generated.ts` (the reasoning-level data source; the same models.dev data pi uses for built-in providers). Runs before `generate-models` in the `pnpm run generate-models` chain. Not shipped at runtime.
+- `scripts/generate-limits.ts` — Generator script. Probes per-model max output tokens against the live chat completions API (reads Pi's `ollama-cloud` API key from `auth.json`, falling back to `OLLAMA_API_KEY`) and writes `limits.generated.ts`. Must be rerun whenever the model catalog changes so new models get probed limits — run it BEFORE `pnpm run generate-models` when new models appear, because `generate-models` bakes `maxTokens` from `limits.generated.ts` into the catalog. Not shipped at runtime.
+- `models.generated.ts` — Generated output of `scripts/generate-models.ts`. **Do not edit by hand.** Regenerate via `pnpm run generate-models` and commit the result.
 - `pricing.generated.ts` — Generated output of `scripts/generate-pricing.ts`. Shipped at runtime (in `package.json` `files`). **Do not edit by hand.**
-- `reasoning.generated.ts` — Generated output of `scripts/generate-reasoning.ts`. Shipped at runtime (in `package.json` `files`). **Do not edit by hand.** Regenerate via `npm run generate-reasoning` (or as part of `npm run generate-models`) and commit the result.
-- `limits.generated.ts` — Generated output of `scripts/generate-limits.ts`. Shipped at runtime (in `package.json` `files`). **Do not edit by hand.** Regenerate via `npm run generate-limits` (uses Pi's `auth.json` or `OLLAMA_API_KEY`) and commit the result. Models without a probed limit fall back to 32768 in `models.ts`.
+- `reasoning.generated.ts` — Generated output of `scripts/generate-reasoning.ts`. Shipped at runtime (in `package.json` `files`). **Do not edit by hand.** Regenerate via `pnpm run generate-reasoning` (or as part of `pnpm run generate-models`) and commit the result.
+- `limits.generated.ts` — Generated output of `scripts/generate-limits.ts`. Shipped at runtime (in `package.json` `files`). **Do not edit by hand.** Regenerate via `pnpm run generate-limits` (uses Pi's `auth.json` or `OLLAMA_API_KEY`) and commit the result. Models without a probed limit fall back to 32768 in `models.ts`.
 
 When adding a new **runtime** module (a `.ts` file that ships):
 
@@ -59,7 +59,7 @@ When adding a new **runtime** module (a `.ts` file that ships):
 - Normalize user-provided base URLs by stripping trailing slashes before composing paths. `OLLAMA_BASE` does this; replicate the pattern anywhere a base URL is composed.
 - Treat 401/403 and 429 distinctly in user-facing output. Auth errors should mention the API key env var and `auth.json`; rate-limit errors should say "try again shortly".
 - Web tools resolve the API key via `ctx.modelRegistry.getApiKeyForProvider("ollama-cloud")` (with `?? process.env.OLLAMA_API_KEY` as a fallback). Do not import `AuthStorage` — it was removed from `@earendil-works/pi-coding-agent`'s public exports in 0.80.8+; importing it crashes the extension at load.
-- Constrain tool parameters with `@sinclair/typebox` at the boundary: `Type.Integer` with `minimum`/`maximum`, `format: "uri"`, etc. Pi's runtime rejects out-of-range integers; a `Type.Number` lets `2.5` through. Do not push into `execute` what the schema can enforce.
+- Constrain tool parameters with `typebox` at the boundary: `Type.Integer` with `minimum`/`maximum`, `format: "uri"`, etc. Pi's runtime rejects out-of-range integers; a `Type.Number` lets `2.5` through. Do not push into `execute` what the schema can enforce.
 
 ## Command Input Validation
 
@@ -76,7 +76,7 @@ Slash commands with arguments must validate the argument and notify the user on 
 ## Generated Files
 
 - `models.generated.ts` is regenerated by `scripts/generate-models.ts`. The script sorts models by id and object keys alphabetically (with `id`/`name` first) for minimal diffs. If your regen produces large diffs, the script is probably broken; do not hand-edit the file into shape.
-- `pricing.generated.ts` is regenerated by `scripts/generate-pricing.ts` from the model pricing table on `https://ollama.com/pricing`. A catalog ID matches a pricing row by exact name or `:tag`-suffix family match, so every variant of a family inherits the family price. Values are per-1M-token rates written verbatim (no rounding). Do not hand-edit; regenerate via `npm run generate-models`, which runs `generate-pricing` first. Catalog IDs with no matching row get zero cost and a build-time warning — the pricing table upstream needs a row for them.
+- `pricing.generated.ts` is regenerated by `scripts/generate-pricing.ts` from the model pricing table on `https://ollama.com/pricing`. A catalog ID matches a pricing row by exact name or `:tag`-suffix family match, so every variant of a family inherits the family price. Values are per-1M-token rates written verbatim (no rounding). Do not hand-edit; regenerate via `pnpm run generate-models`, which runs `generate-pricing` first. Catalog IDs with no matching row get zero cost and a build-time warning — the pricing table upstream needs a row for them.
 - `reasoning.generated.ts` is keyed off models.dev (the `ollama-cloud` provider's `reasoning_options`), not the live Cloud API, so its key set is not expected to match `models.generated.ts` / `pricing.generated.ts` (both keyed off `https://ollama.com/v1/models`). Divergence runs both ways: models.dev may list ids the live API never returns (e.g. bare family aliases like `deepseek-v4-pro` when the API ships `deepseek-v4-pro:0813`), and the live catalog may include a model models.dev has no reasoning data for (e.g. a non-reasoning model). Extra keys are inert — `resolveThinkingLevelMap` only looks up ids present in the catalog — so do not intersect the sets to reconcile the counts; the bare-alias entries may serve pi's native `ollama-cloud` provider.
 - `RETIRED_MODEL_IDS` in `scripts/generate-models.ts` holds retired models still listed by the live API so they're excluded from the baked-in list. Currently empty because past retirements have been removed from the API; update it (and regenerate) when Ollama announces new retirements, per https://docs.ollama.com/cloud#retirements.
 - `GENERATED_MODELS` is a first-launch fallback only; pi refreshes the live catalog at runtime via `refreshModels`, so regenerating the catalog is not needed for model freshness (see Releasing).
@@ -87,12 +87,15 @@ The README and inline comments describe observable behavior. When the behavior c
 
 ## Verification Commands
 
-- After code changes (not docs): `npm run check`. Fix all errors, warnings, and infos before committing. `check` runs Biome (lint + format) and `tsgo --noEmit` (type-check).
-- Run `npm run test` before pushing. CI runs lint, typecheck, and test; PRs that skip any will be rejected by the workflow.
-- Never run `npm run build`. There is no compile or bundle step; the package ships TypeScript sources as-is. The generation steps are `npm run generate-models` (runs `generate-pricing`, `generate-reasoning`, then `generate-models` to refresh `pricing.generated.ts`, `reasoning.generated.ts`, and `models.generated.ts` from ollama.com/pricing, models.dev, and the live API) and `npm run generate-limits` (refreshes `limits.generated.ts`, reads the key from Pi's `auth.json` or `OLLAMA_API_KEY`).
-- `npm run smoke:web-tools` runs a live smoke of `ollama_web_search`/`ollama_web_fetch` (needs `OLLAMA_API_KEY` or an `ollama-cloud` entry in `auth.json`). It runs in CI gated on `secrets.OLLAMA_CLOUD_API_KEY`.
-- When adding a new `npm run` script, add a corresponding step in `.github/workflows/test.yml` if it should run in CI.
-- When changing a workflow file, verify the `permissions:` block is still correct. `publish.yml` requires both `contents: read` and `id-token: write`; trimming either breaks OIDC trusted publishing.
+Run workspace commands from the monorepo root unless noted otherwise.
+
+- After code changes: `pnpm --filter @buyong/pi-ollama-cloud check` (read-only lint and typecheck), then `pnpm --filter @buyong/pi-ollama-cloud test:unit`.
+- `pnpm --dir apps/pi-ollama-cloud pack --pack-destination /tmp/pi-ollama-cloud-pack` resolves workspace/catalog references. Check the actual packed files and load the extracted extension, not only the checkout.
+- Do not add new test files or cases unless the user requests them. Preserve the existing test suite and CI coverage during migrations.
+- There is no build step. Generated data is committed source; do not regenerate it merely to validate a packaging change.
+- The existing live checks use `OLLAMA_CLOUD_API_KEY` in GitHub Actions, exposed to the process as `OLLAMA_API_KEY`. Never expose this secret to pull requests. Missing credentials must fail a release rather than silently bypass its smoke gate.
+- The only active workflow is `../../.github/workflows/pi-packages.yml`. Keep lint, typecheck, `test:unit`, latest-Pi compatibility, package contents, and live smoke connected there.
+- Publishing needs `contents: write` for GitHub Releases and `id-token: write` for npm OIDC. No `NPM_TOKEN` is needed.
 
 ## Changelog
 
@@ -104,15 +107,7 @@ Location: `CHANGELOG.md` at the repo root. All entries go under `## [Unreleased]
 
 ## Commit Format
 
-Conventional commits, present tense, under 72 characters.
-
-```
-feat: add /ollama-webtools on|off subcommand
-feat(models): add refreshOllamaCatalog callback
-docs: note catalog refresh is automatic via native refreshModels
-```
-
-Use scopes when they clarify the component: `models`, `web-tools`, `config`, `ci`, `docs`, `release`. Skip them for broad changes. `chore:` for non-functional changes (deps, regen output).
+Follow the monorepo convention: `<type>(<간단한 설명>): <현재 브랜치명>`. After a blank line, summarize changes in at most five numbered lines. Use the actual branch name; omit file paths and line numbers from the body.
 
 ## Git
 
@@ -124,15 +119,15 @@ Use scopes when they clarify the component: `models`, `web-tools`, `config`, `ci
 
 ## Releasing
 
-Lockstep versioning, single `package.json`. Full walkthrough in the README; the checklist:
+Follow [the maintenance guide](docs/maintaining.md). npm identity stays `@buyong/pi-ollama-cloud`; source and publishing belong to `buYoung/pi-packages`.
 
-1. Move `## [Unreleased]` entries to a new dated version section in `CHANGELOG.md`, and retain an empty `## [Unreleased]` heading above the released section. Before versioning, verify the release notes describe the changes being shipped.
-2. Commit and push `main`, then wait for the Test workflow to pass on that commit (local `npm run test` is a pre-check, not a substitute; CI must pass before tagging).
-3. Before creating or pushing a release tag, ask the user for explicit final confirmation for that version. Earlier requests to prepare or cut a release do not replace this final confirmation.
-4. After confirmation, run `npm version patch` (or `minor` / `major`) and push the version commit and tag to GitHub. The tag triggers `.github/workflows/publish.yml`, which runs tests and smoke checks, verifies the tag/version match, and publishes through npm OIDC trusted publishing. No `NPM_TOKEN` secret is needed.
-
-Because the model catalog refreshes automatically at runtime, releases are only needed for retirement handling (`RETIRED_MODEL_IDS` in `scripts/generate-models.ts`), pricing updates (the ollama.com/pricing table via `scripts/generate-pricing.ts`), or max output token updates (`scripts/generate-limits.ts`).
+- Use `pi-ollama-cloud-v<version>` tags, never the old repository's `v<version>` namespace.
+- Keep the version independent from other apps. Use pnpm for workspace installation and packing; do not reintroduce a package-local lockfile.
+- Preserve historical changelog sections. The inherited `0.13.1` entry predates this migration and was not published under the scoped package when imported; do not silently merge or rewrite it.
+- Before versioning, creating or pushing the release tag, or publishing, obtain the user's final approval for the exact version.
+- Commit and push prepared changes to `main`, wait for CI, then push only the approved release tag. A tag reruns checks on that revision before npm publishing and GitHub Release creation.
+- Runtime refresh handles catalog freshness. Pricing, output limits and retirement behavior still need a generated-data/code release.
 
 ## User Override
 
-If the user's instructions conflict with any rule in this document, ask for explicit confirmation before overriding. Only then execute their instructions.
+Follow explicit user instructions and higher-priority monorepo policies. Ask about unresolved behavior or release decisions; do not turn this guide into an extra approval gate for already authorized implementation.

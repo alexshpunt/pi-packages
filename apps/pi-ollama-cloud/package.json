@@ -1,6 +1,11 @@
 {
   "name": "@buyong/pi-ollama-cloud",
   "version": "0.13.0",
+  "description": "Ollama Cloud provider, web search and fetch tools, and usage status for Pi.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "type": "module",
   "keywords": [
     "pi-package"
@@ -24,18 +29,24 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/buYoung/pi-ollama-cloud.git"
+    "url": "git+https://github.com/buYoung/pi-packages.git",
+    "directory": "apps/pi-ollama-cloud"
+  },
+  "homepage": "https://github.com/buYoung/pi-packages/tree/main/apps/pi-ollama-cloud#readme",
+  "bugs": {
+    "url": "https://github.com/buYoung/pi-packages/issues"
   },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "check": "biome check --write . && tsgo --noEmit",
+    "check": "pnpm run lint && pnpm run typecheck",
     "lint": "biome check .",
     "typecheck": "tsgo --noEmit",
     "format": "biome format --write .",
-    "test": "vitest run",
+    "test": "pnpm run test:unit",
+    "test:unit": "vitest run",
     "smoke:web-tools": "tsx scripts/smoke-web-tools.ts",
     "generate-models": "tsx scripts/generate-pricing.ts && tsx scripts/generate-reasoning.ts && tsx scripts/generate-models.ts && biome format --write models.generated.ts pricing.generated.ts reasoning.generated.ts",
     "generate-limits": "tsx scripts/generate-limits.ts",
@@ -50,16 +61,18 @@
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*",
-    "@sinclair/typebox": "*"
+    "typebox": "*"
   },
   "devDependencies": {
-    "@biomejs/biome": "2",
-    "@earendil-works/pi-ai": "1.0.4",
-    "@earendil-works/pi-coding-agent": "1.0.4",
-    "@earendil-works/pi-tui": "1.0.4",
-    "@types/node": "^26.1.2",
-    "@typescript/native-preview": "7.0.0-dev.20260707.2",
-    "tsx": "^4.19.0",
+    "@biomejs/biome": "catalog:",
+    "@earendil-works/pi-ai": "catalog:",
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "tsx": "^4.22.4",
+    "typebox": "catalog:",
     "vitest": "^4.1.11"
   }
 }

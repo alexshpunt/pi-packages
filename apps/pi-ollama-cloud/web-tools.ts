@@ -26,7 +26,7 @@ import {
   truncateToVisualLines,
 } from "@earendil-works/pi-coding-agent";
 import { type Component, Text, truncateToWidth } from "@earendil-works/pi-tui";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import {
   CACHE_TTL_MS,
   type CacheStore,
