@@ -92,7 +92,6 @@ jobs:
     env:
       OLLAMA_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
       IS_RELEASE: ${{ needs.select.outputs.is-release }}
-      PI_CODING_AGENT_DIR: ${{ runner.temp }}/ollama-agent
     defaults:
       run:
         working-directory: apps/pi-ollama-cloud
@@ -102,6 +101,7 @@ jobs:
           persist-credentials: false
       - name: Require credentials for releases
         run: |
+          echo "PI_CODING_AGENT_DIR=$RUNNER_TEMP/ollama-agent" >> "$GITHUB_ENV"
           if [ -z "$OLLAMA_API_KEY" ]; then
             if [ "$IS_RELEASE" = true ]; then
               echo "::error::Set OLLAMA_CLOUD_API_KEY before releasing pi-ollama-cloud"
