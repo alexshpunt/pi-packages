@@ -57,7 +57,11 @@ describe("provider registration across module instances", () => {
 		const { registered, emit } = activateWithMockPi(activateFresh);
 		assert.equal(registered.length, 0, "no activation-time registration for a later instance");
 
-		emit("session_start", {}, { modelRegistry: registryWith("other-provider") });
+		emit("session_start", {}, {
+			cwd: process.cwd(),
+			sessionManager: { getSessionId: () => "own-registry-child" },
+			modelRegistry: registryWith("other-provider"),
+		});
 		assert.equal(registered.length, 1, "session_start registers into the empty registry");
 		assert.equal(registered[0].name, PROVIDER_ID);
 		assert.ok(registered[0].config.streamSimple, "the registration carries this instance's stream fn");
@@ -68,11 +72,16 @@ describe("provider registration across module instances", () => {
 		const { registered, emit } = activateWithMockPi(activateFresh);
 
 		// Host passed the parent's registry down: the provider is already there.
-		emit("session_start", {}, { modelRegistry: registryWith(PROVIDER_ID) });
+		const context = {
+			cwd: process.cwd(),
+			sessionManager: { getSessionId: () => "shared-registry-child" },
+			modelRegistry: registryWith(PROVIDER_ID),
+		};
+		emit("session_start", {}, context);
 		assert.equal(registered.length, 0, "no overwrite of the parent's registration");
 
 		// Repeated session starts stay idempotent.
-		emit("session_start", {}, { modelRegistry: registryWith(PROVIDER_ID) });
+		emit("session_start", {}, context);
 		assert.equal(registered.length, 0, "still no registration on a later session_start");
 	});
 });

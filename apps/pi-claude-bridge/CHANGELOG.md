@@ -1,5 +1,13 @@
 # Changelog
 
+## UNRELEASED
+
+- **Fix: forward only completed tool calls and compatible MCP schemas** — Drop unfinished streamed blocks before dispatch (#146), flatten top-level schema combinators for Claude Code while retaining Pi-side validation (#180), and stop injecting an unrequested bash timeout (#204).
+- **Fix: recover interrupted and rewritten conversations** — Resume tool results after restart (#174), rebuild shortened session histories instead of starting without context (#191), and keep failed turns from advancing the synchronization cursor (#198, retry handling only). Rebind cancellation to the current run, detach the previous run's listener, and report cancellation consistently on normal and error completion (#200).
+- **Fix: preserve session cwd and reasoning options** — Run provider, AskClaude, and summary queries in the owning session's directory (#175). Forward isolated-call reasoning through model-specific effort mappings (#184), and explicitly disable SDK thinking when Pi requests off and the model supports it (#209). Existing pi-claude-compact delegation and branch-summary takeover remain in place.
+- **Add: expose subscription usage through response headers** — Translate SDK usage-limit events into `anthropic-ratelimit-unified-*` headers for `after_provider_response` consumers (#171), keeping deferred events query-local. Label exhausted subscription windows as quota exhaustion so Pi does not retry them as transient rate limits.
+- **Add: preserve explicit prompt and tool guidance** — Forward additional guidelines and snippets for selected, non-hidden tools, including SDK customTools, without classifying SDK registration as built-in-only behavior. Copy captured guidance, retain it through prompt inheritance, deduplicate rules, and validate raw instructions before formatting. Claude Code's prompt-snapshot policy is unchanged.
+
 ## 0.11.0 — 2026-10-18
 
 - **Refactor: move into pi-packages** — Keep the `@buyong/pi-claude-bridge` npm identity while preserving the source history under `apps/pi-claude-bridge`. Development uses the root pnpm workspace; releases use package-specific tags and the monorepo's npm trusted publisher. Repository, support, and contributor links now point to the monorepo. Upstream updates remain manual and are documented rather than automatically connected.

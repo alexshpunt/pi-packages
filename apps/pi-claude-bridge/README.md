@@ -29,7 +29,7 @@ Requires pi 0.86.1 or newer.
 
 Use `/model` to select any Claude model in pi-ai's catalog, e.g. `claude-bridge/claude-fable-5-1`, `claude-bridge/claude-opus-5`, or `claude-bridge/claude-haiku-4-5`.
 
-Behind the scenes, pi's tools are bridged to Claude Code but everything works like normal in pi. Bash commands get Claude Code's 120-second default timeout since pi's bash has none. Skills are forwarded to Claude Code's system prompt, and steering mid-turn reaches Claude at the next tool boundary.
+Behind the scenes, pi's tools are bridged to Claude Code but everything works like normal in pi. The bridge preserves bash arguments without adding a default timeout; execution-time limits belong to the pi tool. Skills and selected-tool guidance are forwarded to Claude Code's system prompt, and steering mid-turn reaches Claude at the next tool boundary.
 
 The model list comes from pi-ai's Anthropic catalog automatically — when pi-ai adds a new Claude model, it appears in `/model` after updating the package, no bridge update needed. Dated snapshot ids (e.g. `claude-opus-4-5-20251101`) are not shown.
 
@@ -159,7 +159,7 @@ When filing a bug about a session-resume failure (e.g. "No conversation found"),
 
 ### Which injection routes reach Claude Code
 
-The bridge forwards pi's structured parts — project context files, skills, custom prompt, appended instructions, and custom prompt sections (`systemPromptOptions.sections`) — and drops the rest. Measured against the request body (`diag/capture-proxy.mjs`):
+The bridge forwards pi's structured parts — project context files, skills, custom prompt, appended instructions, custom prompt sections (`systemPromptOptions.sections`), and explicit prompt/tool guidance — while omitting pi's generated harness text:
 
 | Route | Reaches Claude Code |
 |---|---|
@@ -168,7 +168,11 @@ The bridge forwards pi's structured parts — project context files, skills, cus
 | `--append-system-prompt` | Yes, with pi's appended instructions |
 | `context_with_system` editing the system message | Yes when it wraps pi's prompt; the turn fails when it replaces one |
 | `before_agent_start` -> `systemPromptOptions.sections` | Yes, one `<name>` block per section |
+| `systemPromptOptions.promptGuidelines` | Yes, as additional instructions |
+| Tool `promptSnippet` and `promptGuidelines` | Yes, for selected tools not hidden by the loadout |
 | `before_agent_start` -> `systemPrompt` | No, dropped |
+
+Tool guidance follows pi's declared-tool selection, not registration provenance: SDK `customTools`, extension tools, and selected built-in tools can all contribute explicit instructions. Captures copy the guidance, deduplicate repeated rules, and apply the existing prompt-safety checks. This does not enable live MCP tool refresh or change Claude Code's system-prompt snapshot policy.
 
 Two traps. Returning `systemPrompt` from `before_agent_start` makes pi replace the whole system prompt, discarding any `context_with_system` edit in the same run — only one reaches the request. And system-prompt edits work by *wrapping*: replacing pi's prompt leaves the bridge with nothing to match, so it refuses the turn rather than send Claude Code a request missing your context files, skills and custom instructions. The error names the closest known prompt and where it diverged.
 
