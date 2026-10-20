@@ -1,15 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { appendFileSync, readFileSync, readdirSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { readPublicPiApps } from "./pi-apps.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const apps = readdirSync(new URL("../apps/", import.meta.url), { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => {
-    const pkg = JSON.parse(readFileSync(new URL(`../apps/${entry.name}/package.json`, import.meta.url), "utf8"));
-    return { slug: entry.name, path: `apps/${entry.name}`, name: pkg.name, version: pkg.version, isPublicPiPackage: pkg.private !== true && !!pkg.pi };
-  })
-  .filter((app) => app.isPublicPiPackage);
+const apps = readPublicPiApps();
 
 const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
 const isRelease = process.env.GITHUB_EVENT_NAME === "push" && process.env.GITHUB_REF?.startsWith("refs/tags/");

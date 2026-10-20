@@ -13,6 +13,7 @@
   "files": [
     "src/",
     "CHANGELOG.md",
+    "CHANGELOG.ko.md",
     "README.md",
     "LICENSE"
   ],

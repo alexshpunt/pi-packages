@@ -10,10 +10,15 @@
     "check": "turbo run typecheck lint",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "release": "node scripts/release/interactive.mjs",
+    "release:dry-run": "node scripts/release/dry-run.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@inquirer/prompts": "8.5.2",
+    "release-it": "21.0.1",
+    "semver": "7.8.5",
     "turbo": "2.11.8"
   }
 }

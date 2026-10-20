@@ -105,18 +105,15 @@ GitHub-hosted runner의 Node 24와 npm 11.5.1 이상을 사용합니다. 별도 
 
 이전 당시 npm 최신과 `package.json`은 `0.13.0`이었지만 원본 CHANGELOG에는 `0.13.1` 항목이 있었습니다. 그 기록은 그대로 보존합니다. 새 버전은 npm에 없는 버전이면서 기존 변경 이력과 중복되지 않게 선택합니다. 이미 게시한 버전은 다시 게시할 수 없습니다.
 
-1. `CHANGELOG.md`의 `[Unreleased]`에 실제 변경사항을 기록합니다. 사용자에게 정확한 다음 버전을 최종 확인받기 전에는 버전 변경이나 태그 생성을 하지 않습니다.
-2. 승인 후 앱의 `package.json` 버전을 변경하고 `[Unreleased]` 내용을 `## [<버전>] - YYYY-MM-DD` 절로 옮깁니다. 위에 빈 `[Unreleased]` 절을 유지합니다. 배포기는 대괄호 유무 두 형식을 지원합니다.
-3. 키 없는 검증을 실행하고 필요한 실서비스 검증을 확인합니다. 변경한 경로만 stage해 커밋한 뒤 `main`을 push합니다. 다른 앱의 버전은 바꾸지 않습니다.
-4. 해당 커밋의 `Pi packages` workflow가 성공한 뒤 승인된 태그만 생성·push합니다. 아래 명령은 현재 앱의 버전을 읽습니다.
+1. `CHANGELOG.md`(영문)와 `CHANGELOG.ko.md`(한글)의 `[Unreleased]`에 사용자가 알아차릴 변경사항을 같은 하위 절로 기록합니다. 빠진 항목은 4단계에서 `claude -p`가 초안을 만듭니다. 사용자에게 정확한 다음 버전을 최종 확인받기 전에는 버전 변경이나 태그 생성을 하지 않습니다.
+2. 키 없는 검증을 실행하고 필요한 실서비스 검증을 확인합니다. 변경한 경로만 stage해 커밋한 뒤 `main`을 push하고, 해당 커밋의 `Pi packages` workflow가 성공했는지 확인합니다.
+3. 저장소 루트에서 준비 상태를 확인합니다. 파일·Git·원격을 바꾸지 않고 JSON으로 결과(`ready`, `blockers`)를 출력합니다.
 
    ```bash
-   version=$(node -p "require('./apps/pi-ollama-cloud/package.json').version")
-   tag="pi-ollama-cloud-v${version}"
-   git tag -a "$tag" -m "$tag"
-   git push origin "$tag"
+   pnpm release:dry-run --app pi-ollama-cloud --version <승인된 버전>
    ```
 
+4. 사용자가 터미널에서 `pnpm release`를 실행해 `@buyong/pi-ollama-cloud`를 고릅니다. `claude -p`가 두 변경 이력에 빠진 항목의 초안을 보여 주면 확인 후 기록하고, 승인된 버전을 고른 뒤 커밋·태그·push를 하나씩 확인합니다. 이 명령이 `package.json` 버전을 올리고 두 파일의 `[Unreleased]` 내용을 `## [<버전>] - YYYY-MM-DD` 절로 옮기며 위에 빈 `[Unreleased]` 절을 남깁니다. push는 `main`과 `pi-ollama-cloud-v<버전>` 태그만 전송하고 다른 앱의 버전은 바꾸지 않습니다.
 5. 태그 workflow의 검사·npm 배포·GitHub Release가 모두 성공했는지 확인하고 공개 레지스트리를 조회합니다.
 
    ```bash

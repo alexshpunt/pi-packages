@@ -184,13 +184,13 @@ node "$package_dir/tools/package-check/validate-package.mjs" \
 
 ## 배포와 upstream 갱신
 
-배포는 `origin/main`을 추적하는 `main`에서 실행합니다. 추적 파일과 Git index가 깨끗해야 하며 `CHANGELOG.md`의 `UNRELEASED`에 변경 내용을 먼저 기록해야 합니다. 저장소 루트에서 다음 명령을 실행합니다.
+배포는 `origin/main`을 추적하는 `main`에서 실행합니다. 추적 파일과 Git index가 깨끗해야 합니다. 변경 이력은 `CHANGELOG.md`(영문)와 `CHANGELOG.ko.md`(한글)의 `UNRELEASED` 절에 들어가며, 빠진 항목은 배포 중에 `claude -p`가 초안을 만들고 확인을 받아 기록합니다. 저장소 루트에서 다음 명령을 실행하고 `@buyong/pi-claude-bridge`를 선택합니다.
 
 ```bash
-pnpm --filter @buyong/pi-claude-bridge release
+pnpm release
 ```
 
-버전 선택 뒤 커밋·태그·push를 각각 확인합니다. 거절하거나 취소하면 이후 단계는 멈추고 이미 바뀐 로컬 상태는 남습니다. push는 `main`과 선택한 `pi-claude-bridge-v<version>` 태그만 전송합니다. 루트의 공통 `.github/workflows/pi-packages.yml`이 태그로 bridge를 선택하고 검증 후 npm OIDC 배포와 GitHub Release를 만듭니다. 정식 버전은 `latest`, 사전 버전은 해당 식별자 또는 `next`를 사용합니다.
+변경 이력 초안과 버전 선택 뒤 커밋·태그·push를 각각 확인합니다. 실행 전 준비 상태는 `pnpm release:dry-run --app pi-claude-bridge --version <버전>`으로 파일을 바꾸지 않고 확인할 수 있습니다. 거절하거나 취소하면 이후 단계는 멈추고 이미 바뀐 로컬 상태는 남습니다. push는 `main`과 선택한 `pi-claude-bridge-v<version>` 태그만 전송합니다. 루트의 공통 `.github/workflows/pi-packages.yml`이 태그로 bridge를 선택하고 검증 후 npm OIDC 배포와 GitHub Release를 만듭니다. 정식 버전은 `latest`, 사전 버전은 해당 식별자 또는 `next`를 사용합니다.
 
 npm Trusted Publisher는 GitHub 사용자 `buYoung`, 저장소 `pi-packages`, workflow 파일명 `pi-packages.yml`에 연결해야 합니다. npm 설정에는 전체 경로가 아닌 파일명만 입력합니다.
 
