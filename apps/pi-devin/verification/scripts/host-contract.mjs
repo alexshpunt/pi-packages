@@ -24,9 +24,6 @@ const FUSION_ID = "fusion";
 const REPORT_PREFIX = "Sidekick report for background handoff";
 const SOL = "gpt-5.6-sol";
 const UNEXPOSED_UIDS = ["kimi-k2-6", "kimi-k2-7", "swe-1-6", "swe-1-6-fast"];
-// Variants marked isRecommended in the fixture catalog. With the recommended filter on, only these and Fusion are listed.
-const RECOMMENDED_UIDS = ["swe-2-high", "swe-1-7-lightning", "claude-fable-5-1-medium", "claude-opus-5-5-medium", "gpt-6-astra-medium", "gpt-6-sol-medium",
-  "gpt-6-luna-medium", "gemini-4-argon-medium", "kimi-k3-high", "glm-5-2", "glm-5-3-low", "glm-5-3-high", "glm-5-3-max", "claude-sonnet-5-5-medium", "gemini-3-8-flash-medium"];
 const OAUTH_ONLY_TEXT = "API key authentication is not supported";
 const BUDGET_TEXT = "Used all 8 Devin model HTTP requests";
 const LONG_CACHE_TEXT = "Long cache lifetime is not confirmed";
@@ -437,16 +434,23 @@ async function scenarioRpc(scenario) {
     for (let attempt = 0; attempt < 50 && !(await fusionName())?.includes("+ SWE-2 Medium"); attempt++) await sleep(100);
 
     // /devin: the recommended filter is saved globally and applied to the list at once without network. RPC writes no status line and sends details as a notification.
-    const devinIDs = async () => ((await rpc.request({ type: "get_available_models" })).data?.models ?? []).filter((model) => model.provider === "devin").map((model) => model.id);
+    const devinModels = async () => ((await rpc.request({ type: "get_available_models" })).data?.models ?? []).filter((model) => model.provider === "devin");
+    const devinIDs = async () => (await devinModels()).map((model) => model.id);
+    // Expected from the catalog's isRecommended: models that map a recommended UID, plus Fusion, with the default list's level mappings unchanged.
+    const recommendedUIDs = new Set(JSON.parse(readFileSync(catalogPath, "utf8")).clientModelConfigs.filter((config) => config.isRecommended === true).map((config) => config.modelUid));
+    const defaultModels = await devinModels();
+    const recommendedModels = defaultModels.filter((model) => model.id === FUSION_ID || Object.values(model.thinkingLevelMap ?? {}).some((uid) => recommendedUIDs.has(uid)));
+    const levelMaps = (list) => JSON.stringify(list.map((model) => [model.id, model.thinkingLevelMap]).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
     const devinFrom = rpc.mark(), devinBase = mock.requests.length;
     await rpc.request({ type: "prompt", message: "/devin recommended on" });
-    let listed = [];
-    for (let attempt = 0; attempt < 50 && (listed = await devinIDs()).length !== RECOMMENDED_UIDS.length + 1; attempt++) await sleep(100);
+    let listed = [], filteredModels = [];
+    for (let attempt = 0; attempt < 50 && (filteredModels = await devinModels()).length !== recommendedModels.length; attempt++) await sleep(100);
     const devinSettingsPath = join(env.agent, "pi-devin", "settings.json");
     const readDevinSettings = () => existsSync(devinSettingsPath) ? JSON.parse(readFileSync(devinSettingsPath, "utf8")) : undefined;
     const filteredSettings = readDevinSettings();
-    scenario.check("devin-recommended-filter", JSON.stringify([...listed].sort()) === JSON.stringify([FUSION_ID, ...RECOMMENDED_UIDS].sort())
-      && filteredSettings?.schemaVersion === 1 && filteredSettings.recommendedOnly === true, { listed: listed.length, saved: filteredSettings });
+    scenario.check("devin-recommended-filter", recommendedUIDs.size > 0 && recommendedModels.length < defaultModels.length
+      && levelMaps(filteredModels) === levelMaps(recommendedModels)
+      && filteredSettings?.schemaVersion === 1 && filteredSettings.recommendedOnly === true, { listed: filteredModels.length, expected: recommendedModels.length, saved: filteredSettings });
     await rpc.request({ type: "prompt", message: "/devin recommended off" });
     for (let attempt = 0; attempt < 50 && (listed = await devinIDs()).length !== 66; attempt++) await sleep(100);
     await rpc.request({ type: "prompt", message: "/devin status on" });

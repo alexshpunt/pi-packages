@@ -4,7 +4,7 @@ import type { PickerTheme } from "./fusion-picker.ts";
 import type { UsageLine } from "./usage.ts";
 
 export const PREFERENCE_ITEMS: readonly { key: keyof DevinPreferences; label: string; detail: string }[] = [
-  { key: "recommendedOnly", label: "Recommended models only", detail: "/model shows only recommended variants and Devin Fusion" },
+  { key: "recommendedOnly", label: "Recommended models only", detail: "/model shows only models with a recommended variant and Devin Fusion" },
   { key: "showUsageStatus", label: "Usage in status line", detail: "shows quota and session tokens in the footer" },
 ];
 const HELP = "↑↓ move · space/↵ toggle · esc close";

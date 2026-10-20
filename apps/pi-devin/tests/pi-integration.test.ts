@@ -86,9 +86,9 @@ const waitUntil = async (predicate: () => boolean, label: string) => {
 
 /** Loads the Devin extension through the public loader, AgentSession and OAuth, and finds the Pi-style Fusion model. */
 async function fusionSession(chat: (request: CapturedProviderRequest, index: number) => Response | Promise<Response>, maxModelCalls?: number,
-  sidekick?: Partial<SidekickToolOptions>) {
+  sidekick?: Partial<SidekickToolOptions>, catalog?: JsonObject) {
   const directory = await mkdtemp(join(tmpdir(), "pi-devin-fusion-"));
-  const fixture = await providerFixture({ chat, maxModelCalls });
+  const fixture = await providerFixture({ chat, maxModelCalls, catalog });
   fixture.provider.shutdown();
   const runtime = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: join(directory, "models.json"),
     modelsStore: new InMemoryModelsStore(), refreshOnCreate: false, allowModelNetwork: false });
@@ -485,22 +485,29 @@ test("Fusion global store: corrupt or malformed files read as defaults and are n
 });
 
 test("/devin: a recommended filter changed by argument is saved globally and applied to the Pi model list at once without network", async () => {
-  const f = await fusionSession(() => streamResponse(finalFrames("unused")));
+  // The full fixture catalog has groups with and without a variant marked isRecommended.
+  const catalog = JSON.parse(await readFile(new URL("./fixtures/model-catalog.json", import.meta.url), "utf8")) as JsonObject;
+  const recommendedUIDs = new Set((catalog.clientModelConfigs as JsonObject[]).filter((config) => config.isRecommended === true).map((config) => config.modelUid as string));
+  const f = await fusionSession(() => streamResponse(finalFrames("unused")), undefined, undefined, catalog);
   try {
     const { session } = f;
     const catalogRequests = () => f.fixture.requests.filter((entry) => entry.method === MODELS_METHOD).length;
-    const before = catalogRequests(), allIDs = f.runtime.getModels("devin").map((model) => model.id);
-    const leadID = f.fusion.devin.fusion!.leadID;
-    await session.setModel(f.runtime.getModel("devin", leadID)!);
+    const allModels = f.runtime.getModels("devin"), allIDs = allModels.map((model) => model.id);
+    const levelMaps = (models: readonly { id: string; thinkingLevelMap?: unknown }[]) => [...models].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+      .map((model) => [model.id, model.thinkingLevelMap]);
+    const expected = allModels.filter((model) => model.id === FUSION_MODEL_ID || Object.values(model.thinkingLevelMap ?? {}).some((uid) => typeof uid === "string" && recommendedUIDs.has(uid)));
+    const hidden = allModels.find((model) => !expected.includes(model))!;
+    assert.ok(recommendedUIDs.size > 0 && hidden);
+    const before = catalogRequests();
+    await session.setModel(hidden);
     const leadsBefore = f.provider().getFusionChoices()!.leads.length;
     await session.prompt(`/${DEVIN_COMMAND_NAME} recommended on`);
     assert.deepEqual(f.devinSettings.read(), { recommendedOnly: true, showUsageStatus: false });
-    // In this fixture catalog (SWE-2 medium/high/max), swe-2-high is the only recommended variant.
-    assert.deepEqual(f.runtime.getModels("devin").map((model) => model.id).sort(), [FUSION_MODEL_ID, "swe-2-high"]);
-    assert.deepEqual(f.runtime.getAvailableSnapshot().filter((model) => model.provider === "devin").map((model) => model.id).sort(), [FUSION_MODEL_ID, "swe-2-high"]);
-    assert.equal(allIDs.includes("swe-2-high"), false);
+    // Recommended groups stay groups with the default list's level mappings, so `/thinking` still picks the recommended UID.
+    assert.deepEqual(levelMaps(f.runtime.getModels("devin")), levelMaps(expected));
+    assert.deepEqual(levelMaps(f.runtime.getAvailableSnapshot().filter((model) => model.provider === "devin")), levelMaps(expected));
     // The hidden current model stays in use for this session, and Fusion candidates ignore the filter.
-    assert.equal(session.model?.id, leadID);
+    assert.equal(session.model?.id, hidden.id);
     assert.equal(f.provider().getFusionChoices()!.leads.length, leadsBefore);
     await session.prompt(`/${DEVIN_COMMAND_NAME} recommended off`);
     assert.deepEqual(f.runtime.getModels("devin").map((model) => model.id), allIDs);

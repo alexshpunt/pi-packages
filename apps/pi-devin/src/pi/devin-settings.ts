@@ -5,7 +5,7 @@ const SCHEMA_VERSION = 1;
 
 /** Display settings toggled by `/devin`. Both default to off and never change how models are used or requested. */
 export interface DevinPreferences {
-  /** Lists only the variants that the catalog marks as recommended. */
+  /** Lists only the models that have a variant the catalog marks as recommended. */
   recommendedOnly: boolean;
   /** Shows quota and session usage in the TUI status line. */
   showUsageStatus: boolean;

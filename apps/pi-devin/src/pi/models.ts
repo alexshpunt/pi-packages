@@ -35,7 +35,7 @@ export interface DevinModel extends Model<typeof DEVIN_API> {
 export interface ProjectionOptions {
   /** Saved Fusion choice. false (sidekick child Pi) creates no Fusion entry. */
   fusion?: FusionSelection | false;
-  /** Lists only variants marked as recommended. The Fusion entry is unaffected. */
+  /** Lists only models with a variant marked as recommended. Groups stay groups. The Fusion entry is unaffected. */
   recommendedOnly?: boolean;
   /** Also lists exact UIDs that a group already covers. Used only by the sidekick child Pi. */
   listsAllExactModels?: boolean;
@@ -186,25 +186,26 @@ export function effectiveFusion(projection: VariantProjection, requested: Fusion
 
 /**
  * Exact UIDs covered by a published group are hidden and chosen with `/thinking`. Their catalog configs are stored on the group model.
- * `recommendedOnly` lists only recommended variants by exact UID. Without any, it falls back to the group list.
+ * `recommendedOnly` keeps only groups and uncovered exact UIDs that hold a recommended variant, so `/thinking` still picks the UID.
+ * Without any recommended variant, it falls back to the default list.
  * `listsAllExactModels` is only for processes that pick exact UIDs directly, such as the sidekick child.
  */
 export function modelsFromProjection(projection: VariantProjection, credential: Credential, options: ProjectionOptions = {}): DevinModel[] {
   const models: DevinModel[] = [], names = groupDisplayNames(projection), ids = publicModelIDs(projection);
   const published = projection.groups.filter((group) => group.canPublish);
-  const recommended = projection.variants.filter((variant) => isUsable(variant) && variant.model.isRecommended);
+  const recommendedUIDs = new Set(projection.variants.filter((variant) => isUsable(variant) && variant.model.isRecommended).map((variant) => variant.model.id));
   // Fall back to the default projection so accounts without recommended flags never get an empty list.
-  const isRecommendedOnly = options.recommendedOnly === true && recommended.length > 0;
-  if (!isRecommendedOnly) {
-    for (const group of published) {
-      const model = modelDefinition(ids.groups.get(group.id)!, names.get(group.id)!, publishedVariants(group), group.mappings, credential);
-      if (group.variants.some((variant) => variant.model.isRecommended)) model.devin.recommended = true;
-      models.push(model);
-    }
+  const isRecommendedOnly = options.recommendedOnly === true && recommendedUIDs.size > 0;
+  const isListed = (uids: readonly string[]) => !isRecommendedOnly || uids.some((uid) => recommendedUIDs.has(uid));
+  for (const group of published) {
+    if (!isListed(Object.values(group.mappings))) continue;
+    const model = modelDefinition(ids.groups.get(group.id)!, names.get(group.id)!, publishedVariants(group), group.mappings, credential);
+    if (group.variants.some((variant) => variant.model.isRecommended)) model.devin.recommended = true;
+    models.push(model);
   }
   const covered = new Set(published.flatMap((group) => Object.values(group.mappings)));
-  const exact = isRecommendedOnly ? recommended
-    : projection.variants.filter((variant) => isUsable(variant) && (options.listsAllExactModels === true || !covered.has(variant.model.id)));
+  const exact = projection.variants.filter((variant) => isUsable(variant) && isListed([variant.model.id])
+    && (options.listsAllExactModels === true || !covered.has(variant.model.id)));
   const listedNames = new Set(models.map((model) => model.name));
   for (const variant of exact) {
     const name = listedNames.has(variant.model.name) ? `${variant.model.name} (${variant.model.id})` : variant.model.name;

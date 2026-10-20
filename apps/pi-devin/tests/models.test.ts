@@ -66,18 +66,21 @@ test("classifies all 265 fixture catalog entries, lists 65 groups and a single F
   assert.equal(swe2.thinkingLevelMap!.medium, "swe-2-medium");
   assertPair(fusionFor(piModels), swe2.id, "swe-2-medium", "SWE-2 Medium");
   assert.equal(piModels.filter((model) => !isFusionModelID(model.id) && model.devin.fusion).length, 0);
-  // Recommended filter: only variants marked as recommended are listed by exact UID; the Fusion entry stays.
-  const recommendedUIDs = ["swe-2-high", "swe-1-7-lightning", "claude-fable-5-1-medium", "claude-opus-5-5-medium", "gpt-6-astra-medium",
-    "gpt-6-sol-medium", "gpt-6-luna-medium", "gemini-4-argon-medium", "kimi-k3-high", "glm-5-2", "glm-5-3-low", "glm-5-3-high", "glm-5-3-max",
-    "claude-sonnet-5-5-medium", "gemini-3-8-flash-medium"];
+  // Recommended filter: models that map a variant the catalog marks isRecommended stay listed as groups; the Fusion entry stays.
+  const recommendedUIDs = new Set(catalog.models.filter((model) => model.isRecommended).map((model) => model.id));
+  const mapsRecommended = (model: (typeof piModels)[number]) => Object.values(model.thinkingLevelMap ?? {}).some((uid) => typeof uid === "string" && recommendedUIDs.has(uid));
   const filtered = modelsFromProjection(projection, credential, { recommendedOnly: true });
-  assert.deepEqual(filtered.filter((model) => !isFusionModelID(model.id)).map((model) => model.id).sort(), [...recommendedUIDs].sort());
-  assert.deepEqual(filtered.filter((model) => isFusionModelID(model.id)).map((model) => model.id), [FUSION_MODEL_ID]);
+  assert.ok(recommendedUIDs.size > 0);
+  assert.deepEqual(filtered.map((model) => model.id), piModels.filter((model) => isFusionModelID(model.id) || mapsRecommended(model)).map((model) => model.id));
+  assert.ok(filtered.length < piModels.length);
   assert.equal(filtered.every((model) => model.devin.recommended === true || isFusionModelID(model.id)), true);
-  // A recommended entry's thinking level is fixed to that one variant.
-  const high = filtered.find((model) => model.id === "swe-2-high")!;
-  assert.deepEqual(getSupportedThinkingLevels(high), ["high"]);
-  assert.equal(high.name, "SWE-2 High");
+  assert.equal(filtered.some((model) => isExactID(model.id)), false);
+  // Every recommended UID stays reachable through `/thinking` of a listed group, with the default list's names and level mappings.
+  for (const uid of recommendedUIDs) assert.ok(filtered.some((model) => Object.values(model.thinkingLevelMap ?? {}).includes(uid)), uid);
+  for (const model of filtered) {
+    const listed = piModels.find((entry) => entry.id === model.id)!;
+    assert.deepEqual([model.name, model.thinkingLevelMap], [listed.name, listed.thinkingLevelMap], model.id);
+  }
   // In the default projection, groups with a recommended variant are flagged and IDs and counts stay the same.
   assert.equal(piModels.filter((model) => model.devin.recommended === true).length, 13);
   assert.equal(piModels.find((model) => model.id === swe2.id)!.devin.recommended, true);

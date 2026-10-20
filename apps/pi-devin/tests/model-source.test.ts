@@ -104,11 +104,14 @@ test("the persisted catalog holds only allowed fields and restores offline for t
   const filteredOptions = { ...options, recommendedOnly: () => isRecommendedOnly }, q = publications();
   const filtered = createDevinModelSource(filteredOptions);
   await filtered.refreshModels(q.context());
-  assert.equal(filtered.getModels().length, 16);
+  // The filter keeps the default list's recommended groups and Fusion.
+  const recommendedIDs = source.getModels().filter((model) => model.devin.recommended === true || model.devin.fusion).map((model) => model.id);
+  assert.ok(recommendedIDs.length > 1 && recommendedIDs.length < source.getModels().length);
+  assert.deepEqual(filtered.getModels().map((model) => model.id), recommendedIDs);
   assert.equal(q.stored()!.models.length, 66);
   const afterRestart = createDevinModelSource(filteredOptions);
   await afterRestart.refreshModels(q.context({ allowNetwork: false, stored: q.stored() }));
-  assert.equal(afterRestart.getModels().length, 16);
+  assert.deepEqual(afterRestart.getModels().map((model) => model.id), recommendedIDs);
   isRecommendedOnly = false;
   afterRestart.rebuildModels();
   assert.deepEqual(afterRestart.getModels().map((model) => model.id), source.getModels().map((model) => model.id));

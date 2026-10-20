@@ -114,7 +114,7 @@ node verification/scripts/host-contract.mjs --report "$check_dir/host-contract.j
 
 Expected: exit code 0 and `outcome: "pass"` in the report. The scope is:
 
-- **RPC**: catalog projection, model and level selection, Unicode, one tool call, a partial tool error, cancel, `/devin-fusion` saving and applying, the `/devin` recommended filter (15 recommended + Fusion), settings saving and the detailed notification with 0 catalog and model requests and no status line, the real child Pi sidekick's waiting and background reports and session file, no sidekick-only models in the lead list or the shared stored list after a sidekick run, the 8-call budget, shutdown during a stream, and 0 remaining subprocesses after exit
+- **RPC**: catalog projection, model and level selection, Unicode, one tool call, a partial tool error, cancel, `/devin-fusion` saving and applying, the `/devin` recommended filter (groups with a variant the catalog marks isRecommended, with unchanged level mappings, + Fusion), settings saving and the detailed notification with 0 catalog and model requests and no status line, the real child Pi sidekick's waiting and background reports and session file, no sidekick-only models in the lead list or the shared stored list after a sidekick run, the 8-call budget, shutdown during a stream, and 0 remaining subprocesses after exit
 - **print and JSON**: tool flow, error and 401 exit codes, JSONL serialization and a single terminal event
 - **OAuth only**: 0 Devin requests with `--api-key`, API key environment variables or an `api_key` in auth.json, and the OAuth path
 - **Cache**: pre-request rejection of `PI_CACHE_RETENTION=long` and its acceptance for 24h models

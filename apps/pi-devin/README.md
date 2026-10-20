@@ -77,7 +77,7 @@ Running `/devin` in the TUI shows the following on one screen. Use ↑↓ to mov
 
 There are two toggles, both off by default. Changes apply to all sessions at once.
 
-- **Recommended models only**: `/model` shows only the models Devin marks as Recommended, plus Devin Fusion. Recommended models are variants with a fixed thinking level, such as `swe-2-high`, rather than families, so you cannot pick another level with `/thinking`. If your account has no recommended models, the full list is shown.
+- **Recommended models only**: `/model` shows only the models that have a variant Devin marks as Recommended, plus Devin Fusion. Devin marks single variants such as `swe-2-high`, but the list keeps the model itself (`swe-2`), so you still pick the thinking level with `/thinking`. The recommended level is not applied automatically. If your account has no recommended models, the full list is shown.
 - **Usage in status line**: the TUI footer shows the remaining daily and weekly quota as bars, plus this session's input and output tokens, like `devin day ▕█████████░▏98% week ▕█████████░▏98% · ↑263 ↓49`. A bar turns to the warning color at 40% or less and to the error color at 20% or less.
 
 Quota is not live. It is refreshed when you log in and when Pi checks the login right before sending a model request, so the usage of the message you just sent shows up after the next request. `/devin` and the status line send no network requests. Credits, per-request costs and usage history are not shown.
