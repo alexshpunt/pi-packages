@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-20
+
 ### Fixed
 
 - Gemini models such as `gemini-4-argon` no longer fail with "There is an issue with this request, please try a different model" when a tool's parameter schema allows `null`, as `image_gen` does. Such tools stay available and are declared with a single parameter type, like Devin's own tools.
