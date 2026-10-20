@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "status": "pass",
+  "startedAt": "2026-10-18T18:31:42.016Z",
+  "apiCallCounts": {
+    "chat": 1,
+    "web_search": 1,
+    "web_fetch": 1,
+    "publicMetadata": 1,
+    "blocked": 0
+  },
+  "checks": [
+    {
+      "name": "shared-cli-chat",
+      "result": "pass",
+      "observed": {
+        "model": "glm-5.3-flash:cloud",
+        "question": "1+1",
+        "timeoutMs": 120000,
+        "maxTokens": 4096,
+        "answerContainsTwo": true,
+        "answerChars": 5,
+        "truncated": false
+      }
+    },
+    {
+      "name": "ollama_web_search",
+      "result": "pass",
+      "observed": {
+        "serializedBytes": 1700,
+        "totalChars": 594,
+        "totalResults": 3,
+        "cacheRetained": true,
+        "cacheReplayWithoutAPI": true
+      }
+    },
+    {
+      "name": "ollama_web_fetch",
+      "result": "pass",
+      "observed": {
+        "serializedBytes": 847,
+        "totalChars": 348,
+        "cacheRetained": true,
+        "cacheReplayWithoutAPI": true
+      }
+    }
+  ]
+}

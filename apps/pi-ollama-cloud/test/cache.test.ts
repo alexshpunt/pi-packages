@@ -10,7 +10,7 @@ import {
   isFresh,
   MAX_CACHE_BYTES,
   searchCacheKey,
-} from "../cache.ts";
+} from "../src/cache/storage.ts";
 
 function freshCache(maxEntries?: number) {
   const dir = mkdtempSync(join(tmpdir(), "ollama-cache-"));
@@ -78,7 +78,8 @@ describe("loadCache/saveCache", () => {
     const dir = mkdtempSync(join(tmpdir(), "ollama-cache-"));
     const path = join(dir, "cache.json");
     const maxCacheBytes = 1024;
-    const padding = "x".repeat(1024 * 1024);
+    // Normalization is exercised below the file read budget; oversized files are rejected separately.
+    const padding = "x".repeat(100);
     const input = {
       searches: {
         search: {

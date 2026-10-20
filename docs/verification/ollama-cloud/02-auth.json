@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "feature": "02-auth",
+  "baselineHead": "827c4e57e21d59215a6b032a6ab1843328a51869",
+  "branch": "main",
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0"
+  },
+  "verifiedFiles": [
+    {
+      "path": "apps/pi-ollama-cloud/limits.generated.ts",
+      "hash": "486b48ef663ee38150695205ec80d5c59546dcca61a1edd63dc5316d4fc99754"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/pricing.generated.ts",
+      "hash": "2f26b315ac247088400a3f5754a8b4b0d7c3ab4ee6916b4e6771c3833c0c077f"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/reasoning.generated.ts",
+      "hash": "e28b7ac751ed9b762edd52f561b62b1a37e1626fb7c0f737ce861b2f0cffb03d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/auth.ts",
+      "hash": "697e7f3eb93a458868204ea50e7643126114279332e0f26ce162ee1f80fcbd13"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/direct.ts",
+      "hash": "7bb5c3612a3e6dbce80f9778f46296f89665ad5c684c658077f429bb643330bc"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/mock-transport.ts",
+      "hash": "4eac82507b73dbfb62ed5f3fb3aa6844fbc8895cc33c104f7dd6949f57969ff3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/verification.ts",
+      "hash": "e5cfc2f6ca06d77bdda45fcb1a7b24d1f185dc015b50a10195cddc86edc1c891"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/generate-limits.ts",
+      "hash": "118e6bd09445714106f186e9ccafa43d502355f863a116d684b5deeb9fa1369f"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/smoke-web-tools.ts",
+      "hash": "4ff50bb0192f90f28acfa67250c91bebdea59f23186621f9caae225e01e4e9f0"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/auth/pi-resolver.ts",
+      "hash": "99cdb6eb2e75e02c04d5a493d5223bb51de72c98896dfb77dd44299d874b9414"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/auth/resolver.ts",
+      "hash": "a47ec54962163eb7af8ca03498da24b3db2c88ab7e258953ba298d04455dbed3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/api.ts",
+      "hash": "edb33594e139b74ef7097692599bcf89625dc744b6877a5218747d25f46ccd15"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/base.ts",
+      "hash": "927f034418488b3661e003dbeebc7d1f77574796685b954d1d8c33074338ab4d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/context-length.ts",
+      "hash": "52e626b89510ae3e03f9c450be3f447c8ab167c67e2364e28c726c8a37d96dc8"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/metadata.ts",
+      "hash": "2a9442a0878c872d0973b154f804bcbb355e95e67d679f141ac53c96f08486ca"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/thinking-levels.ts",
+      "hash": "f76734d0830e884322d62cce3b0a2208ce0dc6747403e4fdafc55afccf5fae8a"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/types.ts",
+      "hash": "4ca01de6b254c5f6a36d75a53a14f1a39836f69468d1bd6a413f874624cdcf02"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/pi/chat.ts",
+      "hash": "0d25f89f2d5e6e51d2c9bdc28f655aa7f72a550981af4e4d36d1d56d81324991"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/shared/concurrent.ts",
+      "hash": "1d7752fe90bb37fee0ba8d4a090f08fe1d72d4ccb2f6fe656b6561c52a6d4b3b"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/shared/http.ts",
+      "hash": "3118c4ad3dee9dd30d7dd64658e9813fc92237754cc44fb6589080872b637bd3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/auth-transport.ts",
+      "hash": "a8cb162b7759de3667548dac01aad5e5df0493d4e56ee1bd2394b736689847e0"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/scripts-auth.test.ts",
+      "hash": "504e9f73f04b75e1218d3dafe56247f86b27728f2f398f06d03254143613e27f"
+    }
+  ],
+  "moduleReferences": {
+    "cli": "scripts/cli/auth.ts",
+    "shared": [
+      "src/auth/pi-resolver.ts"
+    ],
+    "consumers": [
+      "src/pi/chat.ts",
+      "scripts/generate-limits.ts",
+      "scripts/smoke-web-tools.ts",
+      "src/auth/context.ts"
+    ]
+  },
+  "checks": [
+    {
+      "phase": "baseline",
+      "command": "기존 resolver 경로 추적 및 scripts/cli/auth.ts의 raw/reference fixture 비교",
+      "inputs": "임시 auth.json에 $TEST_OLLAMA_KEY 저장",
+      "expected": "기존 raw reader는 참조 원문, 공식 resolver는 fixture 환경값 반환",
+      "observed": "raw reader 원문과 공식 resolver 결과가 다름을 재현; 이후 실제 전송에서 해석된 값 일치",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/auth.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "리터럴·$ENV·${ENV}·명령 참조를 Pi가 해석하고 저장 키 우선순위를 유지",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/auth.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "누락 값·명령 실패의 fallback과 credentials.env 보존",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/auth.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "취소된 요청은 인증 평가 전에 중단",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/auth.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "Pi 최종 채팅 전송에 원문 참조 대신 해석된 키 사용",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud check && pnpm --filter @buyong/pi-ollama-cloud test:unit && git diff --check",
+      "inputs": "test/scripts-auth.test.ts, 실제 generate-limits/smoke-web-tools subprocess와 모의 fetch",
+      "expected": "기본 chat·generator·smoke 소비자의 Authorization은 평가된 키; 생성 파일 불변",
+      "observed": "10개 파일/183개 테스트 통과; 실제 스크립트 모의 전송 일치; 한도 스크립트는 의도된 503 fixture에 쓰기를 거부하고 종료 1",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report /tmp/ollama-final.YEZPe6/final-offline.json && pnpm --filter @buyong/pi-ollama-cloud check && pnpm --filter @buyong/pi-ollama-cloud test:unit && python3 apps/pi-ollama-cloud/test/fixtures/run-render-tui.py --report /tmp/ollama-final.YEZPe6/tui.json",
+      "inputs": "선행 기능이 연결된 최종 checkout과 격리된 mock SDK/script/PTY 소비자",
+      "expected": "후속 변경 이후에도 공용 구현과 최종 소비자 계약 유지",
+      "observed": "54개 통합 check와 237개 테스트 및 PTY 통과. 이 재검증의 실API 호출 0.",
+      "result": "pass"
+    }
+  ],
+  "apiCallCounts": {
+    "chat": 0,
+    "web_search": 0,
+    "web_fetch": 0,
+    "usage": 0,
+    "limitsProbe": 0
+  },
+  "limits": [
+    "사용자 결정: 공식 Pi 명령 해석 유지; 동기 !command 실행 중 취소는 호스트의 최대 10초 timeout까지 지연 가능; 실행 전후 취소 확인",
+    "실API와 개인 auth.json은 사용하지 않음",
+    "01의 src/auth/resolver.ts와 src/pi/chat.ts 해시 변경은 본 인증 연결의 의도된 후속 변경; 11에서 재검증",
+    "README/유지보수 문서의 인증 해석 및 취소 안내는 11에 인계"
+  ],
+  "revalidation": {
+    "checkedAt": "2026-10-18T18:34:01.044Z",
+    "commands": [
+      "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report /tmp/ollama-final.YEZPe6/final-offline.json",
+      "pnpm --filter @buyong/pi-ollama-cloud check",
+      "pnpm --filter @buyong/pi-ollama-cloud test:unit",
+      "python3 apps/pi-ollama-cloud/test/fixtures/run-render-tui.py --report /tmp/ollama-final.YEZPe6/tui.json"
+    ],
+    "result": "pass",
+    "observed": "현재 소스로 54개 통합 check, 18개 파일/237개 테스트, 실제 PTY 4개 동작 검증 통과. 기존 API 관찰·baseline·consumer 기록은 역사적 증거로 보존.",
+    "historicalVerifiedFiles": [
+      {
+        "path": "apps/pi-ollama-cloud/limits.generated.ts",
+        "hash": "486b48ef663ee38150695205ec80d5c59546dcca61a1edd63dc5316d4fc99754"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/pricing.generated.ts",
+        "hash": "86db74dec9eb5862b0735eb8490d93cd0064f39a79948c9424ce2c45cfdd01c2"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/reasoning.generated.ts",
+        "hash": "e91d383cd39fdc2a1307afc47dc2c42963c82b8b7500a0ac07e1ddd7c3fbb11c"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/auth.ts",
+        "hash": "697e7f3eb93a458868204ea50e7643126114279332e0f26ce162ee1f80fcbd13"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/direct.ts",
+        "hash": "7bb5c3612a3e6dbce80f9778f46296f89665ad5c684c658077f429bb643330bc"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/mock-transport.ts",
+        "hash": "4eac82507b73dbfb62ed5f3fb3aa6844fbc8895cc33c104f7dd6949f57969ff3"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/verification.ts",
+        "hash": "07c20d1995d5a374efd3564ab8f231a1ed6f82d0d345086c3e8b2f8626d477af"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/generate-limits.ts",
+        "hash": "2241bee22412e310b46b94434ef692eda9eb65d99b43f8058b22e90ba6cb1778"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/smoke-web-tools.ts",
+        "hash": "6059c7f492554f97c82049d11fcf442c265bd6f414620f47e605a37543699a45"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/auth/pi-resolver.ts",
+        "hash": "99cdb6eb2e75e02c04d5a493d5223bb51de72c98896dfb77dd44299d874b9414"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/auth/resolver.ts",
+        "hash": "a47ec54962163eb7af8ca03498da24b3db2c88ab7e258953ba298d04455dbed3"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/api.ts",
+        "hash": "66db70b2b092864f55bfb60efbecb8476b0908cbc8b42ba78bba6b939a7e2a4b"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/base.ts",
+        "hash": "927f034418488b3661e003dbeebc7d1f77574796685b954d1d8c33074338ab4d"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/context-length.ts",
+        "hash": "52e626b89510ae3e03f9c450be3f447c8ab167c67e2364e28c726c8a37d96dc8"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/metadata.ts",
+        "hash": "f1fab2a039992101a80f84e3cfbd799b40905ab00fdb1b162e7859483ee93350"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/thinking-levels.ts",
+        "hash": "e46c51d2cec4b8a2a1d71f219a68ba91a5134a22a903d0f529a0a09e82799505"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/types.ts",
+        "hash": "e94adf4420f84b9d1b8f8331d3417a04dbf37ae14b96e257ba984d5ee15b55f7"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/pi/chat.ts",
+        "hash": "0d25f89f2d5e6e51d2c9bdc28f655aa7f72a550981af4e4d36d1d56d81324991"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/shared/concurrent.ts",
+        "hash": "1d7752fe90bb37fee0ba8d4a090f08fe1d72d4ccb2f6fe656b6561c52a6d4b3b"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/shared/http.ts",
+        "hash": "3118c4ad3dee9dd30d7dd64658e9813fc92237754cc44fb6589080872b637bd3"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/fixtures/auth-transport.ts",
+        "hash": "a8cb162b7759de3667548dac01aad5e5df0493d4e56ee1bd2394b736689847e0"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/scripts-auth.test.ts",
+        "hash": "504e9f73f04b75e1218d3dafe56247f86b27728f2f398f06d03254143613e27f"
+      }
+    ]
+  }
+}

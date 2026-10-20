@@ -4,16 +4,16 @@
 
 ## 파일과 배포 경계
 
-- `index.ts`: 공급자·명령 등록과 세션 수명 관리
-- `models.ts`: 모델 조립과 `refreshModels`; 생성된 모델·가격·추론 수준·출력 한도 데이터를 사용
-- `web-tools.ts`, `cache.ts`: 웹 도구와 디스크 캐시
-- `config.ts`, `thinking-levels.ts`, `usage.ts`, `utils.ts`: 설정·추론 수준·사용량·공통 처리
-- `scripts/`: 생성과 실서비스 검증. npm 배포 대상 아님
-- `test/`: 기존 Vitest 검증. npm 배포 대상 아님
+- `src/index.ts`: Pi 등록과 `src/pi/`의 명령·도구·세션 연결. `package.json`의 `pi.extensions`가 이 파일을 지정
+- `src/{auth,models,cache,web,render,usage,shared}/`: 공용 runtime 구현. CLI와 실제 확장이 함께 사용
+- `src/generated/catalog.generated.ts`: 모델·가격·추론 데이터와 출처를 함께 보관하는 단일 artifact
+- `src/generated/limits.generated.ts`: 별도 출력 한도 측정 결과
+- `scripts/cli/`: 중앙 메뉴와 01~11 진단. `scripts/lib/`: 생성·배포물·실서비스 검증
+- `test/`: Vitest·subprocess·SDK/TUI fixture. `scripts/`와 함께 npm 배포에서 제외
 
-Pi는 TypeScript 소스를 직접 로드하므로 별도 빌드는 없습니다. 런타임 파일을 추가하면 `package.json`의 `files`에도 포함해야 합니다. `usage.ts`와 `utils.ts` 등은 외부에서 직접 import하므로 경로를 임의로 바꾸지 않습니다.
+Pi는 TypeScript 소스를 직접 로드하므로 별도 빌드는 없습니다. `package.json`의 `files`는 `src/`와 배포 문서만 포함합니다. 루트 `.ts` 파일과 generated 재노출 파일은 제거했으며, 직접 import하는 소비자는 `src/`의 구현 경로를 사용합니다. 개발 스크립트와 검증 코드를 `src/`로 옮기지 않습니다.
 
-Pi 호스트 패키지와 `typebox`는 `peerDependencies: "*"`, 개발 의존성은 `catalog:`로 선언합니다. 공통 TypeScript 설정은 개발 의존성으로만 참조합니다. 배포용 archive는 `pnpm pack`으로 만들어 `workspace:`와 `catalog:`가 해석되게 합니다.
+Pi 호스트 패키지와 `typebox`는 `peerDependencies: "*"`, 개발 의존성은 `catalog:`로 선언합니다. `proper-lockfile`은 생산 의존성이고 Inquirer·tsx·검증 라이브러리는 개발 전용입니다. 공통 TypeScript 설정은 개발 의존성으로만 참조합니다. 배포용 archive는 `pnpm pack`으로 만들어 `workspace:`와 `catalog:`가 해석되게 합니다.
 
 ## 키 없이 검증
 
@@ -21,29 +21,38 @@ Pi 호스트 패키지와 `typebox`는 `peerDependencies: "*"`, 개발 의존성
 pnpm install --frozen-lockfile
 pnpm --filter @buyong/pi-ollama-cloud check
 pnpm --filter @buyong/pi-ollama-cloud test:unit
-pnpm --dir apps/pi-ollama-cloud pack --pack-destination /tmp/pi-ollama-cloud-pack
+verification_dir="$(mktemp -d)"
+pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report "$verification_dir/offline.json"
+pnpm --dir apps/pi-ollama-cloud pack --pack-destination "$verification_dir/package"
 ```
 
 모든 검사는 종료 코드 0이어야 합니다. `check`는 파일을 수정하지 않습니다. 생성 데이터 재조회는 이 검증의 일부가 아닙니다. 로드·명령 확인은 [README의 격리 실행](../README.md#개발과-검증)을 따릅니다.
 
 ## 생성 데이터 갱신
 
-생성 파일은 직접 수정하지 않습니다. 다음 명령은 외부 API를 읽고 앱의 파일을 덮어쓰므로, 일반 검증과 구분해 실행합니다.
+생성 파일은 직접 수정하지 않습니다. 일반 검증은 fixture만 사용합니다. 다음 명령은 외부 자료를 읽거나 실제 사용량을 발생시키므로 목적을 구분합니다.
 
 ```bash
-# 가격표 → models.dev 추론 수준 → 기본 모델 목록
+# 전체 catalog를 수집·검증하지만 게시하지 않음 (공개 API/문서 조회)
+pnpm --filter @buyong/pi-ollama-cloud generate-models --dry-run
+
+# 임시 파일을 완성한 뒤 src/generated/catalog.generated.ts 한 번 교체
 pnpm --filter @buyong/pi-ollama-cloud generate-models
 
-# 추론 수준만 갱신
+# 기존 진입점도 이제 가격·모델·추론 전체 transaction을 실행
 pnpm --filter @buyong/pi-ollama-cloud generate-reasoning
 
-# 모델별 출력 한도 측정: 인증과 실제 요청 사용량 필요
-pnpm --filter @buyong/pi-ollama-cloud generate-limits
+# 별도 출력 한도 측정: 인증과 실제 추론 사용량 필요
+pnpm --filter @buyong/pi-ollama-cloud generate-limits <exact-model-id>
 ```
 
-새 모델의 출력 한도를 반영하려면 `generate-limits`를 `generate-models`보다 먼저 실행합니다. 하나만 측정하려면 `generate-limits` 뒤에 정확한 모델 ID를 전달합니다. 인증은 Pi의 `auth.json`을 먼저 읽고 `OLLAMA_API_KEY`로 대체합니다.
+`generate-models.ts`, `generate-pricing.ts`, `generate-reasoning.ts`는 같은 완전한 파이프라인을 사용합니다. 후보 목록을 한 번 모으고 모든 상세·가격·추론 자료와 최종 형식을 검사한 뒤 단일 catalog를 교체합니다. 일부 상세 실패·빈 목록·원본 schema 오류·쓰기/rename 실패는 기존 결과를 보존합니다. 프로세스가 rename 직전·직후 죽는 경우는 이전 또는 완성본만 관찰하도록 검증했으며, 전원 장애 내구성까지 보장하는 것은 아닙니다.
 
-가격표에 매칭되지 않은 모델, 측정 실패, 삭제된 모델을 검토하고 의도한 생성 결과만 커밋합니다. models.dev의 추론 데이터와 Ollama 모델 목록은 다른 데이터셋이므로 키 집합을 강제로 일치시키지 않습니다. 은퇴했지만 API에 남은 모델은 `scripts/generate-models.ts`의 `RETIRED_MODEL_IDS`에서 처리합니다.
+기본 출력 디렉터리는 앱의 `src/generated/`입니다. `--output-dir <dir>`를 지정하면 그 디렉터리에 `catalog.generated.ts` 또는 `limits.generated.ts`를 직접 씁니다. `--dry-run`은 게시만 막습니다. **`generate-limits --dry-run`도 실제 유료 추론을 실행합니다.** 인증은 공식 Pi resolver로 저장 키를 해석하고 없으면 `OLLAMA_API_KEY`로 대체합니다. 동기 `!command`의 취소는 최대 10초 늦어질 수 있습니다.
+
+출력 한도의 정확한 측정값과 확인된 하한을 구분합니다. 모호한 실패는 기존 값을 유지하고, 전부 실패하거나 유효한 결과가 없으면 파일을 덮어쓰지 않습니다. 새 한도를 catalog에 반영하려면 limits 측정 후 catalog를 생성합니다.
+
+표준 가격과 Off-Peak 가격을 섞지 않습니다. 미확인 별칭 가격은 무료로 확정하지 않으며, models.dev와 Ollama의 키 집합을 강제로 일치시키지 않습니다. API에 남은 은퇴 모델을 자동 제외하는 목록은 현재 없으므로 게시 전에 은퇴 공지도 검토합니다. 기존 데이터 이관의 관찰 시각은 알 수 없는 경우 `null`로 유지합니다.
 
 ## CI와 실서비스 검사
 
@@ -51,7 +60,7 @@ pnpm --filter @buyong/pi-ollama-cloud generate-limits
 
 | 상황 | 실행 |
 | --- | --- |
-| PR·main push | 변경된 앱의 린트·타입·단위 테스트·패키징 |
+| PR·main push | 변경된 앱의 린트·타입·단위 테스트·패키징, Ollama는 추가 offline source/artifact 계약 검증 |
 | 공통 설정·잠금 파일 변경 | 모든 공개 Pi 앱 검증 |
 | Ollama 앱이 검증 대상으로 선택됨 | 최신 Pi 호환성 검사도 실행 |
 | Ollama 대상 main push·수동 실행 | secret이 있으면 실서비스 검사. 없으면 생략 사유 기록 |
@@ -61,7 +70,19 @@ pnpm --filter @buyong/pi-ollama-cloud generate-limits
 
 실서비스 검사에는 `buYoung/pi-packages`의 Actions secret `OLLAMA_CLOUD_API_KEY`가 필요합니다. 값은 실행 프로세스의 `OLLAMA_API_KEY`로 전달하며 PR에는 전달하지 않습니다. GitHub에서 기존 secret 값을 다시 읽어 복사할 수 없으므로 소유자가 새 저장소에 직접 등록합니다.
 
-모델 검사와 thinking off 검사는 `pnpm pack` 결과를 풀어 로드합니다. 웹 API 검사는 기존 `scripts/smoke-web-tools.ts`를 실행합니다. 로컬에서 웹 API만 확인하려면 앱 디렉터리에서 `pnpm run smoke:web-tools`를 실행합니다. 이 명령은 키를 확인하고 실제 웹 검색·페이지 요청을 보냅니다.
+모델·thinking-off·웹 검사는 `pnpm pack` archive를 별도 디렉터리에 생산 의존성과 함께 설치한 결과를 로드합니다. Pi peer는 실행 중인 호스트가 제공합니다. 설치는 `--ignore-scripts --legacy-peer-deps --omit=dev`로 개발 의존성·중복 Pi 설치를 피합니다. offline gate는 기존 로컬 의존성을 복사하므로 registry에서의 신규 설치 증명과는 구분합니다.
+
+웹 검사는 `scripts/smoke-web-tools.ts --package-dir <installed-package>`로 실제 등록된 execute·반환 상한·보관된 캐시 재사용을 확인합니다. 앱 디렉터리의 `pnpm run smoke:web-tools`는 source 경로를 검사하며 검색·fetch 각 1회와 구매 크레딧 보호를 위한 `/api/balance` 조회 1회를 사용합니다. 실패는 자동 재시도하지 않습니다.
+
+수동 최소 검증은 별도의 명시적 예산 승인 후에만 다음 형태로 실행합니다. 기존 CI의 추가 모델·thinking-off 검사를 대체하는 명령이 아닙니다.
+
+```bash
+pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/live.ts --live-minimal --package-dir <installed-package> --report <new-report.json>
+```
+
+공용 채팅 경로에서 `glm-5.3-flash:cloud`에 `1+1` 1회(120,000ms, 최대 4,096 토큰), 등록된 웹 도구에서 `Ollama Cloud` 검색 1회(3개 결과), `https://ollama.com` fetch 1회입니다. 실패도 횟수에 포함하며 이후 단계는 중단합니다. 같은 보고서 경로는 재실행을 거절하고, 전송 전 호출 수를 기록합니다. redirect·추가 요청·retry는 전송 전에 차단합니다. 인증값·전체 응답은 기록하지 않습니다. cache replay는 실제 보관된 항목에만 수행하고 추가 전송을 차단합니다.
+
+`docs/verification/ollama-cloud/`는 역사적 CLI/consumer 기록을 보존합니다. 01–11 기록은 루트 호환 파일을 유지했던 이전 구조의 증거입니다. 후속 수정·경로 이동은 관련 진단·최종 소비자 검증을 다시 실행하고 별도 기록에 현재 해시와 명령을 남깁니다. 단순 해시 교체는 검증이 아닙니다. PTY/TUI 확인은 `python3 apps/pi-ollama-cloud/test/fixtures/run-render-tui.py --report <temp-report.json>`이며, mock renderer callback이나 별도 GUI 육안 검사와 구분합니다.
 
 ## npm 배포 출처 설정
 

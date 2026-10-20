@@ -1,6 +1,7 @@
 import type { ExtensionContext, ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { getCloudApiKey, httpError } from "../utils.ts";
+import { getCloudApiKey } from "../src/auth/context.ts";
+import { httpError } from "../src/shared/http.ts";
 
 // --- Helpers ---
 

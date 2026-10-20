@@ -1,12 +1,22 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { ModelsPublication, RefreshModelsContext } from "@earendil-works/pi-ai";
 import type { ProviderModelConfig } from "@earendil-works/pi-coding-agent";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { GENERATED_MODELS } from "../models.generated.ts";
-import { refreshOllamaCatalog } from "../models.ts";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { assertPartialKeepsTimestamp, assertRestoredCatalogPolicy, catalogFeature } from "../scripts/cli/catalog.ts";
+import { GENERATED_MODELS } from "../src/generated/catalog.generated.ts";
+import { getCatalogDiagnostics, refreshOllamaCatalog } from "../src/models/catalog.ts";
 
 // --- Helpers ---
 
 const originalFetch = globalThis.fetch;
+const originalAgentDir = process.env.PI_CODING_AGENT_DIR;
+let agentDir: string;
+beforeEach(() => {
+  agentDir = mkdtempSync(join(tmpdir(), "ollama-refresh-"));
+  process.env.PI_CODING_AGENT_DIR = agentDir;
+});
 
 function getReasoning(model: ProviderModelConfig | undefined): boolean | undefined {
   return model && "reasoning" in model ? model.reasoning : undefined;
@@ -18,6 +28,9 @@ type Publish = (publication: ModelsPublication) => Promise<boolean>;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  if (originalAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+  else process.env.PI_CODING_AGENT_DIR = originalAgentDir;
+  rmSync(agentDir, { recursive: true, force: true });
 });
 
 /** A minimal pi-ai Model-shaped stored entry (provider/api/baseUrl filled in). */
@@ -45,7 +58,12 @@ function makeContext(
   } = {},
 ) {
   const controller = new AbortController();
-  const publish = overrides.publish ?? vi.fn<Publish>().mockResolvedValue(true);
+  const publish =
+    overrides.publish ??
+    vi.fn<Publish>(async (publication) => {
+      publication.update?.();
+      return true;
+    });
   const context: RefreshModelsContext = {
     allowNetwork: overrides.allowNetwork ?? true,
     force: overrides.force,
@@ -74,6 +92,15 @@ function mockLiveApi() {
 // ============================================================================
 
 describe("refreshOllamaCatalog restore phase", () => {
+  it("passes the CLI recovery cases and re-applies policy through the public callback", async () => {
+    await catalogFeature.verify({
+      check: async (_name, run) => {
+        await run();
+      },
+    });
+    await assertRestoredCatalogPolicy(refreshOllamaCatalog);
+    await assertPartialKeepsTimestamp(refreshOllamaCatalog);
+  });
   it("returns GENERATED_MODELS when no stored entry exists, and never publishes", async () => {
     const { context, publish } = makeContext({ allowNetwork: false, stored: undefined });
     const result = await refreshOllamaCatalog(context);
@@ -141,16 +168,17 @@ describe("refreshOllamaCatalog network phase", () => {
     }
   });
 
-  it("propagates a network failure without publishing", async () => {
+  it("propagates a network failure without persisting a catalog", async () => {
     globalThis.fetch = async () => {
       throw new Error("network down");
     };
     const { context, publish } = makeContext();
     await expect(refreshOllamaCatalog(context)).rejects.toThrow("model list fetch failed: transport error");
-    expect(publish).not.toHaveBeenCalled();
+    expect(publish.mock.calls.every(([value]) => value.persist === undefined)).toBe(true);
+    expect(getCatalogDiagnostics()?.status).toBe("failure");
   });
 
-  it("propagates when every /api/show request fails, without publishing", async () => {
+  it("propagates when every /api/show request fails, without persisting a catalog", async () => {
     globalThis.fetch = async (url) => {
       if (String(url).includes("/v1/models")) {
         return new Response(JSON.stringify({ data: [{ id: "m1" }, { id: "m2" }] }), { status: 200 });
@@ -159,7 +187,8 @@ describe("refreshOllamaCatalog network phase", () => {
     };
     const { context, publish } = makeContext();
     await expect(refreshOllamaCatalog(context)).rejects.toThrow("Failed to fetch model details");
-    expect(publish).not.toHaveBeenCalled();
+    expect(publish.mock.calls.every(([value]) => value.persist === undefined)).toBe(true);
+    expect(getCatalogDiagnostics()?.failures.map((failure) => failure.id)).toEqual(["m1", "m2"]);
   });
 
   it("surfaces a partial failure without persisting when there is no stored catalog", async () => {
@@ -175,10 +204,10 @@ describe("refreshOllamaCatalog network phase", () => {
     };
     const { context, publish } = makeContext();
     await expect(refreshOllamaCatalog(context)).rejects.toThrow("catalog refresh incomplete");
-    expect(publish).not.toHaveBeenCalled();
+    expect(publish.mock.calls.every(([value]) => value.persist === undefined)).toBe(true);
   });
 
-  it("keeps the last-good catalog, advances checkedAt, and surfaces the error on a partial failure with a stored catalog", async () => {
+  it("keeps the last-good catalog and checkedAt while recording a separate failure retry", async () => {
     globalThis.fetch = async (url, init) => {
       if (String(url).includes("/v1/models")) {
         return new Response(JSON.stringify({ data: [{ id: "ok-model" }, { id: "bad-model" }] }), { status: 200 });
@@ -195,9 +224,11 @@ describe("refreshOllamaCatalog network phase", () => {
     });
     await expect(refreshOllamaCatalog(context)).rejects.toThrow("catalog refresh incomplete");
     expect(publish).toHaveBeenCalledTimes(1);
-    const persisted = publish.mock.calls[0][0].persist;
-    expect(persisted?.models.map((m) => m.id)).toEqual(["stored-a"]);
-    expect(persisted?.checkedAt).toEqual(expect.any(Number));
+    expect(publish.mock.calls[0][0].persist).toBeUndefined();
+    expect(getCatalogDiagnostics()?.lastSuccessAtMs).toBe(context.stored?.checkedAt);
+    expect(getCatalogDiagnostics()?.nextRetryAtMs).toBeGreaterThan(Date.now());
+    const restored = await refreshOllamaCatalog({ ...context, allowNetwork: false });
+    expect(restored.map((model) => model.id)).toEqual(["stored-a"]);
   });
 
   it("returns the fallback and does not persist when the live catalog has no tools-capable models", async () => {
@@ -210,7 +241,8 @@ describe("refreshOllamaCatalog network phase", () => {
     const { context, publish } = makeContext();
     const result = await refreshOllamaCatalog(context);
     expect(result).toEqual(GENERATED_MODELS);
-    expect(publish).not.toHaveBeenCalled();
+    expect(publish.mock.calls.every(([value]) => value.persist === undefined)).toBe(true);
+    expect(getCatalogDiagnostics()?.status).toBe("empty");
   });
 
   it("returns models even when publishing fails (best-effort persistence)", async () => {

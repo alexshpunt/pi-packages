@@ -1,0 +1,984 @@
+{
+  "schemaVersion": 1,
+  "status": "pass",
+  "checkedAt": "2026-10-18T22:54:31.839Z",
+  "feature": "source-layout",
+  "baselineHead": "f1915cd60a46ce1c4e0efa7b1a8fd365ae2fcb0f",
+  "branch": "main",
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0"
+  },
+  "verifiedFiles": [
+    {
+      "path": ".github/workflows/pi-packages.yml",
+      "hash": "e2a7e50c4cd47d8175e27ce14455200c5f55c23a28588cb86fa4e304f353e64c"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/CHANGELOG.md",
+      "hash": "fcfd08de982834a66dfc8f038e8487fb2935b395a2e5b4d08103d5cec5b45ad5"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/LICENSE",
+      "hash": "dbc050e61d009710cfab77a4e1fcab925b6223cf016820d523513244fdfae991"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/README.md",
+      "hash": "f775ac06b2ba676af9785092f46b17792744583d04097c7ad0e34d8b9c442a5a"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/docs/maintaining.md",
+      "hash": "6d7b9883b91062b078eb0e280487e7a56aedbcb84cbc3a3ba11cc4876c3cf5f6"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/package.json",
+      "hash": "a5a3e6266b21b8ea8f3fd78d7373de6811517421108288205bf5da42a88dcf0d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/auth.ts",
+      "hash": "697e7f3eb93a458868204ea50e7643126114279332e0f26ce162ee1f80fcbd13"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/budgets.ts",
+      "hash": "4d5723a7b9a98b62f181bacaddc1f779c8dd35aeec448fe43b7a591819fd6c56"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/cache-workers.ts",
+      "hash": "aefb41c9e5baece291e310f81a68c49e7df7ce623940be8896a13d6fff48da89"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/catalog.ts",
+      "hash": "5a4824ee629f1003fd0c1815c6516fdd6364c79d56002c2b8277b02e53b3bfb2"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/chat.ts",
+      "hash": "d6648499fc1d721776f32ed59cdb8f08ff91edd459b8af5b292673ae498f041c"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/core.ts",
+      "hash": "4ce4ad54090974d51234604b364da00938d69364cb37f25cc832917cc2ef0504"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/diagnostics.ts",
+      "hash": "a08db114cbe3b00d16c49a74178326bd538b9eb7cc0538201026237b2d860d5a"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/direct.ts",
+      "hash": "7bb5c3612a3e6dbce80f9778f46296f89665ad5c684c658077f429bb643330bc"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/generated.ts",
+      "hash": "d1754b01c5dd95e68a004c710ae0c2fcf2f8b66e42da5e1525270dd90362c86d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/mock-transport.ts",
+      "hash": "4eac82507b73dbfb62ed5f3fb3aa6844fbc8895cc33c104f7dd6949f57969ff3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/models.ts",
+      "hash": "80c35dbb73489aa6b944719fc785e7dec0d3eb516e9e3ac4df9994e6fcc67cd0"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/registry.ts",
+      "hash": "72e4363bb16b116dfb20f71e86b70af24ced0d20325762a4c6148ab6cada35d0"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/render.ts",
+      "hash": "bc5aa6c2145a5073dadf43229467ab85ad5c0481c987e14de85c6490502b6b60"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/runner.ts",
+      "hash": "0ba50fead830342a20b0b8274ff6b16cae5aa2d1fe2d701ea4e2cd82ae483289"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/sharing.ts",
+      "hash": "2e0ca80891ed214e2849dc14badc7ee3eaa3993d8db5734263eb9027ed5d2e4f"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/usage.ts",
+      "hash": "5b6c1f233e0121f4d2eb5b7eba375e2399050e38223cd732490b92abdce23756"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/verification.ts",
+      "hash": "e5cfc2f6ca06d77bdda45fcb1a7b24d1f185dc015b50a10195cddc86edc1c891"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/verify.ts",
+      "hash": "5d27cc8e37e0558bc82cc4a73c3cc74fdde49945797aed7169d0828049cddaef"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/web.ts",
+      "hash": "5c30fb3ff5f1fc8a3dd5b4bb82c720ba1b48e961d8bf9e5663104404fa7d11d7"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/atomic.ts",
+      "hash": "4dbfa6613c2b5cfa36ec9eb53b6106422a799b52124801b94d1899fbcdd1b1f2"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/catalog.ts",
+      "hash": "ed57cdbc303d1de94c7217286cdd1454eb4a5b6e87fa9c2b97e58607435ff659"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/entry.ts",
+      "hash": "4aa80de140b84712579119b1bc39d007c35212aa31c020d0b717985c885b3dea"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/format.ts",
+      "hash": "d2185998680caedf738d75e11d88d873d390418fc79160e032f335a87c1a688d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/limits.ts",
+      "hash": "5909f08e3d1d91fa59fdee82ed230d166a4203d0b652d149fc29d27d93b29b47"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/parsers.ts",
+      "hash": "33d555e718b58f5f53b670b2479e02301e55ab71c982c18cc1c5159198b22f9a"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/pipeline.ts",
+      "hash": "44cf5339ea1109422c240dda00be5568c74e16c16046a6a6df2e0a4e26c3282d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/render.ts",
+      "hash": "e48b35ef8ed40adc206524e46e4e5d295be7e1f7f2eabfdc80ee9dee6b6d1abc"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/verification/artifact.ts",
+      "hash": "4fdd847166abd3f691e8a3d63b3ce1889042b9b05cd100108d444ceb31dea867"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/verification/consumer.ts",
+      "hash": "951100173369207a88a4a40b3ffc11cda2bba222370a64ee0851e65326e660c5"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/auth/context.ts",
+      "hash": "74973276355aa8d13f54c2c4448400de03aac08f846fd7ba8712905f846d3d8d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/auth/pi-resolver.ts",
+      "hash": "99cdb6eb2e75e02c04d5a493d5223bb51de72c98896dfb77dd44299d874b9414"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/auth/resolver.ts",
+      "hash": "a47ec54962163eb7af8ca03498da24b3db2c88ab7e258953ba298d04455dbed3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/bounded-storage.ts",
+      "hash": "e7395e0eacd666f687678bd13cf14db4c4b67ad5ed70092b59ea1c20e41ca980"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/budget.ts",
+      "hash": "aef2f33d07bd5517b0fcb13ea0c5dac2120f5c8b3b5d3cf6562698c9f59400ac"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/constants.ts",
+      "hash": "a54371447c759280e74b784c03a4a6b5bf607388e2b72fa56c4f04152bc9d762"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/coordinator.ts",
+      "hash": "e7dbb9fca9e77f6757c84d4a9d4d7d61c74030d69347baae340b9d5ac87f294c"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/data.ts",
+      "hash": "eb22de925fd3cc4b267a94370babae33d923c04f5d23a9684ea65eb49822d0ad"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/disk.ts",
+      "hash": "600e38653970343e60267fa56247599b73db1602556cf85df47d84ba441b3d67"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/lock.ts",
+      "hash": "10c6ac1ca17386957e36de5e8eda0eee4255af7ac7ba9692df59f742b610ddc7"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/merge.ts",
+      "hash": "b0adb406c67e3b9303be8514dfc19d4e160cdef5625c6f0b097988dd74837e32"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/publication.ts",
+      "hash": "8ef38e114597c7663e470dfcab7904d908645bbcc572e205852592f1887577f3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/storage.ts",
+      "hash": "ac3860d9cc7d85f7c7ced0cd3e1edb888e0ddfcf9bb6459113e6da173dfab36d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/types.ts",
+      "hash": "fb89fdf94939150e24a62dfda88407f3a504484e4ee60d8cdfe6596497d110a4"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/generated/catalog.generated.ts",
+      "hash": "1ca9e43ae3cabf8c7ca7ea5a3d825ef97d7f2f967a7c32608a8d628289367b59"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/generated/limits.generated.ts",
+      "hash": "486b48ef663ee38150695205ec80d5c59546dcca61a1edd63dc5316d4fc99754"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/index.ts",
+      "hash": "6c579c502b90021505644ed526567dde4f5bb44f2b1075a219166942a8ccaabf"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/api.ts",
+      "hash": "edb33594e139b74ef7097692599bcf89625dc744b6877a5218747d25f46ccd15"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/base.ts",
+      "hash": "927f034418488b3661e003dbeebc7d1f77574796685b954d1d8c33074338ab4d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/catalog-diagnostics.ts",
+      "hash": "e76bd26e56de516f830e0e1280a66473c599dfdd3e7c4d0c0cee591bd729ceaf"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/catalog-service.ts",
+      "hash": "08e34f33a2f2488777170cab399112da10555a86cded953b53f5ce557f9e3ead"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/catalog.ts",
+      "hash": "cad93c583dd370840ff7a22ae83286815867048d67034f9f647f7595886e3079"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/context-length.ts",
+      "hash": "52e626b89510ae3e03f9c450be3f447c8ab167c67e2364e28c726c8a37d96dc8"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/metadata.ts",
+      "hash": "2dd9e7e40062212753f9dc4743d0e1221cc6d8cf26dfae8f882cdb6deacb87b3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/snapshot.ts",
+      "hash": "1bc19913553592a8a02c7dc8011f19fdd596c7ae70d48f49574b180f87ce5291"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/thinking-levels.ts",
+      "hash": "76b1a249d39690efb226edc34a23e13ea59c01890b661726e8f4ad200085b68a"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/types.ts",
+      "hash": "4ca01de6b254c5f6a36d75a53a14f1a39836f69468d1bd6a413f874624cdcf02"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/pi/chat.ts",
+      "hash": "0d25f89f2d5e6e51d2c9bdc28f655aa7f72a550981af4e4d36d1d56d81324991"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/pi/config.ts",
+      "hash": "bcec4aee1bc6fc953ca8625a3fcdd73b10e6228bf5b78cc40b3ae95cc2d20641"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/pi/lifecycle.ts",
+      "hash": "e7c1f5ac8e11585b3da126f76446b6cf45c6c6cecb15a527028ac25c26b09f8f"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/pi/web-tools.ts",
+      "hash": "f7f6baf965f2ff9263f4e3c391f767aaefef60b66723e1e991be6c1d394e4209"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/render/result.ts",
+      "hash": "85098cf1e0d69b42a484c2cadb4309d760199605a401eee129f7f270108957b7"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/shared/concurrent.ts",
+      "hash": "1d7752fe90bb37fee0ba8d4a090f08fe1d72d4ccb2f6fe656b6561c52a6d4b3b"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/shared/http.ts",
+      "hash": "3118c4ad3dee9dd30d7dd64658e9813fc92237754cc44fb6589080872b637bd3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/usage/api.ts",
+      "hash": "99569cb3cec0316365b6a8460b837bed69a04c5a295697d922844550b3b74d06"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/usage/status-controller.ts",
+      "hash": "62f00a628f31cd6f724c9ff1e8b78b9234302698b03d8da9ef0823528d5bbd51"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/usage/status.ts",
+      "hash": "e13dc3fd27aa07c9d7e8d31219363b5ada2e63150599a34d3bc3a62e044bae43"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/constants.ts",
+      "hash": "dd50cf779321a32e64331bf355a43e1f6641cfa77b8dace37ed56443deac4bd2"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/errors.ts",
+      "hash": "7dba787c6b6d2cb0f3b6adbcc8109b955f08e6259b8fb9f57ac76bb914806d4f"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/fetch.ts",
+      "hash": "74d1bef1900aef213a81fdfbbc3b9e1a6b4a2c1a8bc2837c1be3c0e792119acf"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/paging.ts",
+      "hash": "9473c0955e5818e777cd3dd69995e51dd518157161c9a38570e2990c74a0da49"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/search.ts",
+      "hash": "95707fd08528bb63e08a2d43e2b4914d838814020eee7c99c79e1e31466355c2"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/types.ts",
+      "hash": "44624124e988c0ece2a7ea1279ddc8e11a1522bb549f695fe5e1d6ac346231b1"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/cache-concurrency.test.ts",
+      "hash": "39e3e238b28100b760fed4f64c7cd895039fb388622c00a0339621018cba4c07"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/cache.test.ts",
+      "hash": "71476996c3058168ba2e9203ca05b239155917f7633b4352c722716a5b58ae2a"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/catalog-runtime.test.ts",
+      "hash": "d8c0442ddd8f9ebeec700b55304a11d47af73638dca5b6dc3fee2fa160d15114"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/core-consumer.test.ts",
+      "hash": "0074ad8a403d4ea89f4e734886c6308cfcf9b8ce96ed1c096e7805993aceeb01"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/cache-pi-worker.ts",
+      "hash": "a92573b813e575d39756d0df1c52a24bab6c0305297e3479bf9b5d183de4580d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/cache-worker.ts",
+      "hash": "62353c8022a77f5b1434df987074017b97d34a70f3241559c2581f60206b1ece"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/generation-data.ts",
+      "hash": "5f91ea7a299a11e775946397dea22ae3073ae2bc6515df74393635ac2efdc78d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/inspect-generated.ts",
+      "hash": "9b119ab926468983ed4b963f37dfc5902c131ed8fe280c286433a1ca889be247"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/package-contract.ts",
+      "hash": "f3860bdfa8f5f11b11a4a18b20eec252920e6b3553609f911d1e34cd2ac91f14"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/package-inventory.json",
+      "hash": "61a618ecf7aa1716e0920d80761e4142148fa935e52bc85d3af04a8f295235d0"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/render-observer.ts",
+      "hash": "cc94704d100fa18dbb74033fd687d5dff65ee72f2bb58d13465e84590ec9259f"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/render-session.ts",
+      "hash": "aa286e88d95d94ab5ed6c3f1b7cfd9ac1f671b2eb46d0d5d9c8d455f944bec0b"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/generators.test.ts",
+      "hash": "3f7bbad1419ad2cb84580c62cbd0afce5b4e38c15912d1e932505da9889cea1e"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/model-metadata-consumer.test.ts",
+      "hash": "a85984d022c339c68f0304dc710934544e4e59348ff0da44defef89dc4be2697"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/models.test.ts",
+      "hash": "d8a28c4ca4c5d298cc474da0ab7bcaca053635484c571e99f0dba6a257065f77"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/refresh.test.ts",
+      "hash": "abf14226117598acc8201a9ad819c6032e13de20c452c27d5ca38dff8ec40b11"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/render-result.test.ts",
+      "hash": "93e4cbdf857ce454552e67881a09980ae4d334eca7028e462cdd7644cd0c389e"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/scripts-auth.test.ts",
+      "hash": "b5c707ecd8d474864c67bbf542638cbcb3891e4b2b30372d2a1420920eb152ea"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/usage-status.test.ts",
+      "hash": "b4450deb510a77790cff49ac77021f4a86ac55c1efadd9605122f55b00acc778"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/usage.test.ts",
+      "hash": "406f86585d28fe26672dc1bb07f11941b3f85ec68a2f60573678885df328372c"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/utils.test.ts",
+      "hash": "c09cba5ab5f8c08c4807e62b8aced266aa0cc3cd4c6844e105457d94fc4b740d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/web-budgets.test.ts",
+      "hash": "885b3b6835cea2a33cc3b54dac53b0e5137131825f2acb610d7900a6cc2ff3be"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/web-tools-cache-paging.test.ts",
+      "hash": "ab9806ecc5de553d4e6fe8a5cee0905f5eadfb003f50fc862685a071f38836ab"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/web-tools.test.ts",
+      "hash": "b8b5614511d4ea4ed0104beaa112925c12adc4bf8f18f216b1cee5f954b5ac62"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/tsconfig.json",
+      "hash": "005c4efaefcc6d58ef1aeba21fc9aaf22b9269a6d009165ca3654301a2df5600"
+    }
+  ],
+  "moduleReferences": {
+    "cli": "scripts/cli/verify.ts",
+    "shared": [
+      "scripts/cli/registry.ts",
+      "scripts/lib/verification/artifact.ts",
+      "scripts/lib/verification/consumer.ts",
+      "test/fixtures/package-contract.ts",
+      "test/fixtures/package-inventory.json"
+    ],
+    "consumers": [
+      ".github/workflows/pi-packages.yml",
+      "scripts/smoke-web-tools.ts"
+    ]
+  },
+  "checks": [
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "static registry의 10개 독립 기능과 고유 ID",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "01-core-cli: 공용 모델 조립과 무인증 목록 조회",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "01-core-cli: 실제 Pi 전송의 모델 ID·질문·토큰 상한과 임시 폴더 정리",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "01-core-cli: 기존 메뉴·선택·직접 입력·종료와 SIGINT 정리",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "02-auth: 리터럴·$ENV·${ENV}·명령 참조를 Pi가 해석하고 저장 키 우선순위를 유지",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "02-auth: 누락 값·명령 실패의 fallback과 credentials.env 보존",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "02-auth: 취소된 요청은 인증 평가 전에 중단",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "02-auth: Pi 최종 채팅 전송에 원문 참조 대신 해석된 키 사용",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "03-model-metadata: 전체 모델 목록과 tools 채팅 후보를 구분하고 필드별 출처를 표시",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "03-model-metadata: 알 수 없는 thinking·잘못된 형식·기존 입력·off 예외의 안전한 처리",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "03-model-metadata: 실제 Pi 최종 payload의 요청 ID·caller effort·compat·토큰 상한",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "04-catalog-cache: 구버전 snapshot의 동적 context/input과 최신 로컬 정책 적용",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "04-catalog-cache: cold/warm/force와 정확한 4시간 성공 TTL",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "04-catalog-cache: 부분 실패는 정상 checkedAt을 유지하고 15분 후 재시도",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "04-catalog-cache: 전체 실패·빈 목록도 별도 실패 간격을 적용하며 force로 우회",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "04-catalog-cache: 저장 실패와 superseded publish는 마지막 정상 snapshot을 훼손하지 않음",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "04-catalog-cache: 취소는 실패 cooldown을 만들지 않고 즉시 다음 요청을 허용",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "05-fetch-recovery: 404 → 강제 500 → 일반 재시도 → 캐시 적중",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "05-fetch-recovery: 404 → 강제 401 → 일반 재시도 → 캐시 적중",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "05-fetch-recovery: 404 → 강제 403 → 일반 재시도 → 캐시 적중",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "05-fetch-recovery: 404 → 강제 429 → 일반 재시도 → 캐시 적중",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "05-fetch-recovery: 404 → 강제 transport → 일반 재시도 → 캐시 적중",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "05-fetch-recovery: 404 → 강제 shape → 일반 재시도 → 캐시 적중",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "05-fetch-recovery: 404 → 강제 abort → 일반 재시도 → 캐시 적중",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "05-fetch-recovery: 성공 본문도 강제 재조회 실패 뒤 fresh hit로 반환하지 않음",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "06-tool-renderer: 접기↔펼치기 반복 및 성공→오류 전환에서 setText 예외 없음",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "06-tool-renderer: 동일 폭의 새 결과와 테마·폭 변경에 preview 갱신",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "07-cache-budgets: 메모리 8MiB·디스크 8MiB·항목 256KiB와 전체 항목 eviction",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "07-cache-budgets: 정확한 JSON 바이트 경계와 과대 파일의 parse 전 거부",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "07-cache-budgets: UTF-8·줄 수·JSON escaping 상한 안에서 fetch full과 search expand 원문 이어 읽기",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "07-cache-budgets: 긴 제목·URL·query·링크·오류·details도 최종 반환 예산에 포함",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "07-cache-budgets: 메모리 eviction 뒤 offset 재접근의 추가 API 호출 안내",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "08-cache-sharing: 두 프로세스의 순차·동시 저장 병합과 07의 예산·권한",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "08-cache-sharing: 최신 timestamp 우선·삭제 후 stale snapshot 부활 방지·읽기 갱신",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "08-cache-sharing: 메모리 전용 항목은 자체 저장 후 유지하되 외부 파일 세대 변경 시 무효화",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "08-cache-sharing: 잠금 만료 복구·동기 제한 시간·비동기 대기 중 취소",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "08-cache-sharing: 동일 요청 공유와 한 대기자만 취소",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "08-cache-sharing: 전체 취소는 underlying 중단·즉시 제거·늦은 완료 게시 차단",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "08-cache-sharing: refresh 의미 분리와 최신 요청만 게시·인증 분리·오류 후 재시도",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "09-usage-cancel: 공용 controller의 timer·중복·정지/재시작·non-TUI와 최종 fetch signal",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "09-usage-cancel: 정지 시 진행 요청의 signal 취소와 늦은 결과 폐기",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "09-usage-cancel: 새 세대는 실행하고 동시 트리거는 중복 요청하지 않음",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "10-generators: 부분/전체 상세 실패·빈 목록·schema 오류는 이전 snapshot을 보존",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "10-generators: 단일 후보 목록·03 해석·별칭 미추정·안정 직렬화·dry-run",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "10-generators: 표준/Off-Peak·출력 없는 행을 구분하고 모르는 단가를 0으로 생성하지 않음",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "10-generators: 쓰기·최종 rename 실패와 commit 전 취소에도 정상 snapshot 해시 유지",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "10-generators: 모의 한도 실패는 기존 측정값 보존·전체 실패/빈 목록은 파일 미교체",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "10-generators: 공용 probe의 최종 model·인증·취소 전달과 정확값/하한 구분 — 전부 모의 전송",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "최소 live 호출에 사용할 공용 채팅 경로의 상한과 자동 retry 없음",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "runtime 의존 경계와 고정 파일 inventory",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "실제 pnpm archive의 전체 필수 파일·동일 bytes·생산 의존성만 로딩",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "source/artifact 일치: enabled inventory·명령·reload·실제 도구·payload",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "source/artifact 일치: soft-disabled inventory·명령·reload·실제 도구·payload",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "source/artifact 일치: hard-disabled inventory·명령·reload·실제 도구·payload",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud check && pnpm --filter @buyong/pi-ollama-cloud test:unit && git diff --check",
+      "inputs": "이동된 runtime, 기존 회귀 테스트 및 generator의 기본·지정 출력 경로",
+      "expected": "기능과 생성 데이터 보존",
+      "observed": "18개 파일/237개 테스트 통과. 기존 인증 예제 문자열의 Biome 경고 2개. 신규 테스트 파일·사례 없음.",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "node .agents/skills/pi-package-creator/scripts/validate-package.mjs <source-or-artifact> --runtime --expect <standard-inventory> --report <report>",
+      "inputs": "lifecycle 외 표준 inventory 필드와 Pi 1.2.0",
+      "expected": "새 manifest 경로의 discovery와 실제 리소스 로드",
+      "observed": "source와 pnpm 추출본 각각 77 pass, 9 not_applicable, 1 skipped(semantic import 분석은 범용 도구 범위 밖). 타입 검사·runtime graph·실제 SDK 소비자 검사로 별도 보완.",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "python3 apps/pi-ollama-cloud/test/fixtures/run-render-tui.py --report <temporary-report>",
+      "inputs": "새 src/index.ts를 사용하는 실제 Pi PTY fixture",
+      "expected": "펼침·접힘·80→40열 변경 유지",
+      "observed": "4개 동작 통과, 폭 38/78, 네트워크 호출 0.",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "python3 -c 'import yaml; yaml.safe_load(open(\".github/workflows/pi-packages.yml\"))'",
+      "inputs": "CI의 -e 대상을 패키지 디렉터리로 변경",
+      "expected": "기존 CI 관문과 YAML 구문 보존",
+      "observed": "YAML 구문 통과. 원격 CI는 실행하지 않음.",
+      "result": "pass"
+    }
+  ],
+  "apiCallCounts": {
+    "chat": 0,
+    "web_search": 0,
+    "web_fetch": 0,
+    "usage": 0,
+    "limitsProbe": 0
+  },
+  "limits": [
+    "현재 Node v24.14.0/Pi 1.2.0 로컬 검증. 원격 CI와 최신/최소 지원 버전은 이번 실행에서 미검증.",
+    "실API·자격 증명 실조회·생성 데이터 재생성·한도 probe는 실행하지 않음. 11-live.json의 이전 승인 예산을 재사용하지 않음.",
+    "생산 의존성은 기존 설치본에서 복사해 실제 archive를 로드함. 이번에는 registry 신규 설치를 반복하지 않음.",
+    "기존 루트 파일 직접 import 및 파일 경로 지정 로드는 호환되지 않음. README에 새 경로를 명시.",
+    "01–11의 이전 보고서는 경로 이동 전 역사적 기록으로 그대로 보존. 이 기록이 새 구조의 검증 대상과 해시를 명시.",
+    "버전 변경·push·게시를 수행하지 않음. 로컬 커밋은 검증 후 사용자의 별도 요청에 따라 진행."
+  ],
+  "request": "생성 데이터 값 보존, src/generated로 이동, src/index.ts 진입점 및 루트 호환용 재노출 파일 제거",
+  "generatedData": {
+    "catalogNormalizedSHA256": "5ca0c196fe62e04b2a026f308c659fca2f562609857f9c11cc05b39c2aec0b94",
+    "limitsSHA256": "486b48ef663ee38150695205ec80d5c59546dcca61a1edd63dc5316d4fc99754",
+    "valuesUnchanged": true,
+    "note": "catalog의 type-only import 경로만 변경. limits 전체 bytes 동일. 실제 생성·한도 측정 없음."
+  },
+  "movedFiles": {
+    "index.ts": "src/index.ts",
+    "catalog.generated.ts": "src/generated/catalog.generated.ts",
+    "limits.generated.ts": "src/generated/limits.generated.ts"
+  },
+  "removedFacades": [
+    "cache.ts",
+    "config.ts",
+    "models.ts",
+    "models.generated.ts",
+    "pricing.generated.ts",
+    "reasoning.generated.ts",
+    "thinking-levels.ts",
+    "usage.ts",
+    "utils.ts",
+    "web-tools.ts"
+  ],
+  "artifact": {
+    "fileCount": 47,
+    "sha256": "6c2a033d495383da3c6bd3cbc4d3fc10faaaa3b4be338791019557e6a909e7ba",
+    "rootTypeScriptFiles": [],
+    "dependencies": [
+      {
+        "name": "proper-lockfile",
+        "version": "4.1.2"
+      },
+      {
+        "name": "graceful-fs",
+        "version": "4.2.11"
+      },
+      {
+        "name": "retry",
+        "version": "0.12.0"
+      },
+      {
+        "name": "signal-exit",
+        "version": "3.0.7"
+      }
+    ]
+  },
+  "tui": {
+    "result": "pass",
+    "checks": [
+      "initial collapsed views for both tools",
+      "Ctrl+O expanded both registered renderers without fallback",
+      "terminal resized from 80 to 40 columns",
+      "Ctrl+O collapsed both renderers again"
+    ],
+    "apiCallCounts": 0,
+    "observedWidths": [
+      38,
+      78
+    ],
+    "piVersion": "1.2.0",
+    "terminalOutputBytes": 15588
+  }
+}

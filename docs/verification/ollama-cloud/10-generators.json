@@ -1,0 +1,709 @@
+{
+  "schemaVersion": 1,
+  "feature": "10-generators",
+  "baselineHead": "827c4e57e21d59215a6b032a6ab1843328a51869",
+  "branch": "main",
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0"
+  },
+  "verifiedFiles": [
+    {
+      "path": "apps/pi-ollama-cloud/catalog.generated.ts",
+      "hash": "2a579f94910b2a97903d924672d825d25b6010d71e9fd35b93e2d26b4b24432e"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/index.ts",
+      "hash": "7c01df1c8b9492fbf864ae8201715566f9acf842d95d493faaac3c01c82616cf"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/limits.generated.ts",
+      "hash": "486b48ef663ee38150695205ec80d5c59546dcca61a1edd63dc5316d4fc99754"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/models.generated.ts",
+      "hash": "fed4ad4afcd8b34325a95557289f898aa4f1b9ca12565c1dc55142bf3989b942"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/models.ts",
+      "hash": "bec508cc66a0d821f50205aab6d835ba721401ced77898dd70ba874118d71cc4"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/package.json",
+      "hash": "a9b5bd2f4e0e038de970ab9d5d23810f8d090329d06d36f0b17e935b37d90214"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/pricing.generated.ts",
+      "hash": "2f26b315ac247088400a3f5754a8b4b0d7c3ab4ee6916b4e6771c3833c0c077f"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/reasoning.generated.ts",
+      "hash": "e28b7ac751ed9b762edd52f561b62b1a37e1626fb7c0f737ce861b2f0cffb03d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/direct.ts",
+      "hash": "7bb5c3612a3e6dbce80f9778f46296f89665ad5c684c658077f429bb643330bc"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/generated.ts",
+      "hash": "d1754b01c5dd95e68a004c710ae0c2fcf2f8b66e42da5e1525270dd90362c86d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/mock-transport.ts",
+      "hash": "4eac82507b73dbfb62ed5f3fb3aa6844fbc8895cc33c104f7dd6949f57969ff3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/verification.ts",
+      "hash": "e5cfc2f6ca06d77bdda45fcb1a7b24d1f185dc015b50a10195cddc86edc1c891"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/generate-limits.ts",
+      "hash": "118e6bd09445714106f186e9ccafa43d502355f863a116d684b5deeb9fa1369f"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/generate-models.ts",
+      "hash": "8eac2ca07d4ff6eb8d39d1a9eccd136a769e12f105a0f3cf41283210a6ac81c0"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/generate-pricing.ts",
+      "hash": "8eac2ca07d4ff6eb8d39d1a9eccd136a769e12f105a0f3cf41283210a6ac81c0"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/generate-reasoning.ts",
+      "hash": "8eac2ca07d4ff6eb8d39d1a9eccd136a769e12f105a0f3cf41283210a6ac81c0"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/atomic.ts",
+      "hash": "4dbfa6613c2b5cfa36ec9eb53b6106422a799b52124801b94d1899fbcdd1b1f2"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/catalog.ts",
+      "hash": "5a0618a2d33020df4113fb99399330bdc6f14fe328438bf2a505ac07d0a6fd1a"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/entry.ts",
+      "hash": "9051430c0fd4668170f84a6913dc19bd8af0ab979ad23e1a0cc5a11b6f3850a6"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/format.ts",
+      "hash": "d2185998680caedf738d75e11d88d873d390418fc79160e032f335a87c1a688d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/limits.ts",
+      "hash": "5909f08e3d1d91fa59fdee82ed230d166a4203d0b652d149fc29d27d93b29b47"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/parsers.ts",
+      "hash": "4b0e8ad05ef58c510307b33aa9c6ae1999c0143a21432acea09ede1399128a93"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/pipeline.ts",
+      "hash": "44cf5339ea1109422c240dda00be5568c74e16c16046a6a6df2e0a4e26c3282d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/lib/generation/render.ts",
+      "hash": "3a670d79ce01cf504ecfd3d932a68810998517261a766aa3c43d5848f705226b"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/auth/context.ts",
+      "hash": "74973276355aa8d13f54c2c4448400de03aac08f846fd7ba8712905f846d3d8d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/auth/pi-resolver.ts",
+      "hash": "99cdb6eb2e75e02c04d5a493d5223bb51de72c98896dfb77dd44299d874b9414"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/auth/resolver.ts",
+      "hash": "a47ec54962163eb7af8ca03498da24b3db2c88ab7e258953ba298d04455dbed3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/bounded-storage.ts",
+      "hash": "e7395e0eacd666f687678bd13cf14db4c4b67ad5ed70092b59ea1c20e41ca980"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/budget.ts",
+      "hash": "aef2f33d07bd5517b0fcb13ea0c5dac2120f5c8b3b5d3cf6562698c9f59400ac"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/constants.ts",
+      "hash": "a54371447c759280e74b784c03a4a6b5bf607388e2b72fa56c4f04152bc9d762"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/coordinator.ts",
+      "hash": "e7dbb9fca9e77f6757c84d4a9d4d7d61c74030d69347baae340b9d5ac87f294c"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/data.ts",
+      "hash": "eb22de925fd3cc4b267a94370babae33d923c04f5d23a9684ea65eb49822d0ad"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/disk.ts",
+      "hash": "600e38653970343e60267fa56247599b73db1602556cf85df47d84ba441b3d67"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/lock.ts",
+      "hash": "10c6ac1ca17386957e36de5e8eda0eee4255af7ac7ba9692df59f742b610ddc7"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/merge.ts",
+      "hash": "b0adb406c67e3b9303be8514dfc19d4e160cdef5625c6f0b097988dd74837e32"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/publication.ts",
+      "hash": "8ef38e114597c7663e470dfcab7904d908645bbcc572e205852592f1887577f3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/storage.ts",
+      "hash": "ac3860d9cc7d85f7c7ced0cd3e1edb888e0ddfcf9bb6459113e6da173dfab36d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/types.ts",
+      "hash": "fb89fdf94939150e24a62dfda88407f3a504484e4ee60d8cdfe6596497d110a4"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/api.ts",
+      "hash": "edb33594e139b74ef7097692599bcf89625dc744b6877a5218747d25f46ccd15"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/base.ts",
+      "hash": "927f034418488b3661e003dbeebc7d1f77574796685b954d1d8c33074338ab4d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/catalog-diagnostics.ts",
+      "hash": "e76bd26e56de516f830e0e1280a66473c599dfdd3e7c4d0c0cee591bd729ceaf"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/catalog-service.ts",
+      "hash": "62db877b4e0f46069e2617d28b8e2aa4f118a9a1b91af8789ecca798ecc3cbf6"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/catalog.ts",
+      "hash": "cad93c583dd370840ff7a22ae83286815867048d67034f9f647f7595886e3079"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/context-length.ts",
+      "hash": "52e626b89510ae3e03f9c450be3f447c8ab167c67e2364e28c726c8a37d96dc8"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/metadata.ts",
+      "hash": "2a9442a0878c872d0973b154f804bcbb355e95e67d679f141ac53c96f08486ca"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/snapshot.ts",
+      "hash": "1bc19913553592a8a02c7dc8011f19fdd596c7ae70d48f49574b180f87ce5291"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/thinking-levels.ts",
+      "hash": "f76734d0830e884322d62cce3b0a2208ce0dc6747403e4fdafc55afccf5fae8a"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/types.ts",
+      "hash": "4ca01de6b254c5f6a36d75a53a14f1a39836f69468d1bd6a413f874624cdcf02"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/pi/config.ts",
+      "hash": "bcec4aee1bc6fc953ca8625a3fcdd73b10e6228bf5b78cc40b3ae95cc2d20641"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/pi/lifecycle.ts",
+      "hash": "e7c1f5ac8e11585b3da126f76446b6cf45c6c6cecb15a527028ac25c26b09f8f"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/pi/web-tools.ts",
+      "hash": "f7f6baf965f2ff9263f4e3c391f767aaefef60b66723e1e991be6c1d394e4209"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/render/result.ts",
+      "hash": "85098cf1e0d69b42a484c2cadb4309d760199605a401eee129f7f270108957b7"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/shared/concurrent.ts",
+      "hash": "1d7752fe90bb37fee0ba8d4a090f08fe1d72d4ccb2f6fe656b6561c52a6d4b3b"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/shared/http.ts",
+      "hash": "3118c4ad3dee9dd30d7dd64658e9813fc92237754cc44fb6589080872b637bd3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/usage/api.ts",
+      "hash": "99569cb3cec0316365b6a8460b837bed69a04c5a295697d922844550b3b74d06"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/usage/status-controller.ts",
+      "hash": "62f00a628f31cd6f724c9ff1e8b78b9234302698b03d8da9ef0823528d5bbd51"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/usage/status.ts",
+      "hash": "e13dc3fd27aa07c9d7e8d31219363b5ada2e63150599a34d3bc3a62e044bae43"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/constants.ts",
+      "hash": "dd50cf779321a32e64331bf355a43e1f6641cfa77b8dace37ed56443deac4bd2"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/errors.ts",
+      "hash": "7dba787c6b6d2cb0f3b6adbcc8109b955f08e6259b8fb9f57ac76bb914806d4f"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/fetch.ts",
+      "hash": "74d1bef1900aef213a81fdfbbc3b9e1a6b4a2c1a8bc2837c1be3c0e792119acf"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/paging.ts",
+      "hash": "9473c0955e5818e777cd3dd69995e51dd518157161c9a38570e2990c74a0da49"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/search.ts",
+      "hash": "95707fd08528bb63e08a2d43e2b4914d838814020eee7c99c79e1e31466355c2"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/types.ts",
+      "hash": "44624124e988c0ece2a7ea1279ddc8e11a1522bb549f695fe5e1d6ac346231b1"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/generation-data.ts",
+      "hash": "5f91ea7a299a11e775946397dea22ae3073ae2bc6515df74393635ac2efdc78d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/generation-transport.ts",
+      "hash": "98c409e996022ef5415bab16e7697267544fe810b2a60558f1cb011faabe7df0"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/inspect-generated.ts",
+      "hash": "55769ad5dc2edfb58d155254b4019b07147b351440605f23df0cc53a0b3e901a"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/generators.test.ts",
+      "hash": "14e120f0777e64a25f469e18c872f3b63eb13e0584f70aaba061e4a49326371a"
+    }
+  ],
+  "moduleReferences": {
+    "cli": "scripts/cli/generated.ts",
+    "shared": [
+      "scripts/lib/generation/catalog.ts",
+      "scripts/lib/generation/parsers.ts",
+      "scripts/lib/generation/pipeline.ts",
+      "scripts/lib/generation/limits.ts",
+      "src/models/metadata.ts"
+    ],
+    "consumers": [
+      "scripts/generate-models.ts",
+      "scripts/generate-pricing.ts",
+      "scripts/generate-reasoning.ts",
+      "scripts/generate-limits.ts"
+    ]
+  },
+  "checks": [
+    {
+      "phase": "baseline",
+      "command": "cd /tmp/ollama-generation-baseline.1E4vd1/partial/apps/pi-ollama-cloud && OLLAMA_GENERATION_FIXTURE=partial node --import tsx --import <repo>/apps/pi-ollama-cloud/test/fixtures/generation-transport.ts scripts/generate-models.ts",
+      "inputs": "두 모델 중 상세 한 개 실패; 격리된 git archive와 모의 전송",
+      "expected": "부분 성공을 파일에 쓰는 기존 결함 재현",
+      "observed": "종료 0, 1개 실패 경고 후 models.generated.ts 해시 변경",
+      "result": "pass"
+    },
+    {
+      "phase": "baseline",
+      "command": "cd /tmp/ollama-generation-baseline.1E4vd1/chain/apps/pi-ollama-cloud && OLLAMA_GENERATION_FIXTURE=invalid-reasoning node --import tsx --import <repo>/apps/pi-ollama-cloud/test/fixtures/generation-transport.ts scripts/generate-pricing.ts && OLLAMA_GENERATION_FIXTURE=invalid-reasoning node --import tsx --import <repo>/apps/pi-ollama-cloud/test/fixtures/generation-transport.ts scripts/generate-reasoning.ts",
+      "inputs": "가격 수집 성공 뒤 models.dev 형식 실패",
+      "expected": "앞 단계만 기록되는 기존 결함 재현",
+      "observed": "가격 종료 0·추론 종료 1, pricing.generated.ts 해시만 변경",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/generated.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "부분/전체 상세 실패·빈 목록·schema 오류는 이전 snapshot을 보존",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/generated.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "단일 후보 목록·03 해석·별칭 미추정·안정 직렬화·dry-run",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/generated.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "표준/Off-Peak·출력 없는 행을 구분하고 모르는 단가를 0으로 생성하지 않음",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/generated.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "쓰기·최종 rename 실패와 commit 전 취소에도 정상 snapshot 해시 유지",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/generated.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "모의 한도 실패는 기존 측정값 보존·전체 실패/빈 목록은 파일 미교체",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/generated.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "공용 probe의 최종 model·인증·취소 전달과 정확값/하한 구분 — 전부 모의 전송",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud check && pnpm --filter @buyong/pi-ollama-cloud test:unit",
+      "inputs": "기존 경로와 새 메타데이터 입력 선택 사항, 생성 트랜잭션 fixtures",
+      "expected": "전체 기존 검사 유지",
+      "observed": "16개 파일/219개 테스트 통과; 기존 인증 문자열 Biome 경고 2개",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud check && pnpm --filter @buyong/pi-ollama-cloud test:unit && git diff --check",
+      "inputs": "모든 실제 생성 entrypoint를 모의 전송과 임시 output-dir에서 실행; 정상·부분/전체 상세 실패·빈 목록·형식·쓰기/rename 실패·dry-run·한도 실패·SIGKILL 전/후",
+      "expected": "실패 시 파일 집합 불변, 성공 시 root import와 runtime 정책 복원이 같은 snapshot 사용, 개인/생산 데이터 불변",
+      "observed": "16개 파일/232개 테스트 통과; 실제 모델/가격/추론 entrypoint 각각 catalog 1/details 2/pricing 1/reasoning 1 모의 호출; 교체 전 SIGKILL은 이전 파일, 교체 후 SIGKILL은 완성된 새 데이터 유지",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "앱 디렉터리에서 node --import tsx --input-type=module --eval로 기존 3개 root export와 새 snapshot export에 assert.deepEqual; 전환 뒤 stableJSON 의미 해시 재비교",
+      "inputs": "기존 모델 18개·가격 18개·추론 24개",
+      "expected": "구조만 이동, 수치와 모델 값은 그대로 보존",
+      "observed": "export values unchanged; before/after SHA-256 b8878168a58410a1e2aee53e38b2429b6a73aad54ba18415d3a26285da149df4",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report /tmp/ollama-final.YEZPe6/final-offline.json && pnpm --filter @buyong/pi-ollama-cloud check && pnpm --filter @buyong/pi-ollama-cloud test:unit && python3 apps/pi-ollama-cloud/test/fixtures/run-render-tui.py --report /tmp/ollama-final.YEZPe6/tui.json",
+      "inputs": "선행 기능이 연결된 최종 checkout과 격리된 mock SDK/script/PTY 소비자",
+      "expected": "후속 변경 이후에도 공용 구현과 최종 소비자 계약 유지",
+      "observed": "54개 통합 check와 237개 테스트 및 PTY 통과. 이 재검증의 실API 호출 0.",
+      "result": "pass"
+    }
+  ],
+  "apiCallCounts": {
+    "chat": 0,
+    "web_search": 0,
+    "web_fetch": 0,
+    "usage": 0,
+    "limitsProbe": 0
+  },
+  "limits": [
+    "catalog.generated.ts 하나를 원자 교체하고 기존 models/pricing/reasoning 루트 경로와 export를 고정 facade로 유지",
+    "서식은 stdin에서 먼저 처리한 후 교체하므로 post-write formatter에 의한 중간 파일이 없음",
+    "프로세스 SIGKILL 전/후를 macOS에서 검증; 전원 장애/파일시스템 손상까지의 내구성을 보장하지 않으며 강제 종료 시 orphan temporary가 남을 수 있음",
+    "기존 값은 재조회 없이 기계적으로 이동했고 legacy 출처 관측 시각은 unknown(null)으로 표시; 원래 생성일만 보존",
+    "미확인 별칭 단가와 한도는 추정 상속하지 않음. 실제 새 생성에서는 표준 단가·unknown 및 native thinking 출처를 기록",
+    "비어 있던 RETIRED_MODEL_IDS를 제거하고 공통 tools-capable 정책만 사용; 새 제외 모델 없음",
+    "generate-pricing/reasoning 호환 entrypoint도 전체 후보 집합을 검증함; --dry-run은 쓰기만 막음. generate-limits의 dry-run도 실제 실행 시 유료 probe이므로 별도 취급",
+    "한도 부분 성공은 기존 값 보존 및 unknown을 명시하고, 전체 실패·빈 목록은 교체하지 않음. 이 작업의 probe는 모두 mock",
+    "새 snapshot의 nativeThinkingIds를 runtime fallback 정책 복원에 전달했으며 fixture max 수준이 최종 소비자에 남음을 확인",
+    "소비자 검증 중 실제 생성 값·자격 증명·개인 캐시를 변경하지 않음; README/중앙 CLI/CI/포장 교차 검증은 11에 인계"
+  ],
+  "publicSources": [
+    {
+      "url": "https://ollama.com/pricing",
+      "purpose": "스키마 확인 1회: Model/Input/Cached input/Output, Off-Peak 별도 행 및 출력 단가 없는 decision 행. 생산 데이터 재생성에는 사용하지 않음"
+    }
+  ],
+  "migration": {
+    "models": 18,
+    "pricing": 18,
+    "reasoning": 24,
+    "canonicalDataHashBefore": "b8878168a58410a1e2aee53e38b2429b6a73aad54ba18415d3a26285da149df4",
+    "canonicalDataHashAfter": "b8878168a58410a1e2aee53e38b2429b6a73aad54ba18415d3a26285da149df4",
+    "valuesChanged": false,
+    "liveRegeneration": false
+  },
+  "revalidation": {
+    "checkedAt": "2026-10-18T18:34:01.044Z",
+    "commands": [
+      "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report /tmp/ollama-final.YEZPe6/final-offline.json",
+      "pnpm --filter @buyong/pi-ollama-cloud check",
+      "pnpm --filter @buyong/pi-ollama-cloud test:unit",
+      "python3 apps/pi-ollama-cloud/test/fixtures/run-render-tui.py --report /tmp/ollama-final.YEZPe6/tui.json"
+    ],
+    "result": "pass",
+    "observed": "현재 소스로 54개 통합 check, 18개 파일/237개 테스트, 실제 PTY 4개 동작 검증 통과. 기존 API 관찰·baseline·consumer 기록은 역사적 증거로 보존.",
+    "historicalVerifiedFiles": [
+      {
+        "path": "apps/pi-ollama-cloud/catalog.generated.ts",
+        "hash": "2a579f94910b2a97903d924672d825d25b6010d71e9fd35b93e2d26b4b24432e"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/index.ts",
+        "hash": "7c01df1c8b9492fbf864ae8201715566f9acf842d95d493faaac3c01c82616cf"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/limits.generated.ts",
+        "hash": "486b48ef663ee38150695205ec80d5c59546dcca61a1edd63dc5316d4fc99754"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/models.generated.ts",
+        "hash": "fed4ad4afcd8b34325a95557289f898aa4f1b9ca12565c1dc55142bf3989b942"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/models.ts",
+        "hash": "bec508cc66a0d821f50205aab6d835ba721401ced77898dd70ba874118d71cc4"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/package.json",
+        "hash": "a9b5bd2f4e0e038de970ab9d5d23810f8d090329d06d36f0b17e935b37d90214"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/pricing.generated.ts",
+        "hash": "2f26b315ac247088400a3f5754a8b4b0d7c3ab4ee6916b4e6771c3833c0c077f"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/reasoning.generated.ts",
+        "hash": "e28b7ac751ed9b762edd52f561b62b1a37e1626fb7c0f737ce861b2f0cffb03d"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/direct.ts",
+        "hash": "7bb5c3612a3e6dbce80f9778f46296f89665ad5c684c658077f429bb643330bc"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/generated.ts",
+        "hash": "d1754b01c5dd95e68a004c710ae0c2fcf2f8b66e42da5e1525270dd90362c86d"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/mock-transport.ts",
+        "hash": "4eac82507b73dbfb62ed5f3fb3aa6844fbc8895cc33c104f7dd6949f57969ff3"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/verification.ts",
+        "hash": "07c20d1995d5a374efd3564ab8f231a1ed6f82d0d345086c3e8b2f8626d477af"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/generate-limits.ts",
+        "hash": "118e6bd09445714106f186e9ccafa43d502355f863a116d684b5deeb9fa1369f"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/generate-models.ts",
+        "hash": "8eac2ca07d4ff6eb8d39d1a9eccd136a769e12f105a0f3cf41283210a6ac81c0"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/generate-pricing.ts",
+        "hash": "8eac2ca07d4ff6eb8d39d1a9eccd136a769e12f105a0f3cf41283210a6ac81c0"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/generate-reasoning.ts",
+        "hash": "8eac2ca07d4ff6eb8d39d1a9eccd136a769e12f105a0f3cf41283210a6ac81c0"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/lib/generation/atomic.ts",
+        "hash": "4dbfa6613c2b5cfa36ec9eb53b6106422a799b52124801b94d1899fbcdd1b1f2"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/lib/generation/catalog.ts",
+        "hash": "5a0618a2d33020df4113fb99399330bdc6f14fe328438bf2a505ac07d0a6fd1a"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/lib/generation/entry.ts",
+        "hash": "9051430c0fd4668170f84a6913dc19bd8af0ab979ad23e1a0cc5a11b6f3850a6"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/lib/generation/format.ts",
+        "hash": "d2185998680caedf738d75e11d88d873d390418fc79160e032f335a87c1a688d"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/lib/generation/limits.ts",
+        "hash": "5909f08e3d1d91fa59fdee82ed230d166a4203d0b652d149fc29d27d93b29b47"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/lib/generation/parsers.ts",
+        "hash": "4b0e8ad05ef58c510307b33aa9c6ae1999c0143a21432acea09ede1399128a93"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/lib/generation/pipeline.ts",
+        "hash": "44cf5339ea1109422c240dda00be5568c74e16c16046a6a6df2e0a4e26c3282d"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/lib/generation/render.ts",
+        "hash": "3a670d79ce01cf504ecfd3d932a68810998517261a766aa3c43d5848f705226b"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/auth/context.ts",
+        "hash": "74973276355aa8d13f54c2c4448400de03aac08f846fd7ba8712905f846d3d8d"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/auth/pi-resolver.ts",
+        "hash": "99cdb6eb2e75e02c04d5a493d5223bb51de72c98896dfb77dd44299d874b9414"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/auth/resolver.ts",
+        "hash": "a47ec54962163eb7af8ca03498da24b3db2c88ab7e258953ba298d04455dbed3"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/bounded-storage.ts",
+        "hash": "e7395e0eacd666f687678bd13cf14db4c4b67ad5ed70092b59ea1c20e41ca980"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/budget.ts",
+        "hash": "aef2f33d07bd5517b0fcb13ea0c5dac2120f5c8b3b5d3cf6562698c9f59400ac"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/constants.ts",
+        "hash": "a54371447c759280e74b784c03a4a6b5bf607388e2b72fa56c4f04152bc9d762"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/coordinator.ts",
+        "hash": "e7dbb9fca9e77f6757c84d4a9d4d7d61c74030d69347baae340b9d5ac87f294c"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/data.ts",
+        "hash": "eb22de925fd3cc4b267a94370babae33d923c04f5d23a9684ea65eb49822d0ad"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/disk.ts",
+        "hash": "600e38653970343e60267fa56247599b73db1602556cf85df47d84ba441b3d67"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/lock.ts",
+        "hash": "10c6ac1ca17386957e36de5e8eda0eee4255af7ac7ba9692df59f742b610ddc7"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/merge.ts",
+        "hash": "b0adb406c67e3b9303be8514dfc19d4e160cdef5625c6f0b097988dd74837e32"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/publication.ts",
+        "hash": "8ef38e114597c7663e470dfcab7904d908645bbcc572e205852592f1887577f3"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/storage.ts",
+        "hash": "ac3860d9cc7d85f7c7ced0cd3e1edb888e0ddfcf9bb6459113e6da173dfab36d"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/types.ts",
+        "hash": "fb89fdf94939150e24a62dfda88407f3a504484e4ee60d8cdfe6596497d110a4"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/api.ts",
+        "hash": "edb33594e139b74ef7097692599bcf89625dc744b6877a5218747d25f46ccd15"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/base.ts",
+        "hash": "927f034418488b3661e003dbeebc7d1f77574796685b954d1d8c33074338ab4d"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/catalog-diagnostics.ts",
+        "hash": "e76bd26e56de516f830e0e1280a66473c599dfdd3e7c4d0c0cee591bd729ceaf"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/catalog-service.ts",
+        "hash": "62db877b4e0f46069e2617d28b8e2aa4f118a9a1b91af8789ecca798ecc3cbf6"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/catalog.ts",
+        "hash": "cad93c583dd370840ff7a22ae83286815867048d67034f9f647f7595886e3079"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/context-length.ts",
+        "hash": "52e626b89510ae3e03f9c450be3f447c8ab167c67e2364e28c726c8a37d96dc8"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/metadata.ts",
+        "hash": "2a9442a0878c872d0973b154f804bcbb355e95e67d679f141ac53c96f08486ca"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/snapshot.ts",
+        "hash": "1bc19913553592a8a02c7dc8011f19fdd596c7ae70d48f49574b180f87ce5291"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/thinking-levels.ts",
+        "hash": "f76734d0830e884322d62cce3b0a2208ce0dc6747403e4fdafc55afccf5fae8a"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/types.ts",
+        "hash": "4ca01de6b254c5f6a36d75a53a14f1a39836f69468d1bd6a413f874624cdcf02"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/pi/config.ts",
+        "hash": "bcec4aee1bc6fc953ca8625a3fcdd73b10e6228bf5b78cc40b3ae95cc2d20641"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/pi/lifecycle.ts",
+        "hash": "e7c1f5ac8e11585b3da126f76446b6cf45c6c6cecb15a527028ac25c26b09f8f"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/pi/web-tools.ts",
+        "hash": "f7f6baf965f2ff9263f4e3c391f767aaefef60b66723e1e991be6c1d394e4209"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/render/result.ts",
+        "hash": "85098cf1e0d69b42a484c2cadb4309d760199605a401eee129f7f270108957b7"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/shared/concurrent.ts",
+        "hash": "1d7752fe90bb37fee0ba8d4a090f08fe1d72d4ccb2f6fe656b6561c52a6d4b3b"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/shared/http.ts",
+        "hash": "3118c4ad3dee9dd30d7dd64658e9813fc92237754cc44fb6589080872b637bd3"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/usage/api.ts",
+        "hash": "99569cb3cec0316365b6a8460b837bed69a04c5a295697d922844550b3b74d06"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/usage/status-controller.ts",
+        "hash": "62f00a628f31cd6f724c9ff1e8b78b9234302698b03d8da9ef0823528d5bbd51"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/usage/status.ts",
+        "hash": "e13dc3fd27aa07c9d7e8d31219363b5ada2e63150599a34d3bc3a62e044bae43"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/constants.ts",
+        "hash": "dd50cf779321a32e64331bf355a43e1f6641cfa77b8dace37ed56443deac4bd2"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/errors.ts",
+        "hash": "7dba787c6b6d2cb0f3b6adbcc8109b955f08e6259b8fb9f57ac76bb914806d4f"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/fetch.ts",
+        "hash": "74d1bef1900aef213a81fdfbbc3b9e1a6b4a2c1a8bc2837c1be3c0e792119acf"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/paging.ts",
+        "hash": "9473c0955e5818e777cd3dd69995e51dd518157161c9a38570e2990c74a0da49"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/search.ts",
+        "hash": "95707fd08528bb63e08a2d43e2b4914d838814020eee7c99c79e1e31466355c2"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/types.ts",
+        "hash": "44624124e988c0ece2a7ea1279ddc8e11a1522bb549f695fe5e1d6ac346231b1"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/fixtures/generation-data.ts",
+        "hash": "5f91ea7a299a11e775946397dea22ae3073ae2bc6515df74393635ac2efdc78d"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/fixtures/generation-transport.ts",
+        "hash": "98c409e996022ef5415bab16e7697267544fe810b2a60558f1cb011faabe7df0"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/fixtures/inspect-generated.ts",
+        "hash": "55769ad5dc2edfb58d155254b4019b07147b351440605f23df0cc53a0b3e901a"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/generators.test.ts",
+        "hash": "14e120f0777e64a25f469e18c872f3b63eb13e0584f70aaba061e4a49326371a"
+      }
+    ]
+  }
+}

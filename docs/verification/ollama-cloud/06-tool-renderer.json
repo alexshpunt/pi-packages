@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "feature": "06-tool-renderer",
+  "baselineHead": "827c4e57e21d59215a6b032a6ab1843328a51869",
+  "branch": "main",
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0"
+  },
+  "verifiedFiles": [
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/direct.ts",
+      "hash": "7bb5c3612a3e6dbce80f9778f46296f89665ad5c684c658077f429bb643330bc"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/render.ts",
+      "hash": "bc5aa6c2145a5073dadf43229467ab85ad5c0481c987e14de85c6490502b6b60"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/verification.ts",
+      "hash": "e5cfc2f6ca06d77bdda45fcb1a7b24d1f185dc015b50a10195cddc86edc1c891"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/pi/web-tools.ts",
+      "hash": "f7f6baf965f2ff9263f4e3c391f767aaefef60b66723e1e991be6c1d394e4209"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/render/result.ts",
+      "hash": "85098cf1e0d69b42a484c2cadb4309d760199605a401eee129f7f270108957b7"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/render-observer.ts",
+      "hash": "e5d9e46cb45cb1795daba1d5804e9eda7decc6ebe855945bfd55215264969c81"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/render-session.ts",
+      "hash": "9bfb7d4e5b9dd0482ac5a25645d99b3ff6a5429558ed2a6217d1c75ab3950dac"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/fixtures/run-render-tui.py",
+      "hash": "9485a281084ca0fe8a064c2510ae7198d22505c4b26e41457dd05f4aa6c6067b"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/render-result.test.ts",
+      "hash": "619bce982f6fe092d3bcc62f7e0dae6b5f2b474b8869eb0bcdbebafcc6a678e9"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/web-tools.ts",
+      "hash": "4a2d7ac01a170de4c03a6f02e7bc57b72784985c1243dfb91fa9754506c5a34c"
+    }
+  ],
+  "moduleReferences": {
+    "cli": "scripts/cli/render.ts",
+    "shared": [
+      "src/render/result.ts"
+    ],
+    "consumers": [
+      "src/pi/web-tools.ts",
+      "web-tools.ts"
+    ]
+  },
+  "checks": [
+    {
+      "phase": "baseline",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/render.ts --offline --report ../../docs/verification/ollama-cloud/06-tool-renderer.json",
+      "inputs": "collapsed component를 lastComponent로 넘겨 expanded 호출",
+      "expected": "기존 타입 단언 오류 재현",
+      "observed": "수정 전 종료 1: text.setText is not a function",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/render.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "접기↔펼치기 반복 및 성공→오류 전환에서 setText 예외 없음",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/render.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "동일 폭의 새 결과와 테마·폭 변경에 preview 갱신",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud check && pnpm --filter @buyong/pi-ollama-cloud test:unit && git diff --check",
+      "inputs": "test/render-result.test.ts 및 실제 두 도구의 등록된 renderResult",
+      "expected": "양쪽 도구의 전환·폭·오류 처리 통과",
+      "observed": "11개 파일/193개 테스트 통과",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "python3 apps/pi-ollama-cloud/test/fixtures/run-render-tui.py --report /tmp/ollama-render-tui-report.json",
+      "inputs": "격리된 실제 Pi 1.2.0 CLI, fixture 세션, PTY 80→40열, Ctrl+O 두 번",
+      "expected": "두 웹 도구에서 접기→펼치기→폭 변경→접기가 실제 TUI 키로 동작; fallback/네트워크 0",
+      "observed": "{\"result\":\"pass\",\"checks\":[\"initial collapsed views for both tools\",\"Ctrl+O expanded both registered renderers without fallback\",\"terminal resized from 80 to 40 columns\",\"Ctrl+O collapsed both renderers again\"],\"apiCallCounts\":0,\"observedWidths\":[38,78],\"piVersion\":\"1.2.0\",\"terminalOutputBytes\":15588}",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report /tmp/ollama-final.YEZPe6/final-offline.json && pnpm --filter @buyong/pi-ollama-cloud check && pnpm --filter @buyong/pi-ollama-cloud test:unit && python3 apps/pi-ollama-cloud/test/fixtures/run-render-tui.py --report /tmp/ollama-final.YEZPe6/tui.json",
+      "inputs": "선행 기능이 연결된 최종 checkout과 격리된 mock SDK/script/PTY 소비자",
+      "expected": "후속 변경 이후에도 공용 구현과 최종 소비자 계약 유지",
+      "observed": "54개 통합 check와 237개 테스트 및 PTY 통과. 이 재검증의 실API 호출 0.",
+      "result": "pass"
+    }
+  ],
+  "apiCallCounts": {
+    "chat": 0,
+    "web_search": 0,
+    "web_fetch": 0,
+    "usage": 0,
+    "limitsProbe": 0
+  },
+  "limits": [
+    "실제 Pi TUI 검증은 macOS PTY에서 실행; 별도 GUI 터미널의 시각적 검토는 수행하지 않음",
+    "TUI 재현 도구는 Python3와 POSIX PTY를 쓰는 개발 검증이며 npm runtime에 포함하지 않음",
+    "도구 반환 내용·TTL·API 호출 정책은 변경하지 않음"
+  ],
+  "revalidation": {
+    "checkedAt": "2026-10-18T18:34:01.044Z",
+    "commands": [
+      "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report /tmp/ollama-final.YEZPe6/final-offline.json",
+      "pnpm --filter @buyong/pi-ollama-cloud check",
+      "pnpm --filter @buyong/pi-ollama-cloud test:unit",
+      "python3 apps/pi-ollama-cloud/test/fixtures/run-render-tui.py --report /tmp/ollama-final.YEZPe6/tui.json"
+    ],
+    "result": "pass",
+    "observed": "현재 소스로 54개 통합 check, 18개 파일/237개 테스트, 실제 PTY 4개 동작 검증 통과. 기존 API 관찰·baseline·consumer 기록은 역사적 증거로 보존.",
+    "historicalVerifiedFiles": [
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/direct.ts",
+        "hash": "7bb5c3612a3e6dbce80f9778f46296f89665ad5c684c658077f429bb643330bc"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/render.ts",
+        "hash": "bc5aa6c2145a5073dadf43229467ab85ad5c0481c987e14de85c6490502b6b60"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/verification.ts",
+        "hash": "07c20d1995d5a374efd3564ab8f231a1ed6f82d0d345086c3e8b2f8626d477af"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/pi/web-tools.ts",
+        "hash": "162a2e27e00d67f5510e0988a51c76161bd2b6144e69627e36809ffb692b94ab"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/render/result.ts",
+        "hash": "85098cf1e0d69b42a484c2cadb4309d760199605a401eee129f7f270108957b7"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/fixtures/render-observer.ts",
+        "hash": "e5d9e46cb45cb1795daba1d5804e9eda7decc6ebe855945bfd55215264969c81"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/fixtures/render-session.ts",
+        "hash": "9bfb7d4e5b9dd0482ac5a25645d99b3ff6a5429558ed2a6217d1c75ab3950dac"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/fixtures/run-render-tui.py",
+        "hash": "9485a281084ca0fe8a064c2510ae7198d22505c4b26e41457dd05f4aa6c6067b"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/render-result.test.ts",
+        "hash": "619bce982f6fe092d3bcc62f7e0dae6b5f2b474b8869eb0bcdbebafcc6a678e9"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/web-tools.ts",
+        "hash": "4a2d7ac01a170de4c03a6f02e7bc57b72784985c1243dfb91fa9754506c5a34c"
+      }
+    ]
+  }
+}
