@@ -31,6 +31,13 @@ function versionRank(id: string): { family: string; tuple: [number, number] } {
 	return { family, tuple: [Number(major) || 0, Number(minor) || 0] };
 }
 
+// Measured Claude Code behavior: CC turns a disabled thinking request into
+// adaptive thinking for these models, even where pi-ai's catalog allows off
+// (pi-ai 1.3.0 lists off for Haiku 5.5; CC 2.1.304 still thinks - see
+// 05-thinking-override). Marking off unsupported keeps pi from offering it and
+// the bridge from sending disabled.
+const CLAUDE_CODE_ALWAYS_THINKING = new Set(["claude-haiku-5-5"]);
+
 export function buildModels<T extends { id: string; [key: string]: any }>(piAiModels: T[]) {
 	return piAiModels
 		.filter((m) => typeof m.id === "string" && !isDatedAlias(m.id))
@@ -52,7 +59,7 @@ export function buildModels<T extends { id: string; [key: string]: any }>(piAiMo
 			id,
 			name,
 			reasoning, input, contextWindow, maxTokens,
-			thinkingLevelMap,
+			thinkingLevelMap: CLAUDE_CODE_ALWAYS_THINKING.has(id) ? { ...thinkingLevelMap, off: null } : thinkingLevelMap,
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 		}));
 }
