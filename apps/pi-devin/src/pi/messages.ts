@@ -44,7 +44,8 @@ export function toDevinTranscript(context: TranscriptContext, model: ModelInfo):
   const declarations = getCurrentTools(context.messages);
   if (declarations.length && !model.supportsToolCalls) throw new Error("This model does not support the current Pi tool declarations.");
   const tools = declarations.map((tool) => {
-    if (tool.constrainedSampling && (tool.constrainedSampling.type === "grammar" || tool.constrainedSampling.strict === "require")) {
+    // Grammar sampling is optional; like Pi's providers without grammar tools, send the JSON schema instead.
+    if (tool.constrainedSampling && tool.constrainedSampling.type === "json_schema" && tool.constrainedSampling.strict === "require") {
       throw new Error(`Devin does not support this tool's forced sampling format: ${tool.name}`);
     }
     return { name: tool.name, description: tool.description, jsonSchemaString: JSON.stringify(tool.parameters) };
