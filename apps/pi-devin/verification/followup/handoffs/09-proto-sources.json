@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "task": "09",
+  "outcome": "pass",
+  "recordedAt": "2026-10-19T11:49:01.000Z",
+  "source": {
+    "baseRevision": "main@ebf1437",
+    "coreVersion": 1,
+    "runtimeChanged": false,
+    "files": {
+      "proto/** (63 .proto, sorted concatenation)": "42775548f5379d8de3528753bd63300ce3e0615fc2d471f0c8fcecb35d9fa007",
+      "proto/README.md": "a32d064a25d2ea9cfe196d7d1a29b1d9b2ec1b2472d81143fa0f936fd85dcb9d",
+      "verification/scripts/verify-proto.mjs": "8665e69468d96134ec14c97920901865b5cd18ef85bbe2e11a1391a32ac499d3",
+      "verification/scripts/descriptor-to-proto.mjs": "82faa432882f3cfb46c2055de9ef7689e15ff271aab69e7269aa133abffff193",
+      "verification/scripts/lib/buf.mjs": "2e835e4da556d17faae4f63fe87aa779b709f91341673730e3f55ac3ae187986",
+      "verification/followup/proto-provenance.json": "04754876cbce4a2267743b7c6b375e3bb887efbbab4d5f7d5ba66345c0d90993",
+      "verification/followup/proto-check.json": "f3987902eb7dbef9788e47024a2698d3847178f53696f90a7695714eda6b8563",
+      "package.json": "cb6730e0c4b86981af832872503d957788e83d24c67c34a598e40be551f69c71",
+      "../../pnpm-lock.yaml": "513b1c7c82f674ee6b082ec28662e99731d3b1ab58d39f41964bdc05c9245124"
+    },
+    "unchangedReadOnly": {
+      "resources/descriptors.pb": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+      "src/core/protocol/protobuf.ts": "1e9c1d04e7e116e000463f7d86f40b1e4fa96a69a430ee1911ce1ed3d0f953fb"
+    }
+  },
+  "inputs": [
+    "resources/descriptors.pb (read-only baseline)",
+    "src/core/protocol/protobuf.ts getRoot() additions and public codecs (observed and executed, not modified)",
+    "tests/fixtures/captured-samples/GetChatMessage (7 de-identified samples) and tests/fixtures/model-catalog.json",
+    "Historical evidence pointers for the additions (summarized in proto-provenance.json)"
+  ],
+  "schema": {
+    "sourceRoot": "proto",
+    "originalDescriptorSha256": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+    "nativeInventory": {
+      "files": 63, "messages": 2879, "fields": 9863, "enums": 293, "enumValues": 2575, "services": 20, "methods": 688,
+      "extensions": 6, "oneofs": 638, "mapEntries": 106, "proto3Optional": 470, "syntax": { "proto3": 58, "proto2 (unset)": 5 },
+      "missingImports": 0, "publicOrWeakImports": 0, "groups": 0, "editions": 0, "sourceCodeInfo": 0,
+      "customOptions": ["buf.validate.field (838)", "buf.validate.predefined (173)", "buf.validate.message (6)", "buf.validate.oneof (5)"],
+      "perFileHashes": "verification/followup/proto-provenance.json original.files"
+    },
+    "observedAdditions": [
+      "exa.api_server_pb.GetChatMessageRequest.client_session_id = 28 (string, local name)",
+      "exa.chat_pb.ChatMessagePrompt.model_uid = 22 (string, local name)",
+      "exa.codeium_common_pb.ModelInfo.aliases = 27 (repeated string, local name)",
+      "exa.codeium_common_pb.DisplayOption.DISPLAY_OPTION_WIRE_7 = 7 (local value name)"
+    ],
+    "provenancePath": "verification/followup/proto-provenance.json",
+    "compiler": { "package": "@bufbuild/buf", "version": "1.74.0", "license": "Apache-2.0", "declaredIn": "apps/pi-devin devDependencies (exact)", "installScripts": "not required; pnpm 10 does not run them", "reason": "protobufjs 7.6.6 drops custom options and editions fields when re-encoding 21 of 63 original files, so it cannot serve as the reference decoder or compiler" },
+    "verificationCommand": "node verification/scripts/verify-proto.mjs --report verification/followup/proto-check.json --mutation-control",
+    "verificationCwd": "apps/pi-devin",
+    "reportPath": "verification/followup/proto-check.json",
+    "normalization": { "N1": "654 empty original MethodOptions compared as absent", "N2": "14 fields without original json_name compared with the default json_name", "N3": "files matched by name; set order reported only" },
+    "regeneratedDescriptorSha256": "28f1b033d0ed6695350d0b99c73152750063d28868a7f41feb7091713d2fa679",
+    "packageImpact": "files unchanged; npm pack dry-run lists 46 entries with 0 under proto/, verification/ or tests/; no runtime import or install-time compilation"
+  },
+  "checks": [
+    { "key": "inventory-protobufjs-lossless", "cwd": "apps/pi-devin", "command": "node /tmp/devin-next-09/inventory.mjs \"$PWD\" (outside repository)", "observed": "Counts above; protobufjs re-encode identical for 42/63 files only (buf/validate/validate.proto 54720 -> 9146 bytes)" },
+    { "key": "buf-json-roundtrip", "cwd": "/tmp/devin-next-09", "command": "buf convert orig.binpb --type google.protobuf.FileDescriptorSet --from orig.json --to roundtrip.binpb && cmp orig.binpb roundtrip.binpb", "observed": "byte-identical; buf JSON is a lossless reference representation" },
+    { "key": "verify-proto", "cwd": "apps/pi-devin", "command": "node verification/scripts/verify-proto.mjs --report verification/followup/proto-check.json --mutation-control", "observed": "exit 0; baseline ok; 63/63 files byte-identical to original + N1/N2 + 4 additions; 0 semantic diffs; 0 protobufjs shape diffs across 3192 types/enums/services; 18/18 runtime codec cases (7 captured requests with addition probes and original-schema controls, 7 response streams with 15452 frames, catalog fixture, aliases=27, DisplayOption 7, unknown DTO rejection); mutation 18 -> 1018 detected at byte, semantic and shape level; original descriptor and source unchanged" },
+    { "key": "broken-source", "cwd": "apps/pi-devin", "command": "node verification/scripts/verify-proto.mjs --source <tmp copy with invalid broken.proto> --report <TMPDIR>/r.json", "observed": "exit 1 with the compiler error in comparison.generation" },
+    { "key": "report-path-guard", "cwd": "apps/pi-devin", "command": "node verification/scripts/verify-proto.mjs --report /etc/proto-check.json", "observed": "exit 1 before writing" },
+    { "key": "printer-no-overwrite", "cwd": "apps/pi-devin", "command": "node verification/scripts/descriptor-to-proto.mjs --out proto", "observed": "exit 1: refuses non-empty directory" },
+    { "key": "portable-path", "cwd": "/", "command": "node \"<mktemp>/검증 경로 공백/pi-devin/verification/scripts/verify-proto.mjs\" --report \"<copy>/verification/followup/proto-check-copy.json\" --mutation-control", "observed": "exit 0; same ok/baseline/regenerated hash/byte counts/source hashes/runtime cases/mutation result as the repository run" },
+    { "key": "direct-build", "cwd": "apps/pi-devin", "command": "pnpm exec buf build proto --as-file-descriptor-set --exclude-source-info -o \"$TMPDIR/regenerated.binpb\"", "observed": "sha256 28f1b033d0ed6695350d0b99c73152750063d28868a7f41feb7091713d2fa679 (matches report)" },
+    { "key": "existing-codec-tests", "cwd": "apps/pi-devin", "command": "node --test tests/protocol.test.ts tests/core-api.test.ts tests/client.test.ts tests/models.test.ts", "observed": "exit 0, 26/26 pass" },
+    { "key": "typecheck", "cwd": ".", "command": "pnpm --dir apps/pi-devin typecheck", "observed": "exit 0" },
+    { "key": "offline", "cwd": ".", "command": "pnpm --dir apps/pi-devin verify:offline", "observed": "exit 0, 176/176 pass" },
+    { "key": "lockfile", "cwd": ".", "command": "pnpm install --frozen-lockfile --offline --ignore-scripts", "observed": "passes; lockfile diff limited to @bufbuild/buf 1.74.0 and its 7 platform optional packages" }
+  ],
+  "environment": { "node": "v24.14.0", "platform": "darwin", "arch": "arm64", "pnpm": "10.29.2", "buf": "1.74.0", "protobufjs": "7.6.6" },
+  "limitations": [
+    "Original comments, layout, declaration positions and the values of options stripped before the descriptor was produced (654 empty MethodOptions) are not recoverable.",
+    "Names of the four added definitions are local; the original identifiers are unknown. Their evidence is summarized in proto-provenance.json, not re-run.",
+    "Runtime cross-checks use the public codecs; the in-memory runtime Root itself is not exported, so runtime equivalence for non-addition types relies on getRoot() building from the same original descriptor (verified by shape comparison against original + provenance additions).",
+    "buf platform binaries were verified on darwin-arm64 only.",
+    "No real Devin requests, credentials or publication were involved."
+  ],
+  "handoff": {
+    "decision": "continue",
+    "successors": [
+      "add Fusion wire definitions to proto/, observedAdditions and protobuf.ts together; save a new report as verification/followup/proto-check-02.json",
+      "rerun the verification command against the integrated sources and save proto-check-05.json",
+      "confirm proto/, verification/ and @bufbuild/buf stay out of the archive and link the latest report"
+    ]
+  }
+}

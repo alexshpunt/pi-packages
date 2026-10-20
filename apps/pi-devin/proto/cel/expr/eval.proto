@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package cel.expr;
+
+import "google/protobuf/any.proto";
+import "cel/expr/value.proto";
+
+option java_package = "dev.cel.expr";
+option java_outer_classname = "EvalProto";
+option java_multiple_files = true;
+option go_package = "cel.dev/expr";
+option cc_enable_arenas = true;
+
+message EvalState {
+  repeated ExprValue values = 1;
+  repeated EvalState.Result results = 3;
+  message Result {
+    int64 expr = 1;
+    int64 value = 2;
+  }
+
+}
+
+message ExprValue {
+  oneof kind {
+    Value value = 1;
+    ErrorSet error = 2;
+    UnknownSet unknown = 3;
+  }
+}
+
+message ErrorSet {
+  repeated Status errors = 1;
+}
+
+message Status {
+  int32 code = 1;
+  string message = 2;
+  repeated .google.protobuf.Any details = 3;
+}
+
+message UnknownSet {
+  repeated int64 exprs = 1;
+}

@@ -1,0 +1,393 @@
+{
+  "schemaVersion": 1,
+  "kind": "pi-devin-live-run",
+  "completedAt": "2026-10-19T22:15:30.000Z",
+  "node": "v24.14.0",
+  "piVersion": "1.3.0",
+  "planHash": "63c384e12cf3c35f16c439a40903f381666aa1b1e82ec74bccd15ab78e515119",
+  "authorization": {
+    "approvedAt": "2026-10-19T21:58:22.562Z",
+    "scope": {
+      "artifactSha256": "de8db88b783fcd57c2a813a85f91097cd102e555d3c64e26b3fc5414e251b350",
+      "runtimeDigest": "b13f1afaa9f719405c71da8eec45a968df5dbcc372c723d5250dadbdb6a5d2ce",
+      "allowedUIDs": [
+        "swe-2-medium",
+        "swe-2-high"
+      ],
+      "maxModelCalls": 8,
+      "requireFreeTier": true,
+      "hosts": [
+        "server.codeium.com",
+        "api.devin.ai"
+      ],
+      "cases": [
+        "catalog",
+        "plain-medium",
+        "level-high",
+        "add-tool",
+        "fusion"
+      ],
+      "fusion": "Devin Fusion (fusion:devin) with a child Pi sidekick process sharing the temp state, OAuth, guard and the model-call cap",
+      "login": "user-run Pi TUI /login (Devin, browser PKCE) in a new temp state with model-call cap 0",
+      "apiKeys": "never created, entered or used; DEVIN_API_KEY/WINDSURF_API_KEY not passed to child processes",
+      "cleanup": "delete the temp state after the report; no server-side revocation"
+    }
+  },
+  "prepared": {
+    "archiveSha256": "de8db88b783fcd57c2a813a85f91097cd102e555d3c64e26b3fc5414e251b350",
+    "runtimeDigest": {
+      "files": 50,
+      "sha256": "b13f1afaa9f719405c71da8eec45a968df5dbcc372c723d5250dadbdb6a5d2ce"
+    },
+    "packageDir": "artifact/package"
+  },
+  "results": [
+    {
+      "id": "catalog",
+      "durationMs": 1034,
+      "exitCode": 0,
+      "devinModels": 329,
+      "ledger": {
+        "modelCalls": [],
+        "modelStatuses": [],
+        "readCalls": {
+          "GetUserStatus": 1
+        },
+        "readStatuses": [],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "plain-medium",
+      "durationMs": 5857,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-medium"
+      ],
+      "usage": [
+        {
+          "input": 807,
+          "output": 69
+        }
+      ],
+      "tools": [],
+      "finalTextLength": 6,
+      "finalHasFive": false,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-medium"
+        ],
+        "modelStatuses": [
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 1
+        },
+        "readStatuses": [
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "level-high",
+      "durationMs": 3440,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-high"
+      ],
+      "usage": [
+        {
+          "input": 807,
+          "output": 39
+        }
+      ],
+      "tools": [],
+      "finalTextLength": 6,
+      "finalHasFive": false,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-high"
+        ],
+        "modelStatuses": [
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 1
+        },
+        "readStatuses": [
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "add-tool",
+      "durationMs": 5275,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "toolUse",
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-medium",
+        "swe-2-medium"
+      ],
+      "usage": [
+        {
+          "input": 821,
+          "output": 87
+        },
+        {
+          "input": 938,
+          "output": 14
+        }
+      ],
+      "tools": [
+        {
+          "tool": "add",
+          "isError": false,
+          "result": "5"
+        }
+      ],
+      "finalTextLength": 1,
+      "finalHasFive": true,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-medium",
+          "swe-2-medium"
+        ],
+        "modelStatuses": [
+          200,
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 2
+        },
+        "readStatuses": [
+          "GetUserStatus:200",
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "fusion",
+      "durationMs": 11083,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "toolUse",
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-medium",
+        "swe-2-medium"
+      ],
+      "usage": [
+        {
+          "input": 1172,
+          "output": 70
+        },
+        {
+          "input": 1292,
+          "output": 14
+        }
+      ],
+      "tools": [
+        {
+          "tool": "sidekick",
+          "isError": false
+        }
+      ],
+      "finalTextLength": 1,
+      "finalHasFive": true,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium"
+        ],
+        "modelStatuses": [
+          200,
+          200,
+          200,
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 5,
+          "GetCliModelConfigs": 1,
+          "GetCliTeamSettings": 1
+        },
+        "readStatuses": [
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetCliModelConfigs:200",
+          "GetCliTeamSettings:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": {
+          "swe-2-medium": {
+            "present": true,
+            "disabled": false,
+            "costTier": "MODEL_COST_TIER_FREE",
+            "promoActive": true,
+            "promoEnd": {
+              "seconds": "1793516399",
+              "nanos": 999999999
+            }
+          },
+          "swe-2-high": {
+            "present": true,
+            "disabled": false,
+            "costTier": "MODEL_COST_TIER_FREE",
+            "promoActive": true,
+            "promoEnd": {
+              "seconds": "1793516399",
+              "nanos": 999999999
+            }
+          }
+        },
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    }
+  ],
+  "notRun": [],
+  "totals": {
+    "modelCalls": [
+      "swe-2-medium",
+      "swe-2-high",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium"
+    ],
+    "modelStatuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "readCalls": {
+      "token": 1,
+      "GetUserStatus": 14,
+      "GetCliModelConfigs": 2,
+      "GetCliTeamSettings": 2
+    },
+    "readStatuses": [
+      "token:200",
+      "GetUserStatus:200",
+      "GetCliModelConfigs:200",
+      "GetCliTeamSettings:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetCliModelConfigs:200",
+      "GetCliTeamSettings:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200"
+    ],
+    "blocked": [
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      }
+    ],
+    "catalog": {
+      "swe-2-medium": {
+        "present": true,
+        "disabled": false,
+        "costTier": "MODEL_COST_TIER_FREE",
+        "promoActive": true,
+        "promoEnd": {
+          "seconds": "1793516399",
+          "nanos": 999999999
+        }
+      },
+      "swe-2-high": {
+        "present": true,
+        "disabled": false,
+        "costTier": "MODEL_COST_TIER_FREE",
+        "promoActive": true,
+        "promoEnd": {
+          "seconds": "1793516399",
+          "nanos": 999999999
+        }
+      }
+    },
+    "halted": []
+  },
+  "outcome": "pass"
+}

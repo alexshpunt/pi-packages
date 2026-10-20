@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "task": "06",
+  "attempt": 4,
+  "outcome": "pass",
+  "supersedes": {
+    "path": "verification/followup/handoffs/06-artifact-r3.json",
+    "reason": "runtime changed: readable public model IDs in Pi /model and progress bars in the usage display; attempt 3 stays as the record for the 07 run of 2026-10-20"
+  },
+  "source": {
+    "baseRevision": "main@2999330 plus the uncommitted readable-ID and progress-bar changes",
+    "coreVersion": 1,
+    "filesDifferingFromArchiveNow": []
+  },
+  "predecessors": [
+    {
+      "path": "verification/followup/handoffs/06-artifact-r3.json",
+      "outcome": "pass",
+      "sha256": "c95ee7e78ac275907ea35c189793b6b8e365e750da48e15ca4ecb2984d84b6d1"
+    }
+  ],
+  "artifact": {
+    "repoRelativePath": "verification/followup/artifacts/buyong-pi-devin-0.1.0-fa3e5abc72d0.tgz",
+    "storage": "Local file ignored by apps/pi-devin/.gitignore (*.tgz); not committed. A second npm pack produced the same sha256.",
+    "sha256": "fa3e5abc72d0642ceadf6d172e9feeab6cb4e3de11afecbd6ea7c770f0276177",
+    "bytes": 316841,
+    "name": "@buyong/pi-devin",
+    "version": "0.1.0",
+    "private": false,
+    "entries": 56,
+    "runtimeDigest": {
+      "method": "sha256 of sorted 'path\\0sha256\\n' lines over package.json and manifest files",
+      "files": 56,
+      "sha256": "11189fbc46d5997561a7f9de6e1a290884c59b9bdc7bd47cb81ee60e0b0feabf",
+      "matchesSourceAtPack": true
+    },
+    "runtimeFiles": {
+      "LICENSE": "f7b067404420341bd40c5130a89b251f37838585a7e30ebcfa02c894bacc5f0b",
+      "README.md": "b661820c2c84ec1016e71f4662eb6776e7d1cadc056354c429ac9ba2c6898862",
+      "cli.ts": "6e5eccdbe13515285d608d1e5a14d45fb2bc760849d9d279a630c003bef5ae49",
+      "index.ts": "4bcca0491c327d52190900954e072eb5e0ca64d360c950aba88c75e17ec30038",
+      "package.json": "1f5b799411be2d2725f6c32a37d3d7483dcdc61f52916be7668b2ce53616680a",
+      "resources/descriptors.pb": "28f1b033d0ed6695350d0b99c73152750063d28868a7f41feb7091713d2fa679",
+      "src/cli/auth-command.ts": "26ac7aadaa753037570194bdf257620156b659625aff48cd0e7f5232165e5a89",
+      "src/cli/auth-ui.ts": "4302c21f82027ea015fba906dfe070906e1987d839c437113a327d05d449f8b6",
+      "src/cli/conversation.ts": "1a7da6805b456858487515c395905c61a455c2e50aa79b60a4bb95a3d9b78678",
+      "src/cli/credentials.ts": "0ea585e3ce98ca39da60853fa17a0c82ab2231d9b054219d6e0fd881fd1cc5c2",
+      "src/cli/help.ts": "525c6a7a0d181d792fac78d20713c7ceea7f1f7f7dbe52d1855adc62e45fedc9",
+      "src/cli/images.ts": "545ffcadbba59abce8ffa304276c3d64a8e2a537ce3a36edadea32af8598863d",
+      "src/cli/initialization.ts": "fca68aac3eddc4d90a723887723d13a04d6f636fe9cfc28acb5da0f5fcb1e06a",
+      "src/cli/main.ts": "d35b35ec366c893ff98688075b4f2b16a5546101bca882c46aeb7e032d233e98",
+      "src/cli/options.ts": "b7f9c3d0786fbe1aaa61402545128bc744480f5c04c9b9d5bf7e753b19860ce3",
+      "src/cli/registered-tools.ts": "a015b1020c855cb8574fd8344612ec62ab58eb78a66d123dc93a504279b50584",
+      "src/cli/session-store.ts": "78aef4008e0b27cc06e8a41f39461232903b60fe3e6b58518f3a462e1b4258d9",
+      "src/cli/verification.ts": "d7f8f327d0ac82f256bc4fc73baedc132aefbc28e972b4f57293574d2827c534",
+      "src/core/auth/access.ts": "94c5f388bd7e9c9a9b2c07a8be2545beb251788b3c6a0029d83a479793022d62",
+      "src/core/auth/index.ts": "fe4457e02a6395881eb2ec4e07a235037f1a0d8d2f569504dbcbd4e623764d4d",
+      "src/core/auth/login.ts": "d2605efd2fb0634e71695cafdc26bfb9fac799c01e5b92ffcb4dfcc37bb61a65",
+      "src/core/auth/rest-exchange.ts": "e7cdbb50bdfb394963124841fcac9291ad1d84927ea77dace957f9d8206e54f5",
+      "src/core/client.ts": "6d4a901f49452470e30a11e8619bff8b32f375d7d4f56369d0d01b5496127629",
+      "src/core/index.ts": "8b07f3c609d8d9b670541943eba954672299c4153cbd3c8ce1a88cc379491a4e",
+      "src/core/inference/chat.ts": "5e052f1381093f1f54da1bf6d23b22142fa63208b10f3ea0fbf65bcecbc5c238",
+      "src/core/inference/images.ts": "31af805b21d0cab6de83cecd373e3ef8a5b19423925cef97d64b090b86938959",
+      "src/core/inference/messages.ts": "5d94a2511e342a0939064c19684262a34436db36ae789e4f290f4655b416875f",
+      "src/core/inference/retry.ts": "ede8596ae2a622f86938b7432628a4d33cde6a027a20136a7d0db9bc79351636",
+      "src/core/inference/state.ts": "a3ad18cbfdbb3f84517df912a246af73bad85387d310bf109cc63a9fd21bdcbf",
+      "src/core/models/access.ts": "47395646f623f7c604657551b05c839995383741e4815a621522e80b8954421a",
+      "src/core/models/catalog.ts": "cf4bbbd63b69208a2bb71c76f0dd87f4169c65c46f34033d53fc317def276298",
+      "src/core/models/index.ts": "6cf03a055acc4f6ec462b68aa3ec309760842716dcfad47ed667a1fa72de91ff",
+      "src/core/models/select.ts": "6f08f1b3a9e842f3b235d867b9a20eeb4a2ed7c4ccc30e69c02d27896a37b66d",
+      "src/core/models/variants.ts": "a16d6f35964dfab3a3273229acd18f5eae69ba3fa23fa17a3469f803bfe15d48",
+      "src/core/protocol/device.ts": "99f156ac4852fe642905ff3930a24f6e2666b88c8a2fef04d37bbdd91e3e4d3c",
+      "src/core/protocol/fingerprint.ts": "8bdfceb01cc09edca028625a61ca7b82382b796be9a0ad9c35a27aabda146130",
+      "src/core/protocol/http.ts": "5d1af75e0cb4f7841994d4399da8e27bab663290ca23bc55a6f6064ddc737e51",
+      "src/core/protocol/protobuf.ts": "db80b774e2c4299f0f6b91e277ded381297ac7e052986a3cdbb4f72b4f5318ca",
+      "src/core/protocol/transport.ts": "9d9f1aaa78d678df079e5142c8c398613e8efd4ac8f8992ab0657a77b413fd41",
+      "src/core/types.ts": "d5f79eb12c0f26cb199d37b3e500c482334525a623d3128b4e026dc1dc96c0ff",
+      "src/pi/auth.ts": "22d8b90be6da8b7ba8dbd6fe2fe86ed3b86c9ea3178be76d6ab4673b745e9cfd",
+      "src/pi/devin-command.ts": "412f72f7e2899d2bab16b6836febea7a1d7cfa2e732f42a02a2dbb9fa501b4e4",
+      "src/pi/devin-panel.ts": "4bc105452429fbe717177735a1d09902e87162bc1ab8308f722e942691f2213c",
+      "src/pi/devin-settings.ts": "c1bbc66feaaff6d0ffa197ef10d2c9455f290466f9f1a51e4c182d1df325cf46",
+      "src/pi/extension.ts": "15c3b7afc896946b49d81f86cda3464c251cc9c2a6a1c4a0ab60249cbf3089d3",
+      "src/pi/fusion-command.ts": "0932808fe80f8069056c5c68ee91073128655302c3fb469f2411b4d5d898bc89",
+      "src/pi/fusion-picker.ts": "dbb528e73542b69b67174ad33de6670283e01e30aa71cd95c2d0e0097fdb34f9",
+      "src/pi/fusion-settings.ts": "1005abd7ae173d735f7e7a56468f5ad1b07bd92d1577ccf7daee805cd5666028",
+      "src/pi/lifecycle.ts": "221fcf907ecb48579c349ea762be55e35c306d5842323001f57957239a417372",
+      "src/pi/messages.ts": "8170e52f3806e077530fdbac3397253e623c35b4cec5b6f00cecd5041e8e9dd8",
+      "src/pi/models.ts": "c8c68f4a0a4360819473930fd073a40d8510c700ad83865a5810e6c2abe8e0bc",
+      "src/pi/provider.ts": "bb393179e9d6d52af96533db0091c813e01ba4bccaf84b50f47acb9c3eb3ae81",
+      "src/pi/sidekick-runtime.ts": "7470b0a5870d570c4e1a337caa1225c251755e08f4d168a6d90d311a7f4f4286",
+      "src/pi/sidekick.ts": "ff231b4561f49f9c347ec33cf106e45867ec1241685f043fdc6444e78fb60c6a",
+      "src/pi/stream.ts": "7d4c5d099d854f760d7b12a9f141af0a7070883311acba9ece803fb7f073e817",
+      "src/pi/usage.ts": "d22ea82ab720b1fcfa978e5d62354f2c3141e654156f5e03350bff58c29a6099"
+    },
+    "inventoryHash": "177d79b084ffd0301fed3dfa730859b7171e08bf43bd95cd077ba8b2f790eb1b",
+    "registrations": {
+      "extensions": [
+        "index.ts"
+      ],
+      "tools": [
+        "sidekick"
+      ],
+      "commands": [
+        "devin",
+        "fusion"
+      ],
+      "flags": [],
+      "skills": [],
+      "prompts": [],
+      "themes": []
+    },
+    "productionDependencies": {
+      "declared": {
+        "protobufjs": "7.6.6"
+      },
+      "installed": {
+        "@protobufjs/aspromise": {
+          "version": "1.1.2",
+          "integrity": "sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ=="
+        },
+        "@protobufjs/base64": {
+          "version": "1.1.2",
+          "integrity": "sha512-AZkcAA5vnN/v4PDqKyMR5lx7hZttPDgClv83E//FMNhR2TMcLUhfRUBHCmSl0oi9zMgDDqRUJkSxO3wm85+XLg=="
+        },
+        "@protobufjs/codegen": {
+          "version": "2.0.5",
+          "integrity": "sha512-zgXFLzW3Ap33e6d0Wlj4MGIm6Ce8O89n/apUaGNB/jx+hw+ruWEp7EwGUshdLKVRCxZW12fp9r40E1mQrf/34g=="
+        },
+        "@protobufjs/eventemitter": {
+          "version": "1.1.1",
+          "integrity": "sha512-vW1GmwMZNnL+gMRaovlh9yZX74kc+TTU3FObkkurpMaRtBfLP3ldjS9KQWlwZgraRE0+dheEEoAxdzcJQ8eXZg=="
+        },
+        "@protobufjs/fetch": {
+          "version": "1.1.1",
+          "integrity": "sha512-GpptLrs57adMSuHi3VNj0mAF8dwh36LMaYF6XyJ6JMWlVsc+t42tm1HSEDmOs3A8fC9yyeisgLhsTVQokOZ0zw=="
+        },
+        "@protobufjs/float": {
+          "version": "1.0.2",
+          "integrity": "sha512-Ddb+kVXlXst9d+R9PfTIxh1EdNkgoRe5tOX6t01f1lYWOvJnSPDBlG241QLzcyPdoNTsblLUdujGSE4RzrTZGQ=="
+        },
+        "@protobufjs/path": {
+          "version": "1.1.2",
+          "integrity": "sha512-6JOcJ5Tm08dOHAbdR3GrvP+yUUfkjG5ePsHYczMFLq3ZmMkAD98cDgcT2iA1lJ9NVwFd4tH/iSSoe44YWkltEA=="
+        },
+        "@protobufjs/pool": {
+          "version": "1.1.0",
+          "integrity": "sha512-0kELaGSIDBKvcgS4zkjz1PeddatrjYcmMWOlAuAPwAeccUrPHdUqo/J6LiymHHEiJT5NrF1UVwxY14f+fy4WQw=="
+        },
+        "@protobufjs/utf8": {
+          "version": "1.1.2",
+          "integrity": "sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug=="
+        },
+        "@types/node": {
+          "version": "26.6.5",
+          "integrity": "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg=="
+        },
+        "long": {
+          "version": "5.3.2",
+          "integrity": "sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA=="
+        },
+        "protobufjs": {
+          "version": "7.6.6",
+          "integrity": "sha512-dYDWdjSl5RNb7SgPxGQcRU+GtvP7s2fpkrY0r432PcOIaZ0/rBcxEZnQN67iJhFuQiVw754JDoPruPCNdGsbjg=="
+        },
+        "undici-types": {
+          "version": "8.9.0",
+          "integrity": "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="
+        }
+      },
+      "note": "npm 11.9.0 consumer install with --omit=dev --ignore-scripts --legacy-peer-deps; 13 packages, no dev/peer entries, no @earendil-works or typebox copies"
+    },
+    "hostPeers": [
+      "@earendil-works/pi-ai",
+      "@earendil-works/pi-coding-agent",
+      "@earendil-works/pi-tui"
+    ],
+    "license": {
+      "spdx": "MIT",
+      "file": "LICENSE",
+      "sha256": "f7b067404420341bd40c5130a89b251f37838585a7e30ebcfa02c894bacc5f0b"
+    },
+    "excluded": {
+      "devOnlyPaths": [
+        "proto/",
+        "tests/",
+        "verification/",
+        "node_modules/",
+        "AGENTS.md",
+        "tsconfig.json",
+        ".gitignore"
+      ],
+      "observed": "0 archive entries under devOnlyPaths; 0 credential files; extracted tree byte-identical to the archive"
+    },
+    "schemaProvenance": {
+      "shippedDescriptorSha256": "28f1b033d0ed6695350d0b99c73152750063d28868a7f41feb7091713d2fa679",
+      "builtFrom": "proto/ with buf build --as-file-descriptor-set --exclude-source-info (reproducible)",
+      "reportPath": "verification/followup/proto-check-08.json",
+      "reportSha256": "263565a702c9335c44d4064b22700a7ed3a47874e70470b82f92dc48de07d8a0",
+      "provenancePath": "verification/followup/proto-provenance.json",
+      "provenanceSha256": "9ffba451ea30969d15c7a38131e9b0a020329dfeac11f901036bce780185a7fc",
+      "originalThirdPartyDescriptorSha256": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+      "note": "The original third-party descriptor is no longer shipped. proto-check-08 records proto/ as byte-identical to the original plus normalizations N1/N2 and the four observed additions, and the shipped file as byte-identical to the proto/ build."
+    }
+  },
+  "checks": [
+    {
+      "key": "typecheck-offline",
+      "cwd": "apps/pi-devin",
+      "command": "check_env pnpm typecheck && check_env pnpm verify:offline",
+      "observed": "exit 0, 191/191"
+    },
+    {
+      "key": "import-closure",
+      "report": "verification/followup/import-closure-06d.json",
+      "observed": "ok, 0 problems"
+    },
+    {
+      "key": "validate-source-pack",
+      "report": "verification/followup/package-check-06d.json",
+      "observed": "status pass, 228 checks"
+    },
+    {
+      "key": "repack-reproducible",
+      "observed": "same sha256 fa3e5abc72d0…"
+    },
+    {
+      "key": "consumer-production-install",
+      "observed": "exit 0, prepare-artifact exit 0"
+    },
+    {
+      "key": "validate-extracted",
+      "report": "verification/followup/extracted-check-06d.json",
+      "observed": "status pass, 101 checks"
+    },
+    {
+      "key": "extracted-cli-help-other-cwd",
+      "observed": "exit 0 (extracted directory outside node_modules)"
+    },
+    {
+      "key": "source-denied-controls",
+      "observed": "EPERM for source src/pi/models.ts, source index.ts and real ~/.pi/agent/auth.json; artifact src readable"
+    },
+    {
+      "key": "extracted-provider-tests",
+      "observed": "exit 0, 50/50"
+    },
+    {
+      "key": "extracted-host-contract-node24",
+      "report": "verification/followup/host-contract-artifact-06d-node24.json",
+      "observed": "exit 0, 101/101; /model IDs readable (66 ids, none containing ':'), status line with progress bars"
+    },
+    {
+      "key": "extracted-host-contract-node22",
+      "report": "verification/followup/host-contract-artifact-06d-node22.json",
+      "observed": "exit 0, 101/101"
+    },
+    {
+      "key": "native-install-list-help-remove",
+      "observed": "all exit 0; temp settings packages 0 → 1 → 0; 0 error lines; personal settings unchanged (mtime/size)"
+    },
+    {
+      "key": "tui-model-selector-screen",
+      "observed": "real Pi 1.3.0 /model via PTY with the mock: 'claude-opus-4.8 [devin]', 'claude-opus-4.8-fast-mode [devin]', 'Model Name: Claude Opus 4.8'; no family:/uid:/fusion:devin on screen"
+    }
+  ],
+  "findings": [
+    "cli.ts cannot run from an npm install location: Node refuses type stripping under node_modules (ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING), on macOS and Linux. The Pi extension is unaffected because Pi loads it with its own loader. README now tells users to run the CLI from a source checkout; the archive README predates that wording."
+  ],
+  "limitations": [
+    "Linux arm64 was not re-run for this attempt; the previous attempt's Linux results cover the same dependency and process code, and this change is limited to model ID strings and usage text.",
+    "macOS arm64 only for the full host checks; Windows was not run.",
+    "No real Devin service was contacted; no registry publish happened."
+  ],
+  "handoff": {
+    "decision": "continue",
+    "successors": [
+      "this archive is the release candidate; publishing waits for npm authentication",
+      "optional re-run of the live plan on this runtime needs a new plan hash and approval"
+    ]
+  }
+}

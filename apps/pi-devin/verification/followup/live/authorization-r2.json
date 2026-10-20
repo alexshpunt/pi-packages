@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "approved": true,
+  "approvedAt": "2026-10-19T21:58:22.562Z",
+  "approvedBy": "user answer in this chat session (option: 승인: 전체 계획, 상한 8회)",
+  "planHash": "63c384e12cf3c35f16c439a40903f381666aa1b1e82ec74bccd15ab78e515119",
+  "scope": {
+    "artifactSha256": "de8db88b783fcd57c2a813a85f91097cd102e555d3c64e26b3fc5414e251b350",
+    "runtimeDigest": "b13f1afaa9f719405c71da8eec45a968df5dbcc372c723d5250dadbdb6a5d2ce",
+    "allowedUIDs": [
+      "swe-2-medium",
+      "swe-2-high"
+    ],
+    "maxModelCalls": 8,
+    "requireFreeTier": true,
+    "hosts": [
+      "server.codeium.com",
+      "api.devin.ai"
+    ],
+    "cases": [
+      "catalog",
+      "plain-medium",
+      "level-high",
+      "add-tool",
+      "fusion"
+    ],
+    "fusion": "Devin Fusion (fusion:devin) with a child Pi sidekick process sharing the temp state, OAuth, guard and the model-call cap",
+    "login": "user-run Pi TUI /login (Devin, browser PKCE) in a new temp state with model-call cap 0",
+    "apiKeys": "never created, entered or used; DEVIN_API_KEY/WINDSURF_API_KEY not passed to child processes",
+    "cleanup": "delete the temp state after the report; no server-side revocation"
+  }
+}

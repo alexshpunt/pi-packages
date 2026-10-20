@@ -1,0 +1,726 @@
+{
+  "status": "pass",
+  "recordedAt": "2026-10-19T06:52:03.750Z",
+  "coreVersion": 1,
+  "predecessors": [
+    {
+      "path": "verification/handoffs/02-account-login.json",
+      "status": "pass",
+      "coreVersion": 1,
+      "sha256": "ffc801f23fd09356e29aa718ed6cc0df150eb8a8d118b1803dd22cf180493627",
+      "sourceAggregate": "28a6113e858853abb566a2a878996a2f439c415dec969851b870c0aca2acf5c1"
+    },
+    {
+      "path": "verification/handoffs/03-model-thinking.json",
+      "status": "pass",
+      "coreVersion": 1,
+      "sha256": "dd185e9028cfd7b40757503606ce4d09f603881b8f5da8c57dd616ea426e7862",
+      "sourceAggregate": "e43744435d859f75cfb94b13604d2f038576a7c9a55cb49dff5eba568c19b82a"
+    },
+    {
+      "path": "verification/handoffs/04-pi-provider.json",
+      "status": "pass",
+      "coreVersion": 1,
+      "sha256": "bb399f791bd49e6c706f2bc8e25e9142ce28aed2752b299ec93387b444e8206e",
+      "sourceAggregate": "d8ccca4f08a4f943d35396bb2caab7edd2a77401cc08f95beb41af67d16e43bb"
+    }
+  ],
+  "sourceDigest": {
+    "algorithm": "sha256",
+    "files": {
+      "AGENTS.md": "9b5c63e8d1ad978cb489b0ee40c1ddcd82879bcfd3a5a3950e9d468995dcf2ee",
+      "README.md": "e477d0f0c323ca5fef47427ee14388992a139b56a54fb37e5db11283af088e96",
+      "cli.ts": "6e5eccdbe13515285d608d1e5a14d45fb2bc760849d9d279a630c003bef5ae49",
+      "index.ts": "6c28ce46421ad2e49e7c3a54cb6493bd9d12ccfa8c311245923ad50e96e2f0b0",
+      "package.json": "9b5910b417834f219e30f224eb651e9138a0f9b0293d37ab70bf2831c77e880b",
+      "resources/descriptors.pb": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+      "src/cli/auth-command.ts": "26ac7aadaa753037570194bdf257620156b659625aff48cd0e7f5232165e5a89",
+      "src/cli/auth-ui.ts": "4302c21f82027ea015fba906dfe070906e1987d839c437113a327d05d449f8b6",
+      "src/cli/conversation.ts": "1a7da6805b456858487515c395905c61a455c2e50aa79b60a4bb95a3d9b78678",
+      "src/cli/credentials.ts": "0ea585e3ce98ca39da60853fa17a0c82ab2231d9b054219d6e0fd881fd1cc5c2",
+      "src/cli/help.ts": "525c6a7a0d181d792fac78d20713c7ceea7f1f7f7dbe52d1855adc62e45fedc9",
+      "src/cli/images.ts": "545ffcadbba59abce8ffa304276c3d64a8e2a537ce3a36edadea32af8598863d",
+      "src/cli/initialization.ts": "fca68aac3eddc4d90a723887723d13a04d6f636fe9cfc28acb5da0f5fcb1e06a",
+      "src/cli/main.ts": "d35b35ec366c893ff98688075b4f2b16a5546101bca882c46aeb7e032d233e98",
+      "src/cli/options.ts": "b7f9c3d0786fbe1aaa61402545128bc744480f5c04c9b9d5bf7e753b19860ce3",
+      "src/cli/registered-tools.ts": "a015b1020c855cb8574fd8344612ec62ab58eb78a66d123dc93a504279b50584",
+      "src/cli/session-store.ts": "78aef4008e0b27cc06e8a41f39461232903b60fe3e6b58518f3a462e1b4258d9",
+      "src/cli/verification.ts": "d7f8f327d0ac82f256bc4fc73baedc132aefbc28e972b4f57293574d2827c534",
+      "src/core/auth/access.ts": "94c5f388bd7e9c9a9b2c07a8be2545beb251788b3c6a0029d83a479793022d62",
+      "src/core/auth/index.ts": "fe4457e02a6395881eb2ec4e07a235037f1a0d8d2f569504dbcbd4e623764d4d",
+      "src/core/auth/login.ts": "d2605efd2fb0634e71695cafdc26bfb9fac799c01e5b92ffcb4dfcc37bb61a65",
+      "src/core/auth/rest-exchange.ts": "e7cdbb50bdfb394963124841fcac9291ad1d84927ea77dace957f9d8206e54f5",
+      "src/core/client.ts": "6d4a901f49452470e30a11e8619bff8b32f375d7d4f56369d0d01b5496127629",
+      "src/core/index.ts": "8b07f3c609d8d9b670541943eba954672299c4153cbd3c8ce1a88cc379491a4e",
+      "src/core/inference/chat.ts": "5e052f1381093f1f54da1bf6d23b22142fa63208b10f3ea0fbf65bcecbc5c238",
+      "src/core/inference/images.ts": "31af805b21d0cab6de83cecd373e3ef8a5b19423925cef97d64b090b86938959",
+      "src/core/inference/messages.ts": "5d94a2511e342a0939064c19684262a34436db36ae789e4f290f4655b416875f",
+      "src/core/inference/retry.ts": "ede8596ae2a622f86938b7432628a4d33cde6a027a20136a7d0db9bc79351636",
+      "src/core/inference/state.ts": "a3ad18cbfdbb3f84517df912a246af73bad85387d310bf109cc63a9fd21bdcbf",
+      "src/core/models/access.ts": "47395646f623f7c604657551b05c839995383741e4815a621522e80b8954421a",
+      "src/core/models/catalog.ts": "060d776c3ca2e0af1a20808baefecfb72665f0628f884cc67a5e23cd0cbc5cc3",
+      "src/core/models/index.ts": "6cf03a055acc4f6ec462b68aa3ec309760842716dcfad47ed667a1fa72de91ff",
+      "src/core/models/select.ts": "6f08f1b3a9e842f3b235d867b9a20eeb4a2ed7c4ccc30e69c02d27896a37b66d",
+      "src/core/models/variants.ts": "b9d63c69a86415e1366465326cd152b69278b15ee74640ff727a710e2e8372c9",
+      "src/core/protocol/device.ts": "0867029f18545008dde0f94623cb8c2e969c6250765150fd41d6c91cf82acecd",
+      "src/core/protocol/fingerprint.ts": "8bdfceb01cc09edca028625a61ca7b82382b796be9a0ad9c35a27aabda146130",
+      "src/core/protocol/http.ts": "5d1af75e0cb4f7841994d4399da8e27bab663290ca23bc55a6f6064ddc737e51",
+      "src/core/protocol/protobuf.ts": "1e9c1d04e7e116e000463f7d86f40b1e4fa96a69a430ee1911ce1ed3d0f953fb",
+      "src/core/protocol/transport.ts": "9d9f1aaa78d678df079e5142c8c398613e8efd4ac8f8992ab0657a77b413fd41",
+      "src/core/types.ts": "7764fa83bbc6fd876026c63830caf4dea81e6b075a3e0c690fe9ae50fa631efd",
+      "src/pi/auth.ts": "3df1bace8288cd0033a397022e95e8171dcbda27c51f593df17e09d39a7bdc94",
+      "src/pi/extension.ts": "42b105ab90e49055448116f227c4c08dde7c11547b21669eb40c0c1db62df38d",
+      "src/pi/lifecycle.ts": "1de32ad8a027e3f99196ce8516ebc4a02fcb527097ae1885a8ca61ae41b850aa",
+      "src/pi/messages.ts": "8170e52f3806e077530fdbac3397253e623c35b4cec5b6f00cecd5041e8e9dd8",
+      "src/pi/models.ts": "7a627252a7446dc46aa34c94e2ae59640b90db342243605430d9fd14c4451d63",
+      "src/pi/provider.ts": "fb106e4f7f490e8237932898f45e37691d80e9ce6b37e7cd13c353e757b09790",
+      "src/pi/stream.ts": "7d4c5d099d854f760d7b12a9f141af0a7070883311acba9ece803fb7f073e817",
+      "tests/account-login.test.ts": "c75d0784ebc3bd3302cd6ae2d7d09aaf8934ca2441bc021131cdc0730ab0425b",
+      "tests/auth-policy.test.ts": "cf07b98fc393f7105b38b7e81dd96ba938a24ec47a8ffef83861563b1103ae72",
+      "tests/auth.test.ts": "2617039c41c447163b8a051d9e53e8decd6215a75d52dbc3c99c05273c7358ac",
+      "tests/cli-login.test.ts": "e7f2095eded3a947551f30b1563545595c77225fc4c02b9d20eda25ee9a627a2",
+      "tests/cli.test.ts": "71b2a3fad490e27dfd3fe477c9911486e52b0f239698b1610ea178a6c4e98c16",
+      "tests/client.test.ts": "87419669880fd88d6ea5e6be1939b1faa281f4467f74a390cc16ce1e9b2f9f4d",
+      "tests/compression.test.ts": "69ee02dcb0b7117c3dfd7aafd69e9e15f3d100ee81f968a51f555fadce721a19",
+      "tests/conversation.test.ts": "b6b4aefa146462d02a068a49f12e82b47f55378dbd88914c52a1e945113e6fc9",
+      "tests/core-api.test.ts": "7ffaef0fe7fba3caa236c63c7620ac71415278b6679a2bb48a7e98325849e84f",
+      "tests/fingerprint.test.ts": "7d074359eb97f94c9dccac8840cd9fd09f8609acfd1ffa21b3377ca19a4f561b",
+      "tests/fixtures/README.md": "e51b14caa7ad3c919c2d1b0f87bb732bdec1f2fade58e679001db2d6dca2b09a",
+      "tests/fixtures/captured-samples/GetChatMessage/01/request.txt": "e8db2ea40ad4385afd75adb321f304e2531eab8d8fb0151a6e256739a6554eae",
+      "tests/fixtures/captured-samples/GetChatMessage/01/response.txt": "4fcb88ca6d6303d52dd65202e5e0e5420f01b6a355c518f1f0f095bf9ee7eaf9",
+      "tests/fixtures/captured-samples/GetChatMessage/02/request.txt": "01a6ecdffbbd65309bf18ce882466ffa5b32b82845c995719f45899f10c17025",
+      "tests/fixtures/captured-samples/GetChatMessage/02/response.txt": "c3a78fa15ed35ca206f73c09e69ccfb1ec0fbacff8239db700b97f627261fb8d",
+      "tests/fixtures/captured-samples/GetChatMessage/03/request.txt": "09cfbd038634aa61443edbc2f3b354dcab6f3b5581df6ad1814e8c903fc7733f",
+      "tests/fixtures/captured-samples/GetChatMessage/03/response.txt": "341e606c1256836d4d8057e5379c60fa0a12fa025709ceaf2893ee660eb33dd5",
+      "tests/fixtures/captured-samples/GetChatMessage/04/request.txt": "93948a284f827e0bdd7b69101b7f2c893705ee11ce091d97fff7678c69c4a8b2",
+      "tests/fixtures/captured-samples/GetChatMessage/04/response.txt": "8556e7f3fe803586cbd6e817cfb7f39ccc776eef3873650c2c2bbfa21202cdf6",
+      "tests/fixtures/captured-samples/GetChatMessage/05/request.txt": "248582c4df496e2cadd3687dc40179f0f4222247875e4bd6cb6afbcf91a7c300",
+      "tests/fixtures/captured-samples/GetChatMessage/05/response.txt": "72f14a2acd9f5650819b41e372157887ad8d08a5b2542f24850d4ae8548fa8cb",
+      "tests/fixtures/captured-samples/GetChatMessage/06/request.txt": "0d8481889da71022e5e87ed6af21dbbe4b94d88ea94fde6ecf0e4df850a613c6",
+      "tests/fixtures/captured-samples/GetChatMessage/06/response.txt": "61154eb81e3c2755285b6b06a7bacfce629611fb69f47c8b38223ca72861a077",
+      "tests/fixtures/captured-samples/GetChatMessage/07-image/request.txt": "acf4ca3ae06e5e48c6e0cd9b2096b7c7346119d019cb287023fccc97418a7d32",
+      "tests/fixtures/captured-samples/GetChatMessage/07-image/response.txt": "2b5b759be30c17de74b9f1c459269a1c301851088a199120d95670789f613759",
+      "tests/fixtures/captured-samples/GetChatMessage/provenance.json": "38ca2e0e9e40cd2e5ee3df976b4724917d2c9aa3487ed297c5f45495b5ffe691",
+      "tests/fixtures/model-catalog.json": "02ec94832ba0f4a81d985cc687cd1459b1e774d5277039b90047b0ba4fe47b55",
+      "tests/fixtures/model-catalog.json.provenance.json": "c1511fc944abbe222f19d5a8328cdc3c857cf02ccfaf6a1d073b665b79931a21",
+      "tests/helpers.ts": "2a60f5449d68112ad5306b0f156585ee7098f611f1495b3447dfe86ff2d92a51",
+      "tests/http.test.ts": "6759e134c1c727e26809eecc582eb42a7a6d493baa560a8c976fb3cd79129db8",
+      "tests/images.test.ts": "4b983d9de1889fcf820713bf434f8f80f626907780845a3e4d04c6d484a1ff82",
+      "tests/model-source.test.ts": "c4d854f1827b2f891f40b6e75936888dd956337edc9e44c85f22cfecc1426af5",
+      "tests/model-store.test.ts": "59c077e435bab24f47a2095b3ae12fc4114551cb37eba4cb27bb9d0c7582856e",
+      "tests/models.test.ts": "6147146488d1b21603ecaba679dd82fd67e6bc49d5a32580c26aefdc6b2473ad",
+      "tests/pi-auth-contract.test.ts": "52202ffedd8bfec096628766eb7158317a97d6894e7c35faf7c5d16121ce0c21",
+      "tests/pi-auth-storage.test.ts": "3bedcb6ad05541ec4c09a27ccae17585c3273dc6078e7ed306959c3f204885a3",
+      "tests/pi-auth.test.ts": "dc33e82ec20582ae8b6d68b4ac79e152636452426308cfb90da69e244bec037c",
+      "tests/pi-integration.test.ts": "dfb71a6afca63ee7c378134e3fb47dd043120ee62a06a637ea9b3e98581e21b8",
+      "tests/pi-lifecycle-contract.test.ts": "9968f807f9b3f05117a33ec8dc5304dbb68502245267bf54c7510f6d852d8da0",
+      "tests/pi-lifecycle.test.ts": "08ebf15d0aac25b61127d98e21f2a416696ee9d8ee5b64dfb7f034e6512a7cd1",
+      "tests/pi-provider-hooks.test.ts": "2e2f277849eed70275ab3d9f4427262c455976fc6a44b412edaffe376b5b613c",
+      "tests/pi-provider.test.ts": "104b262db67d78cc88c91b38557c74b9cad89126e8d9b13f074c0bba9b89a9da",
+      "tests/pi-runtime.test.ts": "744b87bc97e831f3cbf77bfde6f763230fb33f81e12b2a37bab1a68918acba95",
+      "tests/protocol.test.ts": "f192a6d91eacd4309d6aaf8cbbebbef287eb622b8b763b16f75e07434e049f43",
+      "tests/provider-fixture.ts": "4a57c1de0422e657082c6332bdb011b3abc1fc1f5dc698ea0ef2ea5dd26b3e63",
+      "tests/retry.test.ts": "37d53600d1d1ae1a2a30f4ee659e8cf876ec379d7bd4be4a97eaf16b25b547fd",
+      "tests/session.test.ts": "46f8e29fbe7007c66bde640016ea8fc8aae40ea0fef755c49a807270b7d5286e",
+      "tests/verification.test.ts": "9b758a1c11823e9985a277adcaec8b7344e2ac02a1df8387499e718f429ab309",
+      "tsconfig.json": "dd380564df3918a43d891bfc03d5782e0f0320f492961c18887915cc7f7f816d",
+      "verification/README.md": "7a1a690879a8a7e66fd267c5a55fadbd216e661df8ada6919f2f1a603a09691f",
+      "verification/auth-contract.md": "a905d1c7f3659d2e70204a369a36b2b7e1cbe73ba6a7fdee0700bb137869ae5f",
+      "verification/inventory.json": "e92b6f1c4c52e291d2e85da80b022520eeb7df3cfe136fee88b28d9048236d93",
+      "verification/make-model-fixture.mjs": "4b2ad18c4f27113b03a567775b830f49d1d541e72591535f6ab99bcec8757401",
+      "verification/model-contract.md": "648ab9f65fc4f4f82e99132d57bf2c8f33f1792ddccb5fa553b486a7711dcb34",
+      "verification/provider-contract.md": "01cdeb4a87ae7b06d60739293ca22d27b558efbf74e63151fc8557e45af2d8bb",
+      "verification/scripts/README.md": "7a60290338810f69805e264e97b83b3703f0808cec9a716204d6d33203d65ec1",
+      "verification/scripts/artifact-loader.mjs": "5d6ca8697380aa2e5c2bed06c8b13187139bd25ad16f4a8ea18f25797eae5132",
+      "verification/scripts/lib/runtime.mjs": "2a7040fbdd8fc7b0535fcd2f561354c71a1356744d807245f1af0209178b8c63",
+      "verification/scripts/lib/theme.mjs": "cbc4119e61017bd894bc1b04bfd0f96db03bfb26484a5c65f1231f5a1f786089",
+      "verification/scripts/prepare-artifact.mjs": "9313c6fcce432188034b14018a178228ef1004f04f076f4a499e0cc1efb88efc",
+      "verification/scripts/validate-package.mjs": "d96c685e3f95a640fb176a2db26e7559c6e0e6dc63617a8a04f2e776144305d8"
+    },
+    "aggregate": "f71cdee9f2244c10ff694c8ee694f9a9eec5f7a7dd8011647010b50e835976dc"
+  },
+  "piRoot": "<repo>/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.3.0_@aws-sdk+credential-provider-node@3.972.86_@model_01419f223171ebe2ff54f8c3f2b21cbf/node_modules/@earendil-works/pi-coding-agent",
+  "piVersion": "1.3.0",
+  "piAIVersion": "1.3.0",
+  "piGitHead": null,
+  "nodeVersion": "v24.14.0",
+  "platform": "darwin",
+  "arch": "arm64",
+  "inventory": {
+    "path": "verification/inventory.json",
+    "extensions": [
+      "index.ts"
+    ],
+    "providerId": "devin",
+    "authType": "oauth",
+    "requiredFiles": 46,
+    "tools": [],
+    "commands": [],
+    "flags": [],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
+  "sourceChecks": {
+    "report": "verification/package-check.json",
+    "status": "pass",
+    "counts": {
+      "pass": 184,
+      "skipped": 2,
+      "not_applicable": 4
+    },
+    "commands": [
+      {
+        "key": "package-final-typecheck",
+        "cwd": "<repo>/apps/pi-devin",
+        "command": [
+          "<home>/Library/pnpm/pnpm",
+          "typecheck"
+        ],
+        "exitCode": 0,
+        "startedAt": "2026-10-19T06:37:44.206Z",
+        "completedAt": "2026-10-19T06:37:44.694Z",
+        "summary": []
+      },
+      {
+        "key": "package-final-offline",
+        "cwd": "<repo>/apps/pi-devin",
+        "command": [
+          "<home>/Library/pnpm/pnpm",
+          "verify:offline"
+        ],
+        "exitCode": 0,
+        "startedAt": "2026-10-19T06:37:44.695Z",
+        "completedAt": "2026-10-19T06:37:51.135Z",
+        "summary": [
+          "ℹ tests 171",
+          "ℹ suites 0",
+          "ℹ pass 171",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 6225.738958"
+        ]
+      },
+      {
+        "key": "package-final-cli",
+        "cwd": "<repo>/apps/pi-devin",
+        "command": [
+          "/usr/bin/sandbox-exec",
+          "-f",
+          "/tmp/pi-devin-implementation.UkVlxc/package.sb",
+          "<home>/.nvm/versions/node/v24.14.0/bin/node",
+          "cli.ts",
+          "--help"
+        ],
+        "exitCode": 0,
+        "startedAt": "2026-10-19T06:37:51.135Z",
+        "completedAt": "2026-10-19T06:37:51.260Z",
+        "summary": []
+      },
+      {
+        "key": "package-final-source",
+        "cwd": "<repo>/apps/pi-devin",
+        "command": [
+          "/usr/bin/sandbox-exec",
+          "-f",
+          "/tmp/pi-devin-implementation.UkVlxc/package.sb",
+          "<home>/.nvm/versions/node/v24.14.0/bin/node",
+          "verification/scripts/validate-package.mjs",
+          ".",
+          "--expect",
+          "verification/inventory.json",
+          "--pi-root",
+          "<repo>/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.3.0_@aws-sdk+credential-provider-node@3.972.86_@model_01419f223171ebe2ff54f8c3f2b21cbf/node_modules/@earendil-works/pi-coding-agent",
+          "--runtime",
+          "--pack",
+          "--report",
+          "verification/package-check.json"
+        ],
+        "exitCode": 0,
+        "startedAt": "2026-10-19T06:37:51.260Z",
+        "completedAt": "2026-10-19T06:37:52.213Z",
+        "summary": []
+      }
+    ],
+    "typecheck": "pass",
+    "offlineTests": {
+      "pass": 171,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "cliHelp": "pass",
+    "imports": {
+      "productionFiles": 43,
+      "imports": 182,
+      "violations": [],
+      "coreHostIndependent": true,
+      "experimentRuntimeImports": false,
+      "cliPiReverseImports": false,
+      "note": "Production imports unchanged; only CLI help wording changed since 04"
+    },
+    "originalSourceHashes": {
+      "checked": 32,
+      "unchanged": true
+    },
+    "documentation": {
+      "readme": "README.md",
+      "sourceProcedure": "verification/README.md",
+      "packageInstructions": "AGENTS.md",
+      "agentsChars": 4017,
+      "agentsLimit": 12000
+    }
+  },
+  "artifactChecks": {
+    "report": "verification/extracted-check.json",
+    "status": "pass",
+    "counts": {
+      "pass": 83,
+      "not_applicable": 6,
+      "skipped": 1
+    },
+    "archive": "/tmp/pi-devin-implementation.UkVlxc/배포 검증/pi-package-pack-rpVKFb/archive/buyong-pi-devin-0.1.0.tgz",
+    "archiveSHA256": "de6c395d9a5d9f9f3d1923b7ad3ecf2620780aefa61a0cb461b7bda5480545f8",
+    "archiveBytes": 290952,
+    "packageDir": "/tmp/pi-devin-implementation.UkVlxc/배포 검증/pi-package-pack-rpVKFb/extracted/package",
+    "files": {
+      "README.md": "e477d0f0c323ca5fef47427ee14388992a139b56a54fb37e5db11283af088e96",
+      "cli.ts": "6e5eccdbe13515285d608d1e5a14d45fb2bc760849d9d279a630c003bef5ae49",
+      "index.ts": "6c28ce46421ad2e49e7c3a54cb6493bd9d12ccfa8c311245923ad50e96e2f0b0",
+      "package.json": "9b5910b417834f219e30f224eb651e9138a0f9b0293d37ab70bf2831c77e880b",
+      "resources/descriptors.pb": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+      "src/cli/auth-command.ts": "26ac7aadaa753037570194bdf257620156b659625aff48cd0e7f5232165e5a89",
+      "src/cli/auth-ui.ts": "4302c21f82027ea015fba906dfe070906e1987d839c437113a327d05d449f8b6",
+      "src/cli/conversation.ts": "1a7da6805b456858487515c395905c61a455c2e50aa79b60a4bb95a3d9b78678",
+      "src/cli/credentials.ts": "0ea585e3ce98ca39da60853fa17a0c82ab2231d9b054219d6e0fd881fd1cc5c2",
+      "src/cli/help.ts": "525c6a7a0d181d792fac78d20713c7ceea7f1f7f7dbe52d1855adc62e45fedc9",
+      "src/cli/images.ts": "545ffcadbba59abce8ffa304276c3d64a8e2a537ce3a36edadea32af8598863d",
+      "src/cli/initialization.ts": "fca68aac3eddc4d90a723887723d13a04d6f636fe9cfc28acb5da0f5fcb1e06a",
+      "src/cli/main.ts": "d35b35ec366c893ff98688075b4f2b16a5546101bca882c46aeb7e032d233e98",
+      "src/cli/options.ts": "b7f9c3d0786fbe1aaa61402545128bc744480f5c04c9b9d5bf7e753b19860ce3",
+      "src/cli/registered-tools.ts": "a015b1020c855cb8574fd8344612ec62ab58eb78a66d123dc93a504279b50584",
+      "src/cli/session-store.ts": "78aef4008e0b27cc06e8a41f39461232903b60fe3e6b58518f3a462e1b4258d9",
+      "src/cli/verification.ts": "d7f8f327d0ac82f256bc4fc73baedc132aefbc28e972b4f57293574d2827c534",
+      "src/core/auth/access.ts": "94c5f388bd7e9c9a9b2c07a8be2545beb251788b3c6a0029d83a479793022d62",
+      "src/core/auth/index.ts": "fe4457e02a6395881eb2ec4e07a235037f1a0d8d2f569504dbcbd4e623764d4d",
+      "src/core/auth/login.ts": "d2605efd2fb0634e71695cafdc26bfb9fac799c01e5b92ffcb4dfcc37bb61a65",
+      "src/core/auth/rest-exchange.ts": "e7cdbb50bdfb394963124841fcac9291ad1d84927ea77dace957f9d8206e54f5",
+      "src/core/client.ts": "6d4a901f49452470e30a11e8619bff8b32f375d7d4f56369d0d01b5496127629",
+      "src/core/index.ts": "8b07f3c609d8d9b670541943eba954672299c4153cbd3c8ce1a88cc379491a4e",
+      "src/core/inference/chat.ts": "5e052f1381093f1f54da1bf6d23b22142fa63208b10f3ea0fbf65bcecbc5c238",
+      "src/core/inference/images.ts": "31af805b21d0cab6de83cecd373e3ef8a5b19423925cef97d64b090b86938959",
+      "src/core/inference/messages.ts": "5d94a2511e342a0939064c19684262a34436db36ae789e4f290f4655b416875f",
+      "src/core/inference/retry.ts": "ede8596ae2a622f86938b7432628a4d33cde6a027a20136a7d0db9bc79351636",
+      "src/core/inference/state.ts": "a3ad18cbfdbb3f84517df912a246af73bad85387d310bf109cc63a9fd21bdcbf",
+      "src/core/models/access.ts": "47395646f623f7c604657551b05c839995383741e4815a621522e80b8954421a",
+      "src/core/models/catalog.ts": "060d776c3ca2e0af1a20808baefecfb72665f0628f884cc67a5e23cd0cbc5cc3",
+      "src/core/models/index.ts": "6cf03a055acc4f6ec462b68aa3ec309760842716dcfad47ed667a1fa72de91ff",
+      "src/core/models/select.ts": "6f08f1b3a9e842f3b235d867b9a20eeb4a2ed7c4ccc30e69c02d27896a37b66d",
+      "src/core/models/variants.ts": "b9d63c69a86415e1366465326cd152b69278b15ee74640ff727a710e2e8372c9",
+      "src/core/protocol/device.ts": "0867029f18545008dde0f94623cb8c2e969c6250765150fd41d6c91cf82acecd",
+      "src/core/protocol/fingerprint.ts": "8bdfceb01cc09edca028625a61ca7b82382b796be9a0ad9c35a27aabda146130",
+      "src/core/protocol/http.ts": "5d1af75e0cb4f7841994d4399da8e27bab663290ca23bc55a6f6064ddc737e51",
+      "src/core/protocol/protobuf.ts": "1e9c1d04e7e116e000463f7d86f40b1e4fa96a69a430ee1911ce1ed3d0f953fb",
+      "src/core/protocol/transport.ts": "9d9f1aaa78d678df079e5142c8c398613e8efd4ac8f8992ab0657a77b413fd41",
+      "src/core/types.ts": "7764fa83bbc6fd876026c63830caf4dea81e6b075a3e0c690fe9ae50fa631efd",
+      "src/pi/auth.ts": "3df1bace8288cd0033a397022e95e8171dcbda27c51f593df17e09d39a7bdc94",
+      "src/pi/extension.ts": "42b105ab90e49055448116f227c4c08dde7c11547b21669eb40c0c1db62df38d",
+      "src/pi/lifecycle.ts": "1de32ad8a027e3f99196ce8516ebc4a02fcb527097ae1885a8ca61ae41b850aa",
+      "src/pi/messages.ts": "8170e52f3806e077530fdbac3397253e623c35b4cec5b6f00cecd5041e8e9dd8",
+      "src/pi/models.ts": "7a627252a7446dc46aa34c94e2ae59640b90db342243605430d9fd14c4451d63",
+      "src/pi/provider.ts": "fb106e4f7f490e8237932898f45e37691d80e9ce6b37e7cd13c353e757b09790",
+      "src/pi/stream.ts": "7d4c5d099d854f760d7b12a9f141af0a7070883311acba9ece803fb7f073e817"
+    },
+    "requiredContentsEqual": true,
+    "schemaHash": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+    "forbiddenFiles": [],
+    "hostCopies": [],
+    "symlinks": [],
+    "productionDependencies": [
+      {
+        "name": "node_modules/@protobufjs/aspromise",
+        "version": "1.1.2",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/@protobufjs/base64",
+        "version": "1.1.2",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/@protobufjs/codegen",
+        "version": "2.0.5",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/@protobufjs/eventemitter",
+        "version": "1.1.1",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/@protobufjs/fetch",
+        "version": "1.1.1",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/@protobufjs/float",
+        "version": "1.0.2",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/@protobufjs/path",
+        "version": "1.1.2",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/@protobufjs/pool",
+        "version": "1.1.0",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/@protobufjs/utf8",
+        "version": "1.1.2",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/@types/node",
+        "version": "26.6.5",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/long",
+        "version": "5.3.2",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/protobufjs",
+        "version": "7.6.6",
+        "dev": false,
+        "peer": false
+      },
+      {
+        "name": "node_modules/undici-types",
+        "version": "8.9.0",
+        "dev": false,
+        "peer": false
+      }
+    ],
+    "installation": "Actual archive installed into a fresh consumer with --omit=dev --ignore-scripts --legacy-peer-deps; final install uses offline cache",
+    "dependencyPreparation": "prepare-artifact copies only installed production dependencies; packed runtime files stay unchanged",
+    "providerTests": {
+      "pass": 35,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "hostContractControlCases": 2
+    },
+    "importRedirection": {
+      "scope": "source test harness only; production imports resolve to extracted code and explicit public host entries",
+      "mappedFiles": [
+        "src/core/protocol/fingerprint.ts",
+        "src/core/protocol/protobuf.ts",
+        "src/core/protocol/transport.ts",
+        "src/pi/extension.ts",
+        "src/pi/lifecycle.ts",
+        "src/pi/provider.ts"
+      ],
+      "processRecords": 6
+    },
+    "isolation": {
+      "networkDenied": true,
+      "realCredentialLocationsDenied": true,
+      "sourceRuntimeReadDenied": true,
+      "sourceReadDenialControlPassed": true,
+      "experimentReadDenied": true,
+      "spaceAndUnicodePath": true,
+      "differentCwd": true
+    },
+    "commands": [
+      {
+        "key": "artifact-final-install",
+        "command": [
+          "/tmp/pi-devin-implementation.UkVlxc/bin/npm",
+          "install",
+          "--offline",
+          "--omit=dev",
+          "--ignore-scripts",
+          "--legacy-peer-deps",
+          "--no-audit",
+          "--no-fund",
+          "--cache",
+          "/tmp/pi-devin-implementation.UkVlxc/npm-cache",
+          "/tmp/pi-devin-implementation.UkVlxc/배포 검증/pi-package-pack-rpVKFb/archive/buyong-pi-devin-0.1.0.tgz"
+        ],
+        "cwd": "/tmp/pi-devin-implementation.UkVlxc/배포 검증/consumer-final",
+        "exitCode": 0,
+        "startedAt": "2026-10-19T06:40:50.814Z",
+        "completedAt": "2026-10-19T06:40:51.216Z",
+        "summary": []
+      },
+      {
+        "key": "artifact-final-prepare",
+        "command": [
+          "/usr/bin/sandbox-exec",
+          "-f",
+          "/tmp/pi-devin-implementation.UkVlxc/artifact.sb",
+          "<home>/.nvm/versions/node/v24.14.0/bin/node",
+          "<repo>/apps/pi-devin/verification/scripts/prepare-artifact.mjs",
+          "/tmp/pi-devin-implementation.UkVlxc/배포 검증/consumer-final",
+          "/tmp/pi-devin-implementation.UkVlxc/배포 검증/pi-package-pack-rpVKFb/extracted/package"
+        ],
+        "cwd": "/tmp/pi-devin-implementation.UkVlxc/배포 검증/work",
+        "exitCode": 0,
+        "startedAt": "2026-10-19T06:40:51.216Z",
+        "completedAt": "2026-10-19T06:40:51.329Z",
+        "summary": []
+      },
+      {
+        "key": "artifact-final-source-denied",
+        "command": [
+          "/usr/bin/sandbox-exec",
+          "-f",
+          "/tmp/pi-devin-implementation.UkVlxc/artifact.sb",
+          "<home>/.nvm/versions/node/v24.14.0/bin/node",
+          "-e",
+          "try{require('fs').readFileSync(\"<repo>/apps/pi-devin/src/pi/provider.ts\");process.exit(1)}catch(e){if(e.code!=='EPERM'&&e.code!=='EACCES')throw e;console.log('source read denied')}"
+        ],
+        "cwd": "/tmp/pi-devin-implementation.UkVlxc/배포 검증/work",
+        "exitCode": 0,
+        "startedAt": "2026-10-19T06:40:51.329Z",
+        "completedAt": "2026-10-19T06:40:51.378Z",
+        "summary": []
+      },
+      {
+        "key": "artifact-final-resource",
+        "command": [
+          "/usr/bin/sandbox-exec",
+          "-f",
+          "/tmp/pi-devin-implementation.UkVlxc/artifact.sb",
+          "<home>/.nvm/versions/node/v24.14.0/bin/node",
+          "<repo>/apps/pi-devin/verification/scripts/validate-package.mjs",
+          "/tmp/pi-devin-implementation.UkVlxc/배포 검증/pi-package-pack-rpVKFb/extracted/package",
+          "--expect",
+          "<repo>/apps/pi-devin/verification/inventory.json",
+          "--pi-root",
+          "<repo>/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.3.0_@aws-sdk+credential-provider-node@3.972.86_@model_01419f223171ebe2ff54f8c3f2b21cbf/node_modules/@earendil-works/pi-coding-agent",
+          "--runtime",
+          "--report",
+          "<repo>/apps/pi-devin/verification/extracted-check.json"
+        ],
+        "cwd": "/tmp/pi-devin-implementation.UkVlxc/배포 검증/work",
+        "exitCode": 0,
+        "startedAt": "2026-10-19T06:40:51.378Z",
+        "completedAt": "2026-10-19T06:40:52.121Z",
+        "summary": []
+      },
+      {
+        "key": "artifact-final-cli",
+        "command": [
+          "/usr/bin/sandbox-exec",
+          "-f",
+          "/tmp/pi-devin-implementation.UkVlxc/artifact.sb",
+          "<home>/.nvm/versions/node/v24.14.0/bin/node",
+          "/tmp/pi-devin-implementation.UkVlxc/배포 검증/pi-package-pack-rpVKFb/extracted/package/cli.ts",
+          "--help"
+        ],
+        "cwd": "/tmp/pi-devin-implementation.UkVlxc/배포 검증/work",
+        "exitCode": 0,
+        "startedAt": "2026-10-19T06:40:52.122Z",
+        "completedAt": "2026-10-19T06:40:52.222Z",
+        "summary": []
+      },
+      {
+        "key": "artifact-final-provider",
+        "command": [
+          "/usr/bin/sandbox-exec",
+          "-f",
+          "/tmp/pi-devin-implementation.UkVlxc/artifact.sb",
+          "<home>/.nvm/versions/node/v24.14.0/bin/node",
+          "--import",
+          "<repo>/apps/pi-devin/verification/scripts/artifact-loader.mjs",
+          "--test",
+          "<repo>/apps/pi-devin/tests/pi-lifecycle.test.ts",
+          "<repo>/apps/pi-devin/tests/pi-runtime.test.ts",
+          "<repo>/apps/pi-devin/tests/pi-lifecycle-contract.test.ts",
+          "<repo>/apps/pi-devin/tests/pi-provider-hooks.test.ts",
+          "<repo>/apps/pi-devin/tests/pi-provider.test.ts",
+          "<repo>/apps/pi-devin/tests/pi-integration.test.ts"
+        ],
+        "cwd": "/tmp/pi-devin-implementation.UkVlxc/배포 검증/work",
+        "exitCode": 0,
+        "startedAt": "2026-10-19T06:40:52.223Z",
+        "completedAt": "2026-10-19T06:40:53.168Z",
+        "summary": [
+          "ℹ tests 35",
+          "ℹ suites 0",
+          "ℹ pass 35",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 911.426958"
+        ]
+      }
+    ]
+  },
+  "userFlowChecks": {
+    "nativeCLI": {
+      "checks": [
+        {
+          "command": [
+            "<home>/.nvm/versions/node/v24.14.0/bin/node",
+            "<repo>/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.3.0_@aws-sdk+credential-provider-node@3.972.86_@model_01419f223171ebe2ff54f8c3f2b21cbf/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js",
+            "install",
+            "/tmp/pi-devin-implementation.UkVlxc/배포 검증/pi-package-pack-rpVKFb/extracted/package"
+          ],
+          "exitCode": 0,
+          "startedAt": "2026-10-19T06:43:06.042Z",
+          "completedAt": "2026-10-19T06:43:06.212Z",
+          "hasExtensionDiagnostic": false,
+          "settingsPackages": [
+            "../pi-package-pack-rpVKFb/extracted/package"
+          ]
+        },
+        {
+          "command": [
+            "<home>/.nvm/versions/node/v24.14.0/bin/node",
+            "<repo>/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.3.0_@aws-sdk+credential-provider-node@3.972.86_@model_01419f223171ebe2ff54f8c3f2b21cbf/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js",
+            "list"
+          ],
+          "exitCode": 0,
+          "startedAt": "2026-10-19T06:43:06.212Z",
+          "completedAt": "2026-10-19T06:43:06.475Z",
+          "hasExtensionDiagnostic": false,
+          "settingsPackages": [
+            "../pi-package-pack-rpVKFb/extracted/package"
+          ]
+        },
+        {
+          "command": [
+            "<home>/.nvm/versions/node/v24.14.0/bin/node",
+            "<repo>/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.3.0_@aws-sdk+credential-provider-node@3.972.86_@model_01419f223171ebe2ff54f8c3f2b21cbf/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js",
+            "--no-skills",
+            "--no-prompt-templates",
+            "--no-themes",
+            "--no-context-files",
+            "-e",
+            "/tmp/pi-devin-implementation.UkVlxc/배포 검증/pi-package-pack-rpVKFb/extracted/package",
+            "--help"
+          ],
+          "exitCode": 0,
+          "startedAt": "2026-10-19T06:43:06.475Z",
+          "completedAt": "2026-10-19T06:43:06.708Z",
+          "hasExtensionDiagnostic": false,
+          "settingsPackages": [
+            "../pi-package-pack-rpVKFb/extracted/package"
+          ]
+        },
+        {
+          "command": [
+            "<home>/.nvm/versions/node/v24.14.0/bin/node",
+            "<repo>/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.3.0_@aws-sdk+credential-provider-node@3.972.86_@model_01419f223171ebe2ff54f8c3f2b21cbf/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js",
+            "remove",
+            "/tmp/pi-devin-implementation.UkVlxc/배포 검증/pi-package-pack-rpVKFb/extracted/package"
+          ],
+          "exitCode": 0,
+          "startedAt": "2026-10-19T06:43:06.708Z",
+          "completedAt": "2026-10-19T06:43:06.828Z",
+          "hasExtensionDiagnostic": false,
+          "settingsPackages": []
+        }
+      ],
+      "temporaryAgentDir": "/tmp/pi-devin-implementation.UkVlxc/배포 검증/native agent final",
+      "cwd": "/tmp/pi-devin-implementation.UkVlxc/배포 검증/native work",
+      "settingsRemoved": true,
+      "localPackagePreserved": true
+    },
+    "readmeTarballInstall": {
+      "command": [
+        "npm",
+        "install",
+        "--prefix",
+        "/tmp/pi-devin-implementation.UkVlxc/배포 검증/readme-install",
+        "--offline",
+        "--omit=dev",
+        "--ignore-scripts",
+        "--legacy-peer-deps",
+        "--no-audit",
+        "--no-fund",
+        "--cache",
+        "/tmp/pi-devin-implementation.UkVlxc/npm-cache",
+        "/tmp/pi-devin-implementation.UkVlxc/배포 검증/pi-package-pack-rpVKFb/archive/buyong-pi-devin-0.1.0.tgz"
+      ],
+      "cwd": "/tmp/pi-devin-implementation.UkVlxc/배포 검증/work",
+      "startedAt": "2026-10-19T06:48:36.778Z",
+      "completedAt": "2026-10-19T06:48:37.213Z",
+      "exitCode": 0,
+      "packageInstalled": true
+    },
+    "publicSDK": "OAuth -> catalog -> thinking UID -> streamed result/tool execution -> retry -> lifecycle; verified against extracted code",
+    "modes": "print/tui/json/rpc SDK bindings, not actual interactive TUI or native CLI JSON/RPC serialization"
+  },
+  "cleanup": {
+    "ownedCommandsExited": true,
+    "providerShutdown": "idempotent, actual public session runtime tests naturally exit",
+    "resourceWorkerLimit": "validator forcibly exits its bounded load worker; this alone is not cleanup proof",
+    "retained": "Temporary archives/reports retained for inspection; fixture sessions cleaned by tests",
+    "realSettingsChanged": false,
+    "historicalREA": "cleanup_incomplete unresolved"
+  },
+  "supplementedSkips": {
+    "semanticImports": "43 production files / 182 imports inspected in 04; no import changes in 05; actual artifact dependency inventory checked",
+    "extractedRuntime": "Separate extracted-check report plus 35 provider cases and CLI help passed",
+    "absentFeatures": "tool runner, skills, prompts, themes, package commands/flags are not_applicable"
+  },
+  "repairedChecks": [
+    "Original validation helper omitted HOME; owned source copy forwards isolated HOME/npm config choices",
+    "Npm rejects one path used for both user/global config; two empty temporary files used",
+    "macOS tar resolves to bsdtar; exact sandbox executable target allowed"
+  ],
+  "runtimeChangesSince04": [
+    {
+      "file": "src/cli/help.ts",
+      "change": "Documentation-only correction: compression fallback applies to 408/415/500/502/503/504, not only 415",
+      "revalidated": "typecheck + full 171-case suite + source/extracted CLI help"
+    }
+  ],
+  "liveStatus": "not_run",
+  "published": false,
+  "packageRegistryInstall": "not_run",
+  "packageRegistryUpdate": "not_run",
+  "dependencyRegistryFetch": {
+    "status": "pass",
+    "registry": "https://registry.npmjs.org/",
+    "authenticated": false,
+    "scope": "Declared runtime dependencies only"
+  },
+  "knownLimits": [
+    "Real account login/browser/inference not run",
+    "Node >=22.19.0 declared; execution verified on 24.14.0 only",
+    "Real device collection initially macOS only",
+    "Native default browser equivalence, token lifetime/refresh, HTTPS and final timeout remain unverified",
+    "Historical parity findings unchanged",
+    "Late redaction cannot retract earlier deltas",
+    "Provider collision detection cannot inspect every pre-existing registration order",
+    "Package remains private and unpublished"
+  ],
+  "commands": {
+    "source": "verification/README.md sections 1-2",
+    "artifact": "verification/README.md sections 3-4",
+    "localInstallation": "README.md and verification/README.md section 5",
+    "live": "README.md; user-run only, not performed here"
+  }
+}

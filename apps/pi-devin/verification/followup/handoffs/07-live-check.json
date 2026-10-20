@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "task": "07",
+  "outcome": "pass",
+  "recordedAt": "2026-10-19T15:17:56.000Z",
+  "artifactSha256": "6e01f924f814a61a6966f9b3dfa0aba4e8f43e97e4fc45df0917eefe27f979eb",
+  "runtimeDigest": "56771ab9c895bde708e4064ce1877c19a1d8e3b305524f688f26fe35d30334ac",
+  "predecessors": [
+    { "path": "verification/followup/handoffs/06-artifact.json", "outcome": "pass" }
+  ],
+  "authorization": {
+    "path": "verification/followup/live/authorization.json",
+    "planHash": "91708dcafb735dbe82c804eca64e9feb69e295f7e1d82f8f5699cbb9d4e1dd4a",
+    "approvedAt": "2026-10-19T13:27:50.987Z",
+    "scope": "plan.json as approved: user-run TUI /login (browser PKCE), swe-2-medium and swe-2-high only, 8 model HTTP requests total, hosts server.codeium.com and api.devin.ai, cases catalog/plain-medium/level-high/add-tool/fusion, delete the temp state afterwards",
+    "status": "executed within scope; one out-of-scope host contact during the login session is recorded under deviations"
+  },
+  "plan": {
+    "path": "verification/followup/live/plan.json",
+    "planHash": "91708dcafb735dbe82c804eca64e9feb69e295f7e1d82f8f5699cbb9d4e1dd4a",
+    "allowedUIDs": ["swe-2-medium", "swe-2-high"],
+    "maxModelCalls": 8
+  },
+  "harness": {
+    "verification/scripts/live/live-check.mjs": "0e76680360d07b8f6449f33ae1791d639bdde3f92f02e656dd4205173c05e0b6",
+    "verification/scripts/live/live-guard.mjs": "c0a642ed0fb7ec03408a122fdc315a6140bc5f63d19ae913214736c3d7f9ae46",
+    "enforcement": "Node preload decides before any HTTP bytes are written (node:http/https request end()) and, since the login session, also at socket connect for any TCP/TLS client including Pi's bundled HTTP client: host allowlist, decoded chatModelUid allowlist (covers Fusion sidekick requests), ledger-wide model HTTP cap, catalog free-tier/active check with halt.",
+    "changeBeforeRun": "Added the socket-level host check after finding the login-session GitHub download (see deviations). The plan object and planHash did not change."
+  },
+  "dryRun": {
+    "report": "verification/followup/live/dry-run.json",
+    "reportSha256": "070a06c6b565f2eebb1ea5447e9b6b778be2a2942f273d33867b2f708f46454f",
+    "command": "node verification/scripts/live/live-check.mjs dry-run --archive verification/followup/artifacts/buyong-pi-devin-0.1.0-6e01f924f814.tgz --report verification/followup/live/dry-run.json",
+    "observed": "pass 12/12, including the new socket-level-host-blocked control; same planHash"
+  },
+  "live": {
+    "executed": true,
+    "report": "verification/followup/live/run.json",
+    "reportSha256": "8d2f54f067008d4c1f9083c188b9aa4346a9895aef24ee86485e243ceeba31b4",
+    "completedAt": "2026-10-19T15:16:59.826Z",
+    "host": { "node": "v24.14.0", "pi": "1.3.0", "platform": "darwin-arm64" },
+    "login": {
+      "method": "user-run Pi TUI /login → Devin → browser PKCE in a new temp state with model-call cap 0",
+      "credential": "new Devin OAuth entry: type oauth, devin.version 1, flow browser, expires 0, apiServerURL https://server.codeium.com (values other than these were not read into the report)",
+      "readCalls": { "token (api.devin.ai REST code exchange)": 1, "GetUserStatus": 1, "GetCliModelConfigs": 1, "GetCliTeamSettings": 1 },
+      "modelCalls": 0,
+      "catalog": "863 configs; swe-2-medium and swe-2-high present, not disabled, MODEL_COST_TIER_FREE, promo active until 2026-11-01T06:59:59Z",
+      "note": "A first login invocation exited without logging in (devinOAuth false, no requests); the second completed the login."
+    },
+    "cases": [
+      { "id": "catalog", "pass": true, "mode": "rpc", "devinModels": 393, "modelCalls": [], "readCalls": { "GetUserStatus": 1 } },
+      { "id": "plain-medium", "pass": true, "mode": "json", "modelCalls": ["swe-2-medium"], "statuses": [200], "stopReasons": ["stop"], "responseUIDs": ["swe-2-medium"], "usage": [{ "input": 803, "output": 40 }] },
+      { "id": "level-high", "pass": true, "mode": "json", "modelCalls": ["swe-2-high"], "statuses": [200], "stopReasons": ["stop"], "responseUIDs": ["swe-2-high"], "usage": [{ "input": 806, "output": 46 }] },
+      { "id": "add-tool", "pass": true, "mode": "json", "modelCalls": ["swe-2-medium", "swe-2-medium"], "statuses": [200, 200], "stopReasons": ["toolUse", "stop"], "tools": [{ "tool": "add", "isError": false, "result": "5" }], "finalContains5": true },
+      { "id": "fusion", "pass": true, "mode": "json", "modelCalls": ["swe-2-medium", "swe-2-medium", "swe-2-medium", "swe-2-medium"], "statuses": [200, 200, 200, 200], "stopReasons (lead)": ["toolUse", "stop"], "tools": [{ "tool": "add", "isError": false, "result": "5", "by": "sidekick" }, { "tool": "sidekick", "isError": false }], "finalContains5": true }
+    ],
+    "modelHttpDispatchCount": 8,
+    "modelUIDs": { "swe-2-medium": 7, "swe-2-high": 1 },
+    "readOnlyCalls": { "token": 1, "GetUserStatus": 9, "GetCliModelConfigs": 1, "GetCliTeamSettings": 1 },
+    "blocked": 0,
+    "halted": 0,
+    "apiKeys": "none created, entered or used; the run was started with DEVIN_API_KEY and WINDSURF_API_KEY unset and child environments do not inherit them",
+    "secretsInRecords": "token, token prefix and Basic auth header absent from run.json and the ledger (checked before cleanup)",
+    "cleanup": "live-check cleanup removed the temp state (new credential, sessions, models-store, ledger, downloaded fd/rg); no live-check processes remained. No server-side session revocation."
+  },
+  "deviations": [
+    "During the user-run login TUI session, Pi's own tools manager downloaded fd and rg from GitHub releases into the temp agent bin directory. That client bypassed the node:http/fetch guard and the live sandbox does not restrict network, so this contact with github.com was outside the approved host list. No Devin credential or request was involved, and the files were deleted at cleanup. The guard gained a socket-level host check before the inference run; no further out-of-scope connection was recorded."
+  ],
+  "limitations": [
+    "Free tier is the user's statement plus the catalog flag fetched at login about 4 minutes before inference; the run's processes reused that catalog within the 5-minute freshness window. Cost stays unknown in the provider display.",
+    "Usage counts are as reported by the service for the lead conversation; sidekick request usage is not shown in the Pi transcript.",
+    "Each fresh Pi process probed GetUserStatus before inference (9 status reads in total); these do not count toward the model budget.",
+    "Only the approved two UIDs and five fixed prompts were exercised; long-term token lifetime/refresh, cancellation on the real service, image input, and other models were not tested.",
+    "The package README still says no real login or inference was run with this package; updating it changes a runtime file and therefore the archive, so it belongs to the next release candidate."
+  ]
+}

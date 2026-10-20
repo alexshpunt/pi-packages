@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "task": "07",
+  "attempt": 2,
+  "outcome": "pass",
+  "recordedAt": "2026-10-19T22:15:30.000Z",
+  "artifactSha256": "de8db88b783fcd57c2a813a85f91097cd102e555d3c64e26b3fc5414e251b350",
+  "runtimeDigest": "b13f1afaa9f719405c71da8eec45a968df5dbcc372c723d5250dadbdb6a5d2ce",
+  "predecessors": [
+    {
+      "path": "verification/followup/handoffs/06-artifact-r2.json",
+      "outcome": "pass",
+      "sha256": "0b9e2004440475bcbb32322c4efcb071f109ea554579ceee31adca775b35fe38"
+    }
+  ],
+  "authorization": {
+    "path": "verification/followup/live/authorization-r2.json",
+    "planHash": "63c384e12cf3c35f16c439a40903f381666aa1b1e82ec74bccd15ab78e515119",
+    "approvedAt": "2026-10-19T21:58:22.562Z"
+  },
+  "dryRun": {
+    "report": "verification/followup/live/dry-run-r2.json",
+    "reportSha256": "b3928bc78084e59ed459cbbc2d5fe8540d4b34c941c434589a15ed7531267e1d"
+  },
+  "live": {
+    "report": "verification/followup/live/run-r2.json",
+    "reportSha256": "d5441c577640f875c4df01a9daf831041c41e73025cda42bd218bd5ed19db7f9",
+    "cases": [
+      {
+        "id": "catalog",
+        "pass": true,
+        "modelCalls": []
+      },
+      {
+        "id": "plain-medium",
+        "pass": true,
+        "modelCalls": [
+          "swe-2-medium"
+        ]
+      },
+      {
+        "id": "level-high",
+        "pass": true,
+        "modelCalls": [
+          "swe-2-high"
+        ]
+      },
+      {
+        "id": "add-tool",
+        "pass": true,
+        "modelCalls": [
+          "swe-2-medium",
+          "swe-2-medium"
+        ],
+        "tools": [
+          "add=5"
+        ]
+      },
+      {
+        "id": "fusion",
+        "pass": true,
+        "modelCalls": [
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium"
+        ],
+        "tools": [
+          "sidekick"
+        ]
+      }
+    ],
+    "modelHttpDispatchCount": 8,
+    "modelStatuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "blocked": [
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      }
+    ],
+    "halted": []
+  },
+  "note": "Written on 2026-10-20 after the fact from run-r2.json; the run itself was recorded in commit 06f9441.",
+  "limitations": [
+    "SWE-2 free-tier models only; the temporary state was removed but the server-side session was not revoked."
+  ]
+}

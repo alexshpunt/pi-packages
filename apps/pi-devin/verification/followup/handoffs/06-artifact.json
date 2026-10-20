@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 1,
+  "task": "06",
+  "outcome": "pass",
+  "recordedAt": "2026-10-19T13:11:35.000Z",
+  "source": {
+    "baseRevision": "main@3003e4d",
+    "coreVersion": 1,
+    "files": {
+      "README.md": "f748a7b04e6b8cd94f9f18c120134730e9c61dd4a4d5cf5e2d857b9cf4e6bdcf",
+      "AGENTS.md": "ad333e805b663fe6a638cde36919ecf7558e83059cdeba1d19f8d3d104437cf2",
+      "verification/README.md": "1909a06f6584878117008ca2f650b87dead35d30388a28ebc1223e944c974355",
+      "verification/scripts/README.md": "ca55fb142d5b29e366927820d0e3f0cec92b041a66013ca97aa3d845d6a50f38",
+      "verification/inventory.json": "3522de7608e38db5d042ae7894e82ebd114fff2664ac9f573542ba111a8018cf",
+      "verification/scripts/validate-package.mjs": "1a0f0393171cfdf024265e89b363077578cd677dc3978b2fcfe91eedbef376a3",
+      "verification/scripts/import-closure.mjs": "1ef2b9928097b5dc94a84ddd099d0ffcfac8e28434d4491ee91cbe6a47674d78",
+      "verification/scripts/host-contract.mjs": "692d3a6cd4b2602b6d5ff09b1c1d012424cbd75d00937edee60b6f9878794d39"
+    },
+    "harnessChange": "host-contract.mjs now denies reads of the source src/, index.ts and cli.ts to the Pi process when --package-root is not the source, and the help scenario adds a source-runtime-denied control. Source-mode runs are unchanged (help 7/7, cache 7/7 re-run after the change)."
+  },
+  "predecessors": [
+    {
+      "path": "verification/followup/handoffs/05-host-contract.json",
+      "outcome": "pass",
+      "sha256": "ac0d0104878949538374f2e23668c45d1d8a63282e111373a722867aa24818e3",
+      "note": "05 runtime digest add0600e… differs only by README.md, which this task updated; all other 46 runtime files are unchanged."
+    },
+    {
+      "path": "verification/followup/handoffs/09-proto-sources.json",
+      "outcome": "pass",
+      "sha256": "aad4b37c164956a61993fbfe2df61ab4d7e705e851dac26002f6f3c810297181"
+    }
+  ],
+  "artifact": {
+    "repoRelativePath": "verification/followup/artifacts/buyong-pi-devin-0.1.0-6e01f924f814.tgz",
+    "storage": "Local file ignored by apps/pi-devin/.gitignore (*.tgz); not committed. Rebuild reproduces the same sha256 (verified by a second npm pack).",
+    "sha256": "6e01f924f814a61a6966f9b3dfa0aba4e8f43e97e4fc45df0917eefe27f979eb",
+    "bytes": 298200,
+    "name": "@buyong/pi-devin",
+    "version": "0.1.0",
+    "private": true,
+    "entries": 47,
+    "runtimeDigest": {
+      "method": "sha256 of sorted 'path\\0sha256\\n' lines over package.json and manifest files (same as host-contract.mjs packageRuntime)",
+      "files": 47,
+      "sha256": "56771ab9c895bde708e4064ce1877c19a1d8e3b305524f688f26fe35d30334ac",
+      "matchesSource": true
+    },
+    "runtimeFiles": {
+      "README.md": "f748a7b04e6b8cd94f9f18c120134730e9c61dd4a4d5cf5e2d857b9cf4e6bdcf",
+      "cli.ts": "6e5eccdbe13515285d608d1e5a14d45fb2bc760849d9d279a630c003bef5ae49",
+      "index.ts": "28f305b2e2d12849b4375e268fb964b4f510eb62f1371eb9dea9b18cca27f690",
+      "package.json": "cb6730e0c4b86981af832872503d957788e83d24c67c34a598e40be551f69c71",
+      "resources/descriptors.pb": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+      "src/cli/auth-command.ts": "26ac7aadaa753037570194bdf257620156b659625aff48cd0e7f5232165e5a89",
+      "src/cli/auth-ui.ts": "4302c21f82027ea015fba906dfe070906e1987d839c437113a327d05d449f8b6",
+      "src/cli/conversation.ts": "1a7da6805b456858487515c395905c61a455c2e50aa79b60a4bb95a3d9b78678",
+      "src/cli/credentials.ts": "0ea585e3ce98ca39da60853fa17a0c82ab2231d9b054219d6e0fd881fd1cc5c2",
+      "src/cli/help.ts": "525c6a7a0d181d792fac78d20713c7ceea7f1f7f7dbe52d1855adc62e45fedc9",
+      "src/cli/images.ts": "545ffcadbba59abce8ffa304276c3d64a8e2a537ce3a36edadea32af8598863d",
+      "src/cli/initialization.ts": "fca68aac3eddc4d90a723887723d13a04d6f636fe9cfc28acb5da0f5fcb1e06a",
+      "src/cli/main.ts": "d35b35ec366c893ff98688075b4f2b16a5546101bca882c46aeb7e032d233e98",
+      "src/cli/options.ts": "b7f9c3d0786fbe1aaa61402545128bc744480f5c04c9b9d5bf7e753b19860ce3",
+      "src/cli/registered-tools.ts": "a015b1020c855cb8574fd8344612ec62ab58eb78a66d123dc93a504279b50584",
+      "src/cli/session-store.ts": "78aef4008e0b27cc06e8a41f39461232903b60fe3e6b58518f3a462e1b4258d9",
+      "src/cli/verification.ts": "d7f8f327d0ac82f256bc4fc73baedc132aefbc28e972b4f57293574d2827c534",
+      "src/core/auth/access.ts": "94c5f388bd7e9c9a9b2c07a8be2545beb251788b3c6a0029d83a479793022d62",
+      "src/core/auth/index.ts": "fe4457e02a6395881eb2ec4e07a235037f1a0d8d2f569504dbcbd4e623764d4d",
+      "src/core/auth/login.ts": "d2605efd2fb0634e71695cafdc26bfb9fac799c01e5b92ffcb4dfcc37bb61a65",
+      "src/core/auth/rest-exchange.ts": "e7cdbb50bdfb394963124841fcac9291ad1d84927ea77dace957f9d8206e54f5",
+      "src/core/client.ts": "6d4a901f49452470e30a11e8619bff8b32f375d7d4f56369d0d01b5496127629",
+      "src/core/index.ts": "8b07f3c609d8d9b670541943eba954672299c4153cbd3c8ce1a88cc379491a4e",
+      "src/core/inference/chat.ts": "5e052f1381093f1f54da1bf6d23b22142fa63208b10f3ea0fbf65bcecbc5c238",
+      "src/core/inference/images.ts": "31af805b21d0cab6de83cecd373e3ef8a5b19423925cef97d64b090b86938959",
+      "src/core/inference/messages.ts": "5d94a2511e342a0939064c19684262a34436db36ae789e4f290f4655b416875f",
+      "src/core/inference/retry.ts": "ede8596ae2a622f86938b7432628a4d33cde6a027a20136a7d0db9bc79351636",
+      "src/core/inference/state.ts": "a3ad18cbfdbb3f84517df912a246af73bad85387d310bf109cc63a9fd21bdcbf",
+      "src/core/models/access.ts": "47395646f623f7c604657551b05c839995383741e4815a621522e80b8954421a",
+      "src/core/models/catalog.ts": "060d776c3ca2e0af1a20808baefecfb72665f0628f884cc67a5e23cd0cbc5cc3",
+      "src/core/models/index.ts": "6cf03a055acc4f6ec462b68aa3ec309760842716dcfad47ed667a1fa72de91ff",
+      "src/core/models/select.ts": "6f08f1b3a9e842f3b235d867b9a20eeb4a2ed7c4ccc30e69c02d27896a37b66d",
+      "src/core/models/variants.ts": "b9d63c69a86415e1366465326cd152b69278b15ee74640ff727a710e2e8372c9",
+      "src/core/protocol/device.ts": "99f156ac4852fe642905ff3930a24f6e2666b88c8a2fef04d37bbdd91e3e4d3c",
+      "src/core/protocol/fingerprint.ts": "8bdfceb01cc09edca028625a61ca7b82382b796be9a0ad9c35a27aabda146130",
+      "src/core/protocol/http.ts": "5d1af75e0cb4f7841994d4399da8e27bab663290ca23bc55a6f6064ddc737e51",
+      "src/core/protocol/protobuf.ts": "1e9c1d04e7e116e000463f7d86f40b1e4fa96a69a430ee1911ce1ed3d0f953fb",
+      "src/core/protocol/transport.ts": "9d9f1aaa78d678df079e5142c8c398613e8efd4ac8f8992ab0657a77b413fd41",
+      "src/core/types.ts": "7764fa83bbc6fd876026c63830caf4dea81e6b075a3e0c690fe9ae50fa631efd",
+      "src/pi/auth.ts": "22d8b90be6da8b7ba8dbd6fe2fe86ed3b86c9ea3178be76d6ab4673b745e9cfd",
+      "src/pi/extension.ts": "40ead816ea052e6ccebf5dafb5b87403cb386d08f8f36ef0f8ed9dac8252facc",
+      "src/pi/lifecycle.ts": "9b8b45a1a24ebbc6425f8e5d1115f2f952d582b110a92a82aafb2803a6868da3",
+      "src/pi/messages.ts": "8170e52f3806e077530fdbac3397253e623c35b4cec5b6f00cecd5041e8e9dd8",
+      "src/pi/models.ts": "141aebd98bf4c1e7e6c793fad620341b99943cc049843739da31f4fc307a479f",
+      "src/pi/provider.ts": "ccdcec3ab08f2564e6f9f4f8cba94a0fde4e789668b45102b1101537920624de",
+      "src/pi/sidekick.ts": "91531d56b4873b5a2d7596bc7d1a150bbdb1ca5430345a1e78d397d81704e265",
+      "src/pi/stream.ts": "7d4c5d099d854f760d7b12a9f141af0a7070883311acba9ece803fb7f073e817"
+    },
+    "inventoryHash": "3522de7608e38db5d042ae7894e82ebd114fff2664ac9f573542ba111a8018cf",
+    "registrations": {
+      "extensions": [
+        "index.ts"
+      ],
+      "tools": [
+        "sidekick"
+      ],
+      "commands": [],
+      "flags": [],
+      "skills": [],
+      "prompts": [],
+      "themes": []
+    },
+    "productionDependencies": {
+      "declared": {
+        "protobufjs": "7.6.6"
+      },
+      "installed": {
+        "@protobufjs/aspromise": {
+          "version": "1.1.2",
+          "integrity": "sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ=="
+        },
+        "@protobufjs/base64": {
+          "version": "1.1.2",
+          "integrity": "sha512-AZkcAA5vnN/v4PDqKyMR5lx7hZttPDgClv83E//FMNhR2TMcLUhfRUBHCmSl0oi9zMgDDqRUJkSxO3wm85+XLg=="
+        },
+        "@protobufjs/codegen": {
+          "version": "2.0.5",
+          "integrity": "sha512-zgXFLzW3Ap33e6d0Wlj4MGIm6Ce8O89n/apUaGNB/jx+hw+ruWEp7EwGUshdLKVRCxZW12fp9r40E1mQrf/34g=="
+        },
+        "@protobufjs/eventemitter": {
+          "version": "1.1.1",
+          "integrity": "sha512-vW1GmwMZNnL+gMRaovlh9yZX74kc+TTU3FObkkurpMaRtBfLP3ldjS9KQWlwZgraRE0+dheEEoAxdzcJQ8eXZg=="
+        },
+        "@protobufjs/fetch": {
+          "version": "1.1.1",
+          "integrity": "sha512-GpptLrs57adMSuHi3VNj0mAF8dwh36LMaYF6XyJ6JMWlVsc+t42tm1HSEDmOs3A8fC9yyeisgLhsTVQokOZ0zw=="
+        },
+        "@protobufjs/float": {
+          "version": "1.0.2",
+          "integrity": "sha512-Ddb+kVXlXst9d+R9PfTIxh1EdNkgoRe5tOX6t01f1lYWOvJnSPDBlG241QLzcyPdoNTsblLUdujGSE4RzrTZGQ=="
+        },
+        "@protobufjs/path": {
+          "version": "1.1.2",
+          "integrity": "sha512-6JOcJ5Tm08dOHAbdR3GrvP+yUUfkjG5ePsHYczMFLq3ZmMkAD98cDgcT2iA1lJ9NVwFd4tH/iSSoe44YWkltEA=="
+        },
+        "@protobufjs/pool": {
+          "version": "1.1.0",
+          "integrity": "sha512-0kELaGSIDBKvcgS4zkjz1PeddatrjYcmMWOlAuAPwAeccUrPHdUqo/J6LiymHHEiJT5NrF1UVwxY14f+fy4WQw=="
+        },
+        "@protobufjs/utf8": {
+          "version": "1.1.2",
+          "integrity": "sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug=="
+        },
+        "@types/node": {
+          "version": "26.6.5",
+          "integrity": "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg=="
+        },
+        "long": {
+          "version": "5.3.2",
+          "integrity": "sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA=="
+        },
+        "protobufjs": {
+          "version": "7.6.6",
+          "integrity": "sha512-dYDWdjSl5RNb7SgPxGQcRU+GtvP7s2fpkrY0r432PcOIaZ0/rBcxEZnQN67iJhFuQiVw754JDoPruPCNdGsbjg=="
+        },
+        "undici-types": {
+          "version": "8.9.0",
+          "integrity": "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="
+        }
+      },
+      "note": "Installed by npm 11.9.0 into a fresh consumer with --omit=dev --ignore-scripts --legacy-peer-deps; no dev/peer entries and no @earendil-works or typebox copies. @types/node and undici-types arrive as protobufjs production dependencies."
+    },
+    "excluded": {
+      "devOnlyPaths": [
+        "proto/",
+        "tests/",
+        "verification/",
+        "node_modules/",
+        "AGENTS.md",
+        "tsconfig.json",
+        ".gitignore"
+      ],
+      "observed": "0 archive entries under devOnlyPaths; 0 credential files; 0 symlinks; all 47 entries are regular files byte-identical to the source"
+    },
+    "rebuildCommands": [
+      {
+        "cwd": "apps/pi-devin",
+        "command": "npm pack --ignore-scripts --json --pack-destination <dir>",
+        "expect": "buyong-pi-devin-0.1.0.tgz with sha256 6e01f924f814a61a6966f9b3dfa0aba4e8f43e97e4fc45df0917eefe27f979eb at this source revision"
+      },
+      {
+        "cwd": "apps/pi-devin",
+        "command": "node verification/scripts/validate-package.mjs \"$package_dir\" --expect \"$package_dir/verification/inventory.json\" --pi-root \"$PI_ROOT\" --runtime --pack --report \"$check_dir/package-check.json\"",
+        "note": "verification/README.md sections 1-2 for check_env and isolation"
+      }
+    ],
+    "productionPrepareCommands": [
+      "npm install --prefix \"$consumer_dir\" --omit=dev --ignore-scripts --legacy-peer-deps --no-audit --no-fund \"$archive\"",
+      "node verification/scripts/prepare-artifact.mjs \"$consumer_dir\" \"$artifact_dir\""
+    ],
+    "schemaProvenance": {
+      "reportPath": "verification/followup/proto-check-05.json",
+      "reportSha256": "cc777a07b72ac6a909b326a1309ed5bf3ed2766dffa6727b91ef239d2af4c9e5",
+      "provenancePath": "verification/followup/proto-provenance.json",
+      "provenanceSha256": "04754876cbce4a2267743b7c6b375e3bb887efbbab4d5f7d5ba66345c0d90993",
+      "originalDescriptorSha256": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+      "packagedDescriptorSha256": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+      "note": "The archive ships only resources/descriptors.pb (unchanged original); .proto sources, buf and verify-proto are development-only and absent from the archive."
+    }
+  },
+  "environment": {
+    "platform": "darwin-arm64",
+    "node": [
+      "v24.14.0",
+      "v22.19.0 (host-contract only)"
+    ],
+    "npm": "11.9.0",
+    "pnpm": "10.29.2",
+    "pi": "1.3.0 (app-pinned, dist/bundle/cli.js)",
+    "checkDir": "mktemp under /private/tmp with a nested directory '배포 검증 dir' (spaces and Hangul); separate empty user/global npmrc; HOME/TMPDIR/PI_CODING_AGENT_DIR inside it"
+  },
+  "checks": [
+    {
+      "key": "typecheck",
+      "cwd": "apps/pi-devin",
+      "command": "check_env pnpm typecheck",
+      "observed": "exit 0"
+    },
+    {
+      "key": "offline",
+      "cwd": "apps/pi-devin",
+      "command": "check_env pnpm verify:offline",
+      "observed": "exit 0, 183/183 pass"
+    },
+    {
+      "key": "import-closure",
+      "cwd": "apps/pi-devin",
+      "command": "node verification/scripts/import-closure.mjs . --expect verification/inventory.json --report <file>",
+      "report": "verification/followup/import-closure-06.json",
+      "observed": "ok: 42 reachable modules + resources/descriptors.pb, external packages @earendil-works/pi-ai, @earendil-works/pi-coding-agent, protobufjs only, 0 problems. Packed but unreachable: README.md, package.json and the pre-existing barrels src/core/index.ts, src/core/models/index.ts"
+    },
+    {
+      "key": "validate-source-pack",
+      "cwd": "apps/pi-devin",
+      "command": "check_env node verification/scripts/validate-package.mjs \"$package_dir\" --expect verification/inventory.json --pi-root \"$PI_ROOT\" --runtime --pack",
+      "report": "verification/followup/package-check-06.json",
+      "observed": "status pass, 200 checks; skipped: semantic import and bundle inspection (covered by import-closure), extracted artifact runtime and behavior (covered below); not_applicable: skills/prompts/themes"
+    },
+    {
+      "key": "repack-reproducible",
+      "cwd": "apps/pi-devin",
+      "command": "check_env npm pack --ignore-scripts --json --pack-destination \"$check_dir/repack\"",
+      "observed": "same sha256 6e01f924…"
+    },
+    {
+      "key": "consumer-production-install",
+      "cwd": "apps/pi-devin",
+      "command": "check_env npm install --prefix \"$consumer_dir\" --omit=dev --ignore-scripts --legacy-peer-deps --no-audit --no-fund \"$archive\" && check_env node verification/scripts/prepare-artifact.mjs \"$consumer_dir\" \"$artifact_dir\"",
+      "observed": "exit 0, 14 lock packages, prepare exit 0"
+    },
+    {
+      "key": "validate-extracted",
+      "cwd": "apps/pi-devin",
+      "command": "check_env node verification/scripts/validate-package.mjs \"$artifact_dir\" --expect verification/inventory.json --pi-root \"$PI_ROOT\" --runtime",
+      "report": "verification/followup/extracted-check-06.json",
+      "observed": "status pass, 91 checks"
+    },
+    {
+      "key": "extracted-cli-help-other-cwd",
+      "cwd": "<check>/work",
+      "command": "check_env node \"$artifact_dir/cli.ts\" --help",
+      "observed": "exit 0"
+    },
+    {
+      "key": "source-denied-controls",
+      "cwd": "<check>/work",
+      "command": "sandbox-exec -f no-source.sb node -e readFileSync(...)",
+      "observed": "EPERM for source src/pi/provider.ts, source index.ts, real ~/.pi/agent/auth.json; artifact src and tests readable; source pi-provider test without loader exits 1 with EPERM"
+    },
+    {
+      "key": "extracted-provider-tests",
+      "cwd": "<check>/work",
+      "command": "check_env env PI_DEVIN_TEST_PACKAGE_ROOT=\"$artifact_dir\" PI_DEVIN_TEST_PI_ROOT=\"$PI_ROOT\" sandbox-exec -f no-source.sb node --import verification/scripts/artifact-loader.mjs --test tests/pi-provider*.test.ts tests/pi-integration.test.ts tests/pi-runtime.test.ts tests/pi-lifecycle*.test.ts",
+      "observed": "exit 0, 42/42 pass"
+    },
+    {
+      "key": "extracted-all-tests-informative",
+      "cwd": "<check>/work",
+      "command": "same loader and sandbox with tests/*.test.ts",
+      "observed": "179/183; the 4 failures are CLI tests that spawn the source cli.ts as a child process, which the loader does not map and the sandbox denies"
+    },
+    {
+      "key": "extracted-host-contract-node24",
+      "cwd": "apps/pi-devin",
+      "command": "node verification/scripts/host-contract.mjs --report <file> --package-root \"$artifact_dir\" --pi-root \"$PI_ROOT\"",
+      "report": "verification/followup/host-contract-artifact-node24.json",
+      "observed": "exit 0, pass, 84/84 incl. source-runtime-denied=EPERM, runtime digest 56771ab9…"
+    },
+    {
+      "key": "extracted-host-contract-node22",
+      "cwd": "apps/pi-devin",
+      "command": "<node-v22.19.0> verification/scripts/host-contract.mjs --report <file> --package-root \"$artifact_dir\" --pi-root \"$PI_ROOT\"",
+      "report": "verification/followup/host-contract-artifact-node22.json",
+      "observed": "exit 0, pass, 84/84"
+    },
+    {
+      "key": "native-install-list-help-remove",
+      "cwd": "<check>/work",
+      "command": "check_env node \"$PI_ROOT/dist/bundle/cli.js\" install|list|--help|-e <artifact> --help|remove \"$artifact_dir\"",
+      "observed": "all exit 0; temp settings packages 0 -> 1 -> 0; 0 extension error lines in both help runs; package files kept; personal ~/.pi/agent/settings.json mtime/size unchanged (content not read)"
+    }
+  ],
+  "limitations": [
+    "The archive file is kept locally and is git-ignored; consumers of this handoff must rebuild with the recorded command or use the local copy and compare sha256.",
+    "Extracted CLI behavior beyond --help (login/status/models/chat) was not re-run against the artifact: those tests spawn the source cli.ts.",
+    "macOS arm64 only; sandbox-exec enforced the isolation. Other OSes were not run.",
+    "Production dependencies were resolved from the public npm registry at install time; their integrity values are recorded, not pinned by a committed lock.",
+    "No real Devin service, browser login, registry publish or tag was performed; private:true is kept for task 08.",
+    "host-contract.mjs also replaces the bare local user name with <user> in report text; no committed report contains such a replacement, but a future report could mask a matching package scope. Left unchanged to keep the recorded harness hash consistent with the 05 and 06 reports."
+  ],
+  "handoff": {
+    "decision": "continue",
+    "successors": [
+      "prepare from this artifact sha256/runtimeDigest; live execution still needs explicit approval",
+      "build the release candidate from the same runtime digest; publishing still needs explicit approval"
+    ]
+  },
+  "reports": {
+    "verification/followup/package-check-06.json": "64537dfb760092295f26de1c088d07124ca3e87d550ab0b8e959e5e73fba8251",
+    "verification/followup/extracted-check-06.json": "9505c5cc9155a5c642bb59446d63f43e60e84cbeca8a6478cbb950a59530d77e",
+    "verification/followup/import-closure-06.json": "93b83eddaf11f86536fc576d9d959d89d1dc3079d9c6e6bfa1776af1427a472a",
+    "verification/followup/host-contract-artifact-node24.json": "442ada11c0f8d3e9058e8f59f1e8a841a1ae9c62e695792604d2131f1a439a35",
+    "verification/followup/host-contract-artifact-node22.json": "a24e89e24584f20881b0e92d28a5a8ebd4e3a363e0b6f9873cdaf84ba401991a",
+    "sanitization": "validator reports: temp check dir, source, Pi root, repository and real HOME paths replaced with <check>/<source>/<pi>/<repo>/<home>; host-contract reports sanitized by the runner"
+  }
+}

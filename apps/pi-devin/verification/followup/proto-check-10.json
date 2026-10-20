@@ -1,0 +1,450 @@
+{
+  "schemaVersion": 1,
+  "tool": "verification/scripts/verify-proto.mjs",
+  "recordedAt": "2026-10-19T12:15:49.221Z",
+  "ok": true,
+  "tools": {
+    "buf": "1.74.0",
+    "node": "v24.14.0",
+    "protobufjs": "7.6.6"
+  },
+  "inputs": {
+    "originalDescriptor": {
+      "path": "resources/descriptors.pb",
+      "sha256": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+      "bytes": 849751
+    },
+    "provenance": {
+      "path": "verification/followup/proto-provenance.json",
+      "sha256": "04754876cbce4a2267743b7c6b375e3bb887efbbab4d5f7d5ba66345c0d90993"
+    },
+    "sourceRoot": "proto",
+    "sourceFiles": [
+      {
+        "name": "buf/validate/validate.proto",
+        "sha256": "49178471ed6cb1dbfa2899869babeac5a5404593960e70e2e9a444ee11bec78a"
+      },
+      {
+        "name": "cel/expr/checked.proto",
+        "sha256": "37cab63966200ebe3e902e5a4b4eab0356f144225f10484c6890c16bf12152f6"
+      },
+      {
+        "name": "cel/expr/eval.proto",
+        "sha256": "b80a40961485fd5aa5a726e286cc2e88504c5321a2d608a4908a9336c9d96653"
+      },
+      {
+        "name": "cel/expr/explain.proto",
+        "sha256": "b149b5d679e8f9221f614ced8c38876d49831dfc9363e2aade2fd8c66a4d4db4"
+      },
+      {
+        "name": "cel/expr/syntax.proto",
+        "sha256": "3d887f95d1705e6e41ec3528640f01b951ceadceaecf59a95cd19df7c877dbd7"
+      },
+      {
+        "name": "cel/expr/value.proto",
+        "sha256": "ed1207ccd83fb7f1285e66802cb4be4c1a4ab7a4886581bc9911bf236a6b9999"
+      },
+      {
+        "name": "connectext/grpc/status/v1/status.proto",
+        "sha256": "048fc10cd96564bbc88df062f75a86cee72ea7cb1923a3f4c4b6338cd48f9f67"
+      },
+      {
+        "name": "errorspb/errors.proto",
+        "sha256": "78722a83c6f3a2c0b4aa23f36fb05ba554775fc359898e40716d8857d1833653"
+      },
+      {
+        "name": "errorspb/hintdetail.proto",
+        "sha256": "70470ddbb011e8f5e1590d0b98077df3cec5438da57595f87a31721b8f6b2490"
+      },
+      {
+        "name": "errorspb/markers.proto",
+        "sha256": "9045ec2b42de7727e3b03aa449dcb5672297df8e2ee501fe65e52b5176f7f72e"
+      },
+      {
+        "name": "errorspb/tags.proto",
+        "sha256": "3c96e89f012112a1b5d8a4260fd9b89b263084ab02eebf8d46f03bd264f553cb"
+      },
+      {
+        "name": "errorspb/testing.proto",
+        "sha256": "c27d51c2c0a2a5153b1730d71268d537fc440a50064f3d27c8e663579106df5f"
+      },
+      {
+        "name": "exa/analytics_pb/analytics.proto",
+        "sha256": "3c08a662e02df4e1bc41a8c7d07548a84f38cf58dc93feabd44ac3b6e1a62b42"
+      },
+      {
+        "name": "exa/api_server_pb/api_server.proto",
+        "sha256": "d4a87e787846a024685630d89d11dd41fb1fb459625b09638e5f6498914d27ed"
+      },
+      {
+        "name": "exa/auth_pb/auth.proto",
+        "sha256": "43c7fdd8afcc8369788bcd93df0fb0edcfa2bf61418ecb7654d66583994ead3e"
+      },
+      {
+        "name": "exa/auto_cascade_common_pb/auto_cascade_common.proto",
+        "sha256": "76578195009b3f4517e383cd724d695ba8cc5a0587d4201a3b364f1eaf52a894"
+      },
+      {
+        "name": "exa/browser_preview_pb/browser_preview.proto",
+        "sha256": "88b1dfdf3045f56a6c8b7c2df5995f46d60a1eae397f685ba131df0f1feb11c0"
+      },
+      {
+        "name": "exa/bug_checker_pb/bug_checker.proto",
+        "sha256": "619d836a336463897ae7bc83a9d6e4e9ab8e7cb3b54be2d76ede48ced789d7e8"
+      },
+      {
+        "name": "exa/cascade_plugins_pb/cascade_plugins.proto",
+        "sha256": "1bc6ae406d0c049316197b087fc07c6d1fee007c7f3ca998e283eb861f12a910"
+      },
+      {
+        "name": "exa/chat_client_server_pb/chat_client_server.proto",
+        "sha256": "0ed2ff6c85c53eb56c349f62568465bf687467f2ed58b1ebbcbc568c6a6aa0f8"
+      },
+      {
+        "name": "exa/chat_pb/chat.proto",
+        "sha256": "6f69a597e1dc36a8f52367c6eaa3a6806e73e1aa2668cceedc2cca4a59d7024c"
+      },
+      {
+        "name": "exa/code_edit/code_edit_pb/code_edit.proto",
+        "sha256": "06d0ba99c69571d34093e27e9109a609a536cb16aced89316956b14d2faafeb8"
+      },
+      {
+        "name": "exa/codeium_common_pb/browser_context.proto",
+        "sha256": "8a75d85c9b44de00c94d9b1a1defe5bb09a1157dd48fd7128541027114cca2a4"
+      },
+      {
+        "name": "exa/codeium_common_pb/codeium_common.proto",
+        "sha256": "79e51810e668b00f4b69e8db7334ab3d659d6e61153d96204555dfa86a19dcca"
+      },
+      {
+        "name": "exa/context_module_pb/context_module.proto",
+        "sha256": "2b22cbf074890a86ffb40c5cfceb8a0b4ef36bf94340eace6ae4ba7afd98c302"
+      },
+      {
+        "name": "exa/cortex_pb/cortex.proto",
+        "sha256": "d87bd7979eec6f8cf7019cfc590e1a0b4a2c25c3c82e3d9f19fad1660448e072"
+      },
+      {
+        "name": "exa/dev_pb/dev.proto",
+        "sha256": "3fd12b71cbbb15b3c5f8f4dd5afa51a922560626cd30cdf0d558eaade22ce5d2"
+      },
+      {
+        "name": "exa/diff_action_pb/diff_action.proto",
+        "sha256": "7259d53a32dd5106632417828c0d114d323fa25d014992cb649cadb9c165721c"
+      },
+      {
+        "name": "exa/eval/pr_eval/datasets_pb/datasets.proto",
+        "sha256": "b07d2545c2d2f176bcc4a3f9ce992dbed776fa5232d5b3aec432ccce751500f7"
+      },
+      {
+        "name": "exa/eval_pb/eval.proto",
+        "sha256": "99b8fe400778b257523a5b7d93347f207fe0277c9e14bec3ca5a040acb854ea4"
+      },
+      {
+        "name": "exa/extension_server_pb/extension_server.proto",
+        "sha256": "01ea03956665a42f9314bf8a88fd87ab8d475b79fc371b69890175fefbd36512"
+      },
+      {
+        "name": "exa/file_system_provider_pb/file_system_provider.proto",
+        "sha256": "9ab667f88ef89091b5e3413bd961da35bdcf77dd23565fa58b01ccdfd21628a7"
+      },
+      {
+        "name": "exa/index_pb/index.proto",
+        "sha256": "c775aca04542ffc7cb1bbe3d834cf27af917372d70573fc3b2831470f4c7edb2"
+      },
+      {
+        "name": "exa/knowledge_base_pb/knowledge_base.proto",
+        "sha256": "6ce0f1e87af9ac8b72082bac9c9c844b766a558f0adfcc83be983be1acd0a500"
+      },
+      {
+        "name": "exa/language_server_pb/language_server.proto",
+        "sha256": "b25cdc9b781d4383db90e8f08533080dfecdb0b22b3c2722fc8ea7e053ebdc6d"
+      },
+      {
+        "name": "exa/model_management_pb/model_management.proto",
+        "sha256": "3ae488f103deb726fc69ac54c37fa08f285c3306f8c931b23a2ae764c03767d9"
+      },
+      {
+        "name": "exa/opensearch_clients_pb/opensearch_clients.proto",
+        "sha256": "c68d66a4980053ae1ea2b83a0b34ed0cfa56b14851011d3a0375d3f1419d740b"
+      },
+      {
+        "name": "exa/product_analytics_pb/product_analytics.proto",
+        "sha256": "e5de281e47305151c22358b84cbc5ec9f5605da38936d0776ce346816094eb3d"
+      },
+      {
+        "name": "exa/prompt_pb/prompt.proto",
+        "sha256": "02d87878bcaee7b9e3dbfae0b0aa18a90cd74572743fd1332b39bd6bd4c91bc9"
+      },
+      {
+        "name": "exa/reactive_component_pb/reactive_component.proto",
+        "sha256": "14ebd0c55b47e009202c44c1626f7f91765ae915f44303deb86e038ac920d2af"
+      },
+      {
+        "name": "exa/seat_management_pb/seat_management.proto",
+        "sha256": "15322d78315866878d318d53909791b11ec83a9820f3ce61de671d520d9226c5"
+      },
+      {
+        "name": "exa/tokenizer_pb/tokenizer.proto",
+        "sha256": "ae8fcb519096f7556cf2abbaf5848ace986561b28705a8cb742a6a4b7fd29e9d"
+      },
+      {
+        "name": "exa/trainer_pb/config.proto",
+        "sha256": "26ed0bca1a532c65377a500301d5b561b7579dfa8ed4e4b61cd4c379804b5b5b"
+      },
+      {
+        "name": "exa/tree_sitter/language_data_pb/language_data.proto",
+        "sha256": "72808d7ae678768accd45e547d2ac6871edb310332d30dc7c27281e97ff39092"
+      },
+      {
+        "name": "exa/trust_pb/trust.proto",
+        "sha256": "9c8e4809eb0063c014a1b9918e4099ac257ea49c5520dff7656a7d411374b4e2"
+      },
+      {
+        "name": "exa/user_analytics_pb/user_analytics.proto",
+        "sha256": "5f0942f39bb0106094c11365f380069589aa8436aa552f40ab7283ab790e790f"
+      },
+      {
+        "name": "google/api/expr/v1alpha1/checked.proto",
+        "sha256": "7eb1ec06bcace52a764fe8f9a965b7fa8ac401e480427f9dbd302edabcbf1079"
+      },
+      {
+        "name": "google/api/expr/v1alpha1/eval.proto",
+        "sha256": "7a41c2f7226d23d6dd3959a386948d3b44f5b4fd9194c30d4f73e39a7940b493"
+      },
+      {
+        "name": "google/api/expr/v1alpha1/explain.proto",
+        "sha256": "0077c3174fa42c7ef66ffb8838ed932e768d3975a00da09f954e8ffe5dcbdc20"
+      },
+      {
+        "name": "google/api/expr/v1alpha1/syntax.proto",
+        "sha256": "f7a8f33152c5f4d29113997e5e727a339f6478f946cfc574f4d372cdc0512ef3"
+      },
+      {
+        "name": "google/api/expr/v1alpha1/value.proto",
+        "sha256": "c0ea2eff900dac2da5fa054837059dad6e1bbb35687eccf1bfbe6dafa3094743"
+      },
+      {
+        "name": "google/protobuf/any.proto",
+        "sha256": "6342ea532bd6c9c5430e17976431cd81d384b2c0752199d19ddeb6c23c1a91f6"
+      },
+      {
+        "name": "google/protobuf/cpp_features.proto",
+        "sha256": "03fd3ba28c9dd81b5a6719edc67f8a9b1eb4b6eb59b2cab2cd3a02c600fa5969"
+      },
+      {
+        "name": "google/protobuf/descriptor.proto",
+        "sha256": "d3b0e0e295e7f8004ffde75fcc9f3137daee048e9e031573e96df1d10293afa8"
+      },
+      {
+        "name": "google/protobuf/duration.proto",
+        "sha256": "1fb768c4e2ee40b6a9b642bc230f62225697848d99b08596c9f590569d717c2b"
+      },
+      {
+        "name": "google/protobuf/empty.proto",
+        "sha256": "79a8c187444dfe20f3978f507f41d6d12a08319a3ced2b66162676d5c30d5a79"
+      },
+      {
+        "name": "google/protobuf/go_features.proto",
+        "sha256": "cc7f9321873ffa786a04293802a983c5952a03724a859b02f162258eaf993733"
+      },
+      {
+        "name": "google/protobuf/struct.proto",
+        "sha256": "c313302a24f2b7e3baf34706d6def4f01e5ac4f18078aa9be502892bcafe3746"
+      },
+      {
+        "name": "google/protobuf/timestamp.proto",
+        "sha256": "2577147bd8ef0f29489eac64dca22d4ee3b2ed41c619eb4afa00030f119a29d3"
+      },
+      {
+        "name": "google/protobuf/wrappers.proto",
+        "sha256": "73b311cd19d17e7ea2eabadfc6d2589bfbd9a9cfb38e04e4155754d1fb18830a"
+      },
+      {
+        "name": "google/rpc/status.proto",
+        "sha256": "fdba1b7e1980866397bf8bac981dbce3c0b0e7ee4cf3d275816fc797b941a878"
+      },
+      {
+        "name": "grpc/binlog/v1/binarylog.proto",
+        "sha256": "db2e836ae179e753a26e7d6fd52a712bbf52f43d7b738a715addee47b6b7ea30"
+      },
+      {
+        "name": "io/prometheus/client/metrics.proto",
+        "sha256": "ca7f1d55b1b2372fd99ca60bb1e0a3bba047dd239ffa912117d2ce007d9830a3"
+      }
+    ],
+    "runtime": {
+      "path": "src/core/protocol/protobuf.ts",
+      "sha256": "1e9c1d04e7e116e000463f7d86f40b1e4fa96a69a430ee1911ce1ed3d0f953fb"
+    },
+    "fixtures": [
+      "tests/fixtures/captured-samples/GetChatMessage",
+      "tests/fixtures/model-catalog.json"
+    ]
+  },
+  "baseline": {
+    "sha256": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+    "expectedSha256": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+    "files": 63,
+    "ok": true
+  },
+  "compilerCommand": "buf build proto --as-file-descriptor-set --exclude-source-info",
+  "comparison": {
+    "ok": true,
+    "generation": {
+      "ok": true,
+      "bytes": 848682,
+      "sha256": "28f1b033d0ed6695350d0b99c73152750063d28868a7f41feb7091713d2fa679"
+    },
+    "normalizationApplied": {
+      "N1": 654,
+      "N2": 14
+    },
+    "files": {
+      "expected": 63,
+      "actual": 63,
+      "byteIdentical": 63,
+      "missing": [],
+      "extra": [],
+      "byteMismatches": [],
+      "setOrderMatchesOriginal": false
+    },
+    "semanticDiffs": [],
+    "runtimeShape": {
+      "types": 3192,
+      "diffs": []
+    }
+  },
+  "observedAdditions": [
+    {
+      "id": "W03",
+      "parent": "exa.api_server_pb.GetChatMessageRequest",
+      "name": "client_session_id",
+      "number": 28,
+      "label": "LABEL_OPTIONAL",
+      "type": "TYPE_STRING",
+      "jsonName": "clientSessionId"
+    },
+    {
+      "id": "W04",
+      "parent": "exa.chat_pb.ChatMessagePrompt",
+      "name": "model_uid",
+      "number": 22,
+      "label": "LABEL_OPTIONAL",
+      "type": "TYPE_STRING",
+      "jsonName": "modelUid"
+    },
+    {
+      "id": "M-ALIASES",
+      "parent": "exa.codeium_common_pb.ModelInfo",
+      "name": "aliases",
+      "number": 27,
+      "label": "LABEL_REPEATED",
+      "type": "TYPE_STRING",
+      "jsonName": "aliases"
+    },
+    {
+      "id": "W05",
+      "parent": "exa.codeium_common_pb.DisplayOption",
+      "name": "DISPLAY_OPTION_WIRE_7",
+      "number": 7
+    }
+  ],
+  "runtime": {
+    "cases": [
+      {
+        "name": "GetChatMessage/01/request",
+        "ok": true,
+        "bytes": 8904,
+        "controlWithoutAdditionsDiffers": true
+      },
+      {
+        "name": "GetChatMessage/01/response",
+        "ok": true
+      },
+      {
+        "name": "GetChatMessage/02/request",
+        "ok": true,
+        "bytes": 8974,
+        "controlWithoutAdditionsDiffers": true
+      },
+      {
+        "name": "GetChatMessage/02/response",
+        "ok": true
+      },
+      {
+        "name": "GetChatMessage/03/request",
+        "ok": true,
+        "bytes": 9043,
+        "controlWithoutAdditionsDiffers": true
+      },
+      {
+        "name": "GetChatMessage/03/response",
+        "ok": true
+      },
+      {
+        "name": "GetChatMessage/04/request",
+        "ok": true,
+        "bytes": 9236,
+        "controlWithoutAdditionsDiffers": true
+      },
+      {
+        "name": "GetChatMessage/04/response",
+        "ok": true
+      },
+      {
+        "name": "GetChatMessage/05/request",
+        "ok": true,
+        "bytes": 9377,
+        "controlWithoutAdditionsDiffers": true
+      },
+      {
+        "name": "GetChatMessage/05/response",
+        "ok": true
+      },
+      {
+        "name": "GetChatMessage/06/request",
+        "ok": true,
+        "bytes": 9448,
+        "controlWithoutAdditionsDiffers": true
+      },
+      {
+        "name": "GetChatMessage/06/response",
+        "ok": true
+      },
+      {
+        "name": "GetChatMessage/07-image/request",
+        "ok": true,
+        "bytes": 9027,
+        "controlWithoutAdditionsDiffers": true
+      },
+      {
+        "name": "GetChatMessage/07-image/response",
+        "ok": true
+      },
+      {
+        "name": "GetCliModelConfigs/response/catalog-fixture",
+        "ok": true,
+        "configs": 265,
+        "bytes": 55484
+      },
+      {
+        "name": "ModelInfo.aliases=27",
+        "ok": true
+      },
+      {
+        "name": "DisplayOption.DISPLAY_OPTION_WIRE_7=7",
+        "ok": true,
+        "originalDescriptorDecodes": 7
+      },
+      {
+        "name": "runtime rejects unknown DTO fields",
+        "ok": true
+      }
+    ],
+    "failures": [],
+    "capturedRequests": 7,
+    "responseFrames": 15452
+  },
+  "originalDescriptorUnchanged": true
+}

@@ -1,0 +1,184 @@
+syntax = "proto3";
+
+package exa.model_management_pb;
+
+import "buf/validate/validate.proto";
+import "exa/trainer_pb/config.proto";
+
+option go_package = "github.com/Exafunction/Exafunction/exa/model_management_pb";
+
+enum InferenceRole {
+  INFERENCE_ROLE_UNSPECIFIED = 0;
+  INFERENCE_ROLE_CHAT = 1;
+  INFERENCE_ROLE_AUTOCOMPLETE = 2;
+  INFERENCE_ROLE_EMBEDDING = 3;
+}
+
+message AddModelRequest {
+  string model_name = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  oneof model_path {
+    string model_gcs_path = 2;
+    string model_local_path = 4;
+  }
+  bool overwrite = 3;
+  bool async = 5;
+}
+
+message AddModelResponse {
+}
+
+message DeleteModelRequest {
+  string model_name = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+}
+
+message DeleteModelResponse {
+}
+
+message ModelInPV {
+  string model_name = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  int64 model_size = 2;
+}
+
+message ListModelsRequest {
+}
+
+message ListModelsResponse {
+  repeated ModelInPV models = 1;
+}
+
+message InferenceServerEnvVariable {
+  string name = 1;
+  string value = 2;
+}
+
+message StartInferenceServerRequest {
+  oneof model {
+    string model_name = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+    InferenceModels models = 14;
+  }
+  int32 port = 2;
+  int32 num_gpus = 3;
+  int32 num_cpus = 4;
+  int32 memory_gb = 5;
+  string gpu_type = 22;
+  int32 model_parallelism = 6;
+  int32 gamma = 11;
+  float draft_temperature = 12;
+  int32 prompt_cache_cpu_memory_mib = 19;
+  int32 replicas = 8;
+  string suffix = 7;
+  repeated string custom_flags = 9;
+  bool run_async = 10;
+  string inference_server_image_path = 13;
+  bool blocking = 15;
+  int32 max_generation_sequences = 16;
+  int32 server_version = 17;
+  string deployment_name_override = 18;
+  int32 speculative_copy_length = 21;
+  repeated InferenceServerEnvVariable inference_server_env = 20;
+  optional string deployment_yaml = 23;
+}
+
+message StartInferenceServerResponse {
+  string service_domain = 2;
+  reserved 1;
+  reserved "inference_server_service_ip_address";
+}
+
+message StopInferenceServerRequest {
+  string service_domain = 2;
+  reserved 1;
+  reserved "inference_server_service_ip_address";
+}
+
+message StopInferenceServerResponse {
+}
+
+message UpdateInferenceServerRequest {
+  oneof inference_server_id {
+    string service_domain = 14;
+    string deployment_name = 2;
+  }
+  int32 replicas = 3;
+  int32 num_gpus = 4;
+  int32 num_cpus = 5;
+  int32 memory_gb = 6;
+  int32 model_parallelism = 7;
+  int32 gamma = 10;
+  float draft_temperature = 11;
+  int32 max_generation_sequences = 13;
+  optional bool blocking = 12;
+  repeated string custom_flags = 9;
+  reserved 1;
+  reserved "inference_server_service_ip_address";
+}
+
+message UpdateInferenceServerResponse {
+}
+
+message ListInferenceServersRequest {
+}
+
+message ListInferenceServersResponse {
+  repeated InferenceServerData inference_servers = 1;
+}
+
+message InferenceServerData {
+  string service_domain = 18;
+  int32 port = 2;
+  string service_name = 3;
+  repeated string model_names = 4 [(buf.validate.field) = { repeated: { items: { string: { min_len: 1 } } } }];
+  string age = 13;
+  int32 ready_replicas = 12;
+  int32 replicas = 5;
+  int32 num_gpus = 6;
+  int32 num_cpus = 7;
+  int32 memory_gb = 8;
+  int32 model_parallelism = 9;
+  int32 gamma = 14;
+  float draft_temperature = 15;
+  repeated string custom_flags = 10;
+  map<string, string> kubernetes_labels = 11;
+  bool blocking = 16;
+  int32 max_generation_sequences = 17;
+  int32 data_parallelism = 19;
+  reserved 1;
+  reserved "ip_address";
+}
+
+message InferenceModel {
+  string model_name = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  optional string model_path = 4;
+  bool overwrite = 5;
+  bool draft = 2;
+  InferenceRole role = 3;
+  .exa.trainer_pb.InferenceConfig custom_inference_config = 15;
+}
+
+message InferenceModels {
+  repeated InferenceModel models = 1;
+}
+
+message PollInferenceServerRequest {
+  string service_domain = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+}
+
+message PollInferenceServerResponse {
+  string service_domain = 1;
+  int32 port = 2;
+  int32 ready_replicas = 3;
+  int32 total_replicas = 4;
+  bool ready = 5;
+  repeated string pod_ips = 6;
+}
+
+service ModelManagementService {
+  rpc AddModel(AddModelRequest) returns (AddModelResponse);
+  rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+  rpc StartInferenceServer(StartInferenceServerRequest) returns (StartInferenceServerResponse);
+  rpc StopInferenceServer(StopInferenceServerRequest) returns (StopInferenceServerResponse);
+  rpc UpdateInferenceServer(UpdateInferenceServerRequest) returns (UpdateInferenceServerResponse);
+  rpc ListInferenceServers(ListInferenceServersRequest) returns (ListInferenceServersResponse);
+  rpc PollInferenceServer(PollInferenceServerRequest) returns (PollInferenceServerResponse);
+}

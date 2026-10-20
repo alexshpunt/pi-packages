@@ -1,0 +1,63 @@
+{
+  "scope": "Offline codec replay only; never used as network credentials, device identities, or live requests",
+  "transformation": "Preserve field topology, enum/numeric values, frame count and the asserted sample04 command. Replace identifying/text/image/signature/fingerprint literals with synthetic data. Coalesce fragmented tool JSON into the first argument delta without changing the parsed argument structure.",
+  "originalArtifactsUnchanged": true,
+  "hashes": [
+    {
+      "sample": "01",
+      "originalRequestSha256": "64117000f7801a1733a259715e612b7f90e3febfae9c61777075a46b3b529ccc",
+      "originalResponseSha256": "483a780a7e3c1fb35f8980a5199b03fbea5cec79d6addc53f9ba0f7f4c670d7d",
+      "frames": 82,
+      "requestBytes": 12945,
+      "responseBytes": 30088
+    },
+    {
+      "sample": "02",
+      "originalRequestSha256": "302cda3890ea8c6dd14c360803f758808ab1385b6d4cde27ee71e613ea2b2a2a",
+      "originalResponseSha256": "d3f4b7d3d2bb65c8374300f15012970d03aee7262701338f6823e7f1dc1dca63",
+      "frames": 13,
+      "requestBytes": 13291,
+      "responseBytes": 5047
+    },
+    {
+      "sample": "03",
+      "originalRequestSha256": "4ffded7664bca9c73c88098a48cac2cdc9f36fb5bb98864c72deba209d06e8cd",
+      "originalResponseSha256": "e84dfef9020e2f3367d7a6b1bdf92083488e9e9663788ac3c45e1989d416d665",
+      "frames": 15092,
+      "requestBytes": 13618,
+      "responseBytes": 5078845
+    },
+    {
+      "sample": "04",
+      "originalRequestSha256": "4cc0ccfc50b5c639541bde039d5c6a0479dc1e302579a1de6e16556597d642d4",
+      "originalResponseSha256": "154151337973bea4ec95ac76b600aa97fd91f2150e2945239c450d62ed3b8886",
+      "frames": 34,
+      "requestBytes": 14357,
+      "responseBytes": 12203
+    },
+    {
+      "sample": "05",
+      "originalRequestSha256": "b9e781878ed38f9689cf856ef7d13117ac9dd882a0416a29c36bb2dfc7682c33",
+      "originalResponseSha256": "b9ceff5a1af1b2da646628484d2759f63bd0f921ce4565003f8acf51024192cd",
+      "frames": 64,
+      "requestBytes": 14826,
+      "responseBytes": 22913
+    },
+    {
+      "sample": "06",
+      "originalRequestSha256": "6fb1b8adbf722eb3929f3d8f9e294fbf7106faf504526b6e8f103880e200cbde",
+      "originalResponseSha256": "1b3f15c9a9108b205426475fc827e209f226beafd67fe305eaea2af709a88405",
+      "frames": 103,
+      "requestBytes": 15227,
+      "responseBytes": 35583
+    },
+    {
+      "sample": "07-image",
+      "originalRequestSha256": "3ebab2c73c0449dd05469b942148bb8efae5dfb4d526c1ac87308c06cef6699f",
+      "originalResponseSha256": "afe5a3e01133601899329af779cc491f34838a0b7ec5c441e6ab0ca09d43fb50",
+      "frames": 64,
+      "requestBytes": 13552,
+      "responseBytes": 21848
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "name": "@buyong/pi-devin",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Unofficial Pi provider for Devin accounts (OAuth)",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "keywords": [
+    "pi-package"
+  ],
+  "files": [
+    "index.ts",
+    "src/core",
+    "src/pi",
+    "resources",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buYoung/pi-packages.git",
+    "directory": "apps/pi-devin"
+  },
+  "homepage": "https://github.com/buYoung/pi-packages/tree/main/apps/pi-devin#readme",
+  "bugs": {
+    "url": "https://github.com/buYoung/pi-packages/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "pi": {
+    "extensions": ["./index.ts"],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "verify:offline": "node --test tests/*.test.ts",
+    "cli": "node cli.ts"
+  },
+  "dependencies": {
+    "protobufjs": "7.6.6"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "1.74.0",
+    "@earendil-works/pi-ai": "catalog:devin",
+    "@earendil-works/pi-coding-agent": "catalog:devin",
+    "@earendil-works/pi-tui": "catalog:devin",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  }
+}

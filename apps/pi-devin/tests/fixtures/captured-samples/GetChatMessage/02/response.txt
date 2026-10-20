@@ -1,0 +1,25 @@
+{"latency":2.231046417,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":867658967,"seconds":1785337808},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","modelUid":"fixture-id-3","responseHeader":{"x-request-id":"fixture-value"}}}
+[----------------------next message----------------------]
+{"latency":2.231189557,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":867802267,"seconds":1785337808},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":2,"latency":2.2312968270000004,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":867909527,"seconds":1785337808},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":1,"latency":2.231442987,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":868055697,"seconds":1785337808},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":1,"latency":2.2314850969999998,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":868097827,"seconds":1785337808},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":2,"latency":2.636745863,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":273358273,"seconds":1785337809},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":4,"latency":2.6368480830000003,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":273460793,"seconds":1785337809},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":4,"latency":2.6368878430000002,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":273500573,"seconds":1785337809},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":1,"latency":2.6959359630000006,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":332548483,"seconds":1785337809},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":4,"latency":2.696003233,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":332615943,"seconds":1785337809},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"latency":2.737422252,"messageId":"fixture-id-1","requestId":"fixture-id-2","stopReason":"ExaCodeiumCommonPb_StopReason_STOP_REASON_STOP_PATTERN","timestamp":{"nanos":374034762,"seconds":1785337809},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"latency":2.740785512,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":377398122,"seconds":1785337809},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_FIREWORKS_DEVIN","cacheReadTokens":769,"inputTokens":11125,"modelUid":"fixture-id-3","outputTokens":10,"responseHeader":{"x-request-id":"fixture-value"}}}
+[----------------------next message----------------------]
+{"messageId":"fixture-id-1","responseDimensionGroups":[{"dimensions":[{"cumulativeMetric":{"label":"fixture-value","pluralTail":"fixture-value","tail":"fixture-value","value":1},"uid":"fixture-value"},{"metric":{"label":"fixture-value","value":"fixture-value"},"uid":"fixture-value"}],"title":"fixture-value"},{"dimensions":[{"cumulativeMetric":{"label":"fixture-value","pluralTail":"fixture-value","tail":"fixture-value","value":11125},"uid":"fixture-value"},{"cumulativeMetric":{"label":"fixture-value","pluralTail":"fixture-value","tail":"fixture-value","value":10},"uid":"fixture-value"},{"cumulativeMetric":{"label":"fixture-value","pluralTail":"fixture-value","tail":"fixture-value","value":769},"uid":"fixture-value"}],"title":"fixture-value"}],"timestamp":{"nanos":377398122,"seconds":1785337809}}

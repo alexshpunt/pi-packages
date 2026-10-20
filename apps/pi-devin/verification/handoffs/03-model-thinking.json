@@ -1,0 +1,178 @@
+{
+  "status": "pass",
+  "coreVersion": 1,
+  "recordedAt": "2026-10-19T00:01:21.129Z",
+  "sourceDigest": {
+    "algorithm": "sha256",
+    "files": {
+      "src/core/models/index.ts": "6cf03a055acc4f6ec462b68aa3ec309760842716dcfad47ed667a1fa72de91ff",
+      "src/core/models/variants.ts": "b9d63c69a86415e1366465326cd152b69278b15ee74640ff727a710e2e8372c9",
+      "src/pi/models.ts": "7a627252a7446dc46aa34c94e2ae59640b90db342243605430d9fd14c4451d63",
+      "tests/fixtures/model-catalog.json": "02ec94832ba0f4a81d985cc687cd1459b1e774d5277039b90047b0ba4fe47b55",
+      "tests/fixtures/model-catalog.json.provenance.json": "c1511fc944abbe222f19d5a8328cdc3c857cf02ccfaf6a1d073b665b79931a21",
+      "tests/model-source.test.ts": "c4d854f1827b2f891f40b6e75936888dd956337edc9e44c85f22cfecc1426af5",
+      "tests/model-store.test.ts": "59c077e435bab24f47a2095b3ae12fc4114551cb37eba4cb27bb9d0c7582856e",
+      "tests/models.test.ts": "6147146488d1b21603ecaba679dd82fd67e6bc49d5a32580c26aefdc6b2473ad",
+      "verification/make-model-fixture.mjs": "4b2ad18c4f27113b03a567775b830f49d1d541e72591535f6ab99bcec8757401",
+      "verification/model-contract.md": "648ab9f65fc4f4f82e99132d57bf2c8f33f1792ddccb5fa553b486a7711dcb34"
+    },
+    "aggregate": "e43744435d859f75cfb94b13604d2f038576a7c9a55cb49dff5eba568c19b82a"
+  },
+  "catalogShape": {
+    "sourceModels": 265,
+    "groups": 69,
+    "publishedGroups": 65,
+    "exactUIDs": 261,
+    "piDefinitions": 326,
+    "unsupportedModels": 4,
+    "historicalMappingsEqual": true,
+    "fixture": {
+      "sourceSha256": "22d09685a61dc14c920e0864c5d591dda8814848fffb016907a01c1d9b419f64",
+      "auditSha256": "51448dbe286f874a3c7fc2e26b47c94048078562fc86091c509e27a15f1e6b0f",
+      "fixtureSha256": "02ec94832ba0f4a81d985cc687cd1459b1e774d5277039b90047b0ba4fe47b55",
+      "models": 265,
+      "groups": 69,
+      "publishedGroups": 65,
+      "mapped": 261,
+      "unsupported": [
+        {
+          "uid": "kimi-k2-6",
+          "reason": "thinking strength metadata is unknown"
+        },
+        {
+          "uid": "kimi-k2-7",
+          "reason": "thinking strength metadata is unknown"
+        },
+        {
+          "uid": "swe-1-6",
+          "reason": "thinking strength metadata is unknown"
+        },
+        {
+          "uid": "swe-1-6-fast",
+          "reason": "thinking strength metadata is unknown"
+        }
+      ],
+      "historicalMappingsEqual": true,
+      "transformation": "model identity, declared dimensions, context/output and capabilities only; no full source response, pricing inference or auth data"
+    }
+  },
+  "modelIdCodec": {
+    "family": "family:<percent-encoded-family>[:<base64url JSON dimension tuples>]",
+    "exact": "uid:<percent-encoded-UID>",
+    "dimensions": "sorted [key, order, name]; excludes only declared thinking dimensions",
+    "aliasReinterpretation": false
+  },
+  "resolverAPI": {
+    "core": "resolveBackendSelection(projection, modelID, effectiveLevel)",
+    "scoped": "source.resolve(modelID, effectiveLevel, effectiveCredential)",
+    "returns": [
+      "uid",
+      "model",
+      "level",
+      "variant"
+    ]
+  },
+  "effectiveThinkingContract": {
+    "levels": [
+      "off",
+      "minimal",
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "unsupported": "explicit null map; resolver rejects without fallback",
+    "clamp": "host model-switch clamp is separate from explicit-level validation",
+    "wireProof": {
+      "UIDs": 261,
+      "explicitMaxTokens": 5000,
+      "consumer": "chatRequest + chatRequestCodec"
+    }
+  },
+  "capabilities": {
+    "rule": "group only when context/output/image/tool/parallel constraints agree; otherwise exact UIDs only",
+    "source": "variant metadata, not model-name inference"
+  },
+  "unknownCosts": {
+    "numericFields": 0,
+    "meaning": "required Pi placeholder, not free or actual USD cost",
+    "display": "비용 미상",
+    "metadata": "costsUnknown: true",
+    "creditConversion": false
+  },
+  "unsupported": [
+    {
+      "uid": "kimi-k2-6",
+      "reason": "thinking strength metadata is unknown"
+    },
+    {
+      "uid": "kimi-k2-7",
+      "reason": "thinking strength metadata is unknown"
+    },
+    {
+      "uid": "swe-1-6",
+      "reason": "thinking strength metadata is unknown"
+    },
+    {
+      "uid": "swe-1-6-fast",
+      "reason": "thinking strength metadata is unknown"
+    }
+  ],
+  "cache": {
+    "scope": "one-way credential + normalized endpoint digest; no raw token/native fingerprint/assignment JWT",
+    "version": 1,
+    "freshnessMs": 300000,
+    "restore": "whitelisted config reconstructed and checked by scope/version/api/provider/endpoint",
+    "publish": "ctx.publish only; late/cancelled/rejected updates do not replace last-good",
+    "factoryIO": false,
+    "credentialParser": "injected, no direct auth/CLI import",
+    "hostFileVerified": true
+  },
+  "checks": [
+    {
+      "command": "<home>/Library/pnpm/pnpm --dir apps/pi-devin typecheck",
+      "exitCode": 0,
+      "startedAt": "2026-10-19T00:00:14.345Z",
+      "completedAt": "2026-10-19T00:00:14.724Z"
+    },
+    {
+      "command": "/usr/bin/sandbox-exec -f /tmp/pi-devin-implementation.UkVlxc/auth-host.sb <home>/.nvm/versions/node/v24.14.0/bin/node --test apps/pi-devin/tests/model-store.test.ts",
+      "exitCode": 0,
+      "startedAt": "2026-10-19T00:00:14.725Z",
+      "completedAt": "2026-10-19T00:00:15.383Z",
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    {
+      "command": "<home>/Library/pnpm/pnpm --dir apps/pi-devin verify:offline",
+      "exitCode": 0,
+      "startedAt": "2026-10-19T00:00:15.383Z",
+      "completedAt": "2026-10-19T00:00:22.817Z",
+      "tests": 136,
+      "pass": 136,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0
+    }
+  ],
+  "tests": {
+    "passed": 136,
+    "failed": 0,
+    "sandboxedHostCaseIncluded": true
+  },
+  "protected": {
+    "originalUnchanged": true,
+    "auth02SourceUnchanged": true,
+    "nativeSelectorSourceUnchanged": true
+  },
+  "hostNotes": [
+    "ModelRuntime modelsPath:null chooses in-memory store despite modelsStorePath",
+    "registerNativeProvider starts asynchronous offline refresh; consumers must honor refresh cancellation/generation instead of racing it"
+  ],
+  "liveStatus": "not_run",
+  "next": "04 must wire effective thinking, scoped credential, selected UID/capabilities, hooks and execution budget to the actual provider stream"
+}

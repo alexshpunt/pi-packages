@@ -1,0 +1,5 @@
+{
+  "extends": "@repo/typescript-config/base.json",
+  "compilerOptions": { "erasableSyntaxOnly": true },
+  "include": ["*.ts", "src/**/*.ts", "tests/**/*.ts"]
+}

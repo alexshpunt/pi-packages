@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "task": "01",
+  "outcome": "pass",
+  "recordedAt": "2026-10-19T11:30:59.000Z",
+  "source": {
+    "baseRevision": "main@ebf1437",
+    "appSnapshot": "6057040",
+    "coreVersion": 1,
+    "files": {
+      "src/core/protocol/device.ts": "99f156ac4852fe642905ff3930a24f6e2666b88c8a2fef04d37bbdd91e3e4d3c",
+      "src/pi/auth.ts": "22d8b90be6da8b7ba8dbd6fe2fe86ed3b86c9ea3178be76d6ab4673b745e9cfd",
+      "src/pi/provider.ts": "f0426f70accce12867c014672dbacd3d62d2fb7acb375de1a944946beaa091b2",
+      "tests/fingerprint.test.ts": "7762f6d3a8387dbd386360a229110d75d92da9355439a0a42a08ae46bb4a0050",
+      "tests/cli-login.test.ts": "a51b3325192c9daf348347d8e8cf36d7e75bb58dd7e4e5e434019eeb018dd800",
+      "tests/pi-auth-storage.test.ts": "773b661969efcb625b421e4b997c229b42111cbdc4aebc54fd150045f2de820b",
+      "README.md": "3054f9b8d93c2d1217339621d91f257e5fd2cfc6fed37d727f62d00de09d7b47",
+      "AGENTS.md": "d94116d63383db3567c888e0dd6c38378fa17f4dc71c5ffbdf4767d2b6146461",
+      "verification/auth-contract.md": "b83700c830df37fe3c3a08872533b2ed78bbb90b3978a146bc88f941ca1a1393"
+    },
+    "unchangedReadOnly": {
+      "src/core/protocol/fingerprint.ts": "8bdfceb01cc09edca028625a61ca7b82382b796be9a0ad9c35a27aabda146130",
+      "src/core/client.ts": "6d4a901f49452470e30a11e8619bff8b32f375d7d4f56369d0d01b5496127629",
+      "src/core/auth/login.ts": "d2605efd2fb0634e71695cafdc26bfb9fac799c01e5b92ffcb4dfcc37bb61a65",
+      "src/pi/models.ts": "7a627252a7446dc46aa34c94e2ae59640b90db342243605430d9fd14c4451d63",
+      "src/cli/auth-ui.ts": "4302c21f82027ea015fba906dfe070906e1987d839c437113a327d05d449f8b6",
+      "src/cli/options.ts": "b7f9c3d0786fbe1aaa61402545128bc744480f5c04c9b9d5bf7e753b19860ce3"
+    }
+  },
+  "inputs": [
+    "verification/handoffs/05-package-checks.json (sourceDigest baseline, read-only)",
+    "Pi SDK 1.3.0 public package dist: pi-ai auth/resolve.js, pi-coding-agent core/model-runtime.js, core/provider-composer.js, core/runtime-credentials.js (read-only)",
+    "Fake OAuth credentials, fake API key strings, controlled DeviceSystem I/O, loopback servers, temporary HOME/state directories"
+  ],
+  "reproduction": {
+    "command": "node /tmp/devin-next-01/repro.mjs \"$PWD\" (cwd=apps/pi-devin; script overrides process.platform=linux before import; outside repository)",
+    "before": {
+      "collector": "throw: 기기 지문 수집은 현재 macOS에서만 검증했습니다.",
+      "status": "throw: same message before transport",
+      "catalog": "throw: same message before transport",
+      "transportCalls": 0
+    },
+    "rootCause": "collectDeviceIdentity() rejected every non-darwin platform by name. DevinClient.metadata() calls FingerprintProvider.create(), which lazily runs the collector, so status/catalog/team/chat all failed before transport. Token exchange does not use the collector.",
+    "after": "Verified with controlled DeviceSystem I/O (tests/fingerprint.test.ts). The real default system path was not executed in verification to avoid reading real hardware values."
+  },
+  "identityPolicy": {
+    "darwin": "Unchanged inputs: ioreg IOPlatformSerialNumber; ifconfig MAC command only when serial < 4 bytes; userInfo().username or 'unknown'.",
+    "nonDarwin": "No OS-name rejection. Serial is empty because no non-macOS serial source was verified (same as a failed collection). MACs come from os.networkInterfaces() with the same filter: interfaces with addresses, non-zero MAC, lowercase, deduplicated, sorted. Username from userInfo() or 'unknown'.",
+    "hashAndEncryption": "Unchanged: sha512(macs.join(',') if serial < 4 bytes + serial + username); AES-256-GCM with fresh 12-byte nonce and current nanosecond timestamp per request.",
+    "forbidden": "No captured device values, random fixed IDs or fabricated serials.",
+    "testBoundary": "collectDeviceIdentity(system: DeviceSystem) accepts injected OS input; production default is the Node implementation."
+  },
+  "authReferences": [
+    { "url": "https://unpkg.com/@cognitionai/opencode-devin@0.3.0/dist/auth.js", "bytes": 5581, "sha256": "29ac06ca0e94d2d85fb1eb34585214966feb01031323ac99d5877df8ea2982f3", "use": "Browser PKCE loopback + REST code exchange contract (unchanged implementation in src/core/auth)" },
+    { "url": "https://unpkg.com/@cognitionai/opencode-devin@0.3.0/README.md", "bytes": 7082, "sha256": "2e0bfa5a022baeaf89b5b5d3e8a07b37c38a111a04bd9e46589509ae46db29fe", "use": "OAuth browser/paste-code flows only. Its 'API key' option (cog_ service key / session token paste) is explicitly excluded." }
+  ],
+  "oauthOnly": {
+    "decision": "User decision 2026-10-19: model use only through Devin OAuth; API key usage excluded.",
+    "implementation": "DevinAccountAuth remembers SHA-256 hashes of session tokens learned through OAuth login, refresh, toAuth and host OAuth credentials passed to model refresh (bounded 64, most recent kept). The provider calls assertOAuthSession() before model selection, status probe or transport and rejects other apiKey values with a plain Error (no auth invalidation, no lifecycle abort). Error text redacts the key.",
+    "message": "Devin은 /login으로 받은 OAuth 계정 세션만 사용합니다. API 키 인증은 지원하지 않습니다.",
+    "hostPaths": [
+      { "input": "Pi runtime API key (pi --api-key equivalent: ModelRuntime.setRuntimeApiKey)", "observed": "Provider is not configured", "devinRequests": 0 },
+      { "input": "Stored api_key credential for devin", "observed": "Provider is not configured", "devinRequests": 0 },
+      { "input": "DEVIN_API_KEY / WINDSURF_API_KEY environment only", "observed": "Provider is not configured", "devinRequests": 0 },
+      { "input": "models.json providers.devin.apiKey=$DEVIN_API_KEY without OAuth", "observed": "Host composes auth.apiKey; Devin model list empty; Pi 1.3.0 fails with 'No API provider registered for api: devin-connect'", "devinRequests": 0 },
+      { "input": "Stored OAuth + caller apiKey override (cog_/sk-ws-01- fake values)", "observed": "Provider OAuth-only error before model selection", "devinRequests": 0 },
+      { "input": "Stored OAuth (models.json apiKey also present)", "observed": "Stored OAuth wins; stop result; chat metadata.apiKey equals OAuth session", "devinRequests": "status + chat (controlled fixture)" }
+    ],
+    "cli": "parseArgs strict mode rejects --api-key (ERR_PARSE_ARGS_UNKNOWN_OPTION). With DEVIN_API_KEY/WINDSURF_API_KEY set and no stored login, status exits 1 with the login instruction and 0 requests. CLI reads only credentials written by its own login.",
+    "controlExperiment": "Removing auth.assertOAuthSession() from provider.ts made the caller-override case fall through to the catalog scope error ('현재 계정·endpoint에 맞는 Devin 모델 목록이 없습니다...') instead of the explicit OAuth-only error; the original file was restored and re-verified.",
+    "wireFieldNames": "metadata.apiKey, ExchangePKCEAuthorizationCode.apiKey and Pi ModelAuth.apiKey carry the OAuth session token; unchanged."
+  },
+  "checks": [
+    { "key": "baseline-offline", "cwd": ".", "command": "pnpm --dir apps/pi-devin verify:offline", "observed": "Before changes: exit 0, 171/171 pass" },
+    { "key": "fingerprint-platforms", "cwd": "apps/pi-devin", "command": "node --test tests/fingerprint.test.ts", "observed": "6/6 pass: linux/win32/freebsd collect without OS rejection and without running macOS commands; failure branches give [] and 'unknown'; darwin keeps ioreg/ifconfig order; default collector fingerprint reaches status, catalog and chat payloads with expected device hash, OAuth token and three distinct ciphertexts" },
+    { "key": "cli-portable-oauth-only", "cwd": "apps/pi-devin", "command": "node --test tests/cli-login.test.ts", "observed": "2/2 pass: CLI with process.platform=linux emits auth_url, browser_open_failed, logged_in and completes through the loopback callback (1 request, no real browser spawned); --api-key rejected; API key env vars unused" },
+    { "key": "stage2", "cwd": "apps/pi-devin", "command": "node --test tests/fingerprint.test.ts tests/account-login.test.ts tests/cli-login.test.ts tests/client.test.ts tests/pi-auth.test.ts tests/pi-auth-contract.test.ts tests/pi-auth-storage.test.ts tests/pi-provider.test.ts", "observed": "exit 0, 55/55 pass" },
+    { "key": "stage3-typecheck", "cwd": ".", "command": "pnpm --dir apps/pi-devin typecheck", "observed": "exit 0" },
+    { "key": "stage3-pi-auth", "cwd": "apps/pi-devin", "command": "node --test tests/pi-auth.test.ts tests/pi-auth-contract.test.ts", "observed": "exit 0, 9/9 pass" },
+    { "key": "full-offline", "cwd": ".", "command": "pnpm --dir apps/pi-devin verify:offline", "observed": "exit 0, 176/176 pass (171 existing + 5 new)" }
+  ],
+  "environment": { "node": "v24.14.0", "platform": "darwin", "arch": "arm64", "piCodingAgent": "1.3.0", "piAI": "1.3.0" },
+  "limitations": [
+    "Non-macOS fingerprint formula and server acceptance were not verified; non-darwin uses empty serial plus Node MACs and username.",
+    "The production default DeviceSystem was not executed in tests on purpose (no real hardware values read); its wiring is covered by type checking and code review only.",
+    "Automatic browser opening remains macOS-only; other OSes continue with the displayed URL, callback and manual code input.",
+    "OAuth provenance is per process. Hand-edited Pi auth.json OAuth entries or CLI credential files cannot be distinguished from OAuth sessions without the server and are not a supported path.",
+    "Real login, browser, Devin requests and Node 22.19.0 execution were not performed (07 and 05 respectively)."
+  ],
+  "handoff": {
+    "decision": "continue",
+    "successors": [
+      "keep auth.assertOAuthSession() before every new request path in provider.ts",
+      "verify --api-key/env/auth.json api_key with the real Pi bin and the default collector consumption"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package cockroach.errorspb;
+
+option go_package = "github.com/cockroachdb/errors/errorspb";
+
+message TagsPayload {
+  repeated TagPayload tags = 1;
+}
+
+message TagPayload {
+  string tag = 1;
+  string value = 2;
+}

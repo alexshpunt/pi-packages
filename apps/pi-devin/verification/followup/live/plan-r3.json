@@ -1,0 +1,84 @@
+{
+  "planHash": "032e1fb32409497ffebfa2e3cb48974dd419199a94e5587d352974c87b316776",
+  "plan": {
+    "schemaVersion": 1,
+    "artifactSha256": "0a0ca65638a3197bcf726f2d2ee2bf73b9bbba3a89ec1df8d94b4758e5f38d64",
+    "runtimeDigest": "401280d8b01244623a662fcc4514cbfc1abcb5d196b125c38a7c62a4622ec552",
+    "allowedUIDs": [
+      "swe-2-medium",
+      "swe-2-high"
+    ],
+    "maxModelCalls": 9,
+    "requireFreeTier": true,
+    "hosts": [
+      "server.codeium.com",
+      "api.devin.ai"
+    ],
+    "cases": [
+      {
+        "id": "catalog",
+        "mode": "rpc",
+        "expectModelCalls": 0,
+        "purpose": "OAuth 계정 상태·catalog 조회와 승인 UID의 활성·무료 등급 확인"
+      },
+      {
+        "id": "devin-settings",
+        "mode": "rpc-devin",
+        "model": "family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0",
+        "level": "medium",
+        "prompt": "짧게 인사해 주세요.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectModelCalls": 1,
+        "purpose": "/devin 추천 필터를 켜고 끌 때 실제 목록 변화, 대화 1회 뒤 인수 없는 /devin 알림의 실제 할당량·세션 사용량"
+      },
+      {
+        "id": "plain-medium",
+        "mode": "json",
+        "model": "family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0",
+        "level": "medium",
+        "prompt": "짧게 인사해 주세요.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectModelCalls": 1
+      },
+      {
+        "id": "level-high",
+        "mode": "json",
+        "model": "family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0",
+        "level": "high",
+        "prompt": "짧게 인사해 주세요.",
+        "expectUIDs": [
+          "swe-2-high"
+        ],
+        "expectModelCalls": 1
+      },
+      {
+        "id": "add-tool",
+        "mode": "json",
+        "model": "family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0",
+        "level": "medium",
+        "prompt": "add 도구로 2와 3을 더한 뒤 결과 숫자만 답해 주세요.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectTool": "add",
+        "expectModelCalls": 2
+      },
+      {
+        "id": "fusion",
+        "mode": "json",
+        "model": "fusion:devin",
+        "level": "medium",
+        "prompt": "sidekick 도구에 'add 도구로 2와 3을 더하고 결과를 보고하라'고 맡긴 뒤, 보고받은 결과 숫자만 답해 주세요.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectTool": "sidekick",
+        "expectModelCalls": 4
+      }
+    ]
+  }
+}

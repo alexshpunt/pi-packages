@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 1,
+  "task": "06",
+  "attempt": 2,
+  "outcome": "pass",
+  "supersedes": {
+    "path": "verification/followup/handoffs/06-artifact.json",
+    "reason": "runtime changed by task 11; the first attempt stays as the record for the 07 live run of 2026-10-19"
+  },
+  "source": {
+    "baseRevision": "main@3050635",
+    "coreVersion": 1,
+    "files": {
+      "verification/README.md": "5cff5f26fda6501c71224ebb0b2266ac4729fefab41bd8c1c430c79d74b08350",
+      "verification/inventory.json": "a978663509f3e6993aeafaf3b03ec5f225873df85028e87d7b50e5f73c2bd3f1"
+    }
+  },
+  "predecessors": [
+    {
+      "path": "verification/followup/handoffs/11-fusion-select-background.json",
+      "outcome": "pass",
+      "sha256": "37ddf303d93c97e7ebd9dd83a450d76bd6f6a6227b16441519b047a1bcfc9077"
+    }
+  ],
+  "artifact": {
+    "repoRelativePath": "verification/followup/artifacts/buyong-pi-devin-0.1.0-de8db88b783f.tgz",
+    "storage": "local file ignored by apps/pi-devin/.gitignore (*.tgz); a second npm pack reproduced the same sha256",
+    "sha256": "de8db88b783fcd57c2a813a85f91097cd102e555d3c64e26b3fc5414e251b350",
+    "bytes": 306993,
+    "name": "@buyong/pi-devin",
+    "version": "0.1.0",
+    "private": true,
+    "entries": 50,
+    "runtimeDigest": {
+      "method": "sha256 of sorted 'path\\0sha256\\n' lines over package.json and manifest files",
+      "files": 50,
+      "sha256": "b13f1afaa9f719405c71da8eec45a968df5dbcc372c723d5250dadbdb6a5d2ce",
+      "matchesSource": true,
+      "matchesTask11": true
+    },
+    "runtimeFiles": {
+      "README.md": "fc21abdef834437883e319f0fd46902cf11a562ec26985329f884eb9813fa32e",
+      "cli.ts": "6e5eccdbe13515285d608d1e5a14d45fb2bc760849d9d279a630c003bef5ae49",
+      "index.ts": "2906f682a4bbc337555d9c4acd55ba9d8c2985e59650022f361d865f9b25412d",
+      "package.json": "cb6730e0c4b86981af832872503d957788e83d24c67c34a598e40be551f69c71",
+      "resources/descriptors.pb": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+      "src/cli/auth-command.ts": "26ac7aadaa753037570194bdf257620156b659625aff48cd0e7f5232165e5a89",
+      "src/cli/auth-ui.ts": "4302c21f82027ea015fba906dfe070906e1987d839c437113a327d05d449f8b6",
+      "src/cli/conversation.ts": "1a7da6805b456858487515c395905c61a455c2e50aa79b60a4bb95a3d9b78678",
+      "src/cli/credentials.ts": "0ea585e3ce98ca39da60853fa17a0c82ab2231d9b054219d6e0fd881fd1cc5c2",
+      "src/cli/help.ts": "525c6a7a0d181d792fac78d20713c7ceea7f1f7f7dbe52d1855adc62e45fedc9",
+      "src/cli/images.ts": "545ffcadbba59abce8ffa304276c3d64a8e2a537ce3a36edadea32af8598863d",
+      "src/cli/initialization.ts": "fca68aac3eddc4d90a723887723d13a04d6f636fe9cfc28acb5da0f5fcb1e06a",
+      "src/cli/main.ts": "d35b35ec366c893ff98688075b4f2b16a5546101bca882c46aeb7e032d233e98",
+      "src/cli/options.ts": "b7f9c3d0786fbe1aaa61402545128bc744480f5c04c9b9d5bf7e753b19860ce3",
+      "src/cli/registered-tools.ts": "a015b1020c855cb8574fd8344612ec62ab58eb78a66d123dc93a504279b50584",
+      "src/cli/session-store.ts": "78aef4008e0b27cc06e8a41f39461232903b60fe3e6b58518f3a462e1b4258d9",
+      "src/cli/verification.ts": "d7f8f327d0ac82f256bc4fc73baedc132aefbc28e972b4f57293574d2827c534",
+      "src/core/auth/access.ts": "94c5f388bd7e9c9a9b2c07a8be2545beb251788b3c6a0029d83a479793022d62",
+      "src/core/auth/index.ts": "fe4457e02a6395881eb2ec4e07a235037f1a0d8d2f569504dbcbd4e623764d4d",
+      "src/core/auth/login.ts": "d2605efd2fb0634e71695cafdc26bfb9fac799c01e5b92ffcb4dfcc37bb61a65",
+      "src/core/auth/rest-exchange.ts": "e7cdbb50bdfb394963124841fcac9291ad1d84927ea77dace957f9d8206e54f5",
+      "src/core/client.ts": "6d4a901f49452470e30a11e8619bff8b32f375d7d4f56369d0d01b5496127629",
+      "src/core/index.ts": "8b07f3c609d8d9b670541943eba954672299c4153cbd3c8ce1a88cc379491a4e",
+      "src/core/inference/chat.ts": "5e052f1381093f1f54da1bf6d23b22142fa63208b10f3ea0fbf65bcecbc5c238",
+      "src/core/inference/images.ts": "31af805b21d0cab6de83cecd373e3ef8a5b19423925cef97d64b090b86938959",
+      "src/core/inference/messages.ts": "5d94a2511e342a0939064c19684262a34436db36ae789e4f290f4655b416875f",
+      "src/core/inference/retry.ts": "ede8596ae2a622f86938b7432628a4d33cde6a027a20136a7d0db9bc79351636",
+      "src/core/inference/state.ts": "a3ad18cbfdbb3f84517df912a246af73bad85387d310bf109cc63a9fd21bdcbf",
+      "src/core/models/access.ts": "47395646f623f7c604657551b05c839995383741e4815a621522e80b8954421a",
+      "src/core/models/catalog.ts": "060d776c3ca2e0af1a20808baefecfb72665f0628f884cc67a5e23cd0cbc5cc3",
+      "src/core/models/index.ts": "6cf03a055acc4f6ec462b68aa3ec309760842716dcfad47ed667a1fa72de91ff",
+      "src/core/models/select.ts": "6f08f1b3a9e842f3b235d867b9a20eeb4a2ed7c4ccc30e69c02d27896a37b66d",
+      "src/core/models/variants.ts": "b9d63c69a86415e1366465326cd152b69278b15ee74640ff727a710e2e8372c9",
+      "src/core/protocol/device.ts": "99f156ac4852fe642905ff3930a24f6e2666b88c8a2fef04d37bbdd91e3e4d3c",
+      "src/core/protocol/fingerprint.ts": "8bdfceb01cc09edca028625a61ca7b82382b796be9a0ad9c35a27aabda146130",
+      "src/core/protocol/http.ts": "5d1af75e0cb4f7841994d4399da8e27bab663290ca23bc55a6f6064ddc737e51",
+      "src/core/protocol/protobuf.ts": "1e9c1d04e7e116e000463f7d86f40b1e4fa96a69a430ee1911ce1ed3d0f953fb",
+      "src/core/protocol/transport.ts": "9d9f1aaa78d678df079e5142c8c398613e8efd4ac8f8992ab0657a77b413fd41",
+      "src/core/types.ts": "7764fa83bbc6fd876026c63830caf4dea81e6b075a3e0c690fe9ae50fa631efd",
+      "src/pi/auth.ts": "22d8b90be6da8b7ba8dbd6fe2fe86ed3b86c9ea3178be76d6ab4673b745e9cfd",
+      "src/pi/extension.ts": "eef1cbb99a885e05924a1cb1c73d6a27268e5151f658092cc93cf4ca3b2457e3",
+      "src/pi/fusion-command.ts": "0f5815fbe773e89101219e119d19812f00ece6f2ce07a68874fedd6def252158",
+      "src/pi/fusion-settings.ts": "6135afc5cee52e913f69a40a6ed67f48580ecb787f12f9526e5b7f2bc551a953",
+      "src/pi/lifecycle.ts": "cb79be1cb975fd4edda84dd933d2808d06bc52d346571e82a3b6aebb19ecd253",
+      "src/pi/messages.ts": "8170e52f3806e077530fdbac3397253e623c35b4cec5b6f00cecd5041e8e9dd8",
+      "src/pi/models.ts": "1131f2bf09b0f59a306ad4e42e7d4087d5e7297aa34878775f3c0671d10bec4c",
+      "src/pi/provider.ts": "a0bd1018e8348e4a15ccb48ce4ad216a1b0bb96f8fe9d7801316643d4121574f",
+      "src/pi/sidekick-runtime.ts": "7470b0a5870d570c4e1a337caa1225c251755e08f4d168a6d90d311a7f4f4286",
+      "src/pi/sidekick.ts": "9630e2a5d760aedf0851b882614dc157128832933776ddd2532eeba7be2545dd",
+      "src/pi/stream.ts": "7d4c5d099d854f760d7b12a9f141af0a7070883311acba9ece803fb7f073e817"
+    },
+    "inventoryHash": "a978663509f3e6993aeafaf3b03ec5f225873df85028e87d7b50e5f73c2bd3f1",
+    "registrations": {
+      "extensions": [
+        "index.ts"
+      ],
+      "tools": [
+        "sidekick"
+      ],
+      "commands": [
+        "fusion"
+      ],
+      "flags": [],
+      "skills": [],
+      "prompts": [],
+      "themes": []
+    },
+    "productionDependencies": {
+      "declared": {
+        "protobufjs": "7.6.6"
+      },
+      "installed": {
+        "@protobufjs/aspromise": {
+          "version": "1.1.2",
+          "integrity": "sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ=="
+        },
+        "@protobufjs/base64": {
+          "version": "1.1.2",
+          "integrity": "sha512-AZkcAA5vnN/v4PDqKyMR5lx7hZttPDgClv83E//FMNhR2TMcLUhfRUBHCmSl0oi9zMgDDqRUJkSxO3wm85+XLg=="
+        },
+        "@protobufjs/codegen": {
+          "version": "2.0.5",
+          "integrity": "sha512-zgXFLzW3Ap33e6d0Wlj4MGIm6Ce8O89n/apUaGNB/jx+hw+ruWEp7EwGUshdLKVRCxZW12fp9r40E1mQrf/34g=="
+        },
+        "@protobufjs/eventemitter": {
+          "version": "1.1.1",
+          "integrity": "sha512-vW1GmwMZNnL+gMRaovlh9yZX74kc+TTU3FObkkurpMaRtBfLP3ldjS9KQWlwZgraRE0+dheEEoAxdzcJQ8eXZg=="
+        },
+        "@protobufjs/fetch": {
+          "version": "1.1.1",
+          "integrity": "sha512-GpptLrs57adMSuHi3VNj0mAF8dwh36LMaYF6XyJ6JMWlVsc+t42tm1HSEDmOs3A8fC9yyeisgLhsTVQokOZ0zw=="
+        },
+        "@protobufjs/float": {
+          "version": "1.0.2",
+          "integrity": "sha512-Ddb+kVXlXst9d+R9PfTIxh1EdNkgoRe5tOX6t01f1lYWOvJnSPDBlG241QLzcyPdoNTsblLUdujGSE4RzrTZGQ=="
+        },
+        "@protobufjs/path": {
+          "version": "1.1.2",
+          "integrity": "sha512-6JOcJ5Tm08dOHAbdR3GrvP+yUUfkjG5ePsHYczMFLq3ZmMkAD98cDgcT2iA1lJ9NVwFd4tH/iSSoe44YWkltEA=="
+        },
+        "@protobufjs/pool": {
+          "version": "1.1.0",
+          "integrity": "sha512-0kELaGSIDBKvcgS4zkjz1PeddatrjYcmMWOlAuAPwAeccUrPHdUqo/J6LiymHHEiJT5NrF1UVwxY14f+fy4WQw=="
+        },
+        "@protobufjs/utf8": {
+          "version": "1.1.2",
+          "integrity": "sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug=="
+        },
+        "@types/node": {
+          "version": "26.6.5",
+          "integrity": "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg=="
+        },
+        "long": {
+          "version": "5.3.2",
+          "integrity": "sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA=="
+        },
+        "protobufjs": {
+          "version": "7.6.6",
+          "integrity": "sha512-dYDWdjSl5RNb7SgPxGQcRU+GtvP7s2fpkrY0r432PcOIaZ0/rBcxEZnQN67iJhFuQiVw754JDoPruPCNdGsbjg=="
+        },
+        "undici-types": {
+          "version": "8.9.0",
+          "integrity": "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="
+        }
+      }
+    },
+    "excluded": {
+      "observed": "0 entries under proto/, tests/, verification/, node_modules/; 0 credential files; 0 symlinks; all 50 entries byte-identical to the source"
+    },
+    "schemaProvenance": {
+      "reportPath": "verification/followup/proto-check-05.json",
+      "originalDescriptorSha256": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+      "packagedDescriptorSha256": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+      "note": "descriptor unchanged since task 05"
+    }
+  },
+  "checks": [
+    {
+      "key": "typecheck-offline",
+      "cwd": "apps/pi-devin",
+      "command": "check_env pnpm typecheck && check_env pnpm verify:offline",
+      "observed": "exit 0, 185/185"
+    },
+    {
+      "key": "import-closure",
+      "report": "verification/followup/import-closure-06b.json",
+      "sha256": "2fcc6f054bae2ba1224ed5c22b737064e12226f177c5f2d20ab0e6902b9372a5",
+      "observed": "ok, 45 modules, 0 problems"
+    },
+    {
+      "key": "validate-source-pack",
+      "report": "verification/followup/package-check-06b.json",
+      "sha256": "ca303b1471d807a8b2c5434e18accb14cbdd0ddd57618f24089063b2f1923c02",
+      "observed": "status pass, 209 checks (same skipped/not_applicable items as attempt 1)"
+    },
+    {
+      "key": "repack-reproducible",
+      "observed": "same sha256 de8db88b…"
+    },
+    {
+      "key": "consumer-production-install",
+      "observed": "exit 0, 13 production packages, prepare-artifact exit 0"
+    },
+    {
+      "key": "validate-extracted",
+      "report": "verification/followup/extracted-check-06b.json",
+      "sha256": "8abf1f2c4f8d9c366319365c1bbd7f70c2c712d12ed59746abc663f35bfba590",
+      "observed": "status pass, 94 checks"
+    },
+    {
+      "key": "extracted-cli-help-other-cwd",
+      "observed": "exit 0"
+    },
+    {
+      "key": "source-denied-controls",
+      "observed": "EPERM for source src/pi/sidekick.ts, source index.ts and real ~/.pi/agent/auth.json; artifact src readable"
+    },
+    {
+      "key": "extracted-provider-tests",
+      "command": "artifact-loader + sandbox: tests/pi-provider*.test.ts tests/pi-integration.test.ts tests/pi-runtime.test.ts tests/pi-lifecycle*.test.ts",
+      "observed": "exit 0, 44/44"
+    },
+    {
+      "key": "extracted-host-contract-node24",
+      "report": "verification/followup/host-contract-artifact-06b-node24.json",
+      "sha256": "661418ac30de9f6d5495d0e7e0bfe12cb532d21355103639a263b1546cb36ee0",
+      "observed": "exit 0, 96/96 including source-runtime-denied and the real child sidekick"
+    },
+    {
+      "key": "extracted-host-contract-node22",
+      "report": "verification/followup/host-contract-artifact-06b-node22.json",
+      "sha256": "b44ee713a3375c2e37c5cdc75bfa4f1e6886d12f2d1683d85d2fb2482d8fd2f0",
+      "observed": "exit 0, 96/96"
+    },
+    {
+      "key": "native-install-list-help-remove",
+      "observed": "all exit 0; temp settings packages 0 → 1 → 0; 0 extension error lines; package files kept; personal settings unchanged (mtime/size)"
+    }
+  ],
+  "limitations": [
+    "Same environment limits as attempt 1: macOS arm64, sandbox-exec isolation, registry-resolved production dependencies, no real service, private:true kept.",
+    "The package README still describes real-service use as unverified; the 07 Fusion re-run would change that statement and requires another archive."
+  ],
+  "handoff": {
+    "decision": "continue",
+    "successors": [
+      "dry-run and new approval for the plan using fusion:devin on this archive"
+    ]
+  }
+}

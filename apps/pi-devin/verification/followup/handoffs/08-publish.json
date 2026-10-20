@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "task": "08",
+  "outcome": "blocked",
+  "recordedAt": "2026-10-19T13:23:37.000Z",
+  "blockedReason": "Redistribution rights for resources/descriptors.pb are unresolved, and the package declares no license. Per the brief, publishing stops and only the preparation result is kept.",
+  "artifactSha256": "6e01f924f814a61a6966f9b3dfa0aba4e8f43e97e4fc45df0917eefe27f979eb",
+  "runtimeDigest": "56771ab9c895bde708e4064ce1877c19a1d8e3b305524f688f26fe35d30334ac",
+  "predecessors": [
+    { "path": "verification/followup/handoffs/06-artifact.json", "outcome": "pass" },
+    { "path": "verification/followup/handoffs/07-live-check.json", "outcome": "awaiting-approval" }
+  ],
+  "authorization": null,
+  "preparation": {
+    "registry": {
+      "command": "npm view @buyong/pi-devin --json (fresh HOME, empty user/global npmrc, no token)",
+      "observed": "E404 Not Found: no existing version or dist-tag, so 0.1.0 has no collision",
+      "scope": "npm search shows 8 other @buyong packages (pi-claude-bridge, redact, pi-codex, pi-codex-fast-mode, pi-codex-auto-review, pi-codex-image-gen, pi-ollama-cloud, pi-codex-computer-use); publish permission itself was not checked because it needs npm authentication"
+    },
+    "rights": {
+      "descriptor": "resources/descriptors.pb (sha256 d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b), shipped unchanged",
+      "recordedOrigin": "an artifact of the third-party repository leookun/devin-2api, which claims extraction from Devin/Windsurf binaries; the extraction itself is unverified",
+      "upstreamPage": "https://github.com/leookun/devin-2api declares MIT for its own repository and has cmd/protoextract and an extract-embedded-protos skill; the README does not state where the descriptor came from",
+      "assessment": "An MIT notice on the extracting repository cannot grant rights to the original schema owner's material. No grant from the schema owner was found. Rights remain unresolved.",
+      "packageLicense": "package.json has no license field; no LICENSE file in the app or repository root. No license text was invented."
+    },
+    "candidate": "not built: name/version/access are known, but license and publish metadata cannot be fixed while rights are unresolved",
+    "liveCheck": "07 is awaiting approval; no live evidence exists to cite"
+  },
+  "publication": { "published": false, "publishCount": 0 },
+  "checks": [
+    { "key": "registry-name", "command": "npm view @buyong/pi-devin --json", "observed": "E404 (not published)" },
+    { "key": "rights", "command": "provenance review of resources/descriptors.pb", "observed": "unresolved" }
+  ],
+  "resumeWhen": [
+    "The schema owner's permission or another verifiable redistribution basis for resources/descriptors.pb is recorded, and the user chooses a package license; or",
+    "the user decides on a different distribution approach (for example not publishing to the public registry). Any change to the shipped runtime goes back through 06."
+  ],
+  "limitations": [
+    "This is not legal advice; the assessment only records that no verifiable redistribution basis was found."
+  ]
+}

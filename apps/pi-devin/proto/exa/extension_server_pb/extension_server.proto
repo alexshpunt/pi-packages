@@ -1,0 +1,555 @@
+syntax = "proto3";
+
+package exa.extension_server_pb;
+
+import "buf/validate/validate.proto";
+import "exa/codeium_common_pb/codeium_common.proto";
+import "exa/cortex_pb/cortex.proto";
+import "exa/language_server_pb/language_server.proto";
+
+enum ActiveEditorType {
+  ACTIVE_EDITOR_TYPE_UNSPECIFIED = 0;
+  ACTIVE_EDITOR_TYPE_TEXT_EDITOR = 1;
+  ACTIVE_EDITOR_TYPE_TERMINAL = 2;
+}
+
+enum SoundType {
+  SOUND_TYPE_UNSPECIFIED = 0;
+  SOUND_TYPE_CASCADE_DONE = 1;
+}
+
+enum SettingLocation {
+  SETTING_LOCATION_UNSPECIFIED = 0;
+  SETTING_LOCATION_USER = 1;
+  SETTING_LOCATION_WORKSPACE = 2;
+}
+
+message CancelVibeAndReplaceRequest {
+}
+
+message CancelVibeAndReplaceResponse {
+}
+
+message StartAudioRecordingRequest {
+}
+
+message EndAudioRecordingRequest {
+}
+
+message EndAudioRecordingResponse {
+  string transcription = 1;
+}
+
+message StartAudioRecordingResponse {
+}
+
+message GetCurrentAudioRecordingRequest {
+}
+
+message GetCurrentAudioRecordingResponse {
+  float average_volume = 2;
+}
+
+message LanguageServerStartedRequest {
+  int32 language_server_port = 1;
+  int32 lsp_port = 2;
+  int32 chat_client_port = 3;
+  string csrf_token = 4;
+}
+
+message LanguageServerStartedResponse {
+}
+
+message OpenSettingRequest {
+  string setting_id = 1;
+}
+
+message OpenSettingResponse {
+}
+
+message OpenFilePointerRequest {
+  string file_uri = 1;
+  int32 start_line = 2;
+  int32 start_col = 3;
+  int32 end_line = 4;
+  int32 end_col = 5;
+  bool is_cascade_diff = 6;
+  bool is_directory = 7;
+  bool pinned = 8;
+}
+
+message OpenFilePointerResponse {
+}
+
+message InsertCodeAtCursorRequest {
+  string text = 1;
+  ActiveEditorType editor_type = 2;
+}
+
+message InsertCodeAtCursorResponse {
+}
+
+message EventMetadataRecord {
+  string key = 1;
+  string value = 2;
+}
+
+message LogEventRequest {
+  .exa.codeium_common_pb.ProductEventType event = 1 [deprecated = true];
+  string event_string = 3;
+  repeated EventMetadataRecord metadata = 2;
+}
+
+message LogEventResponse {
+}
+
+message CheckTerminalShellSupportRequest {
+}
+
+message CheckTerminalShellSupportResponse {
+  bool has_shell_integration = 1;
+  string shell_name = 2;
+  string shell_path = 3;
+  string failure_reason = 4;
+  repeated string shell_args = 5;
+}
+
+message ExecuteCommandRequest {
+  string command_line = 5 [(buf.validate.field) = { required: true }];
+  string cwd = 3;
+  string terminal_id = 4;
+  reserved 1;
+  reserved 2;
+  reserved "command";
+  reserved "args";
+}
+
+message ShowTerminalRequest {
+  string terminal_id = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+}
+
+message ShowTerminalResponse {
+}
+
+message OpenVirtualFileRequest {
+  string text = 1;
+  bool show_markdown_preview = 2;
+}
+
+message OpenVirtualFileResponse {
+}
+
+message SaveDocumentRequest {
+  string uri = 1;
+}
+
+message SaveDocumentResponse {
+}
+
+message ReadTerminalRequest {
+  string terminal_id = 1;
+}
+
+message ReadTerminalResponse {
+  string contents = 1;
+}
+
+message OpenTerminalRequest {
+  string terminal_id = 1;
+}
+
+message OpenTerminalResponse {
+}
+
+message GetLintErrorsRequest {
+  optional GetLintErrorsRequest.AwaitNewLintsConfig await_new_lints_config = 1;
+  message AwaitNewLintsConfig {
+    string acknowledger_id = 1;
+    int32 timeout_ms = 2;
+    int32 grace_period_ms = 3;
+    bool include_saved = 4;
+  }
+
+}
+
+message GetLintErrorsResponse {
+  repeated .exa.codeium_common_pb.CodeDiagnostic lint_errors = 1;
+  repeated .exa.codeium_common_pb.CodeDiagnostic persistent_lint_errors = 2;
+}
+
+message WatchForLintsRequest {
+  string acknowledger_id = 1;
+  int32 duration_ms = 2;
+}
+
+message WatchForLintsResponse {
+}
+
+message GetLintsForAcknowledgerRequest {
+  string acknowledger_id = 1;
+}
+
+message GetLintsForAcknowledgerResponse {
+  repeated .exa.codeium_common_pb.CodeDiagnostic lint_errors = 1;
+  repeated .exa.codeium_common_pb.CodeDiagnostic persistent_lint_errors = 2;
+}
+
+message OpenDiffZonesRequest {
+  string cascade_id = 1;
+  repeated .exa.language_server_pb.ValidationState validation_states = 2;
+  bool write_new_state = 3;
+  optional string git_worktree_path = 4;
+}
+
+message OpenDiffZonesResponse {
+}
+
+message OpenMultiDiffRequest {
+  string cascade_id = 1;
+  string title = 2;
+}
+
+message OpenMultiDiffResponse {
+}
+
+message OpenExternalUrlRequest {
+  string url = 1 [(buf.validate.field) = { required: true }];
+  bool use_ide_browser = 2;
+}
+
+message OpenExternalUrlResponse {
+}
+
+message HandleAsyncPostMessageRequest {
+  string message_type = 1;
+  string message_content = 2;
+}
+
+message HandleAsyncPostMessageResponse {
+  string response_content = 1;
+}
+
+message OpenWindsurfRulesFileRequest {
+  bool is_workspace_rules = 1;
+}
+
+message OpenWindsurfRulesFileResponse {
+}
+
+message DeleteWindsurfRulesFileRequest {
+  bool is_workspace_rules = 1;
+  string file_path = 2;
+}
+
+message DeleteWindsurfRulesFileResponse {
+}
+
+message RefreshURIsRequest {
+  repeated string uris = 1;
+}
+
+message RefreshURIsResponse {
+}
+
+message OpenConfigurePluginsPageRequest {
+  optional string server_name = 1;
+}
+
+message OpenConfigurePluginsPageResponse {
+}
+
+message NotebookCellEdit {
+  int32 cell_index = 1;
+  bool is_insert = 2;
+  string cell_type = 3;
+}
+
+message WriteCascadeEditRequest {
+  string uri = 1 [(buf.validate.field) = { required: true }];
+  string target_content = 2 [(buf.validate.field) = { required: true }];
+  optional string cascade_id = 3;
+  optional string git_worktree_path = 4;
+  optional NotebookCellEdit notebook_cell = 5;
+}
+
+message WriteCascadeEditResponse {
+}
+
+message OpenConversationWorkspaceQuickPickRequest {
+  string cascade_id = 1;
+  repeated string workspace_uris = 2;
+}
+
+message OpenConversationWorkspaceQuickPickResponse {
+  bool open_in_current_window = 1;
+}
+
+message FindAllReferencesRequest {
+  string file_uri = 1 [(buf.validate.field) = { required: true }];
+  string symbol = 2 [(buf.validate.field) = { required: true }];
+  uint32 line = 3 [(buf.validate.field) = { required: true }];
+  uint32 occurrence_index = 4 [(buf.validate.field) = { required: true }];
+}
+
+message FindAllReferencesResponse {
+  repeated .exa.codeium_common_pb.LspReference references = 1;
+}
+
+message GetLSPCompletionItemsRequest {
+  string document_uri = 1 [(buf.validate.field) = { required: true }];
+  .exa.codeium_common_pb.DocumentPosition position = 2 [(buf.validate.field) = { required: true }];
+}
+
+message GetLSPCompletionItemsResponse {
+  string completion_items_json = 1;
+}
+
+message UpdateCascadeTrajectorySummariesRequest {
+  .exa.cortex_pb.CascadeTrajectorySummaries summaries = 1 [(buf.validate.field) = { required: true }];
+  bool initial_load_complete = 2;
+}
+
+message UpdateCascadeTrajectorySummariesResponse {
+}
+
+message LoadCodeMapRequest {
+  string codemap_json = 1 [(buf.validate.field) = { required: true }];
+}
+
+message LoadCodeMapResponse {
+}
+
+message AddAnnotationRequest {
+  .exa.codeium_common_pb.CodeAnnotation annotation = 1;
+}
+
+message AddAnnotationResponse {
+}
+
+message RemoveAnnotationRequest {
+  string annotation_id = 1;
+}
+
+message RemoveAnnotationResponse {
+}
+
+message ShowAnnotationRequest {
+  string annotation_id = 1;
+}
+
+message ShowAnnotationResponse {
+}
+
+message GetSecretValueRequest {
+  string key = 1;
+}
+
+message GetSecretValueResponse {
+  string value = 1;
+}
+
+message StoreSecretValueRequest {
+  string key = 1;
+  string value = 2;
+}
+
+message StoreSecretValueResponse {
+}
+
+message GetRedirectUriRequest {
+}
+
+message GetRedirectUriResponse {
+  string uri = 1;
+}
+
+message CheckExperimentRequest {
+  string experiment_key = 1 [(buf.validate.field) = { required: true }];
+  map<string, string> context_overrides = 2;
+}
+
+message CheckExperimentResponse {
+  bool enabled = 1;
+  optional ExperimentVariant variant = 2;
+  optional string error_message = 3;
+}
+
+message ExperimentVariant {
+  string name = 1;
+  ExperimentPayload payload = 2;
+}
+
+message ExperimentPayload {
+  string type = 1;
+  string value = 2;
+}
+
+message SearchQueryRequest {
+  string query = 1 [(buf.validate.field) = { required: true }];
+  optional int32 max_results = 2;
+  optional string cache_key = 3;
+  optional bool include_ignored_files = 4 [deprecated = true];
+}
+
+message SearchQueryResponse {
+  repeated string result_uris = 1;
+}
+
+message UnmountChangesRequest {
+}
+
+message UnmountChangesResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message LogoutWindsurfRequest {
+  string api_key = 1;
+}
+
+message LogoutWindsurfResponse {
+}
+
+message DeleteWindsurfWorkflowRequest {
+  .exa.cortex_pb.CortexMemoryScope scope = 1;
+  string file_path = 2 [(buf.validate.field) = { required: true }];
+}
+
+message DeleteWindsurfWorkflowResponse {
+}
+
+message NotifyMcpStateChangedRequest {
+  repeated .exa.cortex_pb.McpServerState states = 1;
+  reserved 2;
+  reserved 3;
+}
+
+message NotifyMcpStateChangedResponse {
+}
+
+message NativeStorageTarget {
+  oneof target {
+    SettingTarget setting = 1;
+    StateTarget state = 2;
+  }
+}
+
+message SettingTarget {
+  SettingLocation location = 1;
+}
+
+message StateTarget {
+}
+
+message NativeValue {
+  oneof value {
+    string string_value = 1;
+    int32 int_value = 2;
+    bool bool_value = 3;
+    double double_value = 4;
+    NativeValueList list_value = 5;
+    NativeValueMap map_value = 6;
+  }
+}
+
+message NativeValueList {
+  repeated NativeValue values = 1;
+}
+
+message NativeValueMap {
+  map<string, NativeValue> values = 1;
+}
+
+message NativeValueEntry {
+  NativeValue value = 1;
+  bool is_default = 2;
+}
+
+message GetNativeValuesRequest {
+  NativeStorageTarget target = 1 [(buf.validate.field) = { required: true }];
+  repeated string keys = 2;
+}
+
+message GetNativeValuesResponse {
+  map<string, NativeValueEntry> values = 1;
+}
+
+message SetNativeValueRequest {
+  NativeStorageTarget target = 1 [(buf.validate.field) = { required: true }];
+  string key = 2 [(buf.validate.field) = { required: true }];
+  NativeValue value = 3 [(buf.validate.field) = { required: true }];
+  NativeValue expected_previous_value = 4;
+}
+
+message SetNativeValueResponse {
+  bool concurrency_conflict = 1;
+  NativeValueEntry current_value = 2;
+}
+
+message ClearNativeValueRequest {
+  NativeStorageTarget target = 1 [(buf.validate.field) = { required: true }];
+  string key = 2 [(buf.validate.field) = { required: true }];
+}
+
+message ClearNativeValueResponse {
+}
+
+message SubscribeNativeValuesRequest {
+  NativeStorageTarget target = 1 [(buf.validate.field) = { required: true }];
+}
+
+message SubscribeNativeValuesResponse {
+  map<string, NativeValueEntry> values = 1;
+}
+
+service ExtensionServerService {
+  rpc LanguageServerStarted(LanguageServerStartedRequest) returns (LanguageServerStartedResponse);
+  rpc OpenSetting(OpenSettingRequest) returns (OpenSettingResponse);
+  rpc OpenFilePointer(OpenFilePointerRequest) returns (OpenFilePointerResponse);
+  rpc InsertCodeAtCursor(InsertCodeAtCursorRequest) returns (InsertCodeAtCursorResponse);
+  rpc LogEvent(LogEventRequest) returns (LogEventResponse);
+  rpc CheckTerminalShellSupport(CheckTerminalShellSupportRequest) returns (CheckTerminalShellSupportResponse);
+  rpc ExecuteCommand(ExecuteCommandRequest) returns (stream .exa.codeium_common_pb.TerminalShellCommandStreamChunk);
+  rpc ShowTerminal(ShowTerminalRequest) returns (ShowTerminalResponse);
+  rpc OpenVirtualFile(OpenVirtualFileRequest) returns (OpenVirtualFileResponse);
+  rpc SaveDocument(SaveDocumentRequest) returns (SaveDocumentResponse);
+  rpc ReadTerminal(ReadTerminalRequest) returns (ReadTerminalResponse);
+  rpc OpenTerminal(OpenTerminalRequest) returns (OpenTerminalResponse);
+  rpc GetLintErrors(GetLintErrorsRequest) returns (GetLintErrorsResponse);
+  rpc WatchForLints(WatchForLintsRequest) returns (WatchForLintsResponse);
+  rpc GetLintsForAcknowledger(GetLintsForAcknowledgerRequest) returns (GetLintsForAcknowledgerResponse);
+  rpc OpenDiffZones(OpenDiffZonesRequest) returns (OpenDiffZonesResponse);
+  rpc OpenExternalUrl(OpenExternalUrlRequest) returns (OpenExternalUrlResponse);
+  rpc OpenMultiDiff(OpenMultiDiffRequest) returns (OpenMultiDiffResponse);
+  rpc HandleAsyncPostMessage(HandleAsyncPostMessageRequest) returns (HandleAsyncPostMessageResponse);
+  rpc OpenWindsurfRulesFile(OpenWindsurfRulesFileRequest) returns (OpenWindsurfRulesFileResponse);
+  rpc DeleteWindsurfRulesFile(DeleteWindsurfRulesFileRequest) returns (DeleteWindsurfRulesFileResponse);
+  rpc DeleteWindsurfWorkflow(DeleteWindsurfWorkflowRequest) returns (DeleteWindsurfWorkflowResponse);
+  rpc NotifyMcpStateChanged(NotifyMcpStateChangedRequest) returns (NotifyMcpStateChangedResponse);
+  rpc OpenConfigurePluginsPage(OpenConfigurePluginsPageRequest) returns (OpenConfigurePluginsPageResponse);
+  rpc OpenConversationWorkspaceQuickPick(OpenConversationWorkspaceQuickPickRequest) returns (OpenConversationWorkspaceQuickPickResponse);
+  rpc FindAllReferences(FindAllReferencesRequest) returns (FindAllReferencesResponse);
+  rpc GetLSPCompletionItems(GetLSPCompletionItemsRequest) returns (GetLSPCompletionItemsResponse);
+  rpc RefreshURIs(RefreshURIsRequest) returns (RefreshURIsResponse);
+  rpc CheckExperiment(CheckExperimentRequest) returns (CheckExperimentResponse);
+  rpc WriteCascadeEdit(WriteCascadeEditRequest) returns (WriteCascadeEditResponse);
+  rpc StartAudioRecording(StartAudioRecordingRequest) returns (StartAudioRecordingResponse);
+  rpc EndAudioRecording(EndAudioRecordingRequest) returns (EndAudioRecordingResponse);
+  rpc GetCurrentAudioRecording(GetCurrentAudioRecordingRequest) returns (GetCurrentAudioRecordingResponse);
+  rpc UpdateCascadeTrajectorySummaries(UpdateCascadeTrajectorySummariesRequest) returns (UpdateCascadeTrajectorySummariesResponse);
+  rpc LoadCodeMap(LoadCodeMapRequest) returns (LoadCodeMapResponse);
+  rpc AddAnnotation(AddAnnotationRequest) returns (AddAnnotationResponse);
+  rpc RemoveAnnotation(RemoveAnnotationRequest) returns (RemoveAnnotationResponse);
+  rpc ShowAnnotation(ShowAnnotationRequest) returns (ShowAnnotationResponse);
+  rpc GetSecretValue(GetSecretValueRequest) returns (GetSecretValueResponse);
+  rpc StoreSecretValue(StoreSecretValueRequest) returns (StoreSecretValueResponse);
+  rpc GetRedirectUri(GetRedirectUriRequest) returns (GetRedirectUriResponse);
+  rpc CancelVibeAndReplace(CancelVibeAndReplaceRequest) returns (CancelVibeAndReplaceResponse);
+  rpc SearchQuery(SearchQueryRequest) returns (SearchQueryResponse);
+  rpc UnmountChanges(UnmountChangesRequest) returns (UnmountChangesResponse);
+  rpc LogoutWindsurf(LogoutWindsurfRequest) returns (LogoutWindsurfResponse);
+  rpc GetNativeValues(GetNativeValuesRequest) returns (GetNativeValuesResponse);
+  rpc SetNativeValue(SetNativeValueRequest) returns (SetNativeValueResponse);
+  rpc ClearNativeValue(ClearNativeValueRequest) returns (ClearNativeValueResponse);
+  rpc SubscribeNativeValues(SubscribeNativeValuesRequest) returns (stream SubscribeNativeValuesResponse);
+}

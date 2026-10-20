@@ -1,0 +1,87 @@
+{
+  "resources": {
+    "extensions": [
+      "index.ts"
+    ],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
+  "names": {
+    "tools": [
+      "devin_sidekick"
+    ],
+    "commands": [
+      "devin",
+      "devin-fusion"
+    ],
+    "flags": [],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
+  "requiredFiles": [
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "index.ts",
+    "resources/descriptors.pb",
+    "src/core/auth/access.ts",
+    "src/core/auth/index.ts",
+    "src/core/auth/login.ts",
+    "src/core/auth/rest-exchange.ts",
+    "src/core/client.ts",
+    "src/core/index.ts",
+    "src/core/inference/chat.ts",
+    "src/core/inference/images.ts",
+    "src/core/inference/messages.ts",
+    "src/core/inference/retry.ts",
+    "src/core/inference/state.ts",
+    "src/core/models/access.ts",
+    "src/core/models/catalog.ts",
+    "src/core/models/index.ts",
+    "src/core/models/select.ts",
+    "src/core/models/variants.ts",
+    "src/core/protocol/device.ts",
+    "src/core/protocol/fingerprint.ts",
+    "src/core/protocol/http.ts",
+    "src/core/protocol/protobuf.ts",
+    "src/core/protocol/transport.ts",
+    "src/core/types.ts",
+    "src/pi/auth.ts",
+    "src/pi/extension.ts",
+    "src/pi/lifecycle.ts",
+    "src/pi/messages.ts",
+    "src/pi/models.ts",
+    "src/pi/provider.ts",
+    "src/pi/sidekick.ts",
+    "src/pi/stream.ts",
+    "src/pi/fusion-command.ts",
+    "src/pi/fusion-settings.ts",
+    "src/pi/sidekick-runtime.ts",
+    "src/pi/sidekick-report.ts",
+    "src/pi/devin-command.ts",
+    "src/pi/devin-panel.ts",
+    "src/pi/devin-settings.ts",
+    "src/pi/fusion-picker.ts",
+    "src/pi/usage.ts"
+  ],
+  "forbiddenFiles": [
+    "auth.json",
+    "credentials.json",
+    "credentials.toml",
+    ".pi/auth.json",
+    ".env"
+  ],
+  "devOnlyPaths": [
+    "cli.ts",
+    "src/cli/",
+    "proto/",
+    "tests/",
+    "verification/",
+    "node_modules/",
+    "AGENTS.md",
+    "tsconfig.json",
+    ".gitignore"
+  ]
+}

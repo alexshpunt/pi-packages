@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "task": "08",
+  "attempt": 2,
+  "outcome": "blocked",
+  "recordedAt": "2026-10-20T00:59:42.901Z",
+  "supersedes": {
+    "path": "verification/followup/handoffs/08-publish.json",
+    "reason": "the user resolved the distribution decisions on 2026-10-20; attempt 1 stays as the earlier blocked record"
+  },
+  "blockedReason": "npm authentication (login and 2FA) is pending; the user deferred it. Everything up to the authenticated publish is prepared.",
+  "decisions": {
+    "distribution": "public npm registry (publishConfig.access public)",
+    "license": "MIT (LICENSE, copyright buYoung)",
+    "descriptor": "resources/descriptors.pb rebuilt from proto/; the original third-party file is no longer shipped",
+    "disclosure": "README states the package is unofficial, uses a non-public API, and that the schema's original rights are unverified",
+    "rights": "unverified; publishing proceeds on the user's decision, not on a verified redistribution basis",
+    "decidedBy": "user answers in this chat session on 2026-10-20"
+  },
+  "releaseCandidate": {
+    "repoRelativePath": "verification/followup/artifacts/buyong-pi-devin-0.1.0-a4a74c652b33.tgz",
+    "storage": "git-ignored local file; npm pack reproduces it",
+    "sha256": "a4a74c652b338fddb770a8d5147fd2d43a6cc18e71f8c4d5b395f1033b1d7bbb",
+    "sha512Integrity": "sha512-PP3BCfHA+KYXV3I87KVzsCbPuIlI38un8TmE6SOBj2Veu+OrzfCvTXZ3gazjKJ2GCWNi8dzC+WKxn/43MVRkLw==",
+    "bytes": 314957,
+    "files": 56,
+    "name": "@buyong/pi-devin",
+    "version": "0.1.0",
+    "tag": "latest",
+    "relationToLiveChecked": {
+      "archive": "0a0ca65638a3197bcf726f2d2ee2bf73b9bbba3a89ec1df8d94b4758e5f38d64",
+      "differingFiles": [
+        "README.md"
+      ],
+      "liveRun": "verification/followup/handoffs/07-live-check-r3.json"
+    }
+  },
+  "predecessors": [
+    {
+      "path": "verification/followup/handoffs/06-artifact-r3.json",
+      "outcome": "pass",
+      "sha256": "c95ee7e78ac275907ea35c189793b6b8e365e750da48e15ca4ecb2984d84b6d1"
+    },
+    {
+      "path": "verification/followup/handoffs/07-live-check-r3.json",
+      "outcome": "pass",
+      "sha256": "d3cdb7db7bb79a7e72cf8c527dca0690d5bc9f73b7fb8a0ff9ff7e7ac3a85291"
+    }
+  ],
+  "preparation": {
+    "registry": "npm view @buyong/pi-devin → E404 (no existing package; 0.1.0 has no collision) on 2026-10-20",
+    "dryRun": "npm publish <release candidate> --dry-run --access public with empty npmrc and no token: exit 0, '+ @buyong/pi-devin@0.1.0', tag latest, public access, 56 files; warns that login is required",
+    "checks": [
+      "validate-package source --runtime --pack: pass, 228 checks",
+      "consumer production install + prepare-artifact: exit 0",
+      "validate-package extracted --runtime: pass, 101 checks",
+      "Pi 1.3.0 -e <extracted> --help: exit 0, 0 error lines"
+    ]
+  },
+  "remainingSteps": [
+    "User: npm login (with 2FA) for an account that can publish the @buyong scope.",
+    "Then, with explicit approval: npm publish <release candidate> --access public (OTP from the user).",
+    "After publishing: pi install npm:@buyong/pi-devin in a temporary agent directory, load/list/update/remove checks, and record the registry integrity against sha512Integrity.",
+    "Push the repository so the README links (GitHub source, verification docs) resolve."
+  ],
+  "publication": {
+    "published": false,
+    "publishCount": 0
+  },
+  "limitations": [
+    "This is not legal advice; schema rights are recorded as unverified.",
+    "Registry install/update/remove are not verified until the package is published."
+  ]
+}

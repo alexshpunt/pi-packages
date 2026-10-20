@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package exa.tokenizer_pb;
+
+option go_package = "github.com/Exafunction/Exafunction/exa/tokenizer_pb";
+
+enum PreTokenizer {
+  PRE_TOKENIZER_UNSPECIFIED = 0;
+  PRE_TOKENIZER_GPT2 = 1;
+  PRE_TOKENIZER_CL100K = 2;
+  PRE_TOKENIZER_QWEN2 = 3;
+}
+
+message Tokenizer {
+  repeated SpecialToken special_tokens = 1;
+  PreTokenizer pre_tokenizer = 2;
+  oneof word_tokenizer {
+    BPETokenizer bpe = 3;
+  }
+}
+
+message BPETokenizer {
+  repeated BaseToken base_vocab = 1;
+  repeated MergeToken merges = 2;
+}
+
+message SpecialToken {
+  string token = 1;
+  int32 id = 2;
+}
+
+message BaseToken {
+  bytes token = 1;
+}
+
+message MergeToken {
+  int32 first = 1;
+  int32 second = 2;
+}

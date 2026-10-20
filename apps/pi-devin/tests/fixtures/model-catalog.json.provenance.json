@@ -1,0 +1,29 @@
+{
+  "sourceSha256": "22d09685a61dc14c920e0864c5d591dda8814848fffb016907a01c1d9b419f64",
+  "auditSha256": "51448dbe286f874a3c7fc2e26b47c94048078562fc86091c509e27a15f1e6b0f",
+  "fixtureSha256": "02ec94832ba0f4a81d985cc687cd1459b1e774d5277039b90047b0ba4fe47b55",
+  "models": 265,
+  "groups": 69,
+  "publishedGroups": 65,
+  "mapped": 261,
+  "unsupported": [
+    {
+      "uid": "kimi-k2-6",
+      "reason": "thinking strength metadata is unknown"
+    },
+    {
+      "uid": "kimi-k2-7",
+      "reason": "thinking strength metadata is unknown"
+    },
+    {
+      "uid": "swe-1-6",
+      "reason": "thinking strength metadata is unknown"
+    },
+    {
+      "uid": "swe-1-6-fast",
+      "reason": "thinking strength metadata is unknown"
+    }
+  ],
+  "historicalMappingsEqual": true,
+  "transformation": "model identity, declared dimensions, context/output and capabilities only; no full source response, pricing inference or auth data"
+}
