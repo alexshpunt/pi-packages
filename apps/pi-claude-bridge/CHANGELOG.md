@@ -1,5 +1,15 @@
 # Changelog
 
+## UNRELEASED
+
+### Improved
+
+- The bridge now uses Claude Code 2.1.304 (Agent SDK `^0.3.304`).
+
+### Fixed
+
+- On Pi 1.3.0, Haiku 5.5 no longer offers turning reasoning off. Claude Code keeps thinking on for this model, so choosing off had no effect.
+
 ## 0.12.0 — 2026-10-20
 
 - **Fix: forward only completed tool calls and compatible MCP schemas** — Drop unfinished streamed blocks before dispatch (elidickinson/pi-claude-bridge#146), flatten top-level schema combinators for Claude Code while retaining Pi-side validation (elidickinson/pi-claude-bridge#180), and stop injecting an unrequested bash timeout (elidickinson/pi-claude-bridge#204).

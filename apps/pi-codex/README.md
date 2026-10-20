@@ -9,7 +9,7 @@ Use the bundle when you want several of these features together. If you need onl
 ## Before installing
 
 - Node.js 22.19 or later and a configured Pi conversation provider/model.
-- Pi 1.0.0 or later. The repository builds against Pi 1.2.0; component verification scopes differ. The automatic-review guarded CLI/SDK rejects Pi versions before 1.0.0.
+- Pi 1.0.0 or later. The repository builds against Pi 1.3.0; component verification scopes differ. The automatic-review guarded CLI/SDK rejects Pi versions before 1.0.0.
 - The feature-specific requirements in the table. You can leave unused features off.
 
 | Feature | Additional requirement | Initial state without saved settings |

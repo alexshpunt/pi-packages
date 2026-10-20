@@ -54,7 +54,7 @@ Use `/model` to select any Claude model in pi-ai's catalog, e.g. `claude-bridge/
 
 Behind the scenes, pi's tools are bridged to Claude Code but everything works like normal in pi. The bridge preserves bash arguments without adding a default timeout; execution-time limits belong to the pi tool. Skills and selected-tool guidance are forwarded to Claude Code's system prompt, and steering mid-turn reaches Claude at the next tool boundary.
 
-**추론 옵션:** 추론을 켜면 현대 Claude 모델에 adaptive thinking과 summarized display를 명시적으로 전달합니다. 기존 4.5 모델의 처리와 effort 대응은 유지합니다. Haiku 5.5처럼 카탈로그가 추론 끄기를 지원하지 않는 모델(`thinkingLevelMap.off: null`)에는 disabled를 보내지 않습니다.
+**추론 옵션:** 추론을 켜면 현대 Claude 모델에 adaptive thinking과 summarized display를 명시적으로 전달합니다. 기존 4.5 모델의 처리와 effort 대응은 유지합니다. Sonnet 5.5처럼 카탈로그가 추론 끄기를 지원하지 않는 모델(`thinkingLevelMap.off: null`)에는 disabled를 보내지 않습니다. Haiku 5.5는 Pi 1.3.0 카탈로그가 끄기를 허용해도 Claude Code가 추론을 유지하므로, 브리지가 추론 끄기를 지원하지 않는 모델로 등록합니다.
 
 **시스템 프롬프트 갱신:** provider는 `snapshot: false`를 사용합니다. 새 쿼리를 시작하거나 세션을 resume할 때 pi에서 캡처한 현재 프로젝트 문맥·스킬·지침을 전달합니다. 이미 진행 중인 쿼리의 MCP 도구를 실시간으로 갱신하지는 않습니다.
 

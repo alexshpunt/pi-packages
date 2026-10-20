@@ -27,7 +27,7 @@ check_env() {
 }
 ```
 
-`PI_ROOT` is the verified install path. Do not use this repository's default Pi 1.2 catalog or an automatic ancestor lookup instead. To check another install, pass its real install path and check its version first. The user and global npm config files must be two different empty files.
+`PI_ROOT` is the verified install path. Do not use this repository's default catalog or an automatic ancestor lookup instead. To check another install, pass its real install path and check its version first. The user and global npm config files must be two different empty files.
 
 ## 2. Source and real archive checks
 

@@ -8,7 +8,7 @@
 
 ## 설치와 첫 사용
 
-Node.js 22.19 이상, Pi, [Ollama Cloud API 키](https://ollama.com)가 필요합니다. 개발 의존성은 모노레포의 Pi 1.2.0 기준이며, CI에서 최신 Pi와의 호환성도 별도로 검사합니다.
+Node.js 22.19 이상, Pi, [Ollama Cloud API 키](https://ollama.com)가 필요합니다. 개발 의존성은 모노레포의 Pi 1.3.0 기준이며, CI에서 최신 Pi와의 호환성도 별도로 검사합니다.
 
 ```bash
 pi install npm:@buyong/pi-ollama-cloud

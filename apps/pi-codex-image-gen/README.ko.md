@@ -38,6 +38,8 @@ Use image_gen to create a watercolor illustration of a small cafe on a rainy str
 
 성공하면 결과에 PNG 이미지를 포함합니다. 로컬 복사본 저장은 별개이며 실패할 수 있습니다. [출력과 저장](#출력과-저장)을 참고하세요. 이미지가 없다면 요청 실패나 데이터 부재이므로 파일이 생겼다고 가정하지 말고 도구 오류를 확인합니다.
 
+서로 독립적인 이미지를 여러 장 요청하면 번들 스킬이 모델에게 한 응답에서 함께 호출하도록 안내하고, Pi는 그 호출들을 병렬로 실행합니다. 모델이 여전히 한 장씩 호출할 수 있으며, 이미지마다 구독 백엔드에 별도 요청이 갑니다.
+
 ## 로컬·대화 이미지 편집
 
 편집 요청 전에 출처를 선택합니다.
@@ -97,6 +99,13 @@ Use image_gen to edit /absolute/path/to/product.png. Remove the background and k
 
 인증을 확인할 수 없거나 참조 이미지를 로드할 수 없는 경우, 잘못된 설정, 백엔드 실패와 이미지 데이터 부재에는 오류를 반환합니다. 호출자의 취소 신호를 이미지 요청에 전달하지만, 취소만으로 원격 서비스가 이미 작업했는지 알 수는 없습니다.
 
+## 생성 이미지 보기
+
+대화형 터미널에서는 `image_gen` 호출마다 요청 내용(작업 종류, 배경, 프롬프트)을 보여 줍니다. 프롬프트는 항목을 펼치기 전까지 한 줄로 줄여 보여 줍니다. 성공하면 이미지 크기, 저장 경로, 보는 방법을 표시합니다. 모델에게는 경로 안내를 그대로 전달하지만 화면에는 표시하지 않습니다. 터미널이 인라인 이미지(Kitty 그래픽 또는 iTerm2 프로토콜)를 지원하면 Pi가 요약 아래에 이미지를 그립니다.
+
+- **이미지 확대:** 이미지를 클릭합니다. 터미널 높이에 맞는 가장 큰 크기로 커지고, 다시 클릭하면 Pi의 이미지 폭(`terminal.imageWidthCells`)으로 돌아갑니다. 이미지마다 따로 확대됩니다. Pi가 마우스 클릭을 받는 기본 `fullscreen` 모드에서 동작합니다. `regular` 모드에서는 터미널이 클릭을 처리하므로 확대되지 않습니다.
+- **저장 파일 열기:** 경로를 클릭합니다. 경로는 OSC 8 링크입니다. `fullscreen` 모드에서는 Pi가 OS의 기본 앱으로 열고, `regular` 모드에서는 터미널이 엽니다(터미널에 따라 Cmd나 Ctrl을 함께 눌러야 함). 터미널이 링크를 지원하지 않는 것으로 감지되면 확장이 직접 파일을 엽니다. macOS는 `open`, Linux는 `xdg-open`, Windows는 `rundll32 url.dll,FileProtocolHandler`를 사용합니다. 단, SSH 세션(`SSH_CONNECTION`, `SSH_CLIENT`, `SSH_TTY` 중 하나가 있음)에서는 원격 컴퓨터에서 열리므로, `DISPLAY`와 `WAYLAND_DISPLAY`가 모두 없는 Linux와 기타 Unix에서는 열 화면이 없으므로 열지 않습니다.
+
 ## 문제 해결
 
 | 증상 | 조치 |
@@ -106,6 +115,9 @@ Use image_gen to edit /absolute/path/to/product.png. Remove the background and k
 | 로컬 참조를 읽거나 디코딩할 수 없음 | 절대 경로, 파일 권한과 이미지 디코딩 지원을 확인합니다. |
 | 요청한 최근 이미지가 없음 | 다시 첨부하거나 저장한 로컬 경로를 사용합니다. 현재 모델 문맥 밖의 이미지는 자동 복구하지 않습니다. |
 | 백엔드가 모델·계정을 거부함 | 계정 접근과 반환 오류를 확인합니다. 다른 모델로 대체하거나 API 키를 구독 인증 대신 사용하지 않습니다. |
+| 이미지 대신 텍스트 표시만 나옴 | Pi는 tmux 안에서 인라인 이미지를 끄고, Windows Terminal·VS Code·Alacritty·JetBrains 터미널은 이미지 지원 터미널로 감지하지 않습니다. 저장 경로로 열거나, 터미널이 Kitty·iTerm2 이미지를 지원하면 Pi의 `terminal.images` 설정을 지정합니다. |
+| 이미지를 클릭해도 확대되지 않음 | Pi 기본 `fullscreen` 모드(`tuiMode`)를 사용합니다. `regular` 모드에서는 Pi가 마우스 클릭을 받지 않습니다. 터미널 높이가 낮아 더 키울 수 없으면 크기를 유지합니다. |
+| 경로를 클릭해도 열리지 않음 | 경로 아래에 상태 줄이 있으면 확인합니다. SSH나 그래픽 화면이 없는 환경에서는 앱을 실행하지 않습니다. Linux에서는 `xdg-open`(xdg-utils)을 설치합니다. |
 
 ## 소스 빌드와 로드
 
@@ -118,6 +130,16 @@ pnpm --filter @buyong/pi-codex-image-gen exec pi -ne -e ./dist/index.js --skill 
 ```
 
 명시적 스킬 경로는 이번 실행에 번들 지침을 로드합니다. `-ne`는 자동 확장 탐색을 끕니다. 소스를 바꾼 뒤 다시 빌드하세요. 소스 실행도 Pi 구독 로그인이 필요합니다. 빌드가 이미지를 생성하거나 실제 계정 접근을 확인하지는 않습니다.
+
+이 소스 실행에서는 이미지 클릭 확대가 동작하지 않습니다. 패키지 디렉터리에서 로드하면 확장이 실행 중인 Pi 대신 `node_modules`의 개발용 Pi 패키지 사본을 가져오므로, 클릭 처리가 다른 클래스에 연결됩니다. 소스에서 확대를 확인하려면 `node_modules`가 없는 패키지 사본을 로드합니다.
+
+```sh
+cd apps/pi-codex-image-gen
+mkdir -p /tmp/pi-codex-image-gen-try
+npm pack --ignore-scripts --pack-destination /tmp/pi-codex-image-gen-try
+tar xzf /tmp/pi-codex-image-gen-try/*.tgz -C /tmp/pi-codex-image-gen-try
+pi -ne -e /tmp/pi-codex-image-gen-try/package/dist/index.js --skill /tmp/pi-codex-image-gen-try/package/skills
+```
 
 패키지 준비는 [저장소 배포 절차](https://github.com/buYoung/pi-packages#공통-ci와-패키지별-배포)를 참고하세요.
 
