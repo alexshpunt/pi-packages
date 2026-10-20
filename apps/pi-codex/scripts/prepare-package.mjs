@@ -11,13 +11,24 @@ import {
     renameSync,
     rmSync,
 } from "node:fs";
-import { dirname, join, sep } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import semver from "semver";
 
 const packageDirectory = fileURLToPath(new URL("../", import.meta.url));
+const repository = fileURLToPath(new URL("../../../", import.meta.url));
 const readManifest = (directory) =>
     JSON.parse(readFileSync(join(directory, "package.json"), "utf8"));
+// After a build this package's node_modules holds the previous bundle, not pnpm's links,
+// so workspace packages are always read from their workspace directories.
+const workspaces = new Map(
+    ["apps", "packages"].flatMap((folder) =>
+        readdirSync(join(repository, folder), { withFileTypes: true })
+            .map((entry) => join(repository, folder, entry.name))
+            .filter((directory) => existsSync(join(directory, "package.json")))
+            .map((directory) => [readManifest(directory).name, directory]),
+    ),
+);
 const manifest = readManifest(packageDirectory);
 assert.deepEqual(
     manifest.bundleDependencies,
@@ -89,7 +100,9 @@ const staging = mkdtempSync(join(packageDirectory, ".package-"));
 const scratch = mkdtempSync(join(packageDirectory, ".package-archives-"));
 const dependencies = new Map();
 function stageDependency(name, range, parentDirectory) {
-    const directory = resolveDependency(name, parentDirectory);
+    const workspaceDirectory = workspaces.get(name);
+    const directory =
+        workspaceDirectory ?? resolveDependency(name, parentDirectory);
     const dependency = readManifest(directory);
     assert.equal(dependency.name, name);
     assert.ok(
@@ -106,9 +119,9 @@ function stageDependency(name, range, parentDirectory) {
     }
     dependencies.set(name, dependency.version);
     const target = join(staging, name);
-    if (directory.split(sep).includes("node_modules"))
-        stageRegistryPackage(directory, target);
-    else stageWorkspacePackage(directory, target, scratch);
+    if (workspaceDirectory)
+        stageWorkspacePackage(workspaceDirectory, target, scratch);
+    else stageRegistryPackage(directory, target);
     for (const [childName, childRange] of Object.entries(
         dependency.dependencies ?? {},
     ))
