@@ -318,11 +318,11 @@ function safeOutputPath(root, name) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const { values } = parseArgs({ options: { out: { type: "string" }, descriptor: { type: "string" }, help: { type: "boolean" } } });
-  if (values.help || !values.out) {
-    console.log("Usage: node verification/scripts/descriptor-to-proto.mjs --out <new-or-empty-dir> [--descriptor resources/descriptors.pb]");
+  if (values.help || !values.out || !values.descriptor) {
+    console.log("Usage: node verification/scripts/descriptor-to-proto.mjs --out <new-or-empty-dir> --descriptor <FileDescriptorSet>");
     process.exit(values.help ? 0 : 2);
   }
-  const descriptor = resolve(values.descriptor ?? join(APP_ROOT, "resources/descriptors.pb"));
+  const descriptor = resolve(values.descriptor);
   const out = resolve(values.out);
   let isEmpty = true;
   try { isEmpty = readdirSync(out).length === 0; } catch (error) { if (error.code !== "ENOENT") throw error; }

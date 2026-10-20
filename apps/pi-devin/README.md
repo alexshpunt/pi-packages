@@ -182,7 +182,7 @@ The TUI-only screens (the `/devin` screen, the status line and the Fusion picker
 
 The code in this package is MIT licensed ([LICENSE](LICENSE)).
 
-`resources/descriptors.pb` (the Devin protocol schema) is based on a schema that the third-party repository [leookun/devin-2api](https://github.com/leookun/devin-2api) says it extracted from the Devin CLI. The original copyright and distribution rights of this schema have not been verified.
+The protocol schema shipped in `proto/` is based on a descriptor that the third-party repository [leookun/devin-2api](https://github.com/leookun/devin-2api) says it extracted from the Devin CLI. This package then analyzed the protocol itself and added four definitions the base descriptor lacks; they are marked `[added field]`/`[added value]` in the sources and listed in `proto/README.md`. The runtime loads `proto/` directly. The original copyright and distribution rights of the base schema have not been verified.
 
 ## Development
 

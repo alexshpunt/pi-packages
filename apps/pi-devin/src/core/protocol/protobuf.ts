@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import protobuf from "protobufjs";
-import "protobufjs/ext/descriptor/index.js";
 import { object, type JsonObject } from "../types.ts";
 
 export const CHAT_METHOD = "exa.api_server_pb.ApiServerService/GetChatMessage";
@@ -13,16 +14,25 @@ export interface MessageCodec {
 let root: protobuf.Root | undefined;
 const camelCase = (name: string) => name.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 
+const PROTO_ROOT = fileURLToPath(new URL("../../../proto/", import.meta.url));
+
+function protoSources(directory: string, out: string[] = []): string[] {
+  for (const entry of readdirSync(directory)) {
+    const path = join(directory, entry);
+    if (statSync(path).isDirectory()) protoSources(path, out);
+    else if (entry.endsWith(".proto")) out.push(path);
+  }
+  return out;
+}
+
 function getRoot(): protobuf.Root {
   if (!root) {
-    const bytes = readFileSync(new URL("../../../resources/descriptors.pb", import.meta.url));
-    // The descriptor extension's runtime API exists, but the Root type declarations do not include it.
-    const factory = protobuf.Root as typeof protobuf.Root & {
-      fromDescriptor(value: Uint8Array): protobuf.Root;
-    };
-    // Descriptor built from `proto/` with buf. The four definitions added by this package's protocol analysis are part of the source.
-    // Names, reserved words and field numbers are used exactly as in the descriptor.
-    root = factory.fromDescriptor(bytes);
+    // The schema is the shipped `proto/` source tree, parsed directly. The four definitions this
+    // package added from its own protocol analysis are marked in the sources, so nothing is
+    // patched in at runtime. keepCase keeps the declared snake_case names the DTO boundary uses.
+    root = new protobuf.Root();
+    root.resolvePath = (_origin: string, target: string) => isAbsolute(target) ? target : join(PROTO_ROOT, target);
+    root.loadSync(protoSources(PROTO_ROOT), { keepCase: true });
     root.resolveAll();
   }
   return root;
@@ -49,23 +59,7 @@ function convertFields(type: protobuf.Type, value: JsonObject, isEncoding: boole
       return item;
     };
     let converted: unknown;
-    const entryType = field.resolvedType instanceof protobuf.Type ? field.resolvedType : undefined;
-    // fromDescriptor restores maps as repeated key/value messages, not MapField.
-    const isDescriptorMap = field.repeated && entryType?.getOption("map_entry") === true
-      && entryType.fieldsArray.length === 2 && entryType.fields.key?.id === 1 && entryType.fields.value?.id === 2;
-    if (isDescriptorMap) {
-      if (isEncoding) {
-        converted = Object.entries(object(entry, `${path}.${name}`)).map(([key, value]) => convert({
-          key: entryType.fields.key.type === "bool" ? key === "true" : key, value,
-        }));
-      } else {
-        if (!Array.isArray(entry)) throw new Error(`Map field requires an array: ${path}.${name}`);
-        converted = Object.fromEntries(entry.map((pair) => {
-          const item = object(convert(pair), `${path}.${name}`);
-          return [String(item.key ?? entryType.fields.key.defaultValue), item.value ?? entryType.fields.value.defaultValue];
-        }));
-      }
-    } else if (field.map) converted = Object.fromEntries(Object.entries(object(entry, `${path}.${name}`)).map(([key, item]) => [key, convert(item)]));
+    if (field.map) converted = Object.fromEntries(Object.entries(object(entry, `${path}.${name}`)).map(([key, item]) => [key, convert(item)]));
     else if (field.repeated) {
       if (!Array.isArray(entry)) throw new Error(`Field requires an array: ${path}.${name}`);
       converted = entry.map(convert);

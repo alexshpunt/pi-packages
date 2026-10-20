@@ -14,7 +14,7 @@
     "index.ts",
     "src/core",
     "src/pi",
-    "resources",
+    "proto",
     "README.md",
     "LICENSE"
   ],
@@ -43,7 +43,7 @@
     "cli": "node cli.ts"
   },
   "dependencies": {
-    "protobufjs": "7.6.6"
+    "protobufjs": "8.8.1"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",

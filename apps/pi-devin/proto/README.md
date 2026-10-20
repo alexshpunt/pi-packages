@@ -1,14 +1,14 @@
 # proto sources
 
-`.proto` sources for the Devin protocol schema. The shipped `resources/descriptors.pb` is the buf build of this directory, and the runtime (`src/core/protocol/protobuf.ts`) reads only that file. This directory and the verification tools are for development only and are not included in the npm package files (`files` in `package.json`).
+`.proto` sources for the Devin protocol schema. The runtime (`src/core/protocol/protobuf.ts`) parses this directory directly, and the npm package ships it (`files` in `package.json` lists `proto`). `buf` remains a development-only compile check; no built descriptor is shipped.
 
 ## Layout
 
 - The 63 files of the original FileDescriptorSet keep their original logical paths and import relationships. This includes the dependency files that were in the original, such as `google/protobuf/*`, `google/api/expr/*` and `buf/validate/validate.proto`.
 - Declarations, numbers, labels, proto3 optional, oneofs, maps, reserved ranges, extensions, defaults, custom `json_name` and options were copied from the original as is, including the `buf.validate` custom options.
 - The original has no SourceCodeInfo. The original comments and formatting cannot be recovered, so there are no comments other than the notes on observed additions. Types in the same package use relative names; types from other packages use the fully qualified name with a leading dot (`.exa.codeium_common_pb.Metadata`).
-- The current tree is the reconstructed source tree. Only the order in 3 files was changed so the compiler produces the original declaration order: the added value 7 of `DisplayOption` moved after the base descriptor's values, and the nested messages `Index.RepoStats` and `SourceInfo.Extension` moved before the map fields. Fields, numbers and options match the previous tree (the `descriptor-to-proto.mjs` output).
-- This source is now edited directly. Since 2026-10-20, `resources/descriptors.pb` is also rebuilt from this source. The original third-party descriptor is not shipped and not kept in the package.
+- The current tree is edited directly and keeps the original logical paths and declaration order. Only the order in 3 files was adjusted so the compiler produces the original declaration order: the added value 7 of `DisplayOption` moved after the base descriptor's values, and the nested messages `Index.RepoStats` and `SourceInfo.Extension` moved before the map fields. Fields, numbers and options match the previously printed tree (the `descriptor-to-proto.mjs` output).
+- This source is now the shipped schema itself. The runtime loads it directly, so edits take effect on the next start. The original third-party descriptor is not shipped and not kept in the package.
 
 ## Added definitions
 
@@ -33,18 +33,17 @@ Run from `apps/pi-devin`.
 
 ```bash
 node verification/scripts/verify-proto.mjs --report verification/followup/proto-check.json --mutation-control
-# also compare with the original: --original <original FileDescriptorSet>
 ```
 
-Exit 0 means all of the checks below passed. Exit 1 means one of compilation, the shipped file, the original, the wire or the controls failed. Reports are written only to `verification/followup/` or the Node temp directory (`TMPDIR`).
+Exit 0 means all of the checks below passed. Exit 1 means one of compilation, a wire check or a control failed. Reports are written only to `verification/followup/` or the Node temp directory (`TMPDIR`).
 
-1. Rebuild the descriptor in a temp directory with `buf build proto --as-file-descriptor-set --exclude-source-info`.
-2. The rebuilt result must match `resources/descriptors.pb` byte for byte, and its SHA256 must equal `shipped.sha256` in the provenance. The shipped file hash is also compared before and after the check.
-3. Bytes produced by the real runtime codecs (`chatRequestCodec`, `chatResponseCodec`, `unaryCodecs`) are decoded and re-encoded with the rebuilt schema, using the 7 preserved capture requests and responses, the model catalog fixture and 4 probes for the additions. The added fields must resolve by name. As a control, with a schema that omits the additions, those fields must disappear or remain as numbers.
-4. With `--mutation-control`, one field number (`ChatMessagePrompt.signature_type` 18→1018) is changed in a temp copy, and the result must differ from the shipped file.
-5. With `--original`, the whole original and the SHA256 of each of its 63 files must match the provenance baseline. Then the original is decoded losslessly with `buf convert`, and only the normalizations below and the observed additions are applied to build the expected value. The expected value and the rebuilt result must match in per-file bytes, overall semantics and the shape protobufjs reads (field names, numbers, types, repetition, maps, oneofs, proto3 optional, enum values and RPCs). The check fails if a normalization is applied a different number of times than declared. The 2026-10-20 record of this comparison is `verification/followup/proto-check-08.json`.
+1. The source tree must compile: `buf build proto --as-file-descriptor-set --exclude-source-info` must succeed in a temp directory.
+2. Bytes produced by the real runtime codecs (`chatRequestCodec`, `chatResponseCodec`, `unaryCodecs`) are decoded and re-encoded with a root parsed from the same source tree, using the 7 preserved capture requests and responses, the model catalog fixture and 4 probes for the additions. The added fields must resolve by name. As a control, with a root parsed from a copy that omits the additions, those fields must disappear or remain as numbers.
+3. With `--mutation-control`, one field number (`ChatMessagePrompt.signature_type` 18→1018) is changed in a temp copy, and the compiled result must differ from the unmodified build.
 
-### Normalization rules
+The byte-for-byte comparison against a shipped descriptor and the optional comparison against the original third-party descriptor were removed when the runtime switched to loading this directory directly. The recorded results remain in `verification/followup/proto-check-08.json` and `verification/followup/proto-check-12.json`, and the normalization rules below document that record.
+
+### Normalization rules (record of the original comparison)
 
 | ID | Rule | Applied |
 | --- | --- | --- |
@@ -58,15 +57,15 @@ The protobufjs 7.6.6 descriptor schema is not used as the reference decoder, bec
 
 When a new wire definition appears, change the following together.
 
-1. Add the definition with an `[added field]` (or `[added value]` for enums) comment to the relevant `.proto`. Put it after the original declarations so the order matches the expected value of the original comparison.
+1. Add the definition with an `[added field]` (or `[added value]` for enums) comment to the relevant `.proto`. Put it after the original declarations so the declaration order stays stable.
 2. Add the evidence and whether the name is local to `observedAdditions` in `verification/followup/proto-provenance.json`.
-3. Rebuild the shipped file with `pnpm exec buf build proto --as-file-descriptor-set --exclude-source-info -o resources/descriptors.pb`, and update `shipped.sha256` and `bytes` in the provenance.
+3. There is no build step: the runtime reads this directory, so edit the sources directly and rerun the verifier.
 
-Then run the verifier and save the report under a new per-task name (for example, `proto-check-02.json`) instead of overwriting an earlier report. If the shipped file changes, redo the artifact verification (06).
+Then run the verifier and save the report under a new per-task name (for example, `proto-check-13.json`) instead of overwriting an earlier report. If the schema changes, redo the artifact verification (06).
 
 ## Printing again
 
-To view the descriptor's declarations as `.proto` again, pass a new empty directory. The tool does not overwrite a non-empty directory. The default input is the shipped file, and the output has no `[added …]` comments. To view the original declarations, use `--descriptor <original>`.
+To view a descriptor's declarations as `.proto` again, pass a new empty directory and an explicit `--descriptor <FileDescriptorSet>`. The tool does not overwrite a non-empty directory, and the output has no `[added …]` comments. The package no longer keeps a built descriptor.
 
 ```bash
 node verification/scripts/descriptor-to-proto.mjs --out "$(mktemp -d)/printed"
