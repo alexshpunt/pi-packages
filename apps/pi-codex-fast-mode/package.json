@@ -1,6 +1,6 @@
 {
     "name": "@buyong/pi-codex-fast-mode",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "description": "OpenAI Fast and Ultrafast service tiers for Pi, with commands, model-aware activation, and persistent settings.",
     "license": "Apache-2.0",
     "keywords": [
