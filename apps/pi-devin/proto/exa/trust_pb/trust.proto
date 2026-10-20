@@ -1,0 +1,192 @@
+syntax = "proto3";
+
+package exa.trust_pb;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/Exafunction/Exafunction/exa/trust_pb";
+
+enum TrustEventSource {
+  TRUST_EVENT_SOURCE_UNSPECIFIED = 0;
+  TRUST_EVENT_SOURCE_API_SERVER = 1;
+  TRUST_EVENT_SOURCE_DEVIN_WEBSERVER = 2;
+  TRUST_EVENT_SOURCE_INTERNAL_DETECTOR = 3;
+}
+
+enum TrustIdentifierType {
+  TRUST_IDENTIFIER_TYPE_UNSPECIFIED = 0;
+  TRUST_IDENTIFIER_TYPE_EMAIL = 1;
+  TRUST_IDENTIFIER_TYPE_DEVIN_USER_ID = 2;
+  TRUST_IDENTIFIER_TYPE_DEVIN_ACCOUNT_ID = 3;
+  TRUST_IDENTIFIER_TYPE_STRIPE_CUSTOMER_ID = 4;
+}
+
+enum TrustQueryKeyType {
+  TRUST_QUERY_KEY_TYPE_UNSPECIFIED = 0;
+  TRUST_QUERY_KEY_TYPE_AUTH_UID = 1;
+  TRUST_QUERY_KEY_TYPE_DEVIN_USER_ID = 2;
+  TRUST_QUERY_KEY_TYPE_DEVIN_ACCOUNT_ID = 3;
+  TRUST_QUERY_KEY_TYPE_STRIPE_CUSTOMER_ID = 4;
+}
+
+enum ManualTrustVerdict {
+  MANUAL_TRUST_VERDICT_UNSPECIFIED = 0;
+  MANUAL_TRUST_VERDICT_TRUST = 1;
+  MANUAL_TRUST_VERDICT_DISTRUST = 2;
+}
+
+message TrustIdentifier {
+  TrustIdentifierType identifier_type = 1;
+  string identifier = 2;
+}
+
+message TrustQueryKey {
+  TrustQueryKeyType key_type = 1;
+  string key = 2;
+}
+
+message TrustEvent {
+  .google.protobuf.Timestamp observed_at = 1;
+  TrustEventSource source = 3;
+  string idempotency_key = 4;
+  oneof signal {
+    UnknownSignal unknown = 5;
+    ProvidersExhaustedSignal providers_exhausted = 6;
+    CrossModelRateLimitSignal cross_model_rate_limit = 7;
+    AccountFanoutSignal account_fanout = 8;
+    MultiIpTrajectorySignal multi_ip_trajectory = 9;
+    CyberAbuseEvent cyber_abuse = 10;
+    OpenAIBlockedUserEvent openai_blocked_user = 11;
+    SuspiciousUserAgentSignal suspicious_user_agent = 12;
+    ManualTrustSignal manual_trust = 14;
+    HunterEmailVerificationSignal hunter_email_verification = 17;
+    PromoProgramSignal promo_program = 18;
+    PriceMatchProofSignal price_match_proof = 19;
+  }
+  repeated TrustIdentifier identifiers = 13;
+  TrustQueryKey query_key = 15;
+  reserved 2;
+}
+
+message UnknownSignal {
+}
+
+message ProvidersExhaustedSignal {
+  string model_uid = 1;
+  string tier = 2;
+  int32 total_attempts = 3;
+  string last_error_code = 4;
+  string last_error_message = 5;
+  int32 providers_tried = 6;
+  string auth_uid = 7;
+}
+
+message CrossModelRateLimitSignal {
+  string model_uid = 1;
+  string tier = 2;
+  int64 count = 3;
+  int64 limit = 4;
+  int32 period_seconds = 5;
+  bool email_mismatch = 6;
+  string auth_uid = 7;
+}
+
+message AccountFanoutSignal {
+  string auth_uid = 1;
+  string identity = 2;
+  string account_id = 3;
+  bool is_trial = 4;
+}
+
+message MultiIpTrajectorySignal {
+  string auth_uid = 1;
+  int64 ip_count = 2;
+  int64 threshold = 3;
+  int32 window_seconds = 4;
+  string tier = 5;
+  string email = 6;
+  bool enforced = 7;
+}
+
+message CyberAbuseEvent {
+  string auth_uid = 1;
+  string provider = 2;
+  string event_type = 3;
+  string model_uid = 4;
+  string tier = 5;
+}
+
+message OpenAIBlockedUserEvent {
+  string auth_uid = 1;
+  string provider = 2;
+  string model_uid = 3;
+  string tier = 4;
+}
+
+message SuspiciousUserAgentSignal {
+  string auth_uid = 1;
+  string user_agent = 2;
+  string matched_prefix = 3;
+}
+
+message ManualTrustSignal {
+  string auth_uid = 1;
+  ManualTrustVerdict verdict = 2;
+  int32 percent = 3;
+  string reason = 4;
+  string flagged_by = 5;
+}
+
+message HunterEmailVerificationSignal {
+  string email = 1;
+  string result = 2;
+  string status = 3;
+  int32 score = 4;
+  bool regexp = 5;
+  bool gibberish = 6;
+  bool disposable = 7;
+  bool webmail = 8;
+  bool mx_records = 9;
+  bool smtp_server = 10;
+  bool smtp_check = 11;
+  bool accept_all = 12;
+  bool block = 13;
+  int32 sources_count = 14;
+}
+
+message PriceMatchProofSignal {
+  string auth_uid = 1;
+  string invoice_url = 2;
+  string merchant_name = 3;
+  string merchant_token = 4;
+  string invoice_number = 5;
+  int64 amount_due = 6;
+  string currency = 7;
+  repeated string product_skus = 8;
+  .google.protobuf.Timestamp invoice_date = 9;
+  string invoice_pdf_base64 = 10;
+  bool validated = 11;
+  repeated string failed_checks = 12;
+  string raw_invoice_json = 13;
+}
+
+message PromoProgramSignal {
+  string program_slug = 1;
+  string invite_id = 2;
+  string action = 3;
+  string referrer_user_id = 4;
+  string referrer_org_id = 5;
+  string recipient_user_id = 6;
+  string recipient_org_id = 7;
+  string recipient_email = 8;
+  string disqualification_reason = 9;
+  int64 referrer_reward_cents = 10;
+  int64 recipient_reward_cents = 11;
+}
+
+message RecordTrustEventsRequest {
+  repeated TrustEvent events = 1;
+}
+
+message RecordTrustEventsResponse {
+}

@@ -1,0 +1,338 @@
+{
+  "schemaVersion": 1,
+  "kind": "pi-devin-live-run",
+  "completedAt": "2026-10-19T15:16:59.826Z",
+  "node": "v24.14.0",
+  "piVersion": "1.3.0",
+  "planHash": "91708dcafb735dbe82c804eca64e9feb69e295f7e1d82f8f5699cbb9d4e1dd4a",
+  "authorization": {
+    "approvedAt": "2026-10-19T13:27:50.987Z",
+    "scope": {
+      "artifactSha256": "6e01f924f814a61a6966f9b3dfa0aba4e8f43e97e4fc45df0917eefe27f979eb",
+      "runtimeDigest": "56771ab9c895bde708e4064ce1877c19a1d8e3b305524f688f26fe35d30334ac",
+      "allowedUIDs": [
+        "swe-2-medium",
+        "swe-2-high"
+      ],
+      "maxModelCalls": 8,
+      "requireFreeTier": true,
+      "hosts": [
+        "server.codeium.com",
+        "api.devin.ai"
+      ],
+      "cases": [
+        "catalog",
+        "plain-medium",
+        "level-high",
+        "add-tool",
+        "fusion"
+      ],
+      "login": "user-run Pi TUI /login (Devin, browser PKCE) in a new temp state with model-call cap 0",
+      "apiKeys": "never created, entered or used; DEVIN_API_KEY/WINDSURF_API_KEY not passed to child processes",
+      "cleanup": "delete the temp state after the report; no server-side revocation"
+    }
+  },
+  "prepared": {
+    "archiveSha256": "6e01f924f814a61a6966f9b3dfa0aba4e8f43e97e4fc45df0917eefe27f979eb",
+    "runtimeDigest": {
+      "files": 47,
+      "sha256": "56771ab9c895bde708e4064ce1877c19a1d8e3b305524f688f26fe35d30334ac"
+    },
+    "packageDir": "artifact/package"
+  },
+  "results": [
+    {
+      "id": "catalog",
+      "durationMs": 1029,
+      "exitCode": 0,
+      "devinModels": 393,
+      "ledger": {
+        "modelCalls": [],
+        "modelStatuses": [],
+        "readCalls": {
+          "GetUserStatus": 1
+        },
+        "readStatuses": [],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "plain-medium",
+      "durationMs": 3202,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-medium"
+      ],
+      "usage": [
+        {
+          "input": 803,
+          "output": 40
+        }
+      ],
+      "tools": [],
+      "finalTextLength": 18,
+      "finalHasFive": false,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-medium"
+        ],
+        "modelStatuses": [
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 1
+        },
+        "readStatuses": [
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "level-high",
+      "durationMs": 5773,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-high"
+      ],
+      "usage": [
+        {
+          "input": 806,
+          "output": 46
+        }
+      ],
+      "tools": [],
+      "finalTextLength": 6,
+      "finalHasFive": false,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-high"
+        ],
+        "modelStatuses": [
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 1
+        },
+        "readStatuses": [
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "add-tool",
+      "durationMs": 6866,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "toolUse",
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-medium",
+        "swe-2-medium"
+      ],
+      "usage": [
+        {
+          "input": 823,
+          "output": 85
+        },
+        {
+          "input": 116,
+          "output": 25
+        }
+      ],
+      "tools": [
+        {
+          "tool": "add",
+          "isError": false,
+          "result": "5"
+        }
+      ],
+      "finalTextLength": 1,
+      "finalHasFive": true,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-medium",
+          "swe-2-medium"
+        ],
+        "modelStatuses": [
+          200,
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 2
+        },
+        "readStatuses": [
+          "GetUserStatus:200",
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "fusion",
+      "durationMs": 9451,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "toolUse",
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-medium",
+        "swe-2-medium"
+      ],
+      "usage": [
+        {
+          "input": 1067,
+          "output": 72
+        },
+        {
+          "input": 1252,
+          "output": 14
+        }
+      ],
+      "tools": [
+        {
+          "tool": "add",
+          "isError": false,
+          "result": "5"
+        },
+        {
+          "tool": "sidekick",
+          "isError": false
+        }
+      ],
+      "finalTextLength": 1,
+      "finalHasFive": true,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium"
+        ],
+        "modelStatuses": [
+          200,
+          200,
+          200,
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 3
+        },
+        "readStatuses": [
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    }
+  ],
+  "notRun": [],
+  "totals": {
+    "modelCalls": [
+      "swe-2-medium",
+      "swe-2-high",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium"
+    ],
+    "modelStatuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "readCalls": {
+      "token": 1,
+      "GetUserStatus": 9,
+      "GetCliModelConfigs": 1,
+      "GetCliTeamSettings": 1
+    },
+    "readStatuses": [
+      "token:200",
+      "GetUserStatus:200",
+      "GetCliModelConfigs:200",
+      "GetCliTeamSettings:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200"
+    ],
+    "blocked": [],
+    "catalog": {
+      "swe-2-medium": {
+        "present": true,
+        "disabled": false,
+        "costTier": "MODEL_COST_TIER_FREE",
+        "promoActive": true,
+        "promoEnd": {
+          "seconds": "1793516399",
+          "nanos": 999999999
+        }
+      },
+      "swe-2-high": {
+        "present": true,
+        "disabled": false,
+        "costTier": "MODEL_COST_TIER_FREE",
+        "promoActive": true,
+        "promoEnd": {
+          "seconds": "1793516399",
+          "nanos": 999999999
+        }
+      }
+    },
+    "halted": []
+  },
+  "outcome": "pass"
+}

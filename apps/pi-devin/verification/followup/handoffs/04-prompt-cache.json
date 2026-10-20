@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "task": "04",
+  "outcome": "pass",
+  "recordedAt": "2026-10-19T12:26:33.000Z",
+  "source": {
+    "baseRevision": "main@ebf1437",
+    "coreVersion": 1,
+    "files": {
+      "src/pi/models.ts": "141aebd98bf4c1e7e6c793fad620341b99943cc049843739da31f4fc307a479f",
+      "src/pi/provider.ts": "ccdcec3ab08f2564e6f9f4f8cba94a0fde4e789668b45102b1101537920624de",
+      "tests/provider-fixture.ts": "ca7c0da9f4b1c0d53d820edbc29042a9d6480acabb2dd569a2346e1a36c4ea5b",
+      "tests/pi-provider.test.ts": "d779cac2c2ba3518063d2e6678b755a40db4f04a708037e1bd97b0de2a1d3cc1",
+      "tests/pi-runtime.test.ts": "9c717f60f869f8603416cb4785894627ded5e114d620cf8923542a4e399f5d90",
+      "README.md": "b4de112aa4a26751951ab3b458778447b91c7318e6f580abcdbe2b6ed6abab4e"
+    },
+    "unchangedReadOnly": {
+      "src/pi/extension.ts": "40ead816ea052e6ccebf5dafb5b87403cb386d08f8f36ef0f8ed9dac8252facc",
+      "src/core/inference/messages.ts": "unchanged since ebf1437"
+    }
+  },
+  "predecessors": [
+  ],
+  "inputs": [
+    "proto/exa/chat_pb/chat.proto PromptCacheOptions and CacheControlType; api_server.proto system_prompt_cache_options",
+    "proto/exa/codeium_common_pb/codeium_common.proto server-side configs (ApiProviderConfig.cache_ttl_minutes, OpenAIInferenceConfig.extended_prompt_cache_retention)",
+    "tests/fixtures/model-catalog.json model family dimensions",
+    "Pi coding-agent 1.3.0 core/cache-warmer.js (getPromptCacheTtlMs, warming economics) and settings default cacheWarming=streaming"
+  ],
+  "cache": {
+    "retentionPolicies": {
+      "none": "No promptCacheOptions on any prompt (existing; verified).",
+      "short/default": "CACHE_CONTROL_TYPE_EPHEMERAL on user and tool-result prompts only, matching native; assistant prompts and system_prompt_cache_options are not marked.",
+      "long": "Accepted only when the selected variant's catalog dimension 'Prompt Cache Retention' is '24h' (90 fixture UIDs in 8 GPT families); the wire is identical to default because requests have no retention field. Other models, including SWE-2 and payload-hook model switches to them, are rejected before any network request.",
+      "resolution": "Same as Pi built-in providers: caller cacheRetention first, otherwise PI_CACHE_RETENTION=long from options.env then process.env means long, else short."
+    },
+    "ttlEvidence": {
+      "requestWire": "PromptCacheOptions has only type {UNSPECIFIED, EPHEMERAL}; no TTL or retention field.",
+      "modelMetadata": "'Prompt Cache Retention' is a per-family attribute (13 families, never mixed within a family): '24h' on 90 UIDs, unnamed order 0 on 31 UIDs (meaning unknown).",
+      "serverConfigs": "cache_ttl_minutes and extended_prompt_cache_retention exist only in server/model config messages; inferenceConfig is absent from the fixture and the historical live catalog.",
+      "catalogFreshness": "createDevinModelSource freshnessMs 300000 is local catalog freshness, not a prompt cache TTL.",
+      "piPromptCache": "Model.promptCache stays unset: '24h' is an upper retention label, not a guaranteed TTL, and Pi uses promptCache only for warming."
+    },
+    "warmingState": "unsupported (stopped). Pi plans warming only from Model.promptCache, which Devin models do not set, so status is inactive with reason 'cache lifetime unavailable' in streaming and idle modes; the extension's cache_warming_decision handler also returns stop for provider devin. Warming would replay the request as a new metered Devin trajectory step with unknown cost, and no native warming contract exists.",
+    "budgetOwnership": "No warming requests exist. Retention checks run before account probes and transport; rejected long requests send 0 requests and consume no budget."
+  },
+  "schema": {
+    "wireChanges": 0,
+    "reusedReport": "verification/followup/proto-check-10.json",
+    "reportSha256": "d3a55d7a09a057b03daf924c08cd81669bcf9a6647fea422faa4827578a87d42",
+    "inputsUnchanged": [
+      "proto/**",
+      "verification/followup/proto-provenance.json",
+      "src/core/protocol/protobuf.ts"
+    ]
+  },
+  "checks": [
+    {
+      "key": "cache-marks-and-long",
+      "cwd": "apps/pi-devin",
+      "command": "node --test tests/pi-provider.test.ts",
+      "observed": "9/9 pass: default marks [USER EPHEMERAL, SYSTEM none, TOOL EPHEMERAL]; long via caller option, provider env and process env on SWE-2 each error with 0 additional requests; caller short overrides env long; long on gpt-5-6-sol group sends gpt-5-6-sol-medium with the same marks and no system_prompt_cache_options"
+    },
+    {
+      "key": "warming",
+      "cwd": "apps/pi-devin",
+      "command": "node --test tests/pi-runtime.test.ts",
+      "observed": "11/11 pass: cacheWarming streaming and idle each send exactly 1 chat request, status inactive 'cache lifetime unavailable', no extra request after waiting; extension decision stop for devin, undefined for other providers"
+    },
+    {
+      "key": "stage2",
+      "cwd": "apps/pi-devin",
+      "command": "node --test tests/pi-provider.test.ts tests/pi-provider-hooks.test.ts tests/pi-lifecycle.test.ts tests/pi-runtime.test.ts",
+      "observed": "exit 0, 37/37 pass"
+    },
+    {
+      "key": "typecheck",
+      "cwd": ".",
+      "command": "pnpm --dir apps/pi-devin typecheck",
+      "observed": "exit 0"
+    },
+    {
+      "key": "offline",
+      "cwd": ".",
+      "command": "pnpm --dir apps/pi-devin verify:offline",
+      "observed": "exit 0, 183/183 pass (after revision 1)"
+    },
+    {
+      "key": "env-mutation-control",
+      "cwd": "apps/pi-devin",
+      "command": "node --test tests/pi-provider.test.ts with resolveCacheRetention forced to ignore PI_CACHE_RETENTION (temporary, restored)",
+      "observed": "8 pass, 1 fail; restored source 9/9 pass"
+    },
+    {
+      "key": "real-host-env",
+      "cwd": "apps/pi-devin",
+      "command": "node verification/scripts/host-contract.mjs --report <tmp> --only cache",
+      "observed": "pass 7/7: PI_CACHE_RETENTION=long on SWE-2 exits 1 with 0 chat requests; on gpt-5.6-sol medium sends gpt-5-6-sol-medium with EPHEMERAL marks"
+    }
+  ],
+  "limitations": [
+    "Real cache hits, server TTL and pricing were not observed; '24h' acceptance relies on server catalog metadata only.",
+    "The meaning of the unnamed 'Prompt Cache Retention' value (31 UIDs) is unknown; those models keep rejecting long.",
+    "Users who set PI_CACHE_RETENTION=long globally get a pre-request error on Devin models without the 24h label."
+  ],
+  "handoff": {
+    "decision": "continue",
+    "successors": [
+      "include the retention and warming checks in host verification"
+    ]
+  },
+  "revisions": [
+    {
+      "revision": 1,
+      "reason": "Task 05 host-contract on the real Pi 1.3.0 bin found PI_CACHE_RETENTION=long was ignored: Pi passes no cacheRetention from the environment and each provider resolves it, so SWE-2 requests were sent instead of rejected. Fixed as a bounded 04-owned change in src/pi/provider.ts; the README statement now holds on the real host.",
+      "files": [
+        "src/pi/provider.ts",
+        "tests/pi-provider.test.ts"
+      ]
+    }
+  ]
+}

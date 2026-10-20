@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "task": "12",
+  "outcome": "pass",
+  "source": {
+    "baseRevision": "main@a172358",
+    "coreVersion": 1,
+    "runtimeDigest": "f6c9a0f4f5b018889e5a9a5fc54b508aa990b820ae182e53640c74ce2b90f991",
+    "runtimeFiles": 55,
+    "files": {
+      "index.ts": "4bcca0491c327d52190900954e072eb5e0ca64d360c950aba88c75e17ec30038",
+      "package.json": "d367daa4358c2e0f66dd176c134cb5c5cff3a62d29b53501f14c1fd74de5488e",
+      "src/core/types.ts": "d5f79eb12c0f26cb199d37b3e500c482334525a623d3128b4e026dc1dc96c0ff",
+      "src/core/models/catalog.ts": "cf4bbbd63b69208a2bb71c76f0dd87f4169c65c46f34033d53fc317def276298",
+      "src/core/models/variants.ts": "a16d6f35964dfab3a3273229acd18f5eae69ba3fa23fa17a3469f803bfe15d48",
+      "src/pi/models.ts": "6b7b222549654f8696717d5d1cb95c33ab9cf9a1495fea45eee87c01996d9648",
+      "src/pi/provider.ts": "e43b7cc6b5417df8819868709855a9705e4f319bb3415698af017f3d07e51db0",
+      "src/pi/lifecycle.ts": "221fcf907ecb48579c349ea762be55e35c306d5842323001f57957239a417372",
+      "src/pi/extension.ts": "15c3b7afc896946b49d81f86cda3464c251cc9c2a6a1c4a0ab60249cbf3089d3",
+      "src/pi/fusion-command.ts": "0932808fe80f8069056c5c68ee91073128655302c3fb469f2411b4d5d898bc89",
+      "src/pi/fusion-picker.ts": "dbb528e73542b69b67174ad33de6670283e01e30aa71cd95c2d0e0097fdb34f9",
+      "src/pi/devin-command.ts": "eb2f624fcbaf78d0423b37f3c8fa3ff4c832d007ab1a4292cef7e82a3e3a479c",
+      "src/pi/devin-panel.ts": "422d78c5b97abf3957ce722b3a3986d088b3622eefac692c60f806a985de92c9",
+      "src/pi/devin-settings.ts": "c1bbc66feaaff6d0ffa197ef10d2c9455f290466f9f1a51e4c182d1df325cf46",
+      "src/pi/usage.ts": "b3155e117fa66e100ac0ee222a488a2744016dc75c2243768e1b0921c9c43273",
+      "README.md": "04e16f652bfef8e07a72582c5e2bd8cff33db7499cd40c5a34fc9cf471244f0f",
+      "AGENTS.md": "840375f3bd32bad3805e4fddfe3a9b4471d479299df93dcc1f294ebac182907f",
+      "proto/README.md": "e3d19fc228db50246dec79e69d328927244953b5f8873d696611c2e0aacf5bc9",
+      "verification/README.md": "0b0eda7cbb661df1410bfc6a710878ca4a4999089b29e63d67dfa0e0b53679d0",
+      "verification/inventory.json": "7e04318779387b671b5c3bea9d1e04430a4dc2e5b379fbe25484a147098fff9d",
+      "verification/scripts/host-contract.mjs": "21a6fc76c466485e2f486e172af4f523d06b491a227599fa2c93ade050e4fd85",
+      "verification/scripts/artifact-loader.mjs": "79e7c8dab9495c99219efeadf057ee200a7fc8c41572eee4f28ebc62c841698c",
+      "verification/followup/proto-provenance.json": "d3dd2d398b5406eae05aca8b0860df7a6ff24cc1a9101e6e1a7a7a9e25bb05fd",
+      "tests/fixtures/model-catalog.json": "973ab1b8e44bb388b614168a093bdde871cd2b4680de1c21829c848ca021f32e"
+    },
+    "protoTree": {
+      "files": 63,
+      "method": "sha256 of sorted 'path\\0sha256\\n' lines over proto/**/*.proto",
+      "sha256": "b255556d92ff15aee760b48e59ce99946a5d3b46fa35db833c5cf1b1bbbf5327"
+    }
+  },
+  "predecessors": [
+    {
+      "path": "verification/followup/handoffs/11-fusion-select-background.json",
+      "outcome": "pass",
+      "sha256": "37ddf303d93c97e7ebd9dd83a450d76bd6f6a6227b16441519b047a1bcfc9077",
+      "relation": "single fusion:devin model, /fusion storage and child-process sidekick are kept; /fusion gains the TUI picker"
+    },
+    {
+      "path": "verification/followup/handoffs/09-proto-sources.json",
+      "outcome": "pass",
+      "sha256": "aad4b37c164956a61993fbfe2df61ab4d7e705e851dac26002f6f3c810297181",
+      "relation": "the verify-proto contract (original descriptor + 4 observed additions, byte-level comparison, runtime codec cross-check) is kept; only the source tree was replaced"
+    }
+  ],
+  "userDecisions": "2026-10-20: replace proto/ with the reconstructed source tree; /devin manages two global toggles (recommended-only list, usage in the status line); the recommended filter shows exact recommended variants; usage is a short status line plus details in /devin, marked as last-fetched and not real-time; /fusion uses a single-screen two-column TUI (tab, type-to-search, ★ recommended, ● current, Enter saves) while RPC keeps select boxes and arguments.",
+  "proto": {
+    "origin": "the reconstructed source tree (63 .proto files; buf.yaml, README and check_*.mjs scripts were not copied)",
+    "adjustments": [
+      "exa/codeium_common_pb/codeium_common.proto: DisplayOption lists the observed DISPLAY_OPTION_WIRE_7 = 7 after the original values",
+      "exa/index_pb/index.proto: nested message Index.RepoStats declared before the map field indexing_progress",
+      "google/api/expr/v1alpha1/syntax.proto: nested message SourceInfo.Extension declared before the map fields"
+    ],
+    "beforeAdjustment": "verify-proto: 60/63 byte-identical; the 3 files differed only in declaration order (no field, number, type or option difference)",
+    "runtimeUnchanged": "resources/descriptors.pb (sha256 d0bcf2c0…) and src/core/protocol/protobuf.ts are unchanged",
+    "report": "verification/followup/proto-check-12.json"
+  },
+  "settings": {
+    "command": "/devin (TUI panel; /devin recommended on|off, /devin status on|off; no-argument report via notify outside TUI)",
+    "storage": "<agentDir>/pi-devin/settings.json, schemaVersion 1, { recommendedOnly, showUsageStatus }, defaults false/false, atomic rename, unreadable or invalid files read as defaults and are not overwritten",
+    "child": "PI_DEVIN_FUSION_CHILD=1 processes register neither /devin nor the status line and do not apply the filter"
+  },
+  "recommended": {
+    "source": "ClientModelConfig.is_recommended (field 11) already present in resources/descriptors.pb; parsed into ModelInfo.isRecommended and kept in the cached config",
+    "projection": "recommendedOnly lists usable recommended variants as uid: models plus fusion:devin; falls back to the default group list when the catalog marks none; group models and Fusion candidates carry devin.recommended / recommended",
+    "cache": "models-store persistence always holds the unfiltered list so offline restore keeps the full catalog; the filter is applied after restore",
+    "fixture": "tests/fixtures/model-catalog.json marks the 15 recommended UIDs recorded from the live catalog (adaptive is absent from the fixture)"
+  },
+  "usage": {
+    "account": "DevinProvider.getAccountUsage(): billing strategy, daily/weekly remaining percent and reset times from the last GetUserStatus seen at login validation or Pi's OAuth refresh check; cleared on logout, invalidation, re-login and shutdown",
+    "session": "sum of usage on devin assistant messages in the current branch (requests, input, output, cache read/write); sidekick child sessions excluded",
+    "budget": "DevinLifecycle.budget(): used/limit of the active or last execution",
+    "statusLine": "key devin-usage, TUI only, e.g. 'devin 100%/100% · ↑15 ↓10'; tokens only when the account is not quota-billed; cleared when the toggle is off",
+    "network": "no requests are made by /devin or the status line"
+  },
+  "picker": {
+    "component": "src/pi/fusion-picker.ts (pi-tui matchesKey/decodeKittyPrintable/fuzzyFilter/truncateToWidth)",
+    "keys": "tab/shift+tab/←→ switch column, ↑↓ move (wraps), pageUp/pageDown, typing filters, backspace edits, esc clears search then cancels, Enter saves both columns",
+    "layout": "two columns at width >= 60, otherwise the focused column with [LEAD] SIDEKICK tabs; recommended first; every line truncated to the width"
+  },
+  "hostDependency": "@earendil-works/pi-tui added as peerDependency '*' and devDependency catalog:devin (1.3.0); Pi's extension loader provides it as a virtual module; not bundled or installed by the archive; unreachable from cli.ts",
+  "checks": [
+    {
+      "key": "verify-proto",
+      "cwd": "apps/pi-devin",
+      "command": "node verification/scripts/verify-proto.mjs --report verification/followup/proto-check-12.json --mutation-control",
+      "observed": "ok, 63/63 byte-identical, 0 semantic and runtime-shape diffs, 18 runtime cases, mutation detected"
+    },
+    {
+      "key": "typecheck",
+      "cwd": ".",
+      "command": "pnpm --dir apps/pi-devin typecheck",
+      "observed": "exit 0"
+    },
+    {
+      "key": "offline-node24",
+      "cwd": "apps/pi-devin",
+      "command": "node --test tests/*.test.ts",
+      "observed": "exit 0, 191/191"
+    },
+    {
+      "key": "offline-node22",
+      "cwd": "apps/pi-devin",
+      "command": "<node-v22.19.0> --test tests/*.test.ts",
+      "observed": "exit 0, 191/191"
+    },
+    {
+      "key": "import-closure",
+      "cwd": "apps/pi-devin",
+      "command": "node verification/scripts/import-closure.mjs . --expect verification/inventory.json --report verification/followup/import-closure-12.json",
+      "observed": "ok; externals pi-ai, pi-coding-agent, pi-tui (2 modules), protobufjs; cli.ts reaches only protobufjs and node: builtins"
+    },
+    {
+      "key": "validate-source",
+      "cwd": "apps/pi-devin",
+      "command": "node verification/scripts/validate-package.mjs . --expect verification/inventory.json --pi-root \"$PI_ROOT\" --runtime --report verification/followup/package-check-12.json",
+      "observed": "pass, 100 checks incl. wildcard peer and not bundled for pi-tui, exact commands [devin, fusion]"
+    },
+    {
+      "key": "host-contract-node24",
+      "cwd": "apps/pi-devin",
+      "command": "node verification/scripts/host-contract.mjs --report verification/followup/host-contract-12-settings-node24.json",
+      "observed": "pass, 100/100 (new: devin-recommended-filter, devin-command-rpc, tui-fusion-picker, tui-devin-panel, tui-usage-status), runtime digest f6c9a0f4…"
+    },
+    {
+      "key": "host-contract-node22",
+      "cwd": "apps/pi-devin",
+      "command": "<node-v22.19.0> verification/scripts/host-contract.mjs --report verification/followup/host-contract-12-settings-node22.json",
+      "observed": "pass, 100/100"
+    },
+    {
+      "key": "lockfile",
+      "cwd": ".",
+      "command": "pnpm install --frozen-lockfile --offline --ignore-scripts",
+      "observed": "exit 0; lockfile diff is only the pi-tui catalog and importer entries"
+    }
+  ],
+  "findingsFixed": [
+    "Persisting the filtered list would have restored only recommended variants after a restart; persistence now always stores the full list.",
+    "relativeTime showed '곧' for a fetch a few seconds ago; it now shows '방금'.",
+    "A model-list refresh failure after a successful save reverted the panel; the save is kept and a warning is shown."
+  ],
+  "limitations": [
+    "Quota values reflect the last account status the provider saw; they are not polled. Credits, per-request cost and usage history are not shown (not available or not verified for this account type).",
+    "Session totals cover the lead conversation only; sidekick child sessions are not added.",
+    "Recommended flags come from the catalog at refresh time; caches written before this change have no flags until the next network refresh, and the filter falls back to the full list meanwhile.",
+    "The TUI picker and panel were exercised through a PTY with the mock service on macOS arm64 only; no real Devin service, login or other OS was used.",
+    "The archive from task 06 (de8db88b…) is stale for this runtime; 07 was not re-run."
+  ],
+  "handoff": {
+    "decision": "continue",
+    "successors": [
+      "rebuild the archive for runtime digest f6c9a0f4… and repeat the extracted checks",
+      "re-run only with a new plan hash and explicit approval"
+    ]
+  }
+}

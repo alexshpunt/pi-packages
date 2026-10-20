@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "task": "11",
+  "outcome": "pass",
+  "source": {
+    "baseRevision": "main@653ddce",
+    "coreVersion": 1,
+    "runtimeDigest": "b13f1afaa9f719405c71da8eec45a968df5dbcc372c723d5250dadbdb6a5d2ce",
+    "runtimeFiles": 50,
+    "files": {
+      "index.ts": "2906f682a4bbc337555d9c4acd55ba9d8c2985e59650022f361d865f9b25412d",
+      "src/pi/models.ts": "1131f2bf09b0f59a306ad4e42e7d4087d5e7297aa34878775f3c0671d10bec4c",
+      "src/pi/fusion-settings.ts": "6135afc5cee52e913f69a40a6ed67f48580ecb787f12f9526e5b7f2bc551a953",
+      "src/pi/fusion-command.ts": "0f5815fbe773e89101219e119d19812f00ece6f2ce07a68874fedd6def252158",
+      "src/pi/sidekick.ts": "9630e2a5d760aedf0851b882614dc157128832933776ddd2532eeba7be2545dd",
+      "src/pi/sidekick-runtime.ts": "7470b0a5870d570c4e1a337caa1225c251755e08f4d168a6d90d311a7f4f4286",
+      "src/pi/extension.ts": "eef1cbb99a885e05924a1cb1c73d6a27268e5151f658092cc93cf4ca3b2457e3",
+      "src/pi/provider.ts": "a0bd1018e8348e4a15ccb48ce4ad216a1b0bb96f8fe9d7801316643d4121574f",
+      "src/pi/lifecycle.ts": "cb79be1cb975fd4edda84dd933d2808d06bc52d346571e82a3b6aebb19ecd253",
+      "README.md": "fc21abdef834437883e319f0fd46902cf11a562ec26985329f884eb9813fa32e",
+      "AGENTS.md": "2980772ae742ab38839e52d3ca90781c0dc1cf46caa2b544281f63a6d033efd9",
+      "verification/README.md": "d8044a4c7c802804f8cbb502cdddf00bd632ede2802e45edf3e0d2583e590933",
+      "verification/inventory.json": "a978663509f3e6993aeafaf3b03ec5f225873df85028e87d7b50e5f73c2bd3f1",
+      "verification/scripts/host-contract.mjs": "4073b5b398e813d2b8d3de43574b1150e57da23cfa357d96f4b63f72099545e1",
+      "verification/scripts/host-contract/mock-devin.mjs": "ebcaaecc2adfc4da3bbca5cfc795d17572e6bba566ef0df434df8bcc8485a75e",
+      "verification/scripts/import-closure.mjs": "17bec06869966871d94a6da452cd4e7018ee439f4d95064be27d20f314e57fc2",
+      "verification/scripts/live/live-check.mjs": "b75eeb470b4af7e97222d1ddf0293f807f225dd8813ad91babb23c72d6a5dbfb",
+      "tests/models.test.ts": "16112492501965af11251bdffb99f52ce48aa8762af5782bbbb925df2bea07aa",
+      "tests/model-source.test.ts": "e74406b2b291813c18fe7f02d232f38ac9db4a723c8de19adb10931b0d906788",
+      "tests/pi-integration.test.ts": "6539f9b996d3c8903c8525a4992c9dcdaff4cf425a84d5be8d345262a6e0f2a9",
+      "tests/pi-lifecycle.test.ts": "aa7d5b440d7f92c589a851e6669c8354eef399c7a8b2164c69e201667d5f6cf2"
+    }
+  },
+  "predecessors": [
+    { "path": "verification/followup/handoffs/10-pi-fusion.json", "outcome": "pass", "relation": "replaced: per-group fusion models and the in-process synchronous sidekick" },
+    { "path": "verification/followup/handoffs/07-live-check.json", "outcome": "pass", "relation": "historical live evidence for the 10 path only" }
+  ],
+  "userDecisions": "2026-10-20: single Devin Fusion entry in /model; /fusion picks lead group and sidekick model, saved globally; sidekick may run in the background like the CLI (default wait, block:false background, report wakes the lead); per-handoff sidekick budget from PI_DEVIN_MAX_MODEL_CALLS; sidekick tools equal the lead's active tools without Fusion tools.",
+  "reference": "Design follows UniPi @pi-unipi/fusion 2.20.5 (MIT, Neuron-Mr-White/UniPi 6ac5da3): child Pi RPC sidekick, followUp report delivery, steer while busy. No code was copied.",
+  "fusion": {
+    "model": { "id": "fusion:devin", "name": "Devin Fusion · <lead group> + <sidekick model> · 비용 미상", "thinking": "lead group's levels", "defaultPair": "group of swe-2-medium + uid:swe-2-medium", "fallback": "each saved value outside the current catalog falls back to its default; no default means no Fusion entry" },
+    "selection": { "command": "/fusion (interactive: lead group → sidekick group → sidekick variant) or /fusion <leadID> <sidekickID>", "storage": "<agentDir>/pi-devin/fusion.json, schemaVersion 1, atomic rename; unreadable or invalid files are ignored and not overwritten", "apply": "provider.refreshFusion() then modelRegistry.refresh({ providers: ['devin'], allowNetwork: false }); pi.setModel() when the current model is Fusion" },
+    "sidekick": {
+      "process": "lead's Node (execArgv without inspect flags) + Pi CLI, --mode rpc, --session <agentDir>/pi-devin/sidekick/<lead session id>.jsonl or --no-session, --model devin/<sidekick uid>, --thinking <its level>, --append-system-prompt <sidekick prompt>, -e <package root>, --tools <lead active tools without sidekick> or --no-tools, plus the lead CLI's -e/--extension/--no-extensions/--no-mcp",
+      "env": "inherits the lead environment and agent dir (same OAuth storage); PI_DEVIN_FUSION_CHILD=1 disables Fusion model/tool/command in the child",
+      "tool": "sidekick({ message, block? }): default waits and returns the report as the tool result; block:false returns immediately; busy → RPC steer; user input while waiting → background; lead abort → RPC abort and no delivery; background report → pi.sendMessage(devin-sidekick-report, { deliverAs: 'followUp', triggerTurn: true }) once",
+      "lifecycle": "lazy spawn per lead session; restart when idle and model/tools/session file change; other sessions' children closed on session_start; all closed on session_shutdown",
+      "budget": "lead execution budget unchanged; each handoff is a child run with its own PI_DEVIN_MAX_MODEL_CALLS budget"
+    },
+    "removed": ["per-group fusion:<group> models", "provider.streamSidekick and DevinConversation", "lifecycle acquire isSidekick option"]
+  },
+  "checks": [
+    { "key": "typecheck", "cwd": ".", "command": "pnpm --dir apps/pi-devin typecheck", "observed": "exit 0" },
+    { "key": "offline-node24", "cwd": ".", "command": "pnpm --dir apps/pi-devin verify:offline", "observed": "exit 0, 185/185" },
+    { "key": "offline-node22", "cwd": "apps/pi-devin", "command": "<node-v22.19.0> --test tests/*.test.ts", "observed": "exit 0, 185/185" },
+    { "key": "sdk-fusion", "cwd": "apps/pi-devin", "command": "node --test tests/pi-integration.test.ts", "observed": "6/6: child launch arguments/env/cwd, report as tool result, child reuse, tool deactivation, shutdown kills child; block:false background with one followUp wake, steer while busy, user input during wait → background then delivered, lead abort → RPC abort and no delivery; child mode registers nothing; /fusion saves, refreshes snapshots and current model; settings file robustness" },
+    { "key": "mutation-controls", "cwd": "apps/pi-devin", "command": "temporary edits to src/pi/sidekick.ts (restored)", "observed": "input interrupt disabled → background test cancelled by its 30s timeout; report delivery disabled → 1 failure; restored source 6/6" },
+    { "key": "models", "cwd": "apps/pi-devin", "command": "node --test tests/models.test.ts tests/model-source.test.ts tests/model-store.test.ts", "observed": "pass; 327 models (65 family + 261 uid + 1 fusion), choices 65 leads, saved/default/fallback/false cases" },
+    { "key": "import-closure", "cwd": "apps/pi-devin", "command": "node verification/scripts/import-closure.mjs . --expect verification/inventory.json", "observed": "ok: 45 modules, resources package.json and resources/descriptors.pb, 0 problems" },
+    { "key": "host-node24", "cwd": "apps/pi-devin", "command": "node verification/scripts/host-contract.mjs --report verification/followup/host-contract-11-node24.json", "report": "verification/followup/host-contract-11-node24.json", "reportSha256": "504c04bfae797983b804c57edfa50a466020c9e7912d656077610c3bd1d23046", "observed": "exit 0, 95/95; real child Pi sidekick under the same sandbox and guard (2 guarded processes), wait and background sequences, report once, sidekick session file, no descendant processes left" },
+    { "key": "host-node22", "cwd": "apps/pi-devin", "command": "<node-v22.19.0> verification/scripts/host-contract.mjs --report verification/followup/host-contract-11-node22.json", "report": "verification/followup/host-contract-11-node22.json", "reportSha256": "09438f7c8e8d68de400fc67d7aa5c5146b6a73263dfeb10b6765a45c6b7dc36f", "observed": "exit 0, 95/95, same runtime digest" }
+  ],
+  "findingsFixed": [
+    "Pi keeps model and availability snapshots; /fusion now refreshes them without network so /model and RPC lists show the new pair even when Fusion is not the current model (found by host-contract).",
+    "Extensions loaded only with -e in the lead were missing in the child; the lead CLI's extension-selection arguments are now forwarded."
+  ],
+  "limitations": [
+    "The interactive /fusion selector was exercised through the command handler with arguments, not by driving the TUI selector keys.",
+    "When a background report arrives while the lead is still running, Pi continues it as a follow-up in the same run; otherwise it starts a new run. Both were accepted by the host check.",
+    "Sidekick session files under <agentDir>/pi-devin/sidekick/ are not cleaned up automatically.",
+    "The child loads the user's installed packages and MCP servers like a normal Pi start unless the lead CLI disabled them.",
+    "No real Devin service was used. 06 must rebuild the archive and 07 must re-run the Fusion case with new approval."
+  ],
+  "handoff": {
+    "decision": "continue",
+    "successors": [
+      "rebuild the archive for runtime digest b13f1afa…",
+      "the plan now uses fusion:devin; new plan hash needs a new approval"
+    ]
+  }
+}

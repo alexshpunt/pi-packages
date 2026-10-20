@@ -1,0 +1,127 @@
+{"latency":1.6765930050000002,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":23667082,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3","responseHeader":{"x-request-id":"fixture-value"}}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":1.7022525539999998,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":49326781,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":1.733611754,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":80685931,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":1.7786796340000002,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":125753771,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":1.7941231640000002,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":141197171,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":1.823096304,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":170170441,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":1.852900034,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":199974141,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":1.8830422439999999,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":230116141,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":1.912822474,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":259896361,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":1.943258174,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":290331871,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":1.9736688140000003,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":320742931,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.003822303,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":350896250,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.033294263,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":380368370,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.0633031130000004,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":410377010,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.094105603,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":441179640,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.124737063,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":471810970,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.154937843,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":502012010,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.184465323,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":531539100,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.214598063,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":561672030,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.2435761430000003,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":590650310,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.2737644030000004,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":620838590,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.304532732,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":651606489,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.3347680219999996,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":681841969,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.365406552,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":712480619,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.395284152,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":742358069,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.4256145819999997,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":772688479,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.455288622,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":802362699,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.4962598820000004,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":843333969,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.515530482,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":862604609,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.546696532,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":893770689,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.576345731,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":923419818,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.6069816809999997,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":954055638,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.644080121000001,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":991154278,"seconds":1785422931},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.667411900999999,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":14485828,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.698751921,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":45825998,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.727260241,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":74334358,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.757077001,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":104151098,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.7876987810000005,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":134772948,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.8188591710000006,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":165933278,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.8479360910000002,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":195010138,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.8787190099999997,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":225793077,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.90895441,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":256028627,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaThinking":"fixture-value","latency":2.9396432599999995,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":286717427,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":2,"latency":2.9705317700000005,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":317605887,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":4,"latency":2.9995742499999998,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":346648367,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":5,"latency":3.02928527,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":376359137,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":2,"latency":3.05876901,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":405843007,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":2,"latency":3.089607139999999,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":436681277,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":2,"latency":3.11942002,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":466494137,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":4,"latency":3.14886233,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":495936127,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":2,"latency":3.1791750889999992,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":526248816,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":4,"latency":3.208942509,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":556016456,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":4,"latency":3.239276568999999,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":586350686,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":3,"latency":3.270825189,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":617899376,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":2,"latency":3.3011685589999993,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":648242496,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":3,"latency":3.3311246889999993,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":678198246,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":2,"latency":3.3623633989999986,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":709437426,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":1,"latency":3.400372229,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":747446406,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":2,"latency":3.4229518789999993,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":770025846,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":4,"latency":3.451750207999999,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":798824395,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"deltaText":"fixture-value","deltaTokens":2,"latency":3.4837549679999995,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":830828875,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"latency":3.5116936279999997,"messageId":"fixture-id-1","requestId":"fixture-id-2","stopReason":"ExaCodeiumCommonPb_StopReason_STOP_REASON_STOP_PATTERN","timestamp":{"nanos":858767525,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","modelUid":"fixture-id-3"}}
+[----------------------next message----------------------]
+{"latency":3.5161306780000006,"messageId":"fixture-id-1","requestId":"fixture-id-2","timestamp":{"nanos":863204855,"seconds":1785422932},"usage":{"apiProvider":"ExaCodeiumCommonPb_APIProvider_API_PROVIDER_DECART","cacheReadTokens":12672,"inputTokens":317,"modelUid":"fixture-id-3","outputTokens":107,"responseHeader":{"x-request-id":"fixture-value"}}}
+[----------------------next message----------------------]
+{"messageId":"fixture-id-1","responseDimensionGroups":[{"dimensions":[{"cumulativeMetric":{"label":"fixture-value","pluralTail":"fixture-value","tail":"fixture-value","value":1},"uid":"fixture-value"},{"metric":{"label":"fixture-value","value":"fixture-value"},"uid":"fixture-value"}],"title":"fixture-value"},{"dimensions":[{"cumulativeMetric":{"label":"fixture-value","pluralTail":"fixture-value","tail":"fixture-value","value":317},"uid":"fixture-value"},{"cumulativeMetric":{"label":"fixture-value","pluralTail":"fixture-value","tail":"fixture-value","value":107},"uid":"fixture-value"},{"cumulativeMetric":{"label":"fixture-value","pluralTail":"fixture-value","tail":"fixture-value","value":12672},"uid":"fixture-value"}],"title":"fixture-value"}],"timestamp":{"nanos":863204855,"seconds":1785422932}}

@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package google.api.expr.v1alpha1;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
+
+option java_package = "com.google.api.expr.v1alpha1";
+option java_outer_classname = "ValueProto";
+option java_multiple_files = true;
+option go_package = "google.golang.org/genproto/googleapis/api/expr/v1alpha1;expr";
+option cc_enable_arenas = true;
+
+message Value {
+  oneof kind {
+    .google.protobuf.NullValue null_value = 1;
+    bool bool_value = 2;
+    int64 int64_value = 3;
+    uint64 uint64_value = 4;
+    double double_value = 5;
+    string string_value = 6;
+    bytes bytes_value = 7;
+    EnumValue enum_value = 9;
+    .google.protobuf.Any object_value = 10;
+    MapValue map_value = 11;
+    ListValue list_value = 12;
+    string type_value = 15;
+  }
+}
+
+message EnumValue {
+  string type = 1;
+  int32 value = 2;
+}
+
+message ListValue {
+  repeated Value values = 1;
+}
+
+message MapValue {
+  repeated MapValue.Entry entries = 1;
+  message Entry {
+    Value key = 1;
+    Value value = 2;
+  }
+
+}

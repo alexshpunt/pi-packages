@@ -1,0 +1,752 @@
+syntax = "proto3";
+
+package exa.user_analytics_pb;
+
+import "buf/validate/validate.proto";
+import "exa/codeium_common_pb/codeium_common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/Exafunction/Exafunction/exa/user_analytics_pb";
+
+enum QueryDataSource {
+  QUERY_DATA_SOURCE_UNSPECIFIED = 0;
+  QUERY_DATA_SOURCE_USER_DATA = 1;
+  QUERY_DATA_SOURCE_CHAT_DATA = 2;
+  QUERY_DATA_SOURCE_COMMAND_DATA = 3;
+  QUERY_DATA_SOURCE_CASCADE_DATA = 4;
+  QUERY_DATA_SOURCE_PCW_DATA = 5;
+  QUERY_DATA_SOURCE_CASCADE_LINES_ANALYTICS = 6;
+  QUERY_DATA_SOURCE_CASCADE_TOOL_ANALYTICS = 7;
+}
+
+enum QueryAggregation {
+  QUERY_AGGREGATION_UNSPECIFIED = 0;
+  QUERY_AGGREGATION_COUNT = 1;
+  QUERY_AGGREGATION_SUM = 2;
+  QUERY_AGGREGATION_AVG = 3;
+  QUERY_AGGREGATION_MAX = 4;
+  QUERY_AGGREGATION_MIN = 5;
+}
+
+enum QueryFilter {
+  QUERY_FILTER_UNSPECIFIED = 0;
+  QUERY_FILTER_EQUAL = 1;
+  QUERY_FILTER_NOT_EQUAL = 2;
+  QUERY_FILTER_GREATER_THAN = 3;
+  QUERY_FILTER_LESS_THAN = 4;
+  QUERY_FILTER_GE = 5;
+  QUERY_FILTER_LE = 6;
+}
+
+enum IDEType {
+  IDE_TYPE_UNSPECIFIED = 0;
+  IDE_TYPE_WINDSURF = 1;
+  IDE_TYPE_JETBRAINS = 2;
+  IDE_TYPE_PLUGINS = 3;
+  IDE_TYPE_CLI = 4;
+}
+
+message QuerySelectionField {
+  QueryAggregation aggregation_function = 1;
+  string field = 2;
+  string name = 3;
+}
+
+message QueryFilterField {
+  QueryFilter filter = 1;
+  string name = 2;
+  string value = 3;
+}
+
+message QueryAggregationField {
+  string field = 1;
+  string name = 2;
+}
+
+message QueryOrderField {
+  bool ascending = 1;
+  string name = 2;
+}
+
+message CustomQueryRequest {
+  QueryDataSource data_source = 1;
+  repeated QuerySelectionField selections = 2;
+  repeated QueryFilterField filters = 3;
+  repeated QueryAggregationField aggregations = 5;
+  repeated QueryOrderField orderings = 4;
+  bool use_real_api_key = 6;
+}
+
+message QueryResponseItem {
+  map<string, string> item = 1;
+}
+
+message CustomQueryResponse {
+  repeated QueryResponseItem response_items = 1;
+}
+
+message GetAnalyticsRequest {
+  repeated QueryRequest query_requests = 2;
+  .google.protobuf.Timestamp start_timestamp = 3;
+  .google.protobuf.Timestamp end_timestamp = 4;
+  string group_id = 6;
+  repeated string api_keys = 7;
+  repeated string group_ids = 8;
+  repeated IDEType ide_types = 9;
+  reserved 1;
+  reserved 5;
+}
+
+message CascadeAnalyticsRequest {
+  string service_key = 1;
+  string group_name = 2;
+  repeated string emails = 3;
+  repeated string ide_types = 4;
+  .google.protobuf.Timestamp start_timestamp = 5;
+  .google.protobuf.Timestamp end_timestamp = 6;
+  repeated QueryRequest query_requests = 7;
+  string multitenant_team_id = 8;
+  string secret = 9;
+  string team_id = 10;
+}
+
+message CascadeAnalyticsResponse {
+  repeated QueryResult query_results = 1;
+}
+
+message GetAnalyticsResponse {
+  repeated QueryResult query_results = 1;
+}
+
+message AnalyticsRequest {
+  repeated CustomQueryRequest query_requests = 1;
+  string service_key = 2;
+  string group_name = 3;
+  .google.protobuf.Timestamp start_timestamp = 4;
+  .google.protobuf.Timestamp end_timestamp = 5;
+  string multitenant_team_id = 6;
+  string secret = 7;
+  string team_id = 8;
+  AcuConsumptionQuery acu_consumption_query = 9;
+}
+
+message AnalyticsResponse {
+  repeated CustomQueryResponse query_results = 1;
+  AcuConsumptionResponse acu_consumption = 2;
+}
+
+message UserPageAnalyticsRequest {
+  string service_key = 1;
+  string group_name = 2;
+  .google.protobuf.Timestamp start_timestamp = 3;
+  .google.protobuf.Timestamp end_timestamp = 4;
+  string multitenant_team_id = 5;
+  string secret = 6;
+  string team_id = 7;
+}
+
+message UserPageAnalyticsResponse {
+  repeated .exa.codeium_common_pb.UserTableStats user_table_stats = 1;
+  .google.protobuf.Timestamp billing_cycle_start = 2;
+  .google.protobuf.Timestamp billing_cycle_end = 3;
+  string billing_mode = 4;
+}
+
+message QueryRequest {
+  oneof request_type {
+    QueryRequestCompletionStats completion_stats = 1;
+    QueryRequestCompletionsByDay completions_by_day = 2;
+    QueryRequestCompletionsByLanguage completions_by_language = 3;
+    QueryRequestAllUsersCompletionStats all_users_completion_stats = 4;
+    QueryRequestAllUsersCompletionsByDay all_users_completions_by_day = 5;
+    QueryRequestAllUsersCompletionsByLanguage all_users_completions_by_language = 6;
+    QueryRequestCompletionsByIde completions_by_ide = 7;
+    QueryRequestCompletionsByIde all_users_completions_by_ide = 8;
+    QueryRequestCompletionsByApiKey completions_by_api_key = 9;
+    QueryRequestCompletionsByRepository completions_by_repository = 19;
+    QueryRequestChatsByDay chats_by_day = 10;
+    QueryRequestAllChatsByDay all_users_chats_by_day = 11;
+    QueryRequestChatStatsByModel chats_by_model = 12;
+    QueryRequestAllChatStatsByModel all_users_chats_by_model = 13;
+    QueryRequestActiveUserCount active_user_count = 14;
+    QueryRequestPercentCodeWritten percent_code_written = 15;
+    QueryRequestCharsPerOpportunity chars_per_opportunity = 16;
+    QueryRequestChatStats chat_stats = 17;
+    QueryRequestActiveDaysByApiKey active_days_by_api_key = 18;
+    QueryRequestCommandStats command_stats = 20;
+    CustomQueryRequest custom_query = 21;
+    UserPageAnalyticsRequest user_page_analytics = 22;
+    QueryRequestCascadeLines cascade_lines = 23;
+    QueryRequestCascadeToolUsage cascade_tool_usage = 24;
+    QueryRequestCascadeRuns cascade_runs = 25;
+    QueryRequestAllUsersCascadeLines all_users_cascade_lines = 26;
+    QueryRequestAllUsersCascadeToolUsage all_users_cascade_tool_usage = 27;
+    QueryRequestAllUsersCascadeRuns all_users_cascade_runs = 28;
+    QueryRequestAllUsersDailyActiveUserCounts all_users_daily_active_user_counts = 29;
+    QueryRequestAllUsersCommandStats all_users_command_stats = 30;
+    QueryRequestIndividualPercentCodeWritten individual_percent_code_written = 31;
+    QueryRequestCompletionsByLanguagePerUser completions_by_language_per_user = 32;
+  }
+}
+
+message QueryResult {
+  oneof result_type {
+    QueryResultCompletionStats completion_stats = 1;
+    QueryResultCompletionsByDay completions_by_day = 2;
+    QueryResultCompletionsByLanguage completions_by_language = 3;
+    QueryResultCompletionsByIde completions_by_ide = 4;
+    QueryResultCompletionsByApiKey completions_by_api_key = 5;
+    QueryResultCompletionsByRepository completions_by_repository = 13;
+    QueryResultChatsByDay chats_by_day = 6;
+    QueryResultChatStatsByModel chats_by_model = 7;
+    QueryResultActiveUserCount active_user_count = 8;
+    QueryResultPercentCodeWritten percent_code_written = 9;
+    QueryResultCharsPerOpportunity chars_per_opportunity = 10;
+    QueryResultChatStats chat_stats = 11;
+    QueryResultActiveDaysByApiKey active_days_by_api_key = 12;
+    QueryResultError error = 14;
+    QueryResultCommandStats command_stats = 15;
+    CustomQueryResponse custom_stats = 16;
+    UserPageAnalyticsResponse user_page_analytics = 17;
+    QueryResultCascadeLines cascade_lines = 18;
+    QueryResultCascadeToolUsage cascade_tool_usage = 19;
+    QueryResultCascadeRuns cascade_runs = 20;
+    QueryResultDailyActiveUserCounts daily_active_user_counts = 21;
+    QueryResultCompletionsByLanguagePerUser completions_by_language_per_user = 22;
+  }
+}
+
+message DailyActiveUserCount {
+  .google.protobuf.Timestamp day = 1;
+  int64 active_user_count = 2;
+}
+
+message QueryResultDailyActiveUserCounts {
+  repeated DailyActiveUserCount daily_active_user_counts = 1;
+}
+
+message QueryRequestAllUsersDailyActiveUserCounts {
+}
+
+message QueryRequestCompletionStats {
+}
+
+message QueryResultCompletionStats {
+  .exa.codeium_common_pb.CompletionStatistics completion_statistics = 1;
+}
+
+message QueryRequestCompletionsByDay {
+  string time_zone = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+}
+
+message QueryResultCompletionsByDay {
+  repeated .exa.codeium_common_pb.CompletionByDateEntry completions_by_day = 1;
+}
+
+message QueryRequestCompletionsByLanguage {
+}
+
+message QueryResultCompletionsByLanguage {
+  repeated .exa.codeium_common_pb.CompletionByLanguageEntry completions_by_language = 1;
+}
+
+message QueryRequestCompletionsByLanguagePerUser {
+}
+
+message CompletionsByLanguagePerUserEntry {
+  string api_key = 1;
+  repeated .exa.codeium_common_pb.CompletionByLanguageEntry completions_by_language = 2;
+}
+
+message QueryResultCompletionsByLanguagePerUser {
+  repeated CompletionsByLanguagePerUserEntry entries = 1;
+}
+
+message QueryRequestCompletionsByIde {
+}
+
+message QueryResultCompletionsByIde {
+  map<string, .exa.codeium_common_pb.CompletionStatistics> completions_by_ide = 1;
+}
+
+message QueryRequestCompletionsByRepository {
+}
+
+message QueryResultCompletionsByRepository {
+  map<string, .exa.codeium_common_pb.CompletionStatistics> completions_by_repository = 1;
+}
+
+message QueryRequestChatsByDay {
+  string time_zone = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+}
+
+message QueryResultChatsByDay {
+  repeated .exa.codeium_common_pb.ChatStatsByDateEntry chats_by_day = 1;
+}
+
+message QueryRequestAllChatsByDay {
+  string time_zone = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+}
+
+message QueryRequestActiveUserCount {
+  string time_zone = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  .google.protobuf.Timestamp start_timestamp = 2;
+  .google.protobuf.Timestamp end_timestamp = 3;
+}
+
+message QueryRequestActiveUserCountByUsers {
+  string time_zone = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+}
+
+message QueryRequestDailyActiveUserCounts {
+}
+
+message QueryRequestChatStatsByModel {
+}
+
+message QueryRequestAllChatStatsByModel {
+}
+
+message QueryResultChatStatsByModel {
+  repeated .exa.codeium_common_pb.ChatStatsByModelEntry chats_by_model = 1;
+}
+
+message QueryRequestAllUsersCompletionsByDay {
+  string time_zone = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+}
+
+message QueryRequestAllUsersCompletionsByLanguage {
+}
+
+message QueryRequestAllUsersCompletionStats {
+}
+
+message QueryRequestCompletionsByApiKey {
+}
+
+message QueryResultCompletionsByApiKey {
+  map<string, .exa.codeium_common_pb.CompletionStatistics> completions_by_api_key = 1;
+}
+
+message QueryResultActiveUserCount {
+  int64 active_user_count = 1;
+}
+
+message QueryRequestIndividualPercentCodeWritten {
+}
+
+message QueryRequestPercentCodeWritten {
+}
+
+message QueryResultPercentCodeWritten {
+  double percent_code_written = 1;
+  int64 codeium_bytes_by_autocomplete = 2;
+  int64 codeium_bytes_by_command = 3;
+  int64 codeium_bytes_by_supercomplete = 7;
+  int64 codeium_bytes_by_cascade = 8;
+  int64 user_bytes = 4;
+  int64 codeium_bytes = 5;
+  int64 total_bytes = 6;
+}
+
+message QueryRequestCharsPerOpportunity {
+}
+
+message QueryResultCharsPerOpportunity {
+  double chars_per_opportunity = 1;
+  uint64 num_bytes_accepted = 2;
+  uint64 num_completion_attempts = 3;
+}
+
+message QueryRequestChatStats {
+}
+
+message QueryResultChatStats {
+  .exa.codeium_common_pb.ChatStats chat_stats = 1;
+}
+
+message QueryRequestCommandStats {
+}
+
+message QueryRequestAllUsersCommandStats {
+}
+
+message QueryResultCommandStats {
+  .exa.codeium_common_pb.CommandStats command_stats = 1;
+}
+
+message QueryRequestActiveDaysByApiKey {
+}
+
+message QueryResultActiveDaysByApiKey {
+  map<string, uint32> active_days_by_api_key = 1;
+}
+
+message QueryResultError {
+  string error = 1;
+}
+
+message QueryRequestCascadeLines {
+}
+
+message CascadeLineQueryEntry {
+  .google.protobuf.Timestamp day = 1;
+  int64 lines_suggested = 2;
+  int64 lines_accepted = 3;
+}
+
+message QueryResultCascadeLines {
+  repeated CascadeLineQueryEntry cascade_lines = 1;
+}
+
+message QueryRequestCascadeToolUsage {
+}
+
+message CascadeToolUsageQueryEntry {
+  .google.protobuf.Timestamp day = 1;
+  string tool = 2;
+  int64 count = 3;
+}
+
+message QueryResultCascadeToolUsage {
+  repeated CascadeToolUsageQueryEntry cascade_tool_usage = 1;
+}
+
+message QueryRequestCascadeRuns {
+}
+
+message CascadeRunsQueryEntry {
+  .google.protobuf.Timestamp day = 1;
+  string model = 2;
+  string mode = 3;
+  int64 messages_sent = 4;
+  int64 prompts_used = 5;
+  string cascade_id = 6;
+}
+
+message QueryResultCascadeRuns {
+  repeated CascadeRunsQueryEntry cascade_runs = 1;
+}
+
+message QueryRequestAllUsersCascadeRuns {
+}
+
+message QueryRequestAllUsersCascadeToolUsage {
+}
+
+message QueryRequestAllUsersCascadeLines {
+}
+
+message GetGlobalLeaderboardApiKeyRequest {
+}
+
+message GetGlobalLeaderboardApiKeyResponse {
+  string api_key = 1;
+}
+
+message GetBigQueryAnalyticsRequest {
+  string api_key = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  .google.protobuf.Timestamp start_timestamp = 2;
+  .google.protobuf.Timestamp end_timestamp = 3;
+  repeated BigQueryRequest query_requests = 4;
+}
+
+message GetBigQueryAnalyticsResponse {
+  repeated BigQueryResult query_results = 1;
+}
+
+message BigQueryRequest {
+  oneof request_type {
+    BigQueryLeaderboardRequest leaderboard_request = 1;
+  }
+}
+
+message BigQueryResult {
+  oneof result_type {
+    BigQueryResultError error = 1;
+    BigQueryLeaderboardResult leaderboard_result = 2;
+  }
+}
+
+message BigQueryResultError {
+  string error = 1;
+}
+
+message BigQueryLeaderboardRequest {
+}
+
+message BigQueryLeaderboardResult {
+  repeated ModelStats model_stats = 1;
+  .google.protobuf.Timestamp last_queried_at = 2;
+}
+
+message ModelStats {
+  string model = 1;
+  int64 elo_rating = 2;
+  int64 votes = 3;
+  double win_rate = 4;
+  int64 confidence_lower = 6;
+  int64 confidence_upper = 7;
+  double model_speed = 8;
+  string model_group = 9;
+  reserved 5;
+  reserved "model_provider";
+}
+
+message GetDevinUserAnalyticsRequest {
+  string start_date = 1 [deprecated = true];
+  string end_date = 2 [deprecated = true];
+  .google.protobuf.Timestamp start_date_ts = 3;
+  .google.protobuf.Timestamp end_date_ts = 4;
+}
+
+message GetDevinUserAnalyticsResponse {
+  repeated DevinUsageEntry devin_usage_entries = 1;
+  double total_acus = 2;
+}
+
+message DevinUsageEntry {
+  string day = 1;
+  double acus = 2;
+}
+
+message AcuConsumptionQuery {
+  oneof period {
+    AcuConsumptionHistoricalPeriod historical = 1;
+    AcuConsumptionCurrentCyclePeriod current_cycle = 2;
+    option (buf.validate.oneof) = { required: true };
+  }
+  bool include_team_total = 3;
+  repeated string group_ids = 4 [(buf.validate.field) = { repeated: { max_items: 100 } }];
+  AcuConsumptionUserScope user_scope = 5;
+  int32 page_size = 6 [(buf.validate.field) = { int32: { lte: 1000, gte: 0 } }];
+  string page_token = 7;
+}
+
+message AcuConsumptionHistoricalPeriod {
+}
+
+message AcuConsumptionCurrentCyclePeriod {
+}
+
+message AcuConsumptionUserScope {
+  oneof scope {
+    AcuConsumptionTeamScope team = 1;
+    string group_id = 2 [(buf.validate.field) = { string: { min_len: 1 } }];
+    option (buf.validate.oneof) = { required: true };
+  }
+}
+
+message AcuConsumptionTeamScope {
+}
+
+message AcuConsumptionResponse {
+  AcuConsumptionTeamResult team = 1;
+  repeated AcuConsumptionGroupResult groups = 2;
+  string next_page_token = 3;
+  AcuConsumptionMetadata metadata = 4;
+}
+
+message AcuConsumptionTeamResult {
+  optional double total_acus = 1;
+  repeated AcuConsumptionUserRow user_rows = 2;
+}
+
+message AcuConsumptionGroupResult {
+  string group_id = 1;
+  string group_name = 2;
+  double total_acus = 3;
+  repeated AcuConsumptionUserRow user_rows = 4;
+}
+
+message AcuConsumptionUserRow {
+  string user_id = 1;
+  string email = 2;
+  bool current_member = 3;
+  double total_acus = 4;
+}
+
+message AcuConsumptionMetadata {
+  .google.protobuf.Timestamp period_start = 1;
+  .google.protobuf.Timestamp period_end = 2;
+  .google.protobuf.Timestamp generated_at = 3;
+  string team_id = 4;
+  repeated string group_ids = 5;
+  string billing_mode = 6;
+}
+
+message ListGroupsRequest {
+  string service_key = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  string multitenant_team_id = 2;
+  int32 page_size = 3 [(buf.validate.field) = { int32: { lte: 1000, gte: 0 } }];
+  string page_token = 4;
+}
+
+message ListGroupsResponse {
+  repeated ManagedGroupSummary groups = 1;
+  string next_page_token = 2;
+}
+
+message ManagedGroupSummary {
+  string group_id = 1;
+  string name = 2;
+  int32 member_count = 3;
+}
+
+message GetGroupRequest {
+  string service_key = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  string multitenant_team_id = 2;
+  string group_id = 3 [(buf.validate.field) = { string: { min_len: 1 } }];
+}
+
+message GetGroupResponse {
+  ManagedGroup group = 1;
+}
+
+message ManagedGroup {
+  string group_id = 1;
+  string name = 2;
+  int32 member_count = 3;
+  repeated string cascade_model_uids = 4;
+  repeated string command_model_uids = 5;
+  optional double configured_cycle_acu_limit = 6;
+  optional double effective_cycle_acu_limit = 7;
+}
+
+message CreateGroupRequest {
+  string service_key = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  string multitenant_team_id = 2;
+  string name = 3 [(buf.validate.field) = { string: { min_len: 1 } }];
+}
+
+message CreateGroupResponse {
+  ManagedGroup group = 1;
+}
+
+message GroupModelAllowlist {
+  repeated string model_uids = 1;
+}
+
+message UpdateGroupRequest {
+  string service_key = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  string multitenant_team_id = 2;
+  string group_id = 3 [(buf.validate.field) = { string: { min_len: 1 } }];
+  optional string name = 4 [(buf.validate.field) = { string: { min_len: 1 } }];
+  GroupModelAllowlist cascade_models = 5;
+  GroupModelAllowlist command_models = 6;
+  oneof acu_cap_update {
+    double set_cycle_acu_limit = 7 [(buf.validate.field) = { double: { gt: 0.0 } }];
+    bool clear_cycle_acu_limit = 8;
+  }
+}
+
+message UpdateGroupResponse {
+  ManagedGroup group = 1;
+}
+
+message DeleteGroupRequest {
+  string service_key = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  string multitenant_team_id = 2;
+  string group_id = 3 [(buf.validate.field) = { string: { min_len: 1 } }];
+}
+
+message DeleteGroupResponse {
+}
+
+message ListGroupMembersRequest {
+  string service_key = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  string multitenant_team_id = 2;
+  string group_id = 3 [(buf.validate.field) = { string: { min_len: 1 } }];
+  int32 page_size = 4 [(buf.validate.field) = { int32: { lte: 1000, gte: 0 } }];
+  string page_token = 5;
+}
+
+message ListGroupMembersResponse {
+  repeated ManagedGroupMember members = 1;
+  string next_page_token = 2;
+}
+
+message ManagedGroupMember {
+  string user_id = 1;
+  string email = 2;
+}
+
+message AddGroupMembersRequest {
+  string service_key = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  string multitenant_team_id = 2;
+  string group_id = 3 [(buf.validate.field) = { string: { min_len: 1 } }];
+  repeated string user_emails = 4 [(buf.validate.field) = { repeated: { min_items: 1, max_items: 1000 } }];
+}
+
+message AddGroupMembersResponse {
+}
+
+message RemoveGroupMembersRequest {
+  string service_key = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  string multitenant_team_id = 2;
+  string group_id = 3 [(buf.validate.field) = { string: { min_len: 1 } }];
+  repeated string user_emails = 4 [(buf.validate.field) = { repeated: { min_items: 1, max_items: 1000 } }];
+}
+
+message RemoveGroupMembersResponse {
+}
+
+message UserAcuCapSelector {
+  oneof selector {
+    string email = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+    string user_id = 2 [(buf.validate.field) = { string: { min_len: 1 } }];
+    option (buf.validate.oneof) = { required: true };
+  }
+}
+
+message GetUserAcuCapRequest {
+  string service_key = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  string multitenant_team_id = 2;
+  UserAcuCapSelector user = 3 [(buf.validate.field) = { required: true }];
+}
+
+message GetUserAcuCapResponse {
+  UserAcuCap cap = 1;
+}
+
+message UserAcuCap {
+  string user_id = 1;
+  string email = 2;
+  optional double configured_cycle_acu_limit = 3;
+  optional double effective_cycle_acu_limit = 4;
+}
+
+message UpdateUserAcuCapRequest {
+  string service_key = 1 [(buf.validate.field) = { string: { min_len: 1 } }];
+  string multitenant_team_id = 2;
+  UserAcuCapSelector user = 3 [(buf.validate.field) = { required: true }];
+  oneof acu_cap_update {
+    double set_cycle_acu_limit = 4 [(buf.validate.field) = { double: { gte: 0.0 } }];
+    bool clear_cycle_acu_limit = 5;
+    option (buf.validate.oneof) = { required: true };
+  }
+}
+
+message UpdateUserAcuCapResponse {
+  UserAcuCap cap = 1;
+}
+
+service UserAnalyticsService {
+  rpc Analytics(AnalyticsRequest) returns (AnalyticsResponse);
+  rpc UserPageAnalytics(UserPageAnalyticsRequest) returns (UserPageAnalyticsResponse);
+  rpc CascadeAnalytics(CascadeAnalyticsRequest) returns (CascadeAnalyticsResponse);
+  rpc GetAnalytics(GetAnalyticsRequest) returns (GetAnalyticsResponse);
+  rpc GetGlobalLeaderboardApiKey(GetGlobalLeaderboardApiKeyRequest) returns (GetGlobalLeaderboardApiKeyResponse);
+  rpc GetBigQueryAnalytics(GetBigQueryAnalyticsRequest) returns (GetBigQueryAnalyticsResponse);
+  rpc GetDevinUserAnalytics(GetDevinUserAnalyticsRequest) returns (GetDevinUserAnalyticsResponse);
+  rpc ListGroups(ListGroupsRequest) returns (ListGroupsResponse);
+  rpc GetGroup(GetGroupRequest) returns (GetGroupResponse);
+  rpc CreateGroup(CreateGroupRequest) returns (CreateGroupResponse);
+  rpc UpdateGroup(UpdateGroupRequest) returns (UpdateGroupResponse);
+  rpc DeleteGroup(DeleteGroupRequest) returns (DeleteGroupResponse);
+  rpc ListGroupMembers(ListGroupMembersRequest) returns (ListGroupMembersResponse);
+  rpc AddGroupMembers(AddGroupMembersRequest) returns (AddGroupMembersResponse);
+  rpc RemoveGroupMembers(RemoveGroupMembersRequest) returns (RemoveGroupMembersResponse);
+  rpc GetUserAcuCap(GetUserAcuCapRequest) returns (GetUserAcuCapResponse);
+  rpc UpdateUserAcuCap(UpdateUserAcuCapRequest) returns (UpdateUserAcuCapResponse);
+}

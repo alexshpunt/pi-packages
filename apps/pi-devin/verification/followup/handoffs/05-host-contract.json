@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "task": "05",
+  "outcome": "pass",
+  "recordedAt": "2026-10-19T12:58:27.000Z",
+  "source": {
+    "baseRevision": "main@e43728d",
+    "coreVersion": 1,
+    "runtime": {
+      "method": "sha256 of sorted 'path\\0sha256\\n' lines over package.json and manifest files (computed by host-contract.mjs)",
+      "files": 47,
+      "sha256": "add0600ef3e991d54503928b3ff661ee1063b20a2ece7ad5c2dbf212994dce26",
+      "npmPackDryRunEntries": 47
+    },
+    "files": {
+      "verification/scripts/host-contract.mjs": "0986a6e6891838ef60a3d712e256abde7660018a4fbe815f6372d75199bb00f1",
+      "verification/scripts/host-contract/add-tool.mjs": "81888a855314c9120c35877d7c8c24a767c473af4b4cb1621ccafb313a200942",
+      "verification/scripts/host-contract/guard.mjs": "d44fe39cb33cc4cc240d972920c11bbe4e1053bfa99fca5c782149f0d9de2bf0",
+      "verification/scripts/host-contract/mock-devin.mjs": "11d79aa06f4f852716729b0972d16b6b77ea044ed8c9d6501f6a93beb8fc6524",
+      "verification/scripts/host-contract/pty-bridge.py": "dbc58df8697ee45c13eb6589383d0485a9e2a6a5d5933018dd0a60101aef7a20",
+      "verification/README.md": "2cdbebec70231dfb5c1666f9f30e81ceb79a0095f4bccbdd6471bc1d57c01bd7",
+      "verification/scripts/README.md": "9865273719b06752825dc1e9297094c5baa689e374e9cd939cfb7ccfb1934d64",
+      "tests/account-login.test.ts": "adbd676518fdf2e915082e13a2931be7ff8b6faa0ac2d72b2ed355d694fb8246"
+    }
+  },
+  "predecessors": [
+    { "path": "verification/followup/handoffs/01-auth-portable.json", "outcome": "pass", "sha256": "e6392d35ff0eaf1267ce86ff666327ba8de6ca3f3cde00685faba410168d7335" },
+    { "path": "verification/followup/handoffs/09-proto-sources.json", "outcome": "pass", "sha256": "aad4b37c164956a61993fbfe2df61ab4d7e705e851dac26002f6f3c810297181" },
+    { "path": "verification/followup/handoffs/10-pi-fusion.json", "outcome": "pass", "sha256": "64a3a172b26666ce836ddc746a8392342a5318bab4f9f519b8f9b07daf127a1a" },
+    { "path": "verification/followup/handoffs/04-prompt-cache.json", "outcome": "pass", "revision": 1, "sha256": "6ebc3ec24ced20bc7f5b99853395554cfb71d7a9ad5ac518c652732ac9ffa8d3" }
+  ],
+  "integration": {
+    "sharedHotspot": "src/pi/provider.ts was changed in the planned serial order 01 -> 10 -> 04 -> 04 revision 1; its current sha256 ccdcec3ab08f2564e6f9f4f8cba94a0fde4e789668b45102b1101537920624de is covered by the current offline suite and the host runs below, so earlier per-task hashes of that file are historical.",
+    "contracts": "provider devin, API devin-connect, family:/uid:/fusion: IDs, OAuth devin.version=1 and pi-devin.state.v1 unchanged; no wire change after 10 (proto-check-05 inputs/baseline/comparison equal proto-check-10)."
+  },
+  "returnedToOwner": [
+    {
+      "owner": "04",
+      "finding": "On the real Pi 1.3.0 bin PI_CACHE_RETENTION=long reached no Devin request option: Pi passes no cacheRetention from the environment and each provider resolves it. SWE-2 requests were sent instead of rejected, contradicting the README.",
+      "fix": "9fedc6e fix(Devin 장기 캐시 보존에 PI_CACHE_RETENTION 적용): main — caller option first, then provider env, then process env, matching Pi built-in providers; recorded as 04 revision 1.",
+      "reverified": "host-contract cache scenario 7/7 on Node 24.14.0 and 22.19.0"
+    }
+  ],
+  "compatibilityFixes": [
+    {
+      "commit": "e43728d test(수동 로그인 기한 검증을 Node 22 test runner와 호환): main",
+      "finding": "tests/account-login.test.ts manual-login deadline case was cancelled on Node 22.19.0 ('Promise resolution is still pending but the event loop has already resolved'). The fixture's promptCode held no handle; AbortSignal.timeout timers are unref'd on both 22.19.0 and 24.14.0 (verified with a standalone probe, exit 13 on both), so production behavior does not differ and real input (stdin/TUI) keeps the loop alive.",
+      "fix": "Test-only: the pending input fixture holds a ref'd handle and releases it on its abort signal; production code unchanged, engines unchanged."
+    }
+  ],
+  "host": {
+    "piVersion": "1.3.0",
+    "piBin": "dist/bundle/cli.js (package.json bin.pi of the app's pinned @earendil-works/pi-coding-agent)",
+    "platform": "darwin-arm64",
+    "nodeVersions": [
+      { "version": "v24.14.0", "source": "nvm", "report": "verification/followup/host-contract-node24.json", "reportSha256": "4b605e3e7fa30ca9fe5e21f4ca3738c16dbd8564d14d69659ba0c6e49d154c80" },
+      { "version": "v22.19.0", "source": "https://nodejs.org/dist/v22.19.0/node-v22.19.0-darwin-arm64.tar.gz extracted outside the repository and HOME", "tarballSha256": "c59006db713c770d6ec63ae16cb3edc11f49ee093b5c415d667bb4f436c6526d", "checksumSource": "SHASUMS256.txt from the same origin over HTTPS (signature not verified)", "report": "verification/followup/host-contract-node22.json", "reportSha256": "e4e5877815770a5a860d52abf7405eb8caaf5a3fd656c884b4ebea7edded31de" }
+    ],
+    "isolationEvidence": "Guard logs per scenario are in the reports (steps.guard): allowed connections only to the mock port, blocked hosts {} except tui {github.com: 6}, spawned commands ioreg (device fingerprint) and, in tui only, fd/fdfind/rg probes; no blocked opener/keychain command.",
+    "isolation": "Each scenario: fresh temp root under /private/tmp with HOME, PI_CODING_AGENT_DIR, cwd and TMPDIR; fake OAuth credential to a loopback mock; Pi process under sandbox-exec (network only to the mock port, no HOME reads except repository/node/temp, writes only to the temp root) plus a Node guard preload that logs connection/spawn attempts and refuses browser openers and keychain commands. PI_OFFLINE is not used. Temp roots removed after each run (tempRootsRemoved=true).",
+    "modes": {
+      "rpc": "--mode rpc over stdin/stdout JSONL: catalog projection 391 (65 fusion), set_model/set_thinking_level/get_state, Unicode reply, add tool once with split argument deltas, partial tool then error (0 tool runs), abort (request closed, aborted settle, no follow-up), Fusion lead->sidekick(add)->lead sequence, sidekick deactivated on non-fusion model, default budget 8 then error, stdin end during stream (exit 0, request closed), every record valid JSON.",
+      "print": "-p: add tool flow (exit 0, exact Unicode stdout), scripted error (exit 1), unauthenticated trailer (exit 1, 1 request) then recovery (exit 0).",
+      "json": "--mode json: session header first, one agent_end and one agent_settled, >=2 toolcall_delta records, add result 5, partial tool error with 0 tool runs.",
+      "tui": "owned PTY (160x50) via pty-bridge.py: prompt, /thinking max (swe-2-max), shift+tab cycle (swe-2-medium), /model devin/uid:swe-2-medium, Escape abort ('Operation aborted', request closed), /reload ('Reloaded', next request OK), /logout (credential removed, next prompt shows 'No API key found for devin' with 0 requests), /quit exit 0.",
+      "oauthOnly": "--api-key with OAuth, stored api_key entry, DEVIN_API_KEY/WINDSURF_API_KEY without OAuth, --api-key without OAuth: exit 1 and 0 Devin requests, key never echoed; API key env with OAuth and restored OAuth: 1 chat request with the OAuth token.",
+      "cache": "default: USER EPHEMERAL marks; PI_CACHE_RETENTION=long on SWE-2: exit 1 before any chat request; on GPT-5.6 Sol medium (24h): gpt-5-6-sol-medium with EPHEMERAL marks and no system prompt cache options.",
+      "help": "--help exit 0 with both extensions loaded and 0 Devin requests."
+    },
+    "replayCommands": [
+      { "cwd": "apps/pi-devin", "command": "node verification/scripts/host-contract.mjs --report verification/followup/host-contract-node24.json" },
+      { "cwd": "apps/pi-devin", "command": "<node-v22.19.0>/bin/node verification/scripts/host-contract.mjs --report verification/followup/host-contract-node22.json" },
+      { "cwd": "apps/pi-devin", "command": "node verification/scripts/host-contract.mjs --report <path> --package-root <extracted package> --pi-root <PI_ROOT>", "note": "for task 06 extracted artifact" }
+    ],
+    "fixtures": ["tests/fixtures/model-catalog.json (sha256 02ec94832ba0f4a81d985cc687cd1459b1e774d5277039b90047b0ba4fe47b55)", "verification/scripts/host-contract/add-tool.mjs", "fake OAuth session string generated by mock-devin.mjs"]
+  },
+  "schema": {
+    "reportPath": "verification/followup/proto-check-05.json",
+    "reportSha256": "cc777a07b72ac6a909b326a1309ed5bf3ed2766dffa6727b91ef239d2af4c9e5",
+    "provenancePath": "verification/followup/proto-provenance.json",
+    "provenanceSha256": "04754876cbce4a2267743b7c6b375e3bb887efbbab4d5f7d5ba66345c0d90993",
+    "originalDescriptorSha256": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+    "observed": "ok: 63 files byte-identical, 0 semantic diffs, 0 runtime shape diffs, 18 runtime cases; inputs equal proto-check-10"
+  },
+  "checks": [
+    { "key": "host-node24", "cwd": "apps/pi-devin", "command": "node verification/scripts/host-contract.mjs --report verification/followup/host-contract-node24.json", "observed": "exit 0, pass, 7 scenarios, 83/83 checks" },
+    { "key": "host-node22", "cwd": "apps/pi-devin", "command": "<node-v22.19.0> verification/scripts/host-contract.mjs --report verification/followup/host-contract-node22.json", "observed": "exit 0, pass, 7 scenarios, 83/83 checks, same runtime digest" },
+    { "key": "sdk-node24", "cwd": "apps/pi-devin", "command": "node --test tests/pi-integration.test.ts tests/pi-runtime.test.ts tests/pi-lifecycle-contract.test.ts tests/pi-provider-hooks.test.ts", "observed": "exit 0, 24/24 pass (public loader/OAuth, Fusion budget, fork/resume/reload/tree/account change, 300000ms host timeout, compaction budgets, SDK mode bindings, warming, late previous-generation 401)" },
+    { "key": "sdk-node22", "cwd": "apps/pi-devin", "command": "<node-v22.19.0> --test (same 4 files)", "observed": "exit 0, 24/24 pass" },
+    { "key": "offline-node24", "cwd": ".", "command": "pnpm --dir apps/pi-devin verify:offline", "observed": "exit 0, 183/183 pass" },
+    { "key": "offline-node22", "cwd": "apps/pi-devin", "command": "<node-v22.19.0> --test tests/*.test.ts", "observed": "exit 0, 183/183 pass after the compatibility fix (before: 182 pass, 1 cancelled)" },
+    { "key": "typecheck", "cwd": ".", "command": "pnpm --dir apps/pi-devin typecheck", "observed": "exit 0" },
+    { "key": "proto", "cwd": "apps/pi-devin", "command": "node verification/scripts/verify-proto.mjs --report verification/followup/proto-check-05.json", "observed": "exit 0, ok" },
+    { "key": "pack-excludes-verification", "cwd": "apps/pi-devin", "command": "npm pack --dry-run --json --ignore-scripts", "observed": "47 entries, 0 under verification/, tests/, proto/" }
+  ],
+  "limitations": [
+    "macOS arm64 only; sandbox-exec is required, so other OSes would record blocked.",
+    "TUI checks drive keys through a PTY and read rendered text; layout details and the interactive /model selector (ctrl+l) were not exercised, only /model with an argument.",
+    "Host timeouts were not waited out in wall-clock time: the 300000ms default and explicit 5000ms come from the SDK suite with virtual or injected time; CLI runs observed only abort, shutdown and 401 terminals.",
+    "Pi built-in provider catalog refreshes made no outbound attempts in these runs. The only observed outbound traffic was the TUI tools manager probing fd/fdfind/rg and trying github.com 6 times to download them; the guard refused and logged every attempt, the TUI still passed, and no non-loopback connection succeeded.",
+    "The device fingerprint collector ran ioreg inside the sandbox; its values reached only the loopback mock and are not recorded.",
+    "Node 22.19.0 was verified with the publisher checksum only, without GPG signature verification.",
+    "No real Devin service, browser or account was used; live behavior remains for task 07."
+  ],
+  "handoff": {
+    "decision": "continue",
+    "successors": [
+      "reuse host-contract.mjs with --package-root on the extracted artifact and compare the runtime digest"
+    ]
+  }
+}

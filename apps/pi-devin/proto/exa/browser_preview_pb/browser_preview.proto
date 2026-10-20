@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package exa.browser_preview_pb;
+
+import "exa/codeium_common_pb/browser_context.proto";
+
+option go_package = "github.com/Exafunction/Exafunction/exa/browser_preview_pb";
+
+message SendDOMElementRequest {
+  .exa.codeium_common_pb.DOMElementScopeItem dom_element = 1;
+}
+
+message SendDOMElementResponse {
+}
+
+message SendConsoleOutputRequest {
+  .exa.codeium_common_pb.ConsoleLogScopeItem console_log = 1;
+}
+
+message SendConsoleOutputResponse {
+}
+
+service BrowserPreviewService {
+  rpc SendDOMElement(SendDOMElementRequest) returns (SendDOMElementResponse);
+  rpc SendConsoleOutput(SendConsoleOutputRequest) returns (SendConsoleOutputResponse);
+}

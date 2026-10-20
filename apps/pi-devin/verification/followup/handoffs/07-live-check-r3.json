@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "task": "07",
+  "attempt": 3,
+  "outcome": "pass",
+  "recordedAt": "2026-10-20T00:57:16.782Z",
+  "artifactSha256": "0a0ca65638a3197bcf726f2d2ee2bf73b9bbba3a89ec1df8d94b4758e5f38d64",
+  "runtimeDigest": "401280d8b01244623a662fcc4514cbfc1abcb5d196b125c38a7c62a4622ec552",
+  "predecessors": [
+    {
+      "path": "verification/followup/handoffs/06-artifact-r3.json",
+      "outcome": "pass",
+      "sha256": "c95ee7e78ac275907ea35c189793b6b8e365e750da48e15ca4ecb2984d84b6d1"
+    }
+  ],
+  "authorization": {
+    "path": "verification/followup/live/authorization-r3.json",
+    "planHash": "032e1fb32409497ffebfa2e3cb48974dd419199a94e5587d352974c87b316776",
+    "approvedAt": "2026-10-20T00:52:34.570Z",
+    "scope": "6 cases, at most 9 model requests, swe-2-medium/swe-2-high only, free tier required, hosts server.codeium.com and api.devin.ai"
+  },
+  "plan": {
+    "path": "verification/followup/live/plan-r3.json",
+    "planHash": "032e1fb32409497ffebfa2e3cb48974dd419199a94e5587d352974c87b316776",
+    "change": "new case devin-settings (RPC): recommended filter on/off on the real catalog, one swe-2-medium chat, then the no-argument /devin report; cap raised from 8 to 9"
+  },
+  "harness": {
+    "verification/scripts/live/live-check.mjs": "ee642400bcb521bfb36e6f90b4b6aacf4ac4666eee4db4bd2a18cfa750e1f51b",
+    "verification/scripts/live/live-guard.mjs": "c0a642ed0fb7ec03408a122fdc315a6140bc5f63d19ae913214736c3d7f9ae46"
+  },
+  "dryRun": {
+    "report": "verification/followup/live/dry-run-r3.json",
+    "reportSha256": "0a813a9739ed042896c72cb2eb0b8f66f4425cf397198cc0e1066dc2540a2083",
+    "observed": "pass, 12/12 including uid/sidekick/budget/free-tier/socket negative controls"
+  },
+  "live": {
+    "executed": true,
+    "report": "verification/followup/live/run-r3.json",
+    "reportSha256": "9329e245f42ad1a9210069f8531c1e079a7a44a3c5e14749f4b9b776191f6662",
+    "host": {
+      "node": "v24.14.0",
+      "pi": "1.3.0",
+      "platform": "darwin-arm64"
+    },
+    "login": {
+      "method": "Pi TUI /login → browser flow, driven by the assistant through a PTY; the authorization page was opened in the user's Chrome with the browser tool and the user-chosen account (personal Pro) was selected",
+      "modelCalls": 0,
+      "readCalls": {
+        "token": 1,
+        "GetUserStatus": 1,
+        "GetCliModelConfigs": 1,
+        "GetCliTeamSettings": 1
+      },
+      "catalog": "swe-2-medium and swe-2-high present, enabled, MODEL_COST_TIER_FREE, promotion active until 2026-11-01T06:59:59Z",
+      "blocked": "6 github.com:443 connections (Pi tools manager fetching fd/rg) were refused by the socket-level guard; no file was downloaded"
+    },
+    "cases": [
+      {
+        "id": "catalog",
+        "pass": true,
+        "modelCalls": []
+      },
+      {
+        "id": "devin-settings",
+        "pass": true,
+        "modelCalls": [
+          "swe-2-medium"
+        ],
+        "defaultCount": 55,
+        "filteredCount": 15,
+        "restoredCount": 55,
+        "quotaLine": true,
+        "sessionLine": true
+      },
+      {
+        "id": "plain-medium",
+        "pass": true,
+        "modelCalls": [
+          "swe-2-medium"
+        ]
+      },
+      {
+        "id": "level-high",
+        "pass": true,
+        "modelCalls": [
+          "swe-2-high"
+        ]
+      },
+      {
+        "id": "add-tool",
+        "pass": true,
+        "modelCalls": [
+          "swe-2-medium",
+          "swe-2-medium"
+        ],
+        "tools": [
+          "add=5"
+        ]
+      },
+      {
+        "id": "fusion",
+        "pass": true,
+        "modelCalls": [
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium"
+        ],
+        "tools": [
+          "sidekick"
+        ]
+      }
+    ],
+    "modelHttpDispatchCount": 9,
+    "modelStatuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "blocked": [
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      }
+    ],
+    "halted": [],
+    "devinSettings": {
+      "defaultModels": 55,
+      "recommendedOnly": 15,
+      "recommendedExactUIDs": 14,
+      "restored": 55,
+      "report": [
+        "계정 할당량 · 10/20 09:56 조회 (방금) · 실시간 값 아님",
+        "  일간 98% 남음 · 초기화 10/20 17:00 (7시간 3분 뒤)",
+        "  주간 98% 남음 · 초기화 10/25 17:00 (5일 뒤)",
+        "이번 세션 · lead 대화 기준 (sidekick 제외)",
+        "  요청 1회 · 입력 810 · 출력 54 · 캐시 읽기 0 · 캐시 쓰기 0",
+        "실행 예산 · 1/8회 (마지막 실행)",
+        "설정: 추천 모델만 표시 끔 · 상태표시 사용량 끔"
+      ],
+      "note": "The real catalog lists 14 recommended exact variants for this account (adaptive, the router, is not listed by the provider); the fixture marks 15."
+    }
+  },
+  "cleanup": {
+    "stateRemoved": true,
+    "browserTabClosed": true,
+    "serverSessionRevoked": false
+  },
+  "limitations": [
+    "Only SWE-2 free-tier models were called; other recommended models were listed but not called.",
+    "TUI-only screens (/devin panel, status line, /fusion picker) were not exercised against the real service; their data paths were (RPC report and model list).",
+    "The server-side session created by this login was not revoked.",
+    "macOS arm64 only."
+  ]
+}

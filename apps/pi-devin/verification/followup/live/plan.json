@@ -1,0 +1,72 @@
+{
+  "planHash": "63c384e12cf3c35f16c439a40903f381666aa1b1e82ec74bccd15ab78e515119",
+  "plan": {
+    "schemaVersion": 1,
+    "artifactSha256": "de8db88b783fcd57c2a813a85f91097cd102e555d3c64e26b3fc5414e251b350",
+    "runtimeDigest": "b13f1afaa9f719405c71da8eec45a968df5dbcc372c723d5250dadbdb6a5d2ce",
+    "allowedUIDs": [
+      "swe-2-medium",
+      "swe-2-high"
+    ],
+    "maxModelCalls": 8,
+    "requireFreeTier": true,
+    "hosts": [
+      "server.codeium.com",
+      "api.devin.ai"
+    ],
+    "cases": [
+      {
+        "id": "catalog",
+        "mode": "rpc",
+        "expectModelCalls": 0,
+        "purpose": "OAuth 계정 상태·catalog 조회와 승인 UID의 활성·무료 등급 확인"
+      },
+      {
+        "id": "plain-medium",
+        "mode": "json",
+        "model": "family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0",
+        "level": "medium",
+        "prompt": "짧게 인사해 주세요.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectModelCalls": 1
+      },
+      {
+        "id": "level-high",
+        "mode": "json",
+        "model": "family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0",
+        "level": "high",
+        "prompt": "짧게 인사해 주세요.",
+        "expectUIDs": [
+          "swe-2-high"
+        ],
+        "expectModelCalls": 1
+      },
+      {
+        "id": "add-tool",
+        "mode": "json",
+        "model": "family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0",
+        "level": "medium",
+        "prompt": "add 도구로 2와 3을 더한 뒤 결과 숫자만 답해 주세요.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectTool": "add",
+        "expectModelCalls": 2
+      },
+      {
+        "id": "fusion",
+        "mode": "json",
+        "model": "fusion:devin",
+        "level": "medium",
+        "prompt": "sidekick 도구에 'add 도구로 2와 3을 더하고 결과를 보고하라'고 맡긴 뒤, 보고받은 결과 숫자만 답해 주세요.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectTool": "sidekick",
+        "expectModelCalls": 4
+      }
+    ]
+  }
+}

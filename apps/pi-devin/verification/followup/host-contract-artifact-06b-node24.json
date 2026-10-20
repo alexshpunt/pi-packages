@@ -1,0 +1,2033 @@
+{
+  "schemaVersion": 1,
+  "kind": "pi-devin-host-contract",
+  "startedAt": "2026-10-19T16:07:52.860Z",
+  "host": {
+    "platform": "darwin-arm64",
+    "node": "v24.14.0",
+    "piVersion": "1.3.0",
+    "piBin": "dist/bundle/cli.js",
+    "packageRoot": "<package>",
+    "sourceRuntimeReadable": false,
+    "isolation": "sandbox-exec per Pi process (network: mock port only; HOME reads: repo/node/temp only; writes: temp root only) + Node guard preload log"
+  },
+  "inputs": {
+    "packageRuntime": {
+      "method": "sha256 of sorted 'path\\0sha256\\n' lines over package.json and manifest files",
+      "files": 50,
+      "sha256": "b13f1afaa9f719405c71da8eec45a968df5dbcc372c723d5250dadbdb6a5d2ce"
+    },
+    "catalogSha256": "02ec94832ba0f4a81d985cc687cd1459b1e774d5277039b90047b0ba4fe47b55",
+    "harness": {
+      "verification/scripts/host-contract/guard.mjs": "d44fe39cb33cc4cc240d972920c11bbe4e1053bfa99fca5c782149f0d9de2bf0",
+      "verification/scripts/host-contract/add-tool.mjs": "81888a855314c9120c35877d7c8c24a767c473af4b4cb1621ccafb313a200942",
+      "verification/scripts/host-contract/pty-bridge.py": "dbc58df8697ee45c13eb6589383d0485a9e2a6a5d5933018dd0a60101aef7a20",
+      "verification/scripts/host-contract.mjs": "4073b5b398e813d2b8d3de43574b1150e57da23cfa357d96f4b63f72099545e1",
+      "verification/scripts/host-contract/mock-devin.mjs": "ebcaaecc2adfc4da3bbca5cfc795d17572e6bba566ef0df434df8bcc8485a75e"
+    }
+  },
+  "scenarios": {
+    "help": {
+      "outcome": "pass",
+      "durationMs": 709,
+      "checks": [
+        {
+          "key": "help-exit-0",
+          "pass": true,
+          "observed": {
+            "code": 0
+          }
+        },
+        {
+          "key": "help-no-extension-error",
+          "pass": true,
+          "observed": ""
+        },
+        {
+          "key": "help-no-devin-requests",
+          "pass": true,
+          "observed": {
+            "requests": 0
+          }
+        },
+        {
+          "key": "source-runtime-denied",
+          "pass": true,
+          "observed": "EPERM"
+        },
+        {
+          "key": "owned-processes-exited",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "mock-connections-closed",
+          "pass": true,
+          "observed": {
+            "open": 0
+          }
+        },
+        {
+          "key": "no-descendant-processes",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "guard-active",
+          "pass": true,
+          "observed": {
+            "guardedProcesses": 1
+          }
+        },
+        {
+          "key": "no-blocked-commands",
+          "pass": true,
+          "observed": []
+        }
+      ],
+      "steps": {
+        "guard": {
+          "guardedProcesses": 1,
+          "allowedLoopbackConnections": 0,
+          "blockedNetworkHosts": {},
+          "spawnedCommands": {},
+          "blockedCommands": []
+        }
+      }
+    },
+    "rpc": {
+      "outcome": "pass",
+      "durationMs": 5898,
+      "checks": [
+        {
+          "key": "catalog-projection",
+          "pass": true,
+          "observed": {
+            "devin": 327,
+            "fusion": 1
+          }
+        },
+        {
+          "key": "unresolved-levels-unexposed",
+          "pass": true,
+          "observed": {
+            "uids": [
+              "kimi-k2-6",
+              "kimi-k2-7",
+              "swe-1-6",
+              "swe-1-6-fast"
+            ],
+            "mappedUIDs": 261
+          }
+        },
+        {
+          "key": "fusion-default-pairing",
+          "pass": true,
+          "observed": "Devin Fusion · SWE-2 [Fast Mode=0] + SWE-2 Medium · 비용 미상"
+        },
+        {
+          "key": "catalog-requests-oauth",
+          "pass": true,
+          "observed": {
+            "requests": 3
+          }
+        },
+        {
+          "key": "set-model-and-level",
+          "pass": true,
+          "observed": {
+            "model": true,
+            "thinkingLevel": "high"
+          }
+        },
+        {
+          "key": "rpc-unicode-text",
+          "pass": true,
+          "observed": "응답 ✅ 𝔘𝔫𝔦 👋"
+        },
+        {
+          "key": "rpc-unicode-request",
+          "pass": true,
+          "observed": [
+            "swe-2-high"
+          ]
+        },
+        {
+          "key": "rpc-terminal-once",
+          "pass": true,
+          "observed": {
+            "agentEnds": 1,
+            "settled": 1
+          }
+        },
+        {
+          "key": "cache-default-marks",
+          "pass": true,
+          "observed": [
+            "EPHEMERAL"
+          ]
+        },
+        {
+          "key": "no-warming-requests",
+          "pass": true,
+          "observed": {
+            "chatsAfterIdle": 1
+          }
+        },
+        {
+          "key": "rpc-tool-once",
+          "pass": true,
+          "observed": [
+            {
+              "tool": "add",
+              "isError": false,
+              "text": "5"
+            }
+          ]
+        },
+        {
+          "key": "rpc-tool-result-forwarded",
+          "pass": true,
+          "observed": {
+            "chats": 2,
+            "final": "합계는 5 ✅"
+          }
+        },
+        {
+          "key": "rpc-partial-tool-not-run",
+          "pass": true,
+          "observed": {
+            "agentEnds": 1,
+            "settled": [
+              {
+                "aborted": false
+              }
+            ],
+            "stopReasons": [
+              "error"
+            ],
+            "finalText": "",
+            "errorMessage": "invalid_argument: host-contract scripted failure",
+            "toolStarts": [],
+            "toolEnds": [],
+            "toolcallDeltas": 1,
+            "textDeltas": 0
+          }
+        },
+        {
+          "key": "rpc-abort",
+          "pass": true,
+          "observed": {
+            "abort": true,
+            "stopReason": "aborted",
+            "settled": [
+              {
+                "aborted": true
+              }
+            ],
+            "closed": true
+          }
+        },
+        {
+          "key": "rpc-abort-no-followup",
+          "pass": true,
+          "observed": {
+            "chats": 1
+          }
+        },
+        {
+          "key": "fusion-command-saves-and-applies",
+          "pass": true,
+          "observed": {
+            "saved": {
+              "schemaVersion": 1,
+              "leadID": "family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0",
+              "sidekickID": "uid:swe-2-high"
+            },
+            "name": "Devin Fusion · SWE-2 [Fast Mode=0] + SWE-2 High · 비용 미상"
+          }
+        },
+        {
+          "key": "fusion-request-sequence",
+          "pass": true,
+          "observed": [
+            "swe-2-high",
+            "swe-2-medium",
+            "swe-2-medium",
+            "swe-2-high"
+          ]
+        },
+        {
+          "key": "fusion-lead-guidance-and-tools",
+          "pass": true,
+          "observed": [
+            {
+              "guidance": true,
+              "sidekick": false,
+              "tools": [
+                "add",
+                "sidekick"
+              ]
+            },
+            {
+              "guidance": false,
+              "sidekick": true,
+              "tools": [
+                "add"
+              ]
+            },
+            {
+              "guidance": false,
+              "sidekick": true,
+              "tools": [
+                "add"
+              ]
+            },
+            {
+              "guidance": true,
+              "sidekick": false,
+              "tools": [
+                "add",
+                "sidekick"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fusion-separate-conversation",
+          "pass": true,
+          "observed": [
+            "0062ac05e34f",
+            "0b87e16768c9",
+            "0b87e16768c9",
+            "0062ac05e34f"
+          ]
+        },
+        {
+          "key": "fusion-report-to-lead",
+          "pass": true,
+          "observed": {
+            "sidekickToolResult": [
+              "5"
+            ],
+            "leadLast": {
+              "source": "TOOL",
+              "text": "sidekick 보고: 5"
+            },
+            "final": "최종: 5 ✅"
+          }
+        },
+        {
+          "key": "fusion-sidekick-runs-in-child",
+          "pass": true,
+          "observed": {
+            "leadTools": [
+              "sidekick"
+            ]
+          }
+        },
+        {
+          "key": "fusion-sidekick-session-file",
+          "pass": true,
+          "observed": {
+            "exists": true
+          }
+        },
+        {
+          "key": "fusion-background-returns-immediately",
+          "pass": true,
+          "observed": {
+            "toolEnds": [
+              {
+                "tool": "sidekick",
+                "isError": false,
+                "text": "sidekick이 백그라운드에서 작업을 시작했습니다. 보고가 오면 메시지로 알립니다. (handoff 9435ec6c)"
+              }
+            ]
+          }
+        },
+        {
+          "key": "fusion-background-report-once",
+          "pass": true,
+          "observed": {
+            "reports": 1,
+            "lead": 3,
+            "child": 2,
+            "settled": 1,
+            "final": "백그라운드 보고 확인: 5 ✅"
+          }
+        },
+        {
+          "key": "fusion-sidekick-deactivated",
+          "pass": true,
+          "observed": [
+            [
+              "add"
+            ]
+          ]
+        },
+        {
+          "key": "budget-default-8",
+          "pass": true,
+          "observed": {
+            "chats": 8,
+            "error": "Devin 모델 HTTP 요청 예산 8회를 모두 사용했습니다."
+          }
+        },
+        {
+          "key": "rpc-shutdown-during-stream",
+          "pass": true,
+          "observed": {
+            "exitCode": 0,
+            "exitAfterMs": 27,
+            "closed": true
+          }
+        },
+        {
+          "key": "rpc-jsonl-valid",
+          "pass": true,
+          "observed": {
+            "records": 316,
+            "invalid": []
+          }
+        },
+        {
+          "key": "rpc-no-requests-after-exit",
+          "pass": true,
+          "observed": {
+            "chats": 1
+          }
+        },
+        {
+          "key": "owned-processes-exited",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "mock-connections-closed",
+          "pass": true,
+          "observed": {
+            "open": 0
+          }
+        },
+        {
+          "key": "no-descendant-processes",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "guard-active",
+          "pass": true,
+          "observed": {
+            "guardedProcesses": 2
+          }
+        },
+        {
+          "key": "no-blocked-commands",
+          "pass": true,
+          "observed": []
+        }
+      ],
+      "steps": {
+        "models": {
+          "devin": 327,
+          "family": 65,
+          "uid": 261,
+          "fusion": 1
+        },
+        "unicode": {
+          "run": {
+            "agentEnds": 1,
+            "settled": [
+              {
+                "aborted": false
+              }
+            ],
+            "stopReasons": [
+              "stop"
+            ],
+            "finalText": "응답 ✅ 𝔘𝔫𝔦 👋",
+            "toolStarts": [],
+            "toolEnds": [],
+            "toolcallDeltas": 0,
+            "textDeltas": 2
+          },
+          "requests": [
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "0062ac05e34f",
+              "sources": [
+                "USER"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add"
+              ],
+              "lastPrompt": {
+                "source": "USER",
+                "text": "안녕 👋 — 유니코드 확인 𝔘"
+              },
+              "hasFusionGuidance": false,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "unicode",
+              "toolResults": [],
+              "lastUserText": "안녕 👋 — 유니코드 확인 𝔘"
+            }
+          ]
+        },
+        "tool": {
+          "run": {
+            "agentEnds": 1,
+            "settled": [
+              {
+                "aborted": false
+              }
+            ],
+            "stopReasons": [
+              "toolUse",
+              "stop"
+            ],
+            "finalText": "합계는 5 ✅",
+            "toolStarts": [
+              "add"
+            ],
+            "toolEnds": [
+              {
+                "tool": "add",
+                "isError": false,
+                "text": "5"
+              }
+            ],
+            "toolcallDeltas": 2,
+            "textDeltas": 1
+          },
+          "requests": [
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "0062ac05e34f",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "USER"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add"
+              ],
+              "lastPrompt": {
+                "source": "USER",
+                "text": "2와 3을 더해줘"
+              },
+              "hasFusionGuidance": false,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "tool",
+              "toolResults": [],
+              "lastUserText": "2와 3을 더해줘"
+            },
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "0062ac05e34f",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "USER",
+                "SYSTEM",
+                "TOOL"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add"
+              ],
+              "lastPrompt": {
+                "source": "TOOL",
+                "text": "5"
+              },
+              "hasFusionGuidance": false,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "tool-final",
+              "toolResults": [
+                "5"
+              ],
+              "lastUserText": "2와 3을 더해줘"
+            }
+          ]
+        },
+        "partialError": {
+          "run": {
+            "agentEnds": 1,
+            "settled": [
+              {
+                "aborted": false
+              }
+            ],
+            "stopReasons": [
+              "error"
+            ],
+            "finalText": "",
+            "errorMessage": "invalid_argument: host-contract scripted failure",
+            "toolStarts": [],
+            "toolEnds": [],
+            "toolcallDeltas": 1,
+            "textDeltas": 0
+          },
+          "chats": 1
+        },
+        "abort": {
+          "run": {
+            "agentEnds": 1,
+            "settled": [
+              {
+                "aborted": true
+              }
+            ],
+            "stopReasons": [
+              "aborted"
+            ],
+            "finalText": "부분 응답 ",
+            "errorMessage": "This operation was aborted",
+            "toolStarts": [],
+            "toolEnds": [],
+            "toolcallDeltas": 0,
+            "textDeltas": 1
+          },
+          "chats": [
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "0062ac05e34f",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER",
+                "USER"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add"
+              ],
+              "lastPrompt": {
+                "source": "USER",
+                "text": "취소 확인"
+              },
+              "hasFusionGuidance": false,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "abort",
+              "hung": true,
+              "clientClosedEarly": true,
+              "toolResults": [
+                "5"
+              ],
+              "lastUserText": "취소 확인"
+            }
+          ]
+        },
+        "fusion": {
+          "run": {
+            "agentEnds": 1,
+            "settled": [
+              {
+                "aborted": false
+              }
+            ],
+            "stopReasons": [
+              "toolUse",
+              "stop"
+            ],
+            "finalText": "최종: 5 ✅",
+            "toolStarts": [
+              "sidekick"
+            ],
+            "toolEnds": [
+              {
+                "tool": "sidekick",
+                "isError": false,
+                "text": "sidekick 보고: 5"
+              }
+            ],
+            "toolcallDeltas": 1,
+            "textDeltas": 1
+          },
+          "requests": [
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "0062ac05e34f",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER",
+                "USER",
+                "USER"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                "EPHEMERAL",
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add",
+                "sidekick"
+              ],
+              "lastPrompt": {
+                "source": "USER",
+                "text": "Fusion으로 2+3"
+              },
+              "hasFusionGuidance": true,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "lead",
+              "toolResults": [
+                "5"
+              ],
+              "lastUserText": "Fusion으로 2+3"
+            },
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-medium",
+              "cascade": "0b87e16768c9",
+              "sources": [
+                "USER"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add"
+              ],
+              "lastPrompt": {
+                "source": "USER",
+                "text": "2와 3을 add 도구로 더하고 보고해"
+              },
+              "hasFusionGuidance": false,
+              "hasSidekickPrompt": true,
+              "maxTokens": "128000",
+              "plan": "sidekick",
+              "toolResults": [],
+              "lastUserText": "2와 3을 add 도구로 더하고 보고해"
+            },
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-medium",
+              "cascade": "0b87e16768c9",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "TOOL"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add"
+              ],
+              "lastPrompt": {
+                "source": "TOOL",
+                "text": "5"
+              },
+              "hasFusionGuidance": false,
+              "hasSidekickPrompt": true,
+              "maxTokens": "128000",
+              "plan": "sidekick-report",
+              "toolResults": [
+                "5"
+              ],
+              "lastUserText": "2와 3을 add 도구로 더하고 보고해"
+            },
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "0062ac05e34f",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER",
+                "USER",
+                "USER",
+                "SYSTEM",
+                "TOOL"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                "EPHEMERAL",
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add",
+                "sidekick"
+              ],
+              "lastPrompt": {
+                "source": "TOOL",
+                "text": "sidekick 보고: 5"
+              },
+              "hasFusionGuidance": true,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "lead-final",
+              "toolResults": [
+                "5",
+                "sidekick 보고: 5"
+              ],
+              "lastUserText": "Fusion으로 2+3"
+            }
+          ]
+        },
+        "fusionBackground": {
+          "run": {
+            "agentEnds": 1,
+            "settled": [
+              {
+                "aborted": false
+              }
+            ],
+            "stopReasons": [
+              "toolUse",
+              "stop",
+              "stop"
+            ],
+            "finalText": "백그라운드 보고 확인: 5 ✅",
+            "toolStarts": [
+              "sidekick"
+            ],
+            "toolEnds": [
+              {
+                "tool": "sidekick",
+                "isError": false,
+                "text": "sidekick이 백그라운드에서 작업을 시작했습니다. 보고가 오면 메시지로 알립니다. (handoff 9435ec6c)"
+              }
+            ],
+            "toolcallDeltas": 1,
+            "textDeltas": 2
+          },
+          "requests": [
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "0062ac05e34f",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER",
+                "USER",
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                "EPHEMERAL",
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add",
+                "sidekick"
+              ],
+              "lastPrompt": {
+                "source": "USER",
+                "text": "Fusion 백그라운드로 2+3"
+              },
+              "hasFusionGuidance": true,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "lead",
+              "toolResults": [
+                "5",
+                "sidekick 보고: 5"
+              ],
+              "lastUserText": "Fusion 백그라운드로 2+3"
+            },
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-medium",
+              "cascade": "0b87e16768c9",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add"
+              ],
+              "lastPrompt": {
+                "source": "USER",
+                "text": "2와 3을 add 도구로 더하고 보고해"
+              },
+              "hasFusionGuidance": false,
+              "hasSidekickPrompt": true,
+              "maxTokens": "128000",
+              "plan": "sidekick",
+              "toolResults": [
+                "5"
+              ],
+              "lastUserText": "2와 3을 add 도구로 더하고 보고해"
+            },
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-medium",
+              "cascade": "0b87e16768c9",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER",
+                "SYSTEM",
+                "TOOL"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add"
+              ],
+              "lastPrompt": {
+                "source": "TOOL",
+                "text": "5"
+              },
+              "hasFusionGuidance": false,
+              "hasSidekickPrompt": true,
+              "maxTokens": "128000",
+              "plan": "sidekick-report",
+              "toolResults": [
+                "5",
+                "5"
+              ],
+              "lastUserText": "2와 3을 add 도구로 더하고 보고해"
+            },
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "0062ac05e34f",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER",
+                "USER",
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER",
+                "SYSTEM",
+                "TOOL"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                "EPHEMERAL",
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add",
+                "sidekick"
+              ],
+              "lastPrompt": {
+                "source": "TOOL",
+                "text": "sidekick이 백그라운드에서 작업을 시작했습니다. 보고가 오면 메시지로 알립니다. (handoff 9435ec6c)"
+              },
+              "hasFusionGuidance": true,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "lead-after-background",
+              "toolResults": [
+                "5",
+                "sidekick 보고: 5",
+                "sidekick이 백그라운드에서 작업을 시작했습니다. 보고가 오면 메시지로 알립니다. (handoff 9435ec6c)"
+              ],
+              "lastUserText": "Fusion 백그라운드로 2+3"
+            },
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "0062ac05e34f",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER",
+                "USER",
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER",
+                "SYSTEM",
+                "TOOL",
+                "SYSTEM",
+                "USER"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                "EPHEMERAL",
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add",
+                "sidekick"
+              ],
+              "lastPrompt": {
+                "source": "USER",
+                "text": "Sidekick report for background handoff 9435ec6c:\n\nsidekick 보고: 5"
+              },
+              "hasFusionGuidance": true,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "lead-woken",
+              "toolResults": [
+                "5",
+                "sidekick 보고: 5",
+                "sidekick이 백그라운드에서 작업을 시작했습니다. 보고가 오면 메시지로 알립니다. (handoff 9435ec6c)"
+              ],
+              "lastUserText": "Sidekick report for background handoff 9435ec6c:\n\nsidekick 보고: 5"
+            }
+          ]
+        },
+        "budget": {
+          "chats": 8,
+          "toolRuns": 8,
+          "stopReason": "error",
+          "errorMessage": "Devin 모델 HTTP 요청 예산 8회를 모두 사용했습니다."
+        },
+        "shutdown": {
+          "exitCode": 0,
+          "exitAfterMs": 27,
+          "closed": true
+        },
+        "stderr": "",
+        "guard": {
+          "guardedProcesses": 2,
+          "allowedLoopbackConnections": 52,
+          "blockedNetworkHosts": {},
+          "spawnedCommands": {
+            "ioreg": 2,
+            "node": 1
+          },
+          "blockedCommands": []
+        }
+      }
+    },
+    "print": {
+      "outcome": "pass",
+      "durationMs": 2809,
+      "checks": [
+        {
+          "key": "print-tool-flow",
+          "pass": true,
+          "observed": {
+            "code": 0,
+            "stdout": "합계는 5 ✅\n"
+          }
+        },
+        {
+          "key": "print-requests",
+          "pass": true,
+          "observed": [
+            "swe-2-high",
+            "swe-2-high"
+          ]
+        },
+        {
+          "key": "print-error-exit",
+          "pass": true,
+          "observed": {
+            "code": 1
+          }
+        },
+        {
+          "key": "print-401-exit",
+          "pass": true,
+          "observed": {
+            "code": 1,
+            "chats": 1
+          }
+        },
+        {
+          "key": "print-after-401",
+          "pass": true,
+          "observed": {
+            "code": 0
+          }
+        },
+        {
+          "key": "owned-processes-exited",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "mock-connections-closed",
+          "pass": true,
+          "observed": {
+            "open": 0
+          }
+        },
+        {
+          "key": "no-descendant-processes",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "guard-active",
+          "pass": true,
+          "observed": {
+            "guardedProcesses": 5
+          }
+        },
+        {
+          "key": "no-blocked-commands",
+          "pass": true,
+          "observed": []
+        }
+      ],
+      "steps": {
+        "seed": {
+          "devinModels": 327,
+          "exitCode": 0,
+          "modelsStoreWritten": true
+        },
+        "tool": {
+          "code": 0,
+          "stdout": "합계는 5 ✅\n",
+          "stderr": "",
+          "requests": [
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "902c9f60d39d",
+              "sources": [
+                "USER"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add"
+              ],
+              "lastPrompt": {
+                "source": "USER",
+                "text": "2와 3을 더해줘 🧮"
+              },
+              "hasFusionGuidance": false,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "print",
+              "toolResults": [],
+              "lastUserText": "2와 3을 더해줘 🧮"
+            },
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "902c9f60d39d",
+              "sources": [
+                "USER",
+                "SYSTEM",
+                "TOOL"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL",
+                null,
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add"
+              ],
+              "lastPrompt": {
+                "source": "TOOL",
+                "text": "5"
+              },
+              "hasFusionGuidance": false,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "print-final",
+              "toolResults": [
+                "5"
+              ],
+              "lastUserText": "2와 3을 더해줘 🧮"
+            }
+          ],
+          "durationMs": 420
+        },
+        "error": {
+          "code": 1,
+          "stdout": "",
+          "stderr": "invalid_argument: host-contract scripted failure\n",
+          "chats": 1
+        },
+        "unauthenticated": {
+          "code": 1,
+          "stdout": "",
+          "stderr": "unauthenticated: host-contract expired session 인증 자격 증명이 유효하지 않습니다. 만료·철회 등의 원인일 수 있으므로 login으로 다시 인증하세요.\n",
+          "chats": 1,
+          "credentialKept": true
+        },
+        "after401": {
+          "code": 0,
+          "stdout": "복구 ✅\n",
+          "chats": 1
+        },
+        "guard": {
+          "guardedProcesses": 5,
+          "allowedLoopbackConnections": 12,
+          "blockedNetworkHosts": {},
+          "spawnedCommands": {
+            "ioreg": 5
+          },
+          "blockedCommands": []
+        }
+      }
+    },
+    "json": {
+      "outcome": "pass",
+      "durationMs": 1947,
+      "checks": [
+        {
+          "key": "json-valid-stream",
+          "pass": true,
+          "observed": {
+            "code": 0,
+            "first": "session"
+          }
+        },
+        {
+          "key": "json-terminal-once",
+          "pass": true,
+          "observed": {
+            "agentEnds": 1,
+            "settled": 1
+          }
+        },
+        {
+          "key": "json-partial-tool-deltas",
+          "pass": true,
+          "observed": {
+            "deltas": 2,
+            "tools": [
+              {
+                "tool": "add",
+                "isError": false,
+                "text": "5"
+              }
+            ]
+          }
+        },
+        {
+          "key": "json-final-text",
+          "pass": true,
+          "observed": "JSON 결과 5 ✅"
+        },
+        {
+          "key": "json-partial-error",
+          "pass": true,
+          "observed": {
+            "agentEnds": 1,
+            "settled": [
+              {
+                "aborted": false
+              }
+            ],
+            "stopReasons": [
+              "error"
+            ],
+            "finalText": "",
+            "errorMessage": "invalid_argument: host-contract scripted failure",
+            "toolStarts": [],
+            "toolEnds": [],
+            "toolcallDeltas": 1,
+            "textDeltas": 0
+          }
+        },
+        {
+          "key": "owned-processes-exited",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "mock-connections-closed",
+          "pass": true,
+          "observed": {
+            "open": 0
+          }
+        },
+        {
+          "key": "no-descendant-processes",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "guard-active",
+          "pass": true,
+          "observed": {
+            "guardedProcesses": 3
+          }
+        },
+        {
+          "key": "no-blocked-commands",
+          "pass": true,
+          "observed": []
+        }
+      ],
+      "steps": {
+        "seed": {
+          "devinModels": 327,
+          "exitCode": 0,
+          "modelsStoreWritten": true
+        },
+        "tool": {
+          "code": 0,
+          "records": 32,
+          "invalid": [],
+          "run": {
+            "agentEnds": 1,
+            "settled": [
+              {
+                "aborted": false
+              }
+            ],
+            "stopReasons": [
+              "toolUse",
+              "stop"
+            ],
+            "finalText": "JSON 결과 5 ✅",
+            "toolStarts": [
+              "add"
+            ],
+            "toolEnds": [
+              {
+                "tool": "add",
+                "isError": false,
+                "text": "5"
+              }
+            ],
+            "toolcallDeltas": 2,
+            "textDeltas": 1
+          },
+          "stderr": "",
+          "chats": 2
+        },
+        "partialError": {
+          "code": 0,
+          "invalid": 0,
+          "run": {
+            "agentEnds": 1,
+            "settled": [
+              {
+                "aborted": false
+              }
+            ],
+            "stopReasons": [
+              "error"
+            ],
+            "finalText": "",
+            "errorMessage": "invalid_argument: host-contract scripted failure",
+            "toolStarts": [],
+            "toolEnds": [],
+            "toolcallDeltas": 1,
+            "textDeltas": 0
+          },
+          "chats": 1
+        },
+        "guard": {
+          "guardedProcesses": 3,
+          "allowedLoopbackConnections": 8,
+          "blockedNetworkHosts": {},
+          "spawnedCommands": {
+            "ioreg": 3
+          },
+          "blockedCommands": []
+        }
+      }
+    },
+    "oauth": {
+      "outcome": "pass",
+      "durationMs": 2814,
+      "checks": [
+        {
+          "key": "cli-api-key-with-oauth",
+          "pass": true,
+          "observed": {
+            "credential": "oauth",
+            "code": 1,
+            "requests": 0,
+            "chats": 0,
+            "allOAuthToken": true,
+            "oauthOnlyMessage": false,
+            "apiKeyEchoed": false,
+            "output": "…workspace/private-opensource/pi-packages/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.3.0_@aws-sdk+credential-provider-node@3.972.86_@model_01419f223171ebe2ff54f8c3f2b21cbf/node_modules/@earendil-works/pi-coding-agent/docs/models.md"
+          }
+        },
+        {
+          "key": "env-api-keys-with-oauth",
+          "pass": true,
+          "observed": {
+            "credential": "oauth",
+            "code": 0,
+            "requests": 2,
+            "chats": 1,
+            "allOAuthToken": true,
+            "oauthOnlyMessage": false,
+            "apiKeyEchoed": false,
+            "output": "OAuth ✅"
+          }
+        },
+        {
+          "key": "stored-api-key",
+          "pass": true,
+          "observed": {
+            "credential": "api_key",
+            "code": 1,
+            "requests": 0,
+            "chats": 0,
+            "allOAuthToken": true,
+            "oauthOnlyMessage": false,
+            "apiKeyEchoed": false,
+            "output": "Error: Model \"devin/family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0\" not found. Use --list-models to see available models."
+          }
+        },
+        {
+          "key": "env-api-keys-only",
+          "pass": true,
+          "observed": {
+            "credential": "none",
+            "code": 1,
+            "requests": 0,
+            "chats": 0,
+            "allOAuthToken": true,
+            "oauthOnlyMessage": false,
+            "apiKeyEchoed": false,
+            "output": "Error: Model \"devin/family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0\" not found. Use --list-models to see available models."
+          }
+        },
+        {
+          "key": "cli-api-key-only",
+          "pass": true,
+          "observed": {
+            "credential": "none",
+            "code": 1,
+            "requests": 0,
+            "chats": 0,
+            "allOAuthToken": true,
+            "oauthOnlyMessage": false,
+            "apiKeyEchoed": false,
+            "output": "Error: Model \"devin/family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0\" not found. Use --list-models to see available models.\nError: --api-key requires a model to be specified via --model, --provider/--model, or --models"
+          }
+        },
+        {
+          "key": "oauth-restored",
+          "pass": true,
+          "observed": {
+            "credential": "oauth",
+            "code": 0,
+            "requests": 2,
+            "chats": 1,
+            "allOAuthToken": true,
+            "oauthOnlyMessage": false,
+            "apiKeyEchoed": false,
+            "output": "OAuth ✅"
+          }
+        },
+        {
+          "key": "owned-processes-exited",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "mock-connections-closed",
+          "pass": true,
+          "observed": {
+            "open": 0
+          }
+        },
+        {
+          "key": "no-descendant-processes",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "guard-active",
+          "pass": true,
+          "observed": {
+            "guardedProcesses": 7
+          }
+        },
+        {
+          "key": "no-blocked-commands",
+          "pass": true,
+          "observed": []
+        }
+      ],
+      "steps": {
+        "seed": {
+          "devinModels": 327,
+          "exitCode": 0,
+          "modelsStoreWritten": true
+        },
+        "cli-api-key-with-oauth": {
+          "credential": "oauth",
+          "code": 1,
+          "requests": 0,
+          "chats": 0,
+          "allOAuthToken": true,
+          "oauthOnlyMessage": false,
+          "apiKeyEchoed": false,
+          "output": "…workspace/private-opensource/pi-packages/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.3.0_@aws-sdk+credential-provider-node@3.972.86_@model_01419f223171ebe2ff54f8c3f2b21cbf/node_modules/@earendil-works/pi-coding-agent/docs/models.md"
+        },
+        "env-api-keys-with-oauth": {
+          "credential": "oauth",
+          "code": 0,
+          "requests": 2,
+          "chats": 1,
+          "allOAuthToken": true,
+          "oauthOnlyMessage": false,
+          "apiKeyEchoed": false,
+          "output": "OAuth ✅"
+        },
+        "stored-api-key": {
+          "credential": "api_key",
+          "code": 1,
+          "requests": 0,
+          "chats": 0,
+          "allOAuthToken": true,
+          "oauthOnlyMessage": false,
+          "apiKeyEchoed": false,
+          "output": "Error: Model \"devin/family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0\" not found. Use --list-models to see available models."
+        },
+        "env-api-keys-only": {
+          "credential": "none",
+          "code": 1,
+          "requests": 0,
+          "chats": 0,
+          "allOAuthToken": true,
+          "oauthOnlyMessage": false,
+          "apiKeyEchoed": false,
+          "output": "Error: Model \"devin/family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0\" not found. Use --list-models to see available models."
+        },
+        "cli-api-key-only": {
+          "credential": "none",
+          "code": 1,
+          "requests": 0,
+          "chats": 0,
+          "allOAuthToken": true,
+          "oauthOnlyMessage": false,
+          "apiKeyEchoed": false,
+          "output": "Error: Model \"devin/family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0\" not found. Use --list-models to see available models.\nError: --api-key requires a model to be specified via --model, --provider/--model, or --models"
+        },
+        "oauth-restored": {
+          "credential": "oauth",
+          "code": 0,
+          "requests": 2,
+          "chats": 1,
+          "allOAuthToken": true,
+          "oauthOnlyMessage": false,
+          "apiKeyEchoed": false,
+          "output": "OAuth ✅"
+        },
+        "guard": {
+          "guardedProcesses": 7,
+          "allowedLoopbackConnections": 6,
+          "blockedNetworkHosts": {},
+          "spawnedCommands": {
+            "ioreg": 3
+          },
+          "blockedCommands": []
+        }
+      }
+    },
+    "cache": {
+      "outcome": "pass",
+      "durationMs": 2365,
+      "checks": [
+        {
+          "key": "default-ephemeral-marks",
+          "pass": true,
+          "observed": {
+            "code": 0,
+            "chats": [
+              {
+                "uid": "swe-2-medium",
+                "marks": [
+                  "EPHEMERAL"
+                ],
+                "systemCache": false
+              }
+            ],
+            "output": "캐시 ✅"
+          }
+        },
+        {
+          "key": "long-rejected-before-request",
+          "pass": true,
+          "observed": {
+            "code": 1,
+            "chats": [],
+            "output": "이 Devin 모델의 장기 캐시 수명은 확인되지 않았습니다. 장기 보존은 catalog의 Prompt Cache Retention이 24h인 모델에서만 지원합니다."
+          }
+        },
+        {
+          "key": "long-accepted-24h-model",
+          "pass": true,
+          "observed": {
+            "code": 0,
+            "chats": [
+              {
+                "uid": "gpt-5-6-sol-medium",
+                "marks": [
+                  "EPHEMERAL"
+                ],
+                "systemCache": false
+              }
+            ],
+            "output": "캐시 ✅"
+          }
+        },
+        {
+          "key": "owned-processes-exited",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "mock-connections-closed",
+          "pass": true,
+          "observed": {
+            "open": 0
+          }
+        },
+        {
+          "key": "no-descendant-processes",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "guard-active",
+          "pass": true,
+          "observed": {
+            "guardedProcesses": 4
+          }
+        },
+        {
+          "key": "no-blocked-commands",
+          "pass": true,
+          "observed": []
+        }
+      ],
+      "steps": {
+        "seed": {
+          "devinModels": 327,
+          "exitCode": 0,
+          "modelsStoreWritten": true
+        },
+        "default-swe2": {
+          "code": 0,
+          "chats": [
+            {
+              "uid": "swe-2-medium",
+              "marks": [
+                "EPHEMERAL"
+              ],
+              "systemCache": false
+            }
+          ],
+          "output": "캐시 ✅"
+        },
+        "long-swe2-rejected": {
+          "code": 1,
+          "chats": [],
+          "output": "이 Devin 모델의 장기 캐시 수명은 확인되지 않았습니다. 장기 보존은 catalog의 Prompt Cache Retention이 24h인 모델에서만 지원합니다."
+        },
+        "long-sol-accepted": {
+          "code": 0,
+          "chats": [
+            {
+              "uid": "gpt-5-6-sol-medium",
+              "marks": [
+                "EPHEMERAL"
+              ],
+              "systemCache": false
+            }
+          ],
+          "output": "캐시 ✅"
+        },
+        "guard": {
+          "guardedProcesses": 4,
+          "allowedLoopbackConnections": 7,
+          "blockedNetworkHosts": {},
+          "spawnedCommands": {
+            "ioreg": 4
+          },
+          "blockedCommands": []
+        }
+      }
+    },
+    "tui": {
+      "outcome": "pass",
+      "durationMs": 28425,
+      "checks": [
+        {
+          "key": "tui-prompt",
+          "pass": true,
+          "observed": [
+            {
+              "method": "GetChatMessage",
+              "tokenMatches": true,
+              "metadataKeyMatches": true,
+              "chatModelUid": "swe-2-high",
+              "cascade": "f6115a665563",
+              "sources": [
+                "USER"
+              ],
+              "cacheMarks": [
+                "EPHEMERAL"
+              ],
+              "hasSystemPromptCacheOptions": false,
+              "tools": [
+                "add"
+              ],
+              "lastPrompt": {
+                "source": "USER",
+                "text": "안녕 TUI 👋"
+              },
+              "hasFusionGuidance": false,
+              "hasSidekickPrompt": false,
+              "maxTokens": "128000",
+              "plan": "tui-first",
+              "toolResults": [],
+              "lastUserText": "안녕 TUI 👋"
+            }
+          ]
+        },
+        {
+          "key": "tui-thinking-command",
+          "pass": true,
+          "observed": [
+            "swe-2-max"
+          ]
+        },
+        {
+          "key": "tui-thinking-cycle",
+          "pass": true,
+          "observed": [
+            "swe-2-medium"
+          ]
+        },
+        {
+          "key": "tui-model-select",
+          "pass": true,
+          "observed": [
+            "swe-2-medium"
+          ]
+        },
+        {
+          "key": "tui-escape-abort",
+          "pass": true,
+          "observed": {
+            "closed": true,
+            "chats": 1,
+            "shown": true
+          }
+        },
+        {
+          "key": "tui-reload",
+          "pass": true,
+          "observed": {
+            "reloaded": true,
+            "chats": [
+              {
+                "uid": "swe-2-medium",
+                "tokenMatches": true
+              }
+            ]
+          }
+        },
+        {
+          "key": "tui-logout-removes-credential",
+          "pass": true,
+          "observed": {
+            "hasDevinCredential": false
+          }
+        },
+        {
+          "key": "tui-no-requests-after-logout",
+          "pass": true,
+          "observed": {
+            "requests": 0,
+            "errorShown": true
+          }
+        },
+        {
+          "key": "tui-quit",
+          "pass": true,
+          "observed": {
+            "code": 0
+          }
+        },
+        {
+          "key": "owned-processes-exited",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "mock-connections-closed",
+          "pass": true,
+          "observed": {
+            "open": 0
+          }
+        },
+        {
+          "key": "no-descendant-processes",
+          "pass": true,
+          "observed": {
+            "remaining": 0
+          }
+        },
+        {
+          "key": "guard-active",
+          "pass": true,
+          "observed": {
+            "guardedProcesses": 2
+          }
+        },
+        {
+          "key": "no-blocked-commands",
+          "pass": true,
+          "observed": []
+        }
+      ],
+      "steps": {
+        "seed": {
+          "devinModels": 327,
+          "exitCode": 0,
+          "modelsStoreWritten": true
+        },
+        "thinkingCycleUid": "swe-2-medium",
+        "abortScreen": "…hub.com:443 blocked Warning: Failed to download ripgrep: fetch failed: host-contract guard: outbound connection to github.com:443 blocked 안녕 TUI 👋 TUI 응답 ✅ Thinking level: max 최대 수준 max 응답 Thinking level: medium 순환 수준 cycle 응답 Model: uid:swe-2-medium 모델 선택 확인 선택 응답 취소 테스트 부분 응답 Operation aborted ──",
+        "reloadScreen": "…es. Pi can explain its own features and look up its docs. Ask it how to use or extend Pi. [Extensions] add-tool.mjs, package 안녕 TUI 👋 TUI 응답 ✅ 최대 수준 max 응답 순환 수준 cycle 응답 모델 선택 확인 선택 응답 취소 테스트 부분 응답 Operation aborted Reloaded keybindings, extensions, skills, prompts, themes, and context files ── ──",
+        "logoutScreen": "…, skills, prompts, themes, and context files 리로드 후 리로드 응답 ── ──[Extensions] add-tool.mjs, package 안녕 TUI 👋 TUI 응답 ✅ 최대 수준 max 응답 순환 수준 cycle 응답 모델 선택 확인 선택 응답 취소 테스트 부분 응답 Operation aborted Reloaded keybindings, extensions, skills, prompts, themes, and context files 리로드 후 리로드 응답 Logged out of Devin",
+        "afterLogoutMessage": "Error: No API key found for devin. Use /login to log into a provider via OAuth or API key.",
+        "exit": {
+          "code": 0,
+          "afterQuitMs": 465
+        },
+        "screenTail": "…: \n <path> \n <path> \n <path> \n <path> \n──\n──\n<root>/work\n↑15 ↓10 0.0%/262k (auto) uid:swe-2-medium • medium \nTo resume this session: pi --session 01a154eb-9fb9-7036-affc-07a57ca223b1",
+        "snapshots": [
+          {
+            "label": "thinking-command",
+            "screen": "/thinking max ──/thinking max ──→ max ──/thinking max ── Thinking level: max ── ──↑3 ↓2 0.0%/262k (auto) family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0 • max"
+          },
+          {
+            "label": "logout",
+            "screen": "…n aborted Reloaded keybindings, extensions, skills, prompts, themes, and context files 리로드 후 리로드 응답 ──/logout ──→ logout Remove provider authentication Pi can explain its own features and look up its docs. Ask it how to use or extend Pi. [Extensions] add-tool.mjs, package 안녕 TUI 👋 TUI 응답 ✅ 최대 수준 max 응답 순환 수준 cycle 응답 모델 선택 확인 선택 응답 취소 테스트 부분 응답 Operation aborted Reloaded keybindings, extensions, skills, prompts, themes, and context files 리로드 후 리로드 응답 ── ── 안녕 TUI 👋 TUI 응답 ✅ 최대 수준 max 응답 순환 수준 cycle 응답 모델 선택 확인 선택 응답 취소 테스트 부분 응답 Operation aborted Reloaded keybindings, extensions, skills, prompts, themes, and context files 리로드 후 리로드 응답 ── Select provider to logout: > → Devin ✓ configured ──"
+          }
+        ],
+        "guard": {
+          "guardedProcesses": 2,
+          "allowedLoopbackConnections": 15,
+          "blockedNetworkHosts": {
+            "github.com": 6
+          },
+          "spawnedCommands": {
+            "ioreg": 3,
+            "fd": 1,
+            "fdfind": 1,
+            "rg": 1
+          },
+          "blockedCommands": []
+        }
+      }
+    }
+  },
+  "outcome": "pass",
+  "totals": {
+    "scenarios": 7,
+    "checks": 96,
+    "passedChecks": 96
+  },
+  "completedAt": "2026-10-19T16:08:37.884Z",
+  "tempRootsRemoved": true
+}

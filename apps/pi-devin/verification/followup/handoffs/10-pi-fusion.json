@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "task": "10",
+  "outcome": "pass",
+  "recordedAt": "2026-10-19T12:17:15.000Z",
+  "source": {
+    "baseRevision": "main@ebf1437",
+    "coreVersion": 1,
+    "files": {
+      "index.ts": "28f305b2e2d12849b4375e268fb964b4f510eb62f1371eb9dea9b18cca27f690",
+      "src/pi/sidekick.ts": "91531d56b4873b5a2d7596bc7d1a150bbdb1ca5430345a1e78d397d81704e265",
+      "src/pi/provider.ts": "4942125238e18cacd0182e6d978eca8c2d4eff1cf71698eabab8a11cddadb900",
+      "src/pi/models.ts": "598357e502ffb43f371f4b6d1e3fe895c890aee405560a5b65409f5ed28b9b37",
+      "src/pi/lifecycle.ts": "9b8b45a1a24ebbc6425f8e5d1115f2f952d582b110a92a82aafb2803a6868da3",
+      "src/pi/extension.ts": "40ead816ea052e6ccebf5dafb5b87403cb386d08f8f36ef0f8ed9dac8252facc",
+      "verification/inventory.json": "9420ba88b25308fdfca187d7b08316d37ff575f786d0ecab139bc38c1944e510",
+      "README.md": "e061878ce44fc1be07dd66b7ae6df611100681d41858b04ff0416fdb50952a90",
+      "AGENTS.md": "0fd09aef3e2964b9481cd0baade9a1734afb5bf479808fc35d0d1e76b87ee595",
+      "tests/models.test.ts": "8fcd1189e59d686a15014dad2b631adb8f6c8f827d101b94585d34091ef94620",
+      "tests/model-source.test.ts": "3109871e812ef74b91dc1f66e0ec35b8922b97cd4c2c294aa4680dbeed112680",
+      "tests/model-store.test.ts": "dd29b26ae530335d473108c7b714f691e7812a3afbfa3711005c880ad737c8f3",
+      "tests/pi-integration.test.ts": "b7ab6ee817d9192c02d36a06d0b17d358f9b8c17e111ef63870d53465a7f075c",
+      "tests/pi-lifecycle.test.ts": "8e2f4dc57bb09e2e6bbf5e2c78e9a87aac0cad47627b74b8273ff636462283a3",
+      "verification/followup/proto-check-10.json": "d3a55d7a09a057b03daf924c08cd81669bcf9a6647fea422faa4827578a87d42"
+    },
+    "unchangedReadOnly": {
+      "src/pi/auth.ts": "22d8b90be6da8b7ba8dbd6fe2fe86ed3b86c9ea3178be76d6ab4673b745e9cfd",
+      "src/core/models/variants.ts": "b9d63c69a86415e1366465326cd152b69278b15ee74640ff727a710e2e8372c9",
+      "src/core/protocol/protobuf.ts": "1e9c1d04e7e116e000463f7d86f40b1e4fa96a69a430ee1911ce1ed3d0f953fb"
+    },
+    "note": "provider.ts changed after 01 (sidekick request path, Fusion lead guidance). The OAuth-only check still runs first in the shared infer path for lead and sidekick requests; tests/pi-auth-storage.test.ts passes in the full offline run."
+  },
+  "predecessors": [
+    { "path": "verification/followup/handoffs/01-auth-portable.json", "outcome": "pass", "sha256": "e6392d35ff0eaf1267ce86ff666327ba8de6ca3f3cde00685faba410168d7335" },
+    { "path": "verification/followup/handoffs/09-proto-sources.json", "outcome": "pass", "sha256": "aad4b37c164956a61993fbfe2df61ab4d7e705e851dac26002f6f3c810297181" }
+  ],
+  "decision": "User decisions (2026-10-19): add Fusion as a separate Pi-native scope; pairing = selected Devin model as lead + SWE-2 Medium sidekick; synchronous handoff; shared OAuth and budget; budget raised by environment variable up to 100.",
+  "fusion": {
+    "modelIds": "fusion:<group id without the family: prefix>; one per publishable family: group whose models support tool calls, only when uid:swe-2-medium is a supported exact UID. Fixture: 65 fusion models (391 total = 65 groups + 261 exact + 65 fusion).",
+    "projection": "Same thinkingLevelMap, context window, output limit, input modalities and cache configs as the lead group; name 'Fusion · <group> + SWE-2 Medium · 비용 미상'; devin.fusion = { leadID, sidekickID }. Requests resolve to the lead group's exact UID for the selected level. Cache restore re-derives fusion models from the restored projection.",
+    "activation": "Tool `sidekick` registered with defaultActive=false. model_select and session_start activate it only for fusion models found in the provider's own list and remove it otherwise; other active tools are preserved. A `--tools` allowlist must include `sidekick`.",
+    "leadGuidance": "Provider appends FUSION_LEAD_GUIDANCE to the system prompt of fusion lead requests only (custom system prompts keep it). Sidekick requests do not receive it.",
+    "sidekick": {
+      "tool": "{ message: string } -> text report; details { sidekickModel, steps, toolCalls, isResumed }; executionMode sequential",
+      "loop": "Synchronous inside the lead's tool call. Model request via provider.streamSidekick(); tool calls run only through ctx.executeTool() (Pi validation, hooks, permissions; recorded as nestedCalls). `sidekick` is removed from the sidekick's tool list.",
+      "auth": "modelRegistry.getApiKeyAndHeaders(sidekick model) -> OAuth toAuth; provider OAuth-only check applies.",
+      "conversation": "Own sessionId/cascadeId/trajectoryId per Pi session, new executionId per handoff, own step counter; lead step, recovery and auxiliary flags are not consumed (lifecycle.acquire isSidekick).",
+      "context": "Kept in memory per Pi session (max 8 sessions); a failed handoff is rolled back; reset on session_shutdown and not restored after resume/reload.",
+      "timeoutMs": 300000
+    },
+    "budget": "Lead and sidekick share the user run budget (default 8). PI_DEVIN_MAX_MODEL_CALLS accepts integers 1-100; invalid values stop extension load. Index.ts passes it to the provider lifecycle.",
+    "wireChanges": 0
+  },
+  "checks": [
+    { "key": "fusion-projection", "cwd": "apps/pi-devin", "command": "node --test tests/models.test.ts", "observed": "391 unique models incl. 65 fusion entries mirroring lead groups with sidekick uid:swe-2-medium; no fusion entries without swe-2-medium" },
+    { "key": "fusion-integration", "cwd": "apps/pi-devin", "command": "node --test tests/pi-integration.test.ts", "observed": "3/3 pass: fusion model activates sidekick (and keeps fixture_add); lead swe-2-high -> sidekick swe-2-medium x2 -> lead; separate sidekick cascade/trajectory/clientSession/executionId; lead steps 0,1 and sidekick steps 0,1; sidekick tools exclude sidekick; lead prompt carries Fusion guidance after a custom system prompt, sidekick prompt does not; nestedCalls [fixture_add ok]; all metadata.apiKey = OAuth session; execution used 4; failed handoff returns a tool error and is absent from the next handoff's history while earlier context persists; switching to the family model deactivates sidekick; budget 3 stops after lead 1 + sidekick 2 with no further requests" },
+    { "key": "lifecycle", "cwd": "apps/pi-devin", "command": "node --test tests/pi-lifecycle.test.ts", "observed": "sidekick lease shares budget without consuming lead step/recovery; PI_DEVIN_MAX_MODEL_CALLS 40 reaches lifecycle via index.ts, unset keeps 8, invalid values throw" },
+    { "key": "stage2", "cwd": "apps/pi-devin", "command": "node --test tests/models.test.ts tests/pi-provider.test.ts tests/pi-integration.test.ts tests/model-source.test.ts tests/pi-lifecycle.test.ts", "observed": "exit 0, 32/32 pass" },
+    { "key": "package-inventory", "cwd": "apps/pi-devin", "command": "PI_OFFLINE=1 node verification/scripts/validate-package.mjs . --expect verification/inventory.json --pi-root <app Pi 1.3.0 root> --runtime (isolated HOME/npm config)", "observed": "status pass; exact names.tools inventory pass with sidekick" },
+    { "key": "typecheck", "cwd": ".", "command": "pnpm --dir apps/pi-devin typecheck", "observed": "exit 0" },
+    { "key": "offline", "cwd": ".", "command": "pnpm --dir apps/pi-devin verify:offline", "observed": "exit 0, 180/180 pass" },
+    { "key": "proto", "cwd": "apps/pi-devin", "command": "node verification/scripts/verify-proto.mjs --report verification/followup/proto-check-10.json", "observed": "ok: 63/63 byte-identical, 0 semantic/shape diffs, 18 runtime cases; no wire change" }
+  ],
+  "environment": { "node": "v24.14.0", "platform": "darwin", "arch": "arm64", "piCodingAgent": "1.3.0" },
+  "limitations": [
+    "Not CLI Fusion: no fusion-* router pairs, AssignModel pricing/JWT, background sidekick, mid-handoff brief injection or asynchronous report injection.",
+    "Sidekick context is in memory only; it resets after resume/reload or a new session and is not compacted, so very long sidekick histories can hit the context window.",
+    "Sidekick requests call the provider directly: Pi before/after provider request hooks are not applied to them, and the per-request deadline is the Pi 1.3 default 300000ms rather than a session-specific timeout.",
+    "Only mock services were used. Real Devin behavior of the paired flow is unverified; 07 may run it only with a SWE-2 lead Fusion model after separate approval."
+  ],
+  "handoff": {
+    "decision": "continue",
+    "successors": [
+      "keep fusion: entries following the lead group's publication and level mapping",
+      "exercise the Fusion path in real Pi modes",
+      "SWE-2 lead Fusion model is a live candidate"
+    ]
+  }
+}

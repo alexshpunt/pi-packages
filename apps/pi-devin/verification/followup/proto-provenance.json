@@ -1,0 +1,456 @@
+{
+  "schemaVersion": 1,
+  "description": "Provenance for apps/pi-devin/proto and the shipped resources/descriptors.pb: the third-party original baseline, observed wire additions, the shipped descriptor built from proto/, and the closed list of normalization rules used by verification/scripts/verify-proto.mjs.",
+  "original": {
+    "path": "resources/descriptors.pb",
+    "sha256": "d0bcf2c0e9ebf09241ccce2dda35dd70420147b86df9696d57f5c162fc73ac5b",
+    "bytes": 849751,
+    "counts": {
+      "files": 63,
+      "messages": 2879,
+      "fields": 9863,
+      "enums": 293,
+      "enumValues": 2575,
+      "services": 20,
+      "methods": 688,
+      "extensions": 6,
+      "oneofs": 638,
+      "mapEntries": 106,
+      "proto3Optional": 470
+    },
+    "syntax": {
+      "proto3": 58,
+      "proto2 (unset)": 5
+    },
+    "sourceCodeInfo": "absent: original comments, layout and source positions are not recoverable",
+    "files": [
+      {
+        "name": "buf/validate/validate.proto",
+        "bytes": 54720,
+        "sha256": "69353807d04cf8beaa31478620fc4192916e93329f021f58913521e4fca1a733"
+      },
+      {
+        "name": "cel/expr/checked.proto",
+        "bytes": 2579,
+        "sha256": "33e39383faa3c70abfde5007242783780af178c86192cc2923e5c15e16148da2"
+      },
+      {
+        "name": "cel/expr/eval.proto",
+        "bytes": 650,
+        "sha256": "beabbba7458d890881abfd1efe41160240f88edf3517b04f3177a848a24dc55c"
+      },
+      {
+        "name": "cel/expr/explain.proto",
+        "bytes": 290,
+        "sha256": "fe42fe4e8304f128af17dd61e4ed363259dda854f1979a50b533ff64212d9c2e"
+      },
+      {
+        "name": "cel/expr/syntax.proto",
+        "bytes": 2993,
+        "sha256": "8e8a5038fa288826e5454e013d1d0ee9c916ae9e3e1d4d52f7f16e388e4e9d15"
+      },
+      {
+        "name": "cel/expr/value.proto",
+        "bytes": 945,
+        "sha256": "aba20de73575562252ecf2725e960e5c0792c759016e7740a72e557a3c5a57d4"
+      },
+      {
+        "name": "connectext/grpc/status/v1/status.proto",
+        "bytes": 393,
+        "sha256": "24d2372bea059831e69ebbe8b31a8ca990a875c0e3b5845e0ff4850ae06d5bb9"
+      },
+      {
+        "name": "errorspb/errors.proto",
+        "bytes": 1349,
+        "sha256": "d5a609945c6a00a2043a5944c5c26b6aa14abeff22987f8d806a31f0614f6af2"
+      },
+      {
+        "name": "errorspb/hintdetail.proto",
+        "bytes": 132,
+        "sha256": "6d17b27d8154a528dd19e79069cf5f485473995d1787463bbb7d2899aa93aee5"
+      },
+      {
+        "name": "errorspb/markers.proto",
+        "bytes": 207,
+        "sha256": "fcdb790107c3f96e73c7f242325aa35d00c4c1468d261ad74d288592911dbd15"
+      },
+      {
+        "name": "errorspb/tags.proto",
+        "bytes": 212,
+        "sha256": "32368353968f14c3bb1e9f698076e591c7d70748ce92948e22b05044a0a28cd6"
+      },
+      {
+        "name": "errorspb/testing.proto",
+        "bytes": 107,
+        "sha256": "1e9458740b4f1f9d3730cead746a8aa0ecfce341e2ddf656af6f50aa9d2376cb"
+      },
+      {
+        "name": "exa/analytics_pb/analytics.proto",
+        "bytes": 7879,
+        "sha256": "34b69e2f48af9bb3471194057893acdb1065c40218dc5849b51ee892646d054e"
+      },
+      {
+        "name": "exa/api_server_pb/api_server.proto",
+        "bytes": 92600,
+        "sha256": "22c867b1fc434e8663f35bb44f65ddb6d9ede8860022c2343cfb8c3e4cb7594d"
+      },
+      {
+        "name": "exa/auth_pb/auth.proto",
+        "bytes": 454,
+        "sha256": "93bdd0c8ba423935144ac3b37d8c358232d2dbbf7424d181572151d6873c11df"
+      },
+      {
+        "name": "exa/auto_cascade_common_pb/auto_cascade_common.proto",
+        "bytes": 2324,
+        "sha256": "747f9cc8b486d118bb16b63920330dd09d05ed75e3b5f5303a257076c6eb90ab"
+      },
+      {
+        "name": "exa/browser_preview_pb/browser_preview.proto",
+        "bytes": 707,
+        "sha256": "a74ae029932a8c0aea721dbc520682993407fa596a3a0fe34836e5f166ab81b6"
+      },
+      {
+        "name": "exa/bug_checker_pb/bug_checker.proto",
+        "bytes": 487,
+        "sha256": "ead3380a7b04eb2ff6c7de83236301f26f86e499ea90825eca75594fd4af1b0c"
+      },
+      {
+        "name": "exa/cascade_plugins_pb/cascade_plugins.proto",
+        "bytes": 8896,
+        "sha256": "effa9e9c4d2c4ade58d25086acfdb455ec9d301eb854dd38581c3e848305efbf"
+      },
+      {
+        "name": "exa/chat_client_server_pb/chat_client_server.proto",
+        "bytes": 1739,
+        "sha256": "36618b8559e5c60bfff3d2ae98fabf3259d676258c59d69a20c3ea4500cd86d3"
+      },
+      {
+        "name": "exa/chat_pb/chat.proto",
+        "bytes": 15097,
+        "sha256": "44386ddb44475db173d546f244317768f09a0ec996c247ce7bb3a706b7c955df"
+      },
+      {
+        "name": "exa/code_edit/code_edit_pb/code_edit.proto",
+        "bytes": 6296,
+        "sha256": "62741b98adeba76657bcc889653abec0fd42aca5587c9c1c8fc8161385202d09"
+      },
+      {
+        "name": "exa/codeium_common_pb/browser_context.proto",
+        "bytes": 753,
+        "sha256": "a745b66f5c247e5eed6f4c20a2f460e0dc56306e05f70f10129ac3689c2f2773"
+      },
+      {
+        "name": "exa/codeium_common_pb/codeium_common.proto",
+        "bytes": 134777,
+        "sha256": "7d16b522ee7d66175bbbc8c7d539597df74d1c216ad8edf91944c8b247a87634"
+      },
+      {
+        "name": "exa/context_module_pb/context_module.proto",
+        "bytes": 6593,
+        "sha256": "36a8ca1b22a789f265ea184c5ed4d29282db5dfacc07f9985022e8ce739e7d57"
+      },
+      {
+        "name": "exa/cortex_pb/cortex.proto",
+        "bytes": 113681,
+        "sha256": "eadab257b653ccdadfa3b44779487be4e348232df02397f4b40339f00cb32c21"
+      },
+      {
+        "name": "exa/dev_pb/dev.proto",
+        "bytes": 597,
+        "sha256": "10ae2f5bd9c8fdb8e04e114cdaade680bca85e17d1624057fc059a81bf7423da"
+      },
+      {
+        "name": "exa/diff_action_pb/diff_action.proto",
+        "bytes": 1767,
+        "sha256": "9087f5b654fd7fc7ab2c7a76afb51fa955890d89bbdc33de802688631acf7f27"
+      },
+      {
+        "name": "exa/eval/pr_eval/datasets_pb/datasets.proto",
+        "bytes": 3771,
+        "sha256": "5d59804fa9559742cb5710cd3963cdf7647f5233a36fc83d769bec07762ba758"
+      },
+      {
+        "name": "exa/eval_pb/eval.proto",
+        "bytes": 48096,
+        "sha256": "a4f5fb68f32936da5e640275f5662647c635195250867eb51b1c5e9d1735643f"
+      },
+      {
+        "name": "exa/extension_server_pb/extension_server.proto",
+        "bytes": 16749,
+        "sha256": "3862b526d072ed648fcec4c72ef0888db7d2cc8c848068c52ad7f343ce56fbd1"
+      },
+      {
+        "name": "exa/file_system_provider_pb/file_system_provider.proto",
+        "bytes": 2103,
+        "sha256": "3d3842f103e5782c9aeb732dcce912aec71bac29af1686b4e4420d55388eb40e"
+      },
+      {
+        "name": "exa/index_pb/index.proto",
+        "bytes": 15107,
+        "sha256": "4d4724423232efa5a816e370bbe2ed795a6fe11f39d023b1c54cd1aaf10e09fd"
+      },
+      {
+        "name": "exa/knowledge_base_pb/knowledge_base.proto",
+        "bytes": 5116,
+        "sha256": "0b4f630da9c37953f2a7ac0d60e74e946e5e568c7fc29186971b247b3cff686a"
+      },
+      {
+        "name": "exa/language_server_pb/language_server.proto",
+        "bytes": 86119,
+        "sha256": "0a3a8451ef2e4e81c9c70afed969680eb0931fb6e4cda449e8b94cad2b1de10a"
+      },
+      {
+        "name": "exa/model_management_pb/model_management.proto",
+        "bytes": 5458,
+        "sha256": "e8c01f65dc824dcc2b6f58053414ac8a3696cd5d00990341d6ff5482bf5d0871"
+      },
+      {
+        "name": "exa/opensearch_clients_pb/opensearch_clients.proto",
+        "bytes": 15362,
+        "sha256": "10238f2b749f12f4f55dd916ce335b8679cadcacb38313341ee6def47c7be45a"
+      },
+      {
+        "name": "exa/product_analytics_pb/product_analytics.proto",
+        "bytes": 1421,
+        "sha256": "4505a5db6419dc9fa7461dd47182e83b73f9a123f9deb8756a0ecb0cc52e6671"
+      },
+      {
+        "name": "exa/prompt_pb/prompt.proto",
+        "bytes": 4180,
+        "sha256": "c1934bd34251e76ee39eccb5c93a26d3bea16c43caf7a11cc7b7474a6b16b34f"
+      },
+      {
+        "name": "exa/reactive_component_pb/reactive_component.proto",
+        "bytes": 3216,
+        "sha256": "9acb33e34260794b0539499d2a400ce595a82259bd256cf66a9c223a0b50d07c"
+      },
+      {
+        "name": "exa/seat_management_pb/seat_management.proto",
+        "bytes": 99431,
+        "sha256": "ed1fc3428af34b8191d73bfd3bc57b93707c7c9631be07fed3a19ff7111eb58b"
+      },
+      {
+        "name": "exa/tokenizer_pb/tokenizer.proto",
+        "bytes": 654,
+        "sha256": "d10818d4e3370105faf77ab0107c087727fd9cded3bc25f5c45cf1c8e3e34c83"
+      },
+      {
+        "name": "exa/trainer_pb/config.proto",
+        "bytes": 21634,
+        "sha256": "f0e5a57d8fba213b8365099857691c2509204c6d09915a5c4b635c7126c92e32"
+      },
+      {
+        "name": "exa/tree_sitter/language_data_pb/language_data.proto",
+        "bytes": 455,
+        "sha256": "37afa12e8e0749e7cb3068e256d1a505bd2869f5a37730df0c1b2d0d7c3b8486"
+      },
+      {
+        "name": "exa/trust_pb/trust.proto",
+        "bytes": 5410,
+        "sha256": "ea1baeb8d22d8762e5de04fae9ab366e0980847f16b1af8cc5ce73adab35a309"
+      },
+      {
+        "name": "exa/user_analytics_pb/user_analytics.proto",
+        "bytes": 25259,
+        "sha256": "b9bab80f2a0b456e4d0b20458c6c6389fe8bb8da52e56cb28f8be9a190be2d21"
+      },
+      {
+        "name": "google/api/expr/v1alpha1/checked.proto",
+        "bytes": 3124,
+        "sha256": "82991fa16aac26200d72e5af274eb0b2d784d4a4ef232849ed18e0afdb53f6ba"
+      },
+      {
+        "name": "google/api/expr/v1alpha1/eval.proto",
+        "bytes": 738,
+        "sha256": "ae2c09e0b47f61f78f16aa406832d3c3440fcd0a19e6981dbd1794e024adf341"
+      },
+      {
+        "name": "google/api/expr/v1alpha1/explain.proto",
+        "bytes": 434,
+        "sha256": "8ae4b036f9a4060c152e6a61f1393eb9a8722352003eb3a354dde6f221a4bc29"
+      },
+      {
+        "name": "google/api/expr/v1alpha1/syntax.proto",
+        "bytes": 3637,
+        "sha256": "b7b0a5c27cf0c4c63fbf37a4a7f6700503d7f990eba698110fdc197a03857835"
+      },
+      {
+        "name": "google/api/expr/v1alpha1/value.proto",
+        "bytes": 1153,
+        "sha256": "954e8c47a581c7c5673ca10fd679d1fd537f6880af0950be203834624e263de3"
+      },
+      {
+        "name": "google/protobuf/any.proto",
+        "bytes": 228,
+        "sha256": "8f596a55d5ed667d3c868efbc74115f0d39e350afe4af915827fa09ad69af109"
+      },
+      {
+        "name": "google/protobuf/cpp_features.proto",
+        "bytes": 645,
+        "sha256": "45f54b3f8c3d70b7ec169ab7defb4e9c69b0c31f0f94973aa8d8b6b16dd8efa5"
+      },
+      {
+        "name": "google/protobuf/descriptor.proto",
+        "bytes": 13181,
+        "sha256": "af656d6ea8a1213bb001451ea1dda5a22ba4d95996272a6ab38b40da3f4bceea"
+      },
+      {
+        "name": "google/protobuf/duration.proto",
+        "bytes": 251,
+        "sha256": "623658ab5764fddc75283b29c9e740f500a43cbae015a572ccbce8a28396af0f"
+      },
+      {
+        "name": "google/protobuf/empty.proto",
+        "bytes": 190,
+        "sha256": "0555769ad996450d230c4e2308c2c9fd7db780d44281230cb0d824137020a435"
+      },
+      {
+        "name": "google/protobuf/go_features.proto",
+        "bytes": 870,
+        "sha256": "e059a496a40c25e12e963d96d939a0a117671265a2b827277a03a503405d3206"
+      },
+      {
+        "name": "google/protobuf/struct.proto",
+        "bytes": 738,
+        "sha256": "ea585e0aaf06fdea3ca34ae3af272ed35355b07cd2388ce60abd6eabd473dbf1"
+      },
+      {
+        "name": "google/protobuf/timestamp.proto",
+        "bytes": 255,
+        "sha256": "422a163a2d7051465e0a516584b4d96d18c270ec4e7ad3c21ad33e5c440ebecc"
+      },
+      {
+        "name": "google/protobuf/wrappers.proto",
+        "bytes": 518,
+        "sha256": "0cf278022a8115b90b903d80e68ae0dc5a40c7bac941787399b550a13c25af7b"
+      },
+      {
+        "name": "google/rpc/status.proto",
+        "bytes": 275,
+        "sha256": "01743597a5d8462782ffb3627fc43c5d2ce4db32f628dd0ccc82a9faa7debbee"
+      },
+      {
+        "name": "grpc/binlog/v1/binarylog.proto",
+        "bytes": 1986,
+        "sha256": "9a97a67ddba7ff8f0e121f40f1b838fbe94f191dc37b89f7763d9a36bcd3d0c6"
+      },
+      {
+        "name": "io/prometheus/client/metrics.proto",
+        "bytes": 2565,
+        "sha256": "ea247c35598f82dc5b8cfa01ca7d0ea5044d644e940ed10d6d35f81e3996ac51"
+      }
+    ],
+    "shipped": false,
+    "note": "Third-party FileDescriptorSet that proto/ was reconstructed from. Since 2026-10-20 it is no longer shipped or kept in the package; pass it with --original to repeat the comparison. verification/followup/proto-check-12.json records proto/ as byte-identical per file to this original plus normalizations N1/N2 and the four observed additions."
+  },
+  "shipped": {
+    "path": "resources/descriptors.pb",
+    "sha256": "28f1b033d0ed6695350d0b99c73152750063d28868a7f41feb7091713d2fa679",
+    "bytes": 848682,
+    "builtFrom": "proto/",
+    "command": "buf build proto --as-file-descriptor-set --exclude-source-info -o resources/descriptors.pb",
+    "compiler": "@bufbuild/buf 1.74.0",
+    "reproducible": "two builds produced the same sha256",
+    "differsFromOriginal": "contains the four observed additions; omits empty MethodOptions (N1); adds default json_name to 14 fields (N2, ignored by protobufjs); file order follows the compiler"
+  },
+  "reconstruction": {
+    "sourceRoot": "proto",
+    "origin": "2026-10-20: replaced with the reconstructed source tree (63 .proto files, same original descriptor). Only declaration order was adjusted in 3 files so the compiler reproduces the original order: DisplayOption lists the observed value 7 after the original values, and the nested messages Index.RepoStats and SourceInfo.Extension are declared before the map fields. The previous tree printed by descriptor-to-proto.mjs had the same fields, numbers and options (60 of 63 files compiled byte-identical before the order adjustment).",
+    "generator": "verification/scripts/descriptor-to-proto.mjs (reference printer only; prints original declarations and never overwrites a non-empty directory)",
+    "referenceDecoder": "buf convert with the original set as schema (lossless: JSON round trip is byte-identical). protobufjs 7.6.6 descriptor schema is not used because re-encoding drops custom options and editions fields in 21 of 63 files.",
+    "compiler": {
+      "package": "@bufbuild/buf",
+      "version": "1.74.0",
+      "license": "Apache-2.0",
+      "scope": "devDependency only; not in package files or runtime imports",
+      "command": "buf build <sourceRoot> --as-file-descriptor-set --exclude-source-info"
+    },
+    "layout": "Type references are written relative to the current package where unambiguous and fully qualified with a leading dot across packages. Nested messages are declared before map fields when the original nested_type order requires it. Observed additions are marked with [added field] or [added value] comments. Custom options are written in text-format aggregate syntax."
+  },
+  "observedAdditions": [
+    {
+      "id": "W03",
+      "kind": "field",
+      "file": "exa/api_server_pb/api_server.proto",
+      "parent": "exa.api_server_pb.GetChatMessageRequest",
+      "field": {
+        "name": "client_session_id",
+        "number": 28,
+        "label": "LABEL_OPTIONAL",
+        "type": "TYPE_STRING",
+        "jsonName": "clientSessionId"
+      },
+      "isLocalName": true,
+      "evidence": "Protocol analysis matched the session lock name to request tag 28; the request summary and session replay carried the same session ID.",
+      "runtime": "src/core/protocol/protobuf.ts getRoot(): Field(\"client_session_id\", 28, \"string\")"
+    },
+    {
+      "id": "W04",
+      "kind": "field",
+      "file": "exa/chat_pb/chat.proto",
+      "parent": "exa.chat_pb.ChatMessagePrompt",
+      "field": {
+        "name": "model_uid",
+        "number": 22,
+        "label": "LABEL_OPTIONAL",
+        "type": "TYPE_STRING",
+        "jsonName": "modelUid"
+      },
+      "isLocalName": true,
+      "evidence": "Protocol analysis kept the requested model UID at prompt tag 22.",
+      "runtime": "src/core/protocol/protobuf.ts getRoot(): Field(\"model_uid\", 22, \"string\")"
+    },
+    {
+      "id": "M-ALIASES",
+      "kind": "field",
+      "file": "exa/codeium_common_pb/codeium_common.proto",
+      "parent": "exa.codeium_common_pb.ModelInfo",
+      "field": {
+        "name": "aliases",
+        "number": 27,
+        "label": "LABEL_REPEATED",
+        "type": "TYPE_STRING",
+        "jsonName": "aliases"
+      },
+      "isLocalName": true,
+      "evidence": "A live GetCliModelConfigs response carried modelInfo aliases (for example a family alias) that are absent from the descriptor snapshot; a unique mock alias sent at tag 27 was resolved by --model.",
+      "runtime": "src/core/protocol/protobuf.ts getRoot(): Field(\"aliases\", 27, \"string\", \"repeated\")"
+    },
+    {
+      "id": "W05",
+      "kind": "enumValue",
+      "file": "exa/codeium_common_pb/codeium_common.proto",
+      "parent": "exa.codeium_common_pb.DisplayOption",
+      "value": {
+        "name": "DISPLAY_OPTION_WIRE_7",
+        "number": 7
+      },
+      "isLocalName": true,
+      "evidence": "Model and team queries sent supported_model_displays 3, 4, 6, 7, 8; 7 has no name in the descriptor.",
+      "runtime": "src/core/protocol/protobuf.ts getRoot(): Enum.add(\"DISPLAY_OPTION_WIRE_7\", 7)"
+    }
+  ],
+  "normalization": [
+    {
+      "id": "N1",
+      "rule": "An original MethodOptions message that is present and empty ({}) is compared as absent.",
+      "scope": "service[].method[].options",
+      "expectedCount": 654,
+      "reason": "Every original method carries an empty options message, consistent with source-retention options stripped before the descriptor was embedded. Those option values are not recoverable, and .proto cannot express an empty options message."
+    },
+    {
+      "id": "N2",
+      "rule": "An original field without json_name is compared with the protoc default json_name that every compiler emits.",
+      "scope": "exa/tokenizer_pb/tokenizer.proto (10 fields), google/protobuf/cpp_features.proto (3 fields and extension cpp)",
+      "expectedCount": 14,
+      "reason": "Absent json_name means the default name; .proto cannot request an absent json_name."
+    },
+    {
+      "id": "N3",
+      "rule": "Files are matched by name; FileDescriptorSet order is reported but not compared.",
+      "expectedCount": null,
+      "reason": "The compiler orders files by dependency and name. Runtime loading resolves names, not set order."
+    }
+  ],
+  "maintenance": "When a wire definition changes, edit the .proto source and this file's observedAdditions, then run verify-proto.mjs and keep the new report instead of overwriting earlier evidence."
+}

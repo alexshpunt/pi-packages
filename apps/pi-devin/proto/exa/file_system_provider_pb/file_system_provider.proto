@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package exa.file_system_provider_pb;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+enum FileType {
+  FILE_TYPE_UNSPECIFIED = 0;
+  FILE_TYPE_DIRECTORY = 1;
+  FILE_TYPE_REGULAR = 2;
+  FILE_TYPE_SYMLINK = 3;
+}
+
+enum FileSystemError {
+  FILE_SYSTEM_ERROR_UNSPECIFIED = 0;
+  FILE_SYSTEM_ERROR_NOT_DIRECTORY = 1;
+  FILE_SYSTEM_ERROR_IS_DIRECTORY = 2;
+  FILE_SYSTEM_ERROR_NOT_EXIST = 3;
+  FILE_SYSTEM_ERROR_EXISTS = 4;
+  FILE_SYSTEM_ERROR_PERMISSION = 5;
+  FILE_SYSTEM_ERROR_INVALID_URI = 6;
+  FILE_SYSTEM_ERROR_OTHER = 7;
+}
+
+message FileStat {
+  FileType type = 1;
+  int64 size = 2;
+  .google.protobuf.Timestamp mtime = 3;
+  .google.protobuf.Timestamp ctime = 4;
+  FileSystemError error = 5;
+  string error_message = 6;
+}
+
+message StatRequest {
+  repeated string uri = 1 [(buf.validate.field) = { repeated: { items: { string: { uri: true } } } }];
+}
+
+message StatResponse {
+  repeated FileStat file_stat = 1;
+}
+
+message ReadDirectoryRequest {
+  repeated string uri = 1 [(buf.validate.field) = { repeated: { items: { string: { uri: true } } } }];
+}
+
+message ReadDirectoryResponse {
+  repeated DirEntries entries = 1;
+}
+
+message DirEntries {
+  map<string, FileStat> file_stat_entries = 1;
+  FileSystemError error = 2;
+  string error_message = 3;
+}
+
+message ReadFileRequest {
+  repeated string uri = 1 [(buf.validate.field) = { repeated: { items: { string: { uri: true } } } }];
+}
+
+message ReadFileResponse {
+  repeated FileData file_data = 1;
+}
+
+message FileData {
+  bytes content = 1;
+  FileSystemError error = 2;
+  string error_message = 3;
+}
+
+service FileSystemProviderService {
+  rpc Stat(StatRequest) returns (StatResponse);
+  rpc ReadDirectory(ReadDirectoryRequest) returns (ReadDirectoryResponse);
+  rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
+}

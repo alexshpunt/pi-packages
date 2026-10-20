@@ -1,0 +1,529 @@
+{
+  "status": "pass",
+  "scope": "Requested resource inventory and applicable structure/loading/filtering checks. Theme checks apply only to provided themes; --pack selects npm artifact checks. This is not a complete behavioral test.",
+  "packageDir": "<check>/tmp/pi-package-pack-ri35AZ/extracted/package",
+  "checks": [
+    {
+      "name": "package.json object",
+      "status": "pass"
+    },
+    {
+      "name": "npm metadata and gallery discovery",
+      "status": "not_applicable",
+      "detail": "No npm artifact check selected; local loading does not require npm name/version or a gallery keyword."
+    },
+    {
+      "name": "ES module authoring convention",
+      "status": "pass",
+      "detail": "type: module is an authoring recommendation. A different or omitted value is not by itself a Pi load error."
+    },
+    {
+      "name": "pi manifest object",
+      "status": "pass"
+    },
+    {
+      "name": "pi.extensions string array",
+      "status": "pass"
+    },
+    {
+      "name": "extensions portable path: ./index.ts",
+      "status": "pass"
+    },
+    {
+      "name": "extensions existing candidate: ./index.ts",
+      "status": "pass",
+      "detail": "Candidate existence only; the Pi runtime decides discovery and filtering."
+    },
+    {
+      "name": "extensions contained resource: ./index.ts",
+      "status": "pass",
+      "detail": "Published resources must not depend on an outside symlink target."
+    },
+    {
+      "name": "pi.skills string array",
+      "status": "pass"
+    },
+    {
+      "name": "pi.prompts string array",
+      "status": "pass"
+    },
+    {
+      "name": "pi.themes string array",
+      "status": "pass"
+    },
+    {
+      "name": "host not bundled as runtime dependency: @earendil-works/pi-ai",
+      "status": "pass"
+    },
+    {
+      "name": "wildcard host peer: @earendil-works/pi-ai",
+      "status": "pass"
+    },
+    {
+      "name": "host not bundled as runtime dependency: @earendil-works/pi-agent-core",
+      "status": "pass"
+    },
+    {
+      "name": "host not bundled as runtime dependency: @earendil-works/pi-coding-agent",
+      "status": "pass"
+    },
+    {
+      "name": "wildcard host peer: @earendil-works/pi-coding-agent",
+      "status": "pass"
+    },
+    {
+      "name": "host not bundled as runtime dependency: @earendil-works/pi-tui",
+      "status": "pass"
+    },
+    {
+      "name": "host not bundled as runtime dependency: typebox",
+      "status": "pass"
+    },
+    {
+      "name": "semantic import and bundle inspection",
+      "status": "skipped",
+      "detail": "Review imports for undeclared runtime dependencies, unsupported host subpaths, and bundled host copies. Static checks do not parse TypeScript or compiled bundles."
+    },
+    {
+      "name": "required source file: package.json",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: README.md",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: index.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: cli.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: resources/descriptors.pb",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/auth-command.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/auth-ui.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/conversation.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/credentials.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/help.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/images.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/initialization.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/main.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/options.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/registered-tools.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/session-store.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cli/verification.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/auth/access.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/auth/index.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/auth/login.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/auth/rest-exchange.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/client.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/index.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/inference/chat.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/inference/images.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/inference/messages.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/inference/retry.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/inference/state.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/models/access.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/models/catalog.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/models/index.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/models/select.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/models/variants.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/protocol/device.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/protocol/fingerprint.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/protocol/http.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/protocol/protobuf.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/protocol/transport.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/core/types.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/pi/auth.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/pi/extension.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/pi/lifecycle.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/pi/messages.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/pi/models.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/pi/provider.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/pi/sidekick.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/pi/stream.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/pi/fusion-command.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/pi/fusion-settings.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/pi/sidekick-runtime.ts",
+      "status": "pass"
+    },
+    {
+      "name": "forbidden source file absent: auth.json",
+      "status": "pass"
+    },
+    {
+      "name": "forbidden source file absent: credentials.json",
+      "status": "pass"
+    },
+    {
+      "name": "forbidden source file absent: credentials.toml",
+      "status": "pass"
+    },
+    {
+      "name": "forbidden source file absent: .pi/auth.json",
+      "status": "pass"
+    },
+    {
+      "name": "forbidden source file absent: .env",
+      "status": "pass"
+    },
+    {
+      "name": "Pi resource worker completed",
+      "status": "pass"
+    },
+    {
+      "name": "Pi resource diagnostics",
+      "status": "pass",
+      "detail": []
+    },
+    {
+      "name": "string/object resource parity",
+      "status": "pass"
+    },
+    {
+      "name": "wildcard filters expose no extra resources",
+      "status": "pass"
+    },
+    {
+      "name": "disable only extensions",
+      "status": "pass"
+    },
+    {
+      "name": "disable only skills",
+      "status": "not_applicable",
+      "detail": "No resources of this type to disable."
+    },
+    {
+      "name": "disable only prompts",
+      "status": "not_applicable",
+      "detail": "No resources of this type to disable."
+    },
+    {
+      "name": "disable only themes",
+      "status": "not_applicable",
+      "detail": "No resources of this type to disable."
+    },
+    {
+      "name": "exact resources.extensions inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [
+          "index.ts"
+        ],
+        "actual": [
+          "index.ts"
+        ]
+      }
+    },
+    {
+      "name": "exact resources.skills inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact resources.prompts inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact resources.themes inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact names.tools inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [
+          "sidekick"
+        ],
+        "actual": [
+          "sidekick"
+        ]
+      }
+    },
+    {
+      "name": "exact names.commands inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [
+          "fusion"
+        ],
+        "actual": [
+          "fusion"
+        ]
+      }
+    },
+    {
+      "name": "exact names.flags inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact names.skills inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact names.prompts inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact names.themes inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "theme contract",
+      "status": "not_applicable",
+      "detail": "This package provides no themes; a theme is not required."
+    },
+    {
+      "name": "packed artifact",
+      "status": "not_applicable",
+      "detail": "No npm artifact check selected; use --pack for npm delivery or a requested tarball."
+    }
+  ],
+  "runtime": {
+    "version": "1.3.0",
+    "node": "v24.14.0",
+    "workspace": "<check>/tmp/pi-package-check-O4zIAm",
+    "diagnostics": [],
+    "names": {
+      "tools": [
+        "sidekick"
+      ],
+      "commands": [
+        "fusion"
+      ],
+      "flags": [],
+      "skills": [],
+      "prompts": [],
+      "themes": []
+    },
+    "resources": {
+      "extensions": [
+        "index.ts"
+      ],
+      "skills": [],
+      "prompts": [],
+      "themes": []
+    },
+    "filterChecks": [
+      {
+        "name": "string/object resource parity",
+        "ok": true,
+        "actual": {
+          "extensions": [
+            "index.ts"
+          ],
+          "skills": [],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      {
+        "name": "wildcard filters expose no extra resources",
+        "ok": true,
+        "actual": {
+          "extensions": [
+            "index.ts"
+          ],
+          "skills": [],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      {
+        "name": "disable only extensions",
+        "ok": true,
+        "actual": {
+          "extensions": [],
+          "skills": [],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      {
+        "name": "disable only skills",
+        "status": "not_applicable",
+        "detail": "No resources of this type to disable."
+      },
+      {
+        "name": "disable only prompts",
+        "status": "not_applicable",
+        "detail": "No resources of this type to disable."
+      },
+      {
+        "name": "disable only themes",
+        "status": "not_applicable",
+        "detail": "No resources of this type to disable."
+      }
+    ]
+  },
+  "limits": [
+    "Factories execute with process access. Environment filtering and resource isolation are not a security sandbox.",
+    "No live model, provider, MCP, command/UI, prompt expansion, live session reload, project trust, registry, or git-update check.",
+    "The theme authoring check rejects invalid unused variables, export colors, and reserved built-in names even when Pi may defer or tolerate them.",
+    "No TypeScript compiler, full import analysis, arbitrary custom integration checks, or proof of dependency freshness."
+  ]
+}

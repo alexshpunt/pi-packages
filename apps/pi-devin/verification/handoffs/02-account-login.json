@@ -1,0 +1,146 @@
+{
+  "status": "pass",
+  "coreVersion": 1,
+  "recordedAt": "2026-10-18T23:35:20.921Z",
+  "sourceDigest": {
+    "algorithm": "sha256",
+    "files": {
+      "src/cli/auth-command.ts": "26ac7aadaa753037570194bdf257620156b659625aff48cd0e7f5232165e5a89",
+      "src/cli/auth-ui.ts": "4302c21f82027ea015fba906dfe070906e1987d839c437113a327d05d449f8b6",
+      "src/cli/help.ts": "41de38f5e651e7c8ed40185d4c336dda82e5cf3806c1ce2bc1a322fa26a25258",
+      "src/cli/main.ts": "d35b35ec366c893ff98688075b4f2b16a5546101bca882c46aeb7e032d233e98",
+      "src/cli/options.ts": "b7f9c3d0786fbe1aaa61402545128bc744480f5c04c9b9d5bf7e753b19860ce3",
+      "src/core/auth/index.ts": "fe4457e02a6395881eb2ec4e07a235037f1a0d8d2f569504dbcbd4e623764d4d",
+      "src/core/auth/login.ts": "d2605efd2fb0634e71695cafdc26bfb9fac799c01e5b92ffcb4dfcc37bb61a65",
+      "src/core/auth/rest-exchange.ts": "e7cdbb50bdfb394963124841fcac9291ad1d84927ea77dace957f9d8206e54f5",
+      "src/core/protocol/transport.ts": "0267f819407e55653187662a2c0afd94cdb18a5110accbd14d8172079b6c9e15",
+      "src/pi/auth.ts": "6f1c867642b3f223693b6efbb0c9417fc6d5d8d7e27275e95f50ca64fd5fddd1",
+      "tests/account-login.test.ts": "c75d0784ebc3bd3302cd6ae2d7d09aaf8934ca2441bc021131cdc0730ab0425b",
+      "tests/cli-login.test.ts": "e7f2095eded3a947551f30b1563545595c77225fc4c02b9d20eda25ee9a627a2",
+      "tests/pi-auth-contract.test.ts": "52202ffedd8bfec096628766eb7158317a97d6894e7c35faf7c5d16121ce0c21",
+      "tests/pi-auth-storage.test.ts": "3bedcb6ad05541ec4c09a27ccae17585c3273dc6078e7ed306959c3f204885a3",
+      "tests/pi-auth.test.ts": "dc33e82ec20582ae8b6d68b4ac79e152636452426308cfb90da69e244bec037c",
+      "verification/auth-contract.md": "a905d1c7f3659d2e70204a369a36b2b7e1cbe73ba6a7fdee0700bb137869ae5f"
+    },
+    "aggregate": "28a6113e858853abb566a2a878996a2f439c415dec969851b870c0aca2acf5c1"
+  },
+  "authType": "oauth",
+  "entry": "src/pi/auth.ts:createDevinAccountAuth",
+  "registration": "factory ready; extension registration belongs to04",
+  "flows": {
+    "browser": {
+      "webappPath": "/auth/cli/continue",
+      "redirect": "http://127.0.0.1:<port>/callback",
+      "exchange": "POST https://api.devin.ai/auth/cli/token",
+      "encoding": "REST JSON",
+      "source": "https://unpkg.com/@cognitionai/opencode-devin@0.3.0/dist/auth.js",
+      "nativeDefaultRuntimeObserved": false
+    },
+    "manual": {
+      "webappPath": "/devin/account/login",
+      "redirect": "chisel-show-auth-token",
+      "exchange": "ordinary ExchangeDevinCLIPKCECode / prefixed ExchangePKCEAuthorizationCode",
+      "encoding": "Connect proto; explicit JSON allowed",
+      "evidence": "preserved login-manual retry record"
+    },
+    "legacy": {
+      "selection": "explicit encoding or existing login() API",
+      "exchange": "existing Connect callback/code contract preserved"
+    }
+  },
+  "credentialSemantics": {
+    "type": "oauth",
+    "refresh": "empty; no server refresh grant",
+    "expires": 0,
+    "expiresMeaning": "unknown server expiry; validate existing session on each host auth resolution",
+    "refreshOperation": "new client GetUserStatus; returns unchanged credential, not a renewed token",
+    "authQueryPerResolution": 1,
+    "maxStoreMutationPerResolution": 1,
+    "concurrentQueries": "serialized by host store; not deduplicated because sentinel remains0",
+    "explicitMinimumValidity": "rejected; unknown lifetime cannot be promised",
+    "hostRefreshTimeoutMs": 15000,
+    "callerCancellation": "host-owned in-flight refresh can complete/persist after caller cancellation; bounded by15000ms",
+    "authenticationFailure": "no replay until explicit login; stale generation invalidation ignored"
+  },
+  "storageOwnership": {
+    "cli": "existing version1 credentials and DEVIN_POC_STATE_DIR",
+    "pi": "host CredentialStore/authPath; no direct path selection or import",
+    "automaticSynchronization": false
+  },
+  "mockChecks": [
+    "browser REST callback, state/method/path/duplicate checks",
+    "manual ordinary/prefixed final Connect request",
+    "callback/manual winner cancellation and exactly one exchange",
+    "explicit legacy encoding preserved; incompatible options rejected before UI",
+    "300000/30000/15000ms reach final signal consumers",
+    "body bounds and malformed JSON redaction",
+    "public Models login/getAuth/refresh/logout and bounded store operations",
+    "401 blocks replay;403/429/local timeout do not become expiry",
+    "CLI subprocess loopback login/file permissions/logout isolation",
+    "public coding-agent ModelRuntime with actual temporary auth file and blocked network"
+  ],
+  "nativeEvidenceLimits": [
+    "native default browser was not executed; default contract comes from official public client, not inferred from manual Connect",
+    "earlier A03/A04/A05 ledger unchanged",
+    "server session expiry/refresh lifetime remains unknown"
+  ],
+  "liveStatus": "not_run",
+  "realCredentialReads": 0,
+  "realAccountRequests": 0,
+  "realInferenceRequests": 0,
+  "realBrowserExecutions": 0,
+  "checks": [
+    {
+      "command": "pnpm --dir apps/pi-devin typecheck",
+      "exitCode": 0,
+      "startedAt": "2026-10-18T23:28:40.825Z",
+      "completedAt": "2026-10-18T23:28:41.174Z"
+    },
+    {
+      "command": "pnpm --dir apps/pi-devin verify:offline",
+      "exitCode": 0,
+      "startedAt": "2026-10-18T23:28:41.174Z",
+      "completedAt": "2026-10-18T23:28:47.318Z",
+      "tests": 122,
+      "pass": 122,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    {
+      "command": "node apps/pi-devin/cli.ts --help",
+      "exitCode": 0,
+      "startedAt": "2026-10-18T23:28:47.318Z",
+      "completedAt": "2026-10-18T23:28:47.411Z"
+    },
+    {
+      "command": "pnpm --dir apps/pi-devin typecheck",
+      "exitCode": 0,
+      "completedAt": "2026-10-18T23:34:12.503Z"
+    },
+    {
+      "command": "sandbox-exec -f <isolated auth profile> node --test apps/pi-devin/tests/pi-auth-storage.test.ts",
+      "exitCode": 0,
+      "passed": 1,
+      "completedAt": "2026-10-18T23:34:13.153Z",
+      "sandboxProfileSha256": "215a29a775bb6f7f9834f9a1c3f3103c386abf9c4aec3ddacd751ac03cb570f1",
+      "network": "denied",
+      "realCredentialPaths": "denied"
+    }
+  ],
+  "tests": {
+    "fullSuitePassed": 122,
+    "additionalSandboxedHostCasePassed": 1,
+    "combinedCases": 123
+  },
+  "compatibility": {
+    "original93CasesRetained": true,
+    "coreVersion": 1,
+    "addedProtocolExports": [
+      "boundedJSON",
+      "discardResponse"
+    ],
+    "reason": "reuse existing bounded response handling for REST authentication without duplicating transport"
+  },
+  "next": "03 model mapping and04 integration; no Pi extension is registered yet"
+}

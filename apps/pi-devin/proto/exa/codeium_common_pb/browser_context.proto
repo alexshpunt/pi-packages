@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package exa.codeium_common_pb;
+
+option go_package = "github.com/Exafunction/Exafunction/exa/codeium_common_pb";
+
+message FileLineRange {
+  string absolute_uri = 1;
+  uint32 start_line = 2;
+  uint32 end_line = 3;
+}
+
+message ConsoleLogLine {
+  string timestamp_str = 1;
+  string type = 2;
+  string output = 3;
+  string console_message_location = 4;
+}
+
+message ConsoleLogScopeItem {
+  repeated ConsoleLogLine lines = 1;
+  string server_address = 2;
+}
+
+message DOMElementScopeItem {
+  string tag_name = 1;
+  string outer_html = 2;
+  string id = 3;
+  string react_component_name = 4;
+  FileLineRange file_line_range = 5;
+}

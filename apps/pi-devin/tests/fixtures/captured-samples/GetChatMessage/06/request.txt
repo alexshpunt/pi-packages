@@ -1,0 +1,238 @@
+{
+  "cascadeId": "fixture-id-5",
+  "chatMessagePrompts": [
+    {
+      "messageId": "fixture-id-6",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_USER"
+    },
+    {
+      "messageId": "fixture-id-7",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_USER"
+    },
+    {
+      "messageId": "fixture-id-8",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_USER"
+    },
+    {
+      "messageId": "fixture-id-9",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_SYSTEM"
+    },
+    {
+      "messageId": "fixture-id-10",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_USER"
+    },
+    {
+      "messageId": "fixture-id-11",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_SYSTEM"
+    },
+    {
+      "messageId": "fixture-id-12",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_USER"
+    },
+    {
+      "messageId": "fixture-id-13",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_SYSTEM",
+      "thinking": "fixture-value",
+      "toolCalls": [
+        {
+          "argumentsJson": "{\"command\":\"fixture-value\"}",
+          "id": "fixture-id-14",
+          "name": "fixture-value"
+        }
+      ]
+    },
+    {
+      "messageId": "fixture-id-15",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_TOOL",
+      "toolCallId": "fixture-id-14"
+    },
+    {
+      "messageId": "fixture-id-16",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_USER"
+    },
+    {
+      "messageId": "fixture-id-17",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_SYSTEM",
+      "thinking": "fixture-value",
+      "toolCalls": [
+        {
+          "argumentsJson": "{\"command\":\"fixture-value\"}",
+          "id": "fixture-id-18",
+          "name": "fixture-value"
+        }
+      ]
+    },
+    {
+      "messageId": "fixture-id-19",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_TOOL",
+      "toolCallId": "fixture-id-18"
+    },
+    {
+      "messageId": "fixture-id-20",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_SYSTEM"
+    },
+    {
+      "messageId": "fixture-id-21",
+      "prompt": "fixture-value",
+      "source": "ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_USER"
+    }
+  ],
+  "chatModelUid": "fixture-id-3",
+  "configuration": {
+    "maxNewlines": 400,
+    "maxTokens": 128000,
+    "numCompletions": 1,
+    "temperature": 1,
+    "topK": 40,
+    "topP": 0.9499999880790707
+  },
+  "executionId": "fixture-id-22",
+  "metadata": {
+    "apiKey": "fixture-redacted",
+    "extensionName": "fixture-value",
+    "extensionVersion": "fixture-value",
+    "f": "fixture-redacted",
+    "ideName": "fixture-value",
+    "ideVersion": "fixture-value",
+    "locale": "fixture-value",
+    "os": "fixture-value"
+  },
+  "plannerMode": "ExaCodeiumCommonPb_ConversationalPlannerMode_CONVERSATIONAL_PLANNER_MODE_DEFAULT",
+  "prompt": "fixture-value",
+  "requestType": "CHAT_MESSAGE_REQUEST_TYPE_CASCADE",
+  "tools": [
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"additionalProperties\":false,\"required\":[\"fixture-value\"],\"type\":\"object\",\"properties\":{\"questions\":{\"description\":\"fixture-value\",\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"question\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"header\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"options\":{\"description\":\"fixture-value\",\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"label\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"description\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"required\":[\"fixture-value\",\"fixture-value\"],\"additionalProperties\":false}},\"multi_select\":{\"description\":\"fixture-value\",\"type\":\"boolean\",\"default\":false}},\"required\":[\"fixture-value\",\"fixture-value\",\"fixture-value\"],\"additionalProperties\":false}},\"answers\":{\"description\":\"fixture-value\",\"type\":\"object\",\"additionalProperties\":{\"description\":\"fixture-value\",\"type\":\"object\",\"properties\":{\"selected\":{\"description\":\"fixture-value\",\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"custom_text\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"required\":[\"fixture-value\"],\"additionalProperties\":false}}}}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\",\"fixture-value\",\"fixture-value\"],\"properties\":{\"file_path\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"old_string\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"new_string\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"replace_all\":{\"description\":\"fixture-value\",\"type\":\"boolean\",\"default\":false}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\"],\"properties\":{\"command\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"shell_id\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"timeout\":{\"description\":\"fixture-value\",\"type\":\"integer\"},\"tty\":{\"description\":\"fixture-value\",\"type\":\"boolean\",\"default\":false}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\"],\"properties\":{\"pattern\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"path\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\"],\"properties\":{\"shell_id\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"timeout\":{\"description\":\"fixture-value\",\"type\":\"integer\"},\"incremental\":{\"description\":\"fixture-value\",\"type\":\"boolean\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"additionalProperties\":false,\"required\":[\"fixture-value\"],\"type\":\"object\",\"properties\":{\"pattern\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"path\":{\"description\":\"fixture-value\",\"type\":\"string\",\"default\":\"fixture-value\"},\"glob_pattern\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"output_mode\":{\"type\":\"string\",\"enum\":[\"fixture-value\",\"fixture-value\",\"fixture-value\"],\"description\":\"fixture-value\",\"default\":\"fixture-value\"},\"case_insensitive\":{\"description\":\"fixture-value\",\"type\":\"boolean\",\"default\":false},\"max_results\":{\"description\":\"fixture-value\",\"type\":\"integer\"},\"context_lines\":{\"description\":\"fixture-value\",\"type\":\"integer\",\"default\":0}}}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\"],\"properties\":{\"shell_id\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\",\"fixture-value\"],\"properties\":{\"server_name\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"tool_name\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"arguments\":{\"description\":\"fixture-value\",\"type\":\"object\",\"additionalProperties\":true,\"default\":{},\"properties\":{}}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"properties\":{\"server_name\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\",\"fixture-value\"],\"properties\":{\"server_name\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"resource_uri\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"additionalProperties\":false,\"required\":[\"fixture-value\",\"fixture-value\",\"fixture-value\"],\"type\":\"object\",\"properties\":{\"notebook_path\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"cell_number\":{\"description\":\"fixture-value\",\"type\":\"integer\"},\"new_source\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"cell_type\":{\"description\":\"fixture-value\",\"type\":\"string\",\"enum\":[\"fixture-value\",\"fixture-value\"]},\"edit_mode\":{\"default\":\"fixture-value\",\"description\":\"fixture-value\",\"type\":\"string\",\"enum\":[\"fixture-value\",\"fixture-value\",\"fixture-value\"]}}}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\"],\"properties\":{\"notebook_path\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\"],\"properties\":{\"file_path\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"offset\":{\"description\":\"fixture-value\",\"type\":\"integer\"},\"limit\":{\"description\":\"fixture-value\",\"type\":\"integer\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\"],\"properties\":{\"agent_id\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"block\":{\"description\":\"fixture-value\",\"type\":\"boolean\",\"default\":false},\"timeout\":{\"description\":\"fixture-value\",\"type\":\"integer\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\",\"fixture-value\"],\"properties\":{\"scope\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"path\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\",\"fixture-value\",\"fixture-value\"],\"properties\":{\"title\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"task\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"profile\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"is_background\":{\"description\":\"fixture-value\",\"type\":\"boolean\",\"default\":false},\"resume\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"additionalProperties\":false,\"properties\":{\"command\":{\"description\":\"fixture-value\",\"default\":\"fixture-value\",\"type\":\"string\",\"enum\":[\"fixture-value\",\"fixture-value\",\"fixture-value\"]},\"skill\":{\"description\":\"fixture-value\",\"type\":\"string\",\"default\":null},\"path\":{\"description\":\"fixture-value\",\"type\":\"string\",\"default\":null},\"keywords\":{\"description\":\"fixture-value\",\"type\":\"array\",\"items\":{\"type\":\"string\"},\"default\":null},\"keywords_mode\":{\"type\":\"string\",\"enum\":[\"fixture-value\",\"fixture-value\"],\"description\":\"fixture-value\",\"default\":\"fixture-value\"}},\"type\":\"object\"}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"additionalProperties\":false,\"required\":[\"fixture-value\"],\"type\":\"object\",\"properties\":{\"todos\":{\"description\":\"fixture-value\",\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"content\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"status\":{\"type\":\"string\",\"enum\":[\"fixture-value\",\"fixture-value\",\"fixture-value\"],\"description\":\"fixture-value\"}},\"required\":[\"fixture-value\",\"fixture-value\"],\"additionalProperties\":false}}}}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\"],\"properties\":{\"query\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"num_results\":{\"description\":\"fixture-value\",\"type\":\"integer\",\"default\":null},\"domain\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\"],\"properties\":{\"url\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\",\"fixture-value\"],\"properties\":{\"file_path\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"content\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    },
+    {
+      "description": "fixture-value",
+      "jsonSchemaString": "{\"required\":[\"fixture-value\"],\"properties\":{\"shell_id\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"text_input\":{\"description\":\"fixture-value\",\"type\":\"string\"},\"bytes_input\":{\"description\":\"fixture-value\",\"type\":\"string\"}},\"type\":\"object\",\"additionalProperties\":false}",
+      "name": "fixture-value"
+    }
+  ],
+  "trajectoryReference": {
+    "stepIndex": 6,
+    "stepType": "ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_USER_INPUT",
+    "trajectoryId": "fixture-id-23",
+    "trajectoryType": "ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_CASCADE"
+  }
+}

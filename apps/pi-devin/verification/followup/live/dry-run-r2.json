@@ -1,0 +1,928 @@
+{
+  "schemaVersion": 1,
+  "kind": "pi-devin-live-dry-run",
+  "startedAt": "2026-10-19T16:10:17.987Z",
+  "node": "v24.14.0",
+  "piVersion": "1.3.0",
+  "planHash": "63c384e12cf3c35f16c439a40903f381666aa1b1e82ec74bccd15ab78e515119",
+  "plan": {
+    "schemaVersion": 1,
+    "artifactSha256": "de8db88b783fcd57c2a813a85f91097cd102e555d3c64e26b3fc5414e251b350",
+    "runtimeDigest": "b13f1afaa9f719405c71da8eec45a968df5dbcc372c723d5250dadbdb6a5d2ce",
+    "allowedUIDs": [
+      "swe-2-medium",
+      "swe-2-high"
+    ],
+    "maxModelCalls": 8,
+    "requireFreeTier": true,
+    "hosts": [
+      "server.codeium.com",
+      "api.devin.ai"
+    ],
+    "cases": [
+      {
+        "id": "catalog",
+        "mode": "rpc",
+        "expectModelCalls": 0,
+        "purpose": "OAuth 계정 상태·catalog 조회와 승인 UID의 활성·무료 등급 확인"
+      },
+      {
+        "id": "plain-medium",
+        "mode": "json",
+        "model": "family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0",
+        "level": "medium",
+        "prompt": "짧게 인사해 주세요.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectModelCalls": 1
+      },
+      {
+        "id": "level-high",
+        "mode": "json",
+        "model": "family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0",
+        "level": "high",
+        "prompt": "짧게 인사해 주세요.",
+        "expectUIDs": [
+          "swe-2-high"
+        ],
+        "expectModelCalls": 1
+      },
+      {
+        "id": "add-tool",
+        "mode": "json",
+        "model": "family:swe-2:W1siRmFzdCBNb2RlIiwwLCIiXV0",
+        "level": "medium",
+        "prompt": "add 도구로 2와 3을 더한 뒤 결과 숫자만 답해 주세요.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectTool": "add",
+        "expectModelCalls": 2
+      },
+      {
+        "id": "fusion",
+        "mode": "json",
+        "model": "fusion:devin",
+        "level": "medium",
+        "prompt": "sidekick 도구에 'add 도구로 2와 3을 더하고 결과를 보고하라'고 맡긴 뒤, 보고받은 결과 숫자만 답해 주세요.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectTool": "sidekick",
+        "expectModelCalls": 4
+      }
+    ]
+  },
+  "scenarios": {
+    "plan": {
+      "results": [
+        {
+          "id": "catalog",
+          "durationMs": 3026,
+          "exitCode": 0,
+          "devinModels": 327,
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1,
+              "GetCliModelConfigs": 1,
+              "GetCliTeamSettings": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetCliModelConfigs:200",
+              "GetCliTeamSettings:200"
+            ],
+            "blocked": [],
+            "catalog": {
+              "swe-2-medium": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              },
+              "swe-2-high": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              }
+            },
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": true
+        },
+        {
+          "id": "plain-medium",
+          "durationMs": 606,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "stop"
+          ],
+          "responseUIDs": [
+            "swe-2-medium"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            }
+          ],
+          "tools": [],
+          "finalTextLength": 6,
+          "finalHasFive": false,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-medium"
+            ],
+            "modelStatuses": [
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200"
+            ],
+            "blocked": [],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 1,
+          "pass": true
+        },
+        {
+          "id": "level-high",
+          "durationMs": 588,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "stop"
+          ],
+          "responseUIDs": [
+            "swe-2-high"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            }
+          ],
+          "tools": [],
+          "finalTextLength": 6,
+          "finalHasFive": false,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-high"
+            ],
+            "modelStatuses": [
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200"
+            ],
+            "blocked": [],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 1,
+          "pass": true
+        },
+        {
+          "id": "add-tool",
+          "durationMs": 656,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "responseUIDs": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            },
+            {
+              "input": 3,
+              "output": 2
+            }
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false,
+              "result": "5"
+            }
+          ],
+          "finalTextLength": 1,
+          "finalHasFive": true,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-medium",
+              "swe-2-medium"
+            ],
+            "modelStatuses": [
+              200,
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 2
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetUserStatus:200"
+            ],
+            "blocked": [],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 2,
+          "pass": true
+        },
+        {
+          "id": "fusion",
+          "durationMs": 1291,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "responseUIDs": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            },
+            {
+              "input": 3,
+              "output": 2
+            }
+          ],
+          "tools": [
+            {
+              "tool": "sidekick",
+              "isError": false
+            }
+          ],
+          "finalTextLength": 1,
+          "finalHasFive": true,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium"
+            ],
+            "modelStatuses": [
+              200,
+              200,
+              200,
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 5
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200"
+            ],
+            "blocked": [],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 4,
+          "pass": true
+        }
+      ],
+      "mockRequests": 20,
+      "mockChats": [
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium"
+      ],
+      "allOAuthToken": true,
+      "ledgerHasSecret": false,
+      "openConnections": 0
+    },
+    "uidBlocked": {
+      "results": [
+        {
+          "id": "catalog",
+          "durationMs": 2027,
+          "exitCode": 0,
+          "devinModels": 327,
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1,
+              "GetCliModelConfigs": 1,
+              "GetCliTeamSettings": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetCliModelConfigs:200",
+              "GetCliTeamSettings:200"
+            ],
+            "blocked": [],
+            "catalog": {
+              "swe-2-medium": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              }
+            },
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": true
+        },
+        {
+          "id": "level-high",
+          "durationMs": 599,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "error"
+          ],
+          "responseUIDs": [
+            "swe-2-high"
+          ],
+          "usage": [
+            {
+              "input": 0,
+              "output": 0
+            }
+          ],
+          "tools": [],
+          "finalTextLength": 0,
+          "finalHasFive": false,
+          "errorMessage": "live-guard blocked: uid",
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200"
+            ],
+            "blocked": [
+              {
+                "reason": "uid",
+                "uid": "swe-2-high",
+                "method": "GetChatMessage"
+              }
+            ],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": false
+        }
+      ],
+      "mockRequests": 4,
+      "mockChats": [],
+      "allOAuthToken": true,
+      "ledgerHasSecret": false,
+      "openConnections": 0
+    },
+    "sidekickBlocked": {
+      "results": [
+        {
+          "id": "catalog",
+          "durationMs": 2026,
+          "exitCode": 0,
+          "devinModels": 327,
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1,
+              "GetCliModelConfigs": 1,
+              "GetCliTeamSettings": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetCliModelConfigs:200",
+              "GetCliTeamSettings:200"
+            ],
+            "blocked": [],
+            "catalog": {
+              "swe-2-high": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              }
+            },
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": true
+        },
+        {
+          "id": "fusion",
+          "durationMs": 1220,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "toolUse",
+            "toolUse",
+            "stop"
+          ],
+          "responseUIDs": [
+            "swe-2-high",
+            "swe-2-high",
+            "swe-2-high"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            },
+            {
+              "input": 3,
+              "output": 2
+            },
+            {
+              "input": 3,
+              "output": 2
+            }
+          ],
+          "tools": [
+            {
+              "tool": "sidekick",
+              "isError": true
+            },
+            {
+              "tool": "add",
+              "isError": false,
+              "result": "5"
+            }
+          ],
+          "finalTextLength": 9,
+          "finalHasFive": true,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-high",
+              "swe-2-high",
+              "swe-2-high"
+            ],
+            "modelStatuses": [
+              200,
+              200,
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 5
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200"
+            ],
+            "blocked": [
+              {
+                "reason": "uid",
+                "uid": "swe-2-medium",
+                "method": "GetChatMessage"
+              }
+            ],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 3,
+          "pass": false
+        }
+      ],
+      "mockRequests": 11,
+      "mockChats": [
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-high"
+      ],
+      "allOAuthToken": true,
+      "ledgerHasSecret": false,
+      "openConnections": 0
+    },
+    "budget": {
+      "results": [
+        {
+          "id": "catalog",
+          "durationMs": 2022,
+          "exitCode": 0,
+          "devinModels": 327,
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1,
+              "GetCliModelConfigs": 1,
+              "GetCliTeamSettings": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetCliModelConfigs:200",
+              "GetCliTeamSettings:200"
+            ],
+            "blocked": [],
+            "catalog": {
+              "swe-2-medium": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              },
+              "swe-2-high": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              }
+            },
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": true
+        },
+        {
+          "id": "add-tool",
+          "durationMs": 603,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "toolUse",
+            "error"
+          ],
+          "responseUIDs": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            },
+            {
+              "input": 0,
+              "output": 0
+            }
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false,
+              "result": "5"
+            }
+          ],
+          "finalTextLength": 0,
+          "finalHasFive": false,
+          "errorMessage": "live-guard blocked: budget",
+          "ledger": {
+            "modelCalls": [
+              "swe-2-medium"
+            ],
+            "modelStatuses": [
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 2
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetUserStatus:200"
+            ],
+            "blocked": [
+              {
+                "reason": "budget",
+                "uid": "swe-2-medium",
+                "method": "GetChatMessage"
+              }
+            ],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 1,
+          "pass": false
+        }
+      ],
+      "mockRequests": 6,
+      "mockChats": [
+        "swe-2-medium"
+      ],
+      "allOAuthToken": true,
+      "ledgerHasSecret": false,
+      "openConnections": 0
+    },
+    "notFree": {
+      "results": [
+        {
+          "id": "catalog",
+          "durationMs": 2021,
+          "exitCode": 0,
+          "devinModels": 327,
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1,
+              "GetCliModelConfigs": 1,
+              "GetCliTeamSettings": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetCliModelConfigs:200",
+              "GetCliTeamSettings:200"
+            ],
+            "blocked": [],
+            "catalog": {
+              "swe-2-medium": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_HIGH",
+                "promoActive": null,
+                "promoEnd": null
+              },
+              "swe-2-high": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              }
+            },
+            "halted": [
+              {
+                "reason": "approved UID missing, disabled or not free tier",
+                "uids": [
+                  "swe-2-medium"
+                ]
+              }
+            ]
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": false
+        },
+        {
+          "id": "plain-medium",
+          "durationMs": 629,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "error"
+          ],
+          "responseUIDs": [
+            "swe-2-medium"
+          ],
+          "usage": [
+            {
+              "input": 0,
+              "output": 0
+            }
+          ],
+          "tools": [],
+          "finalTextLength": 0,
+          "finalHasFive": false,
+          "errorMessage": "live-guard blocked: halted",
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200"
+            ],
+            "blocked": [
+              {
+                "reason": "halted",
+                "uid": "swe-2-medium",
+                "method": "GetChatMessage"
+              }
+            ],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": false
+        }
+      ],
+      "mockRequests": 4,
+      "mockChats": [],
+      "allOAuthToken": true,
+      "ledgerHasSecret": false,
+      "openConnections": 0
+    }
+  },
+  "checks": [
+    {
+      "key": "plan-all-cases-pass",
+      "pass": true,
+      "observed": [
+        [
+          "catalog",
+          true
+        ],
+        [
+          "plain-medium",
+          true
+        ],
+        [
+          "level-high",
+          true
+        ],
+        [
+          "add-tool",
+          true
+        ],
+        [
+          "fusion",
+          true
+        ]
+      ]
+    },
+    {
+      "key": "plan-model-calls-within-cap",
+      "pass": true,
+      "observed": [
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium"
+      ]
+    },
+    {
+      "key": "plan-oauth-only",
+      "pass": true,
+      "observed": {
+        "requests": 20
+      }
+    },
+    {
+      "key": "non-approved-uid-not-sent",
+      "pass": true,
+      "observed": [
+        {
+          "reason": "uid",
+          "uid": "swe-2-high",
+          "method": "GetChatMessage"
+        }
+      ]
+    },
+    {
+      "key": "sidekick-uid-checked-before-send",
+      "pass": true,
+      "observed": {
+        "sent": [
+          "swe-2-high",
+          "swe-2-high",
+          "swe-2-high"
+        ],
+        "blocked": [
+          {
+            "reason": "uid",
+            "uid": "swe-2-medium",
+            "method": "GetChatMessage"
+          }
+        ]
+      }
+    },
+    {
+      "key": "global-cap-enforced",
+      "pass": true,
+      "observed": {
+        "sent": 1,
+        "blocked": [
+          {
+            "reason": "budget",
+            "uid": "swe-2-medium",
+            "method": "GetChatMessage"
+          }
+        ]
+      }
+    },
+    {
+      "key": "not-free-halts-before-inference",
+      "pass": true,
+      "observed": {
+        "halted": [
+          {
+            "reason": "approved UID missing, disabled or not free tier",
+            "uids": [
+              "swe-2-medium"
+            ]
+          }
+        ],
+        "sent": 0
+      }
+    },
+    {
+      "key": "api-key-env-not-inherited",
+      "pass": true,
+      "observed": []
+    },
+    {
+      "key": "no-secrets-in-ledgers",
+      "pass": true,
+      "observed": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "key": "mock-connections-closed",
+      "pass": true,
+      "observed": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "key": "socket-level-host-blocked",
+      "pass": true,
+      "observed": {
+        "stdout": "ELIVEGUARD",
+        "status": 0
+      }
+    },
+    {
+      "key": "dry-run-state-removed",
+      "pass": true,
+      "observed": {}
+    }
+  ],
+  "outcome": "pass",
+  "completedAt": "2026-10-19T16:10:41.403Z"
+}

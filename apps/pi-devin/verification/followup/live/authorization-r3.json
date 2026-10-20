@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "approved": true,
+  "approvedAt": "2026-10-20T00:52:34.570Z",
+  "approvedBy": "user answer in this chat session (option: 승인 — 이 계획대로 실행); browser login by the assistant was explicitly allowed by the user",
+  "planHash": "032e1fb32409497ffebfa2e3cb48974dd419199a94e5587d352974c87b316776",
+  "scope": {
+    "artifactSha256": "0a0ca65638a3197bcf726f2d2ee2bf73b9bbba3a89ec1df8d94b4758e5f38d64",
+    "runtimeDigest": "401280d8b01244623a662fcc4514cbfc1abcb5d196b125c38a7c62a4622ec552",
+    "allowedUIDs": [
+      "swe-2-medium",
+      "swe-2-high"
+    ],
+    "maxModelCalls": 9,
+    "requireFreeTier": true,
+    "hosts": [
+      "server.codeium.com",
+      "api.devin.ai"
+    ],
+    "cases": [
+      "catalog",
+      "devin-settings",
+      "plain-medium",
+      "level-high",
+      "add-tool",
+      "fusion"
+    ],
+    "login": "assistant starts /login in the temporary Pi TUI and completes the browser flow in the user’s Chrome with the browser tool",
+    "cleanup": "temporary state removed after the run; server-side session not revoked"
+  }
+}
