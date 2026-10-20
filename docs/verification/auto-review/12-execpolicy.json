@@ -1,0 +1,31 @@
+{
+  "status": "local-verified",
+  "reference": {
+    "tag": "rust-v0.160.0",
+    "revision": "a956835d020762cb2b570053af06f643a11c0ecc",
+    "crate": "codex-execpolicy"
+  },
+  "sourceDigest": "04f50f1c2ac8cd3a7c5986c8bf0285bf64051c957e2d323ad82a79391d769a9c",
+  "testedSourceDigest": "0e8c42f82335e512c1089863303a90822ed1458f9fee842417dc454d9ab464dc",
+  "postTestChange": "Policy/integration evidence precedes only package license inclusion and installed-helper verification; packaged helper executes successfully in subsequent e2e evidence.",
+  "contractDigest": "7c16ec541fca790264aca75860a393e675013c8f273ed60516a80f93c9f44379",
+  "implementation": [
+    "Pinned upstream Starlark engine; no literal-only grammar replacement",
+    "Prefix examples, host_executable resolution, network_rule compilation",
+    "Immutable source snapshots, bounded child process and cancellation",
+    "Effective network profile reaches admission and native execution"
+  ],
+  "verification": {
+    "passed": 37,
+    "evidence": [
+      ".reports/pi-guard/runs/2026-10-03T04-01-07-755Z-8ee0b11b-4129-48bb-a9e4-59769f78a2de/darwin-arm64/policy.json",
+      ".reports/pi-guard/runs/2026-10-03T04-01-08-534Z-90a7979a-9a65-447f-b7df-766e3e179810/darwin-arm64/integration.json",
+      ".reports/pi-guard/runs/2026-10-03T04-03-13-276Z-2e22afde-93e8-4c98-adc7-1a0b1b694962/darwin-arm64/e2e.json"
+    ]
+  },
+  "limits": [
+    "The compiler is required for source builds; installed packages contain the host-native helper.",
+    "The final Docker and live-provider qualification will be regenerated after the remaining changes.",
+    "Pinned Codex compiles network_rule protocol annotations into host domain lists; it does not create independent per-protocol domain permissions at this boundary."
+  ]
+}

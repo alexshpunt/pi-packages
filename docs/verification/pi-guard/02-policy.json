@@ -1,0 +1,1296 @@
+{
+  "schemaVersion": 1,
+  "state": "ready",
+  "sourceDigest": "53b927482747a5ce3b4a517f69b4b4ba49f6f39e47886819dbdf22293225bd76",
+  "contractDigest": "a21607fbe065593e3fdb78321d7b34cf299134e9854ad257953d538d46518165",
+  "runtimeVersions": {
+    "node": "v24.14.0",
+    "@earendil-works/pi-coding-agent": "0.99.1",
+    "@earendil-works/pi-ai": "0.99.1"
+  },
+  "modulePaths": [
+    "src/policy/index.ts",
+    "src/policy/paths.ts",
+    "src/policy/shell.ts",
+    "src/policy/rules.ts",
+    "src/policy/domains.ts"
+  ],
+  "moduleHashes": {
+    "src/policy/index.ts": "6b4ddf08b55394fc43290b6a35a722312b0efb70023749ed1fb4c9275e7ef432",
+    "src/policy/paths.ts": "45ee47140ccf59e27316bc8ab87928f6fb2f5c9b93e653ab5cf8871887eebaab",
+    "src/policy/shell.ts": "b6a567a1f3a07332a7ebe46b6f1d80853de6f3d34e89531f9d8feb6f1bf642c2",
+    "src/policy/rules.ts": "4ceb6a97c4c37db727d84e75829ec2c2fa476fbb6909a8dcd00f807fe45b113d",
+    "src/policy/domains.ts": "1075f22ec60b5fada7aa6b91913dd870b030b094919ccd769216707223bf74c4"
+  },
+  "testFiles": [
+    "test/unit/policy.test.mjs",
+    "test/unit/execpolicy.test.mjs",
+    "test/unit/execpolicy-parity.test.mjs",
+    "test/unit/context-files.test.mjs",
+    "test/unit/external.test.mjs"
+  ],
+  "coveredBehavior": [
+    "paths",
+    "rules",
+    "shell",
+    "settings",
+    "context-files",
+    "external-policy"
+  ],
+  "results": [
+    {
+      "schemaVersion": 2,
+      "runId": "2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0",
+      "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/policy.json",
+      "startedAt": "2026-10-04T06:14:21.202Z",
+      "provenance": "executed",
+      "suite": "policy",
+      "status": "pass",
+      "command": "npm run test:policy",
+      "testFiles": [
+        "test/unit/policy.test.mjs",
+        "test/unit/execpolicy.test.mjs",
+        "test/unit/execpolicy-parity.test.mjs",
+        "test/unit/context-files.test.mjs",
+        "test/unit/external.test.mjs"
+      ],
+      "coveredBehavior": [
+        "paths",
+        "rules",
+        "shell",
+        "settings",
+        "context-files",
+        "external-policy"
+      ],
+      "tests": [
+        {
+          "name": "[paths] path-prefix escapes, symlink ancestors and nonexistent targets are resolved",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] deny outranks allow for every compound segment and stale identities",
+          "status": "pass"
+        },
+        {
+          "name": "[shell] ordinary reads run directly and advanced syntax cannot borrow a prefix grant",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] literal Codex prefix_rule grammar validates examples and strongest decision across wrappers",
+          "status": "pass"
+        },
+        {
+          "name": "[paths] write-protected metadata remains readable and scoped elevation differs from absolute denial",
+          "status": "pass"
+        },
+        {
+          "name": "[settings] default readable roots, temporary roots and Git worktree metadata match the declared boundary",
+          "status": "pass"
+        },
+        {
+          "name": "[shell] literal network destinations follow rules and dynamic commands require review",
+          "status": "pass"
+        },
+        {
+          "name": "[settings] corrupt or weakening settings fail closed and read-only file writes require permission",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] Codex Starlark functions, comprehensions, f-strings and tuple examples reach actual matching",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] host executable constraints reject aliases and preserve exact-path precedence",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] all network_rule protocols and overlay ordering reach approval policy",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] malformed rules, cancelled evaluation and oversized requests fail closed",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-0",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-1",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-2",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-3",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-4",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-5",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-6",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-7",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-8",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-9",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-10",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-11",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-12",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-13",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-14",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-15",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-16",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-17",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-18",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-19",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-20",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-21",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-22",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-23",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-24",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-25",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-26",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-27",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-28",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-29",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-30",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-31",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-32",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-33",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-34",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-35",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-36",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-37",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-38",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-39",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-40",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-41",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-42",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-43",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-44",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-45",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-46",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-47",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-48",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-49",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-50",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-51",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-52",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-53",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-54",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-55",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-56",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-57",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-58",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-59",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-60",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-61",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-62",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-63",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-64",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-65",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-66",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-67",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-68",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-69",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-70",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-71",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-72",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-73",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-74",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-75",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-76",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-77",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-78",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-79",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-80",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-81",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-82",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-83",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-84",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-85",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-86",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-87",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-88",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-89",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-90",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-91",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-92",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-93",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-94",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-95",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-96",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-97",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-98",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-99",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-100",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-101",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-102",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-103",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-104",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-105",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-106",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-107",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-108",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-109",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-110",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-111",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-112",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-113",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-114",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-115",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-116",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-117",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-118",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-119",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-120",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-121",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-122",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-123",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-124",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-125",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-126",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-127",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-128",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-129",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-130",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-131",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-132",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-133",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-134",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-135",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-136",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-137",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-138",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-139",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-140",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: expression-141",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-0",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-1",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-2",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-3",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-4",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-5",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-6",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-7",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-8",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-9",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-10",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-11",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-12",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-13",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-14",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-15",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-16",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-17",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-18",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-19",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-20",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-21",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-22",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-23",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-24",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-25",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-26",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-27",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-28",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-29",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-30",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-31",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-32",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-33",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-34",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-35",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-36",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-37",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-38",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-39",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-40",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-41",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-42",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-43",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-44",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-45",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-46",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-47",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-48",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-49",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-50",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-51",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-52",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-53",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-54",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-55",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-56",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-57",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-58",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-59",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-60",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-61",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-62",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-63",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-64",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-65",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-66",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-67",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-68",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-69",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-70",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-71",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-72",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-73",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-74",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-75",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-76",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-77",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-78",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-79",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-80",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: program-81",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-http-allow",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-http-prompt",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-http-forbidden",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-http-deny",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-https-allow",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-https-prompt",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-https-forbidden",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-https-deny",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-https_connect-allow",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-https_connect-prompt",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-https_connect-forbidden",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-https_connect-deny",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-http-connect-allow",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-http-connect-prompt",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-http-connect-forbidden",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-http-connect-deny",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-socks5_tcp-allow",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-socks5_tcp-prompt",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-socks5_tcp-forbidden",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-socks5_tcp-deny",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-socks5_udp-allow",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-socks5_udp-prompt",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-socks5_udp-forbidden",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-socks5_udp-deny",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-smtp-allow",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-smtp-prompt",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-smtp-forbidden",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-smtp-deny",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-0",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-1",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-2",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-3",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-4",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-5",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-6",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-7",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-8",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-9",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-10",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-11",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-12",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-13",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-14",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-15",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-host-16",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: network-overlays",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: file-globals-isolated",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: empty",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: host-0",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: host-1",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: host-2",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: host-3",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: host-4",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: host-5",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: host-6",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] original Codex result replay: host-7",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] pending cancellation releases its listener and leaves the host responsive",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] bounded evaluation and host access rejection also cover the synchronous API",
+          "status": "pass"
+        },
+        {
+          "name": "[rules] request validation keeps the original strict JSON boundary",
+          "status": "pass"
+        },
+        {
+          "name": "[context-files] nearest project root, override precedence and configured fallback follow Codex discovery",
+          "status": "pass"
+        },
+        {
+          "name": "[context-files] absent markers, empty markers, untrusted projects and UTF-8 byte limits stay bounded",
+          "status": "pass"
+        },
+        {
+          "name": "[context-files] permitted symlinks work while protected targets and hard-link aliases cannot enter prompts",
+          "status": "pass"
+        },
+        {
+          "name": "[external-policy] Codex MCP annotation precedence and four approval modes",
+          "status": "pass"
+        }
+      ],
+      "platform": "darwin-arm64",
+      "sourceDigest": "53b927482747a5ce3b4a517f69b4b4ba49f6f39e47886819dbdf22293225bd76",
+      "contractDigest": "a21607fbe065593e3fdb78321d7b34cf299134e9854ad257953d538d46518165",
+      "runtimeVersions": {
+        "node": "v24.14.0",
+        "@earendil-works/pi-coding-agent": "0.99.1",
+        "@earendil-works/pi-ai": "0.99.1"
+      },
+      "evidenceKind": "unit-doubles",
+      "blockedReasons": [],
+      "recordedAt": "2026-10-04T06:14:26.311Z"
+    }
+  ],
+  "buildProof": {
+    "command": "npm run build",
+    "cwd": "/Users/buyong/workspace/private-opensource/pi-codex-permission/",
+    "status": "pass",
+    "exitCode": 0,
+    "recordedAt": "2026-10-04T06:14:20.547Z"
+  },
+  "supportedGrammar": "Literal prefix_rule subset with alternatives and match/not_match assertions; strongest compound rule wins. Unsupported shell syntax and interpreters require review unless a trusted command rule authorizes them.",
+  "policyRevision": "sha256 of validated settings, immutable profile, loaded rules and review policy",
+  "exports": [
+    "PolicyEngine",
+    "validateSettings",
+    "loadSettings",
+    "defaultProfile",
+    "canonicalPath",
+    "analyzeShell"
+  ],
+  "recordedAt": "2026-10-04T06:14:34.670Z",
+  "runId": "2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0",
+  "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/02-policy.json"
+}

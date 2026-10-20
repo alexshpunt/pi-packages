@@ -1,0 +1,14 @@
+@buyong/pi-codex-computer-use
+
+This package implements a pi host bridge for the MCP interfaces used by
+OpenAI Codex Computer Use and Browser Use. The public OpenAI Codex host
+contracts were used as implementation references.
+
+OpenAI Codex
+Copyright 2025 OpenAI
+Public Codex source is licensed under the Apache License, Version 2.0.
+
+No proprietary OpenAI runtime, app, plugin, or @oai package is included.
+The runtime installed by Codex Desktop retains its own licenses and terms;
+it is not relicensed by the Apache-2.0 license of this host bridge.
+This package is not affiliated with or endorsed by OpenAI.

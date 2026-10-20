@@ -1,0 +1,34 @@
+{
+  "status": "original-check-passed-on-retry",
+  "sourceDigest": "3caadb996f7de930cf1f5c19af8f6e5b943e21ee01fac1010e28d88e55b12030",
+  "productionSourceChanged": false,
+  "firstAggregate": {
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T06-34-11-445Z-abb77561-1abe-4747-bb4c-20fd36d83aee/darwin-arm64/final.json",
+    "status": "failed",
+    "tests": 142,
+    "passed": 141,
+    "error": "Packed probe failed after 20055ms; code=null; killed=true; signal=SIGTERM; stderr="
+  },
+  "diagnostic": {
+    "command": "node --test --test-concurrency=1 --test-name-pattern='\\[package\\]' tmp/ci/diagnose-packed-probe.mjs",
+    "observerTimeoutMs": 120000,
+    "elapsedMs": 12556,
+    "loadAndQualifyMs": 6848,
+    "writeMs": 4924,
+    "factoryLoaded": true,
+    "workerEffect": true,
+    "provenance": "observed tool output of an instrumented diagnostic copy"
+  },
+  "finalRetry": {
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T06-43-09-842Z-24f65c75-aabd-4cad-9a0a-db94df383980/darwin-arm64/final.json",
+    "command": "npm run verify:guard",
+    "status": "complete",
+    "tests": 142,
+    "originalPackageObserverTimeoutMs": 20000,
+    "packageCase": {
+      "name": "[package] npm tarball loads the default factory through public Pi APIs and executes bundled worker assets",
+      "status": "pass"
+    }
+  },
+  "limitation": "최초 지연의 세부 원인은 특정하지 못했다. 단독 측정은 관찰 시간을 120초로 확대한 진단 복사본에서 수행했다. 최종 재실행은 원본 검사와 20초 제한을 유지했으며, 초기 실패도 보존한다."
+}

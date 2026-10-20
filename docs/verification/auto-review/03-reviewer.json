@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "sourceDigest": "fac4b0218380fe76cc8747924720c2a40f88e601522199cbb945ba3e532114d1",
+  "contractDigest": "490d588398b878d177832e21f02b2474f94803dd3f7722d036f8ff4e12950e0f",
+  "reference": "openai/codex a956835d020762cb2b570053af06f643a11c0ecc",
+  "policyDigest": "0817e385826320edbebcb96ae2c21925ca7ec3c81b2a2e3b3b2cc9360db74480",
+  "policy": "Pinned upstream template and tenant text retained with Apache license; only execution-environment wording and Pi output contract adapted. Local tenant replacement preserves mandatory trust/risk/outcome instructions.",
+  "contextSources": {
+    "user": "Pi input interactive/rpc; source-tagged custom entries persist original scope",
+    "resumeAndFork": "Public selected SessionManager.getBranch; custom provenance entries restore authorization; generated summaries and role=user without verified provenance remain evidence",
+    "agents": "before_agent_start.systemPromptOptions.contextFiles supplied by runtime, not a path read from tool output",
+    "developer": "Runtime customPrompt and appendSystemPrompt",
+    "userConfirmation": "Actual approval UI choice -> ReviewContextStore.confirm; explicit trusted adapters can record confirmations",
+    "untrusted": "Visible assistant text/tool calls/results; hidden thinking and binary content excluded",
+    "compaction": "Original source-tagged authorization preserved; omitted evidence labelled; cannot truncate required authority/action",
+    "sessionTree": "Resets context identity and cancellation at selected branch"
+  },
+  "modelResolution": {
+    "default": "Current Pi model through its public registry",
+    "override": "reviewModel(provider,id) uses ModelRegistry.find; missing override fails closed",
+    "limits": "Total caller/deadline signal, bounded rounds, model maxTokens cap, context capacity checks"
+  },
+  "investigationCapabilities": {
+    "tools": [
+      "inspect_file",
+      "inspect_directory"
+    ],
+    "consumer": "NativeExecutor with read-only profile, empty network allowlist and empty delta; protected controller paths denied",
+    "evidence": "Actual owned outside sentinel read on darwin-arm64; rejected write/network/escalation and cancelled requests; no external model calls"
+  },
+  "terminalStates": [
+    "approved",
+    "denied",
+    "timed-out",
+    "aborted",
+    "failed"
+  ],
+  "failureKinds": [
+    "provider",
+    "invalid-output",
+    "context",
+    "investigation",
+    "timeout",
+    "cancelled"
+  ],
+  "intermediateConsumer": "ApprovalManager rejects nonempty auto-approved deltas until child 04 wires final native delivery; all new failure states deny and never fall back to UI",
+  "legacy": "Explicit decision/reason providers remain supported conservatively; legacy allow cannot auto-increase permissions",
+  "commands": [
+    "npm run build",
+    "npm run test:reviewer",
+    "npm run test:approvals",
+    "npm run test:integration"
+  ],
+  "baselineArtifact": ".reports/pi-guard/runs/2026-10-03T00-01-18-993Z-00744972-a687-4f14-ae7f-ab80939e9076/darwin-arm64/reviewer.json",
+  "artifactPaths": [
+    ".reports/pi-guard/runs/2026-10-03T00-07-21-828Z-df5c0e1f-e122-4646-af0a-779a2a3cb80f/darwin-arm64/integration.json",
+    ".reports/pi-guard/runs/2026-10-03T00-07-02-264Z-5c226854-c264-4e59-9b85-e6b9dbb50631/darwin-arm64/approvals.json",
+    ".reports/pi-guard/runs/2026-10-03T00-07-01-902Z-030f7abf-883a-49ab-ac83-fcd4d14cb651/darwin-arm64/reviewer.json"
+  ],
+  "verification": {
+    "reviewer": 7,
+    "approvals": 6,
+    "integration": 12,
+    "provider": "controlled; not live qualification"
+  },
+  "unresolved": [],
+  "recordedAt": "2026-10-03T00:08:20.268Z",
+  "finalFollowup": {
+    "sourceDigest": "a9472e6027c7866d1c6e524511018ef0ef88abe14a43fac90bed1ff3110f2f19",
+    "contractDigest": "7c16ec541fca790264aca75860a393e675013c8f273ed60516a80f93c9f44379",
+    "platformResults": {
+      "darwin-arm64": {
+        "status": "pass",
+        "tests": 71,
+        "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-38-38-870Z-58e6b235-a503-4c32-92e3-3360dea2dd94/darwin-arm64/platform.json"
+      },
+      "linux-x64": {
+        "status": "environment-blocked",
+        "tests": 0,
+        "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-38-07-412Z-cf557ca0-87f5-4a10-96c0-66074bf96361/linux-x64/docker-offline.json"
+      },
+      "linux-arm64": {
+        "status": "pass",
+        "tests": 71,
+        "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-37-58-990Z-d948c0be-dd4c-453a-ba86-c82bed05b0b5/linux-arm64/docker-offline.json"
+      }
+    },
+    "finalReport": "docs/handoffs/auto-review/07-conformance.json",
+    "finalStatus": "environment-blocked",
+    "correction": "Output guidance now preserves low-risk denials required by an explicit security policy, instead of suggesting every low-risk output must allow."
+  }
+}

@@ -1,0 +1,224 @@
+{
+    "status": "complete",
+    "brief": "docs/briefs/2026-10-05-feat-codex-cua-04-confirmations.md",
+    "date": "2026-10-05",
+    "consumed": [
+        "docs/handoffs/computer-use/04-mcp-bridge.json",
+        "docs/handoffs/computer-use/02-feasibility.json"
+    ],
+    "modules": {
+        "src/elicitation.ts": "classify(params) → Classification; buildOptions(classification) → DialogOption[]; responseForChoice(choice) → ElicitationResult; declineWithMessage(message); AUTO_APPROVE_RESPONSE; DECLINE_REASONS; formatDialogTitle; isMessageOnlySchema; parseFormFields; createElicitationHandler({activeCalls, getFallbackContext, log}) → ElicitationHandler installed through openConnection({ elicitationHandler }).",
+        "src/active-call.ts": "ActiveCallTracker: tools.ts begins/ends a record {toolName, callId, ctx, signal, notes[]} around each bridged tools/call so the handler reaches the calling ExtensionContext and the tool call's AbortSignal; notes are appended to the tool result as a final text block (`Approval requests during this call: …`).",
+        "src/tools.ts": "deps.activeCalls (optional) wires the tracker; result content gains the notes block when a request was declined during the call.",
+        "src/index.ts": "creates the tracker and handler once, passes the handler to openConnection on every (re)start, keeps the last session_start context as the no-call fallback; stopServer waits up to 3 s for an in-flight turn_ended before closing."
+    },
+    "kinds": {
+        "auto-approve": {
+            "condition": "message-only schema and _meta tool_name js, connector_id node_repl, codex_approval_kind mcp_tool_call, no codex_sensitive_action true, no codex_requires_user_input true (Codex core user-reviewer rule)",
+            "response": {
+                "action": "accept",
+                "content": {},
+                "_meta": {
+                    "approvals_reviewer": "auto_review"
+                }
+            },
+            "ui": "none; logged as elicitation-auto-approved",
+            "observed": "not emitted by the runtime in any run (node_repl_auto_review_required is sent as false); verified with a synthetic payload"
+        },
+        "tool-approval": {
+            "condition": "message-only schema and codex_approval_kind mcp_tool_call (app access, audio recording, origin access with codex_sensitive_action, downloads/uploads, page assets, raw CDP, WebMCP calls, safety prechecks)",
+            "options": [
+                "Allow",
+                "Allow for this session (persist includes session)",
+                "Always allow (persist includes always)",
+                "Cancel"
+            ],
+            "neverOffered": "Deny",
+            "observed": "app access for Finder: 2 requests per cold getApp+getAXState call, 1 after a one-shot Allow on the first op; title `Allow Computer Use to use \"Finder\"?` / `Computer Use · get_app_state` / `App: Finder`"
+        },
+        "message-only": {
+            "condition": "message-only schema without codex_approval_kind mcp_tool_call (for example browsing history with sensitive_data)",
+            "options": [
+                "Allow",
+                "Allow for this session (if persist)",
+                "Always allow (if persist)",
+                "Deny",
+                "Cancel"
+            ],
+            "observed": "classification only (no such request appeared); exercised by 05-browser-use"
+        },
+        "form": {
+            "condition": "object schema with properties of type string | number | integer | boolean | enum (enum/enumNames or oneOf const/title)",
+            "ui": "field by field: boolean → select True/False, enum → select, string/number/integer → input with minLength/maxLength/min/max/integer validation; Esc on any field → cancel",
+            "response": "{action: accept, content: {<id>: value}}",
+            "observed": "classification only (synthetic payload); no form request appeared"
+        },
+        "url": {
+            "condition": "params.mode === \"url\"",
+            "response": "decline with _meta.message",
+            "reason": "pi cannot open URL-based approval requests, so this request was declined."
+        },
+        "browser-auth": {
+            "condition": "codex_approval_kind browser_auth",
+            "response": "decline with _meta.message",
+            "reason": "pi has no browser sign-in surface (QR code or screenshot), so this request was declined."
+        },
+        "otp": {
+            "condition": "codex_approval_kind browser_email_otp",
+            "response": "decline with _meta.message",
+            "reason": "pi has no one-time-code input surface, so this request was declined."
+        },
+        "unsupported": {
+            "condition": "a form property pi cannot render (array/object, missing const in oneOf, non-object schema)",
+            "response": "decline with _meta.message",
+            "reason": "pi cannot render this request's form, so this request was declined."
+        }
+    },
+    "options": {
+        "labels": [
+            "Allow",
+            "Allow for this session",
+            "Always allow",
+            "Deny",
+            "Cancel"
+        ],
+        "descriptions": {
+            "toolApproval": [
+                "Run the tool and continue",
+                "Run the tool and remember this choice for this session",
+                "Run the tool and remember this choice for future tool calls",
+                "Cancel this tool call"
+            ],
+            "messageOnly": [
+                "Allow this request and continue",
+                "Allow this request and remember this choice for this session",
+                "Allow this request and remember this choice for future requests",
+                "Decline this request and continue",
+                "Cancel this request"
+            ]
+        },
+        "rendering": "ctx.ui.select(title, [`<label> — <description>`...], { signal }); title lines: message, connector_name · tool_title|tool_name (js omitted), `Risk: <level>` when not low, one `<display_name>: <value>` line per tool_params_display row",
+        "persistDetection": "`persist` as string or array; session → Allow for this session, always → Always allow (Codex approval_supports_persist_mode)"
+    },
+    "responses": {
+        "Allow": {
+            "action": "accept"
+        },
+        "Allow for this session": {
+            "action": "accept",
+            "_meta": {
+                "persist": "session"
+            }
+        },
+        "Always allow": {
+            "action": "accept",
+            "_meta": {
+                "persist": "always"
+            }
+        },
+        "Deny": {
+            "action": "decline"
+        },
+        "Cancel": {
+            "action": "cancel"
+        },
+        "dismissed or aborted dialog": {
+            "action": "cancel"
+        },
+        "form": {
+            "action": "accept",
+            "content": "{<fieldId>: value}"
+        },
+        "declined kinds / no UI": {
+            "action": "decline",
+            "_meta": {
+                "message": "<plain sentence>"
+            }
+        }
+    },
+    "autoApproval": {
+        "rule": "Codex core review_guardian_mcp_elicitation user-reviewer branch (core/src/session/mcp.rs): server is node_repl/cua_repl, _meta tool_name js, connector_id node_repl, codex_approval_kind mcp_tool_call, codex_sensitive_action !== true, codex_requires_user_input !== true, empty form schema",
+        "response": {
+            "action": "accept",
+            "content": {},
+            "_meta": {
+                "approvals_reviewer": "auto_review"
+            }
+        },
+        "observedCount": 0,
+        "note": "Only applies on this package's cua_repl connection (the handler is installed per connection); logged with the request _meta"
+    },
+    "noUi": {
+        "condition": "no active bridged call context with hasUI, and no session context with hasUI (print and JSON modes)",
+        "response": {
+            "action": "decline",
+            "_meta": {
+                "message": "This pi session has no interactive approval surface (print or JSON mode); run pi interactively to approve Computer Use requests."
+            }
+        },
+        "toolResult": "runtime error text `Computer Use was not approved to use Finder` plus the appended block `Approval requests during this call: This pi session has no interactive approval surface …` (verified in --mode json tool_execution_end and in -p)",
+        "observed": true
+    },
+    "observations": {
+        "sessionA": {
+            "answers": [
+                "Allow",
+                "Allow",
+                "Allow for this session"
+            ],
+            "call1": "two requests (getApp binding and getAXState both ask for get_app_state); Allow + Allow → accessibility text returned",
+            "call2": "one request → Allow for this session (`_meta.persist: session`) → the second operation of the same call did not ask",
+            "call3": "no request at all; accessibility text returned",
+            "turnEnded": "once, Stop, outcome completed"
+        },
+        "sessionB": {
+            "answers": [
+                "Cancel",
+                "delay 60 s then Allow",
+                "Allow",
+                "abort during dialog"
+            ],
+            "call1": "Cancel → js result isError `Computer Use was not approved to use Finder`",
+            "call2": "first request held 60.0 s then Allow, second request Allow → success; the js call (default timeout_ms 30000) did NOT time out while the request was pending, so the runtime suspends the js timeout during confirmations",
+            "call3": "RPC abort (Esc) while the dialog was open → dialog dismissed through the signal (choice dismissed → cancel), notifications/cancelled sent for the js request, tool result `js was cancelled`, turn_ended Interrupt with outcome aborted",
+            "nextCall": "not exercised after the abort in the same session (the run ended); server stayed connected (agent-settled serverRunning true)"
+        },
+        "noUiPrint": "pi -p: request declined with reason no-ui; model saw the runtime's not-approved error",
+        "noUiJson": "pi --mode json: tool_execution_end content = [not-approved error, docs block, `Approval requests during this call: …` note]",
+        "turnEndedOnQuit": "with the pending turn_ended awaited in stopServer (≤ 3 s), a print-mode run logs turn-ended before server-stop (previously `MCP connection closed`)",
+        "sessionGrantScope": "the session grant lived in the cua_repl process / native service for the pi session; a new pi session (new server process and session_id) asked again"
+    },
+    "declinedKinds": [
+        "url",
+        "browser-auth",
+        "otp",
+        "unsupported"
+    ],
+    "sideEffects": {
+        "getStateUnchanged": "03 getState behavior unchanged (two-call runs in 04 started with getApp; earlier getState runs in the same build passed)",
+        "escDuringDialog": "cancels the dialog, the pi tool call and the MCP request; the connection stayed usable (agent-settled serverRunning true)",
+        "turnEndedOnce": "exactly one turn-ended per run in sessions A and B",
+        "buildCheck": "npm run build and npm run check pass",
+        "codexDesktop": "not re-tested (skipped; Codex Desktop kept running with its own processes untouched)",
+        "settings": "~/.pi/agent/codex-computer-use/settings.json left at {computerUse: true, browserUse: true}",
+        "processes": "cua-repl process count back to Codex Desktop's baseline (30) after every run"
+    },
+    "unresolved": [
+        "Browser request kinds (history, origin, downloads/uploads, page assets, raw CDP, WebMCP, safety precheck) are classified but not yet exercised — 05-browser-use.",
+        "Form requests and the auto-approve branch were verified with synthetic payloads only.",
+        "Codex renders tool approvals with its own TUI layout; pi uses ctx.ui.select with the labels and descriptions embedded in the option strings.",
+        "Codex Desktop's own confirmations after these sessions were not re-checked."
+    ],
+    "scratchScripts": [
+        {
+            "path": "/tmp/cua-04/classify-check.mjs",
+            "purpose": "Stage 1: feeds recorded and documented payloads through dist/elicitation.js and prints kind, options, titles and response shapes",
+            "content": "// Stage 1 verification for child 04: feeds recorded and documented payloads through dist/elicitation.js.\nimport { join } from \"node:path\";\nconst dist = process.argv[2];\nconst e = await import(join(dist, \"elicitation.js\"));\n\nconst cases = [\n    {\n        name: \"app access (recorded, persist session+always)\",\n        params: {\n            message: 'Allow Computer Use to use \"Finder\"?',\n            requestedSchema: { properties: {}, type: \"object\" },\n            _meta: { callId: \"call_x\", codex_approval_kind: \"mcp_tool_call\", connector_id: \"computer-use\", connector_name: \"Computer Use\", persist: [\"session\", \"always\"], riskLevel: \"low\", tool_name: \"get_app_state\", tool_params: { app: \"com.apple.finder\" }, tool_params_display: [{ display_name: \"App\", name: \"app\", value: \"Finder\" }] },\n        },\n    },\n    {\n        name: \"app access persist session only (string form)\",\n        params: { message: \"Allow Computer Use to use X?\", requestedSchema: { type: \"object\", properties: {} }, _meta: { codex_approval_kind: \"mcp_tool_call\", connector_id: \"computer-use\", persist: \"session\" } },\n    },\n    {\n        name: \"audio recording (approval_request, high risk)\",\n        params: { message: \"Allow Computer Use to record computer audio?\", requestedSchema: { type: \"object\", properties: {} }, _meta: { codex_approval_kind: \"mcp_tool_call\", codex_request_type: \"approval_request\", connector_id: \"computer-use\", connector_name: \"Computer Use\", persist: [\"session\"], riskLevel: \"high\", tool_name: \"start_audio_recording\", tool_params: { app: \"computer-audio\" } } },\n    },\n    {\n        name: \"origin access (sensitive, mcp_tool_call)\",\n        params: { message: \"Allow Browser Use to access example.com?\", requestedSchema: { type: \"object\", properties: {} }, _meta: { codex_approval_kind: \"mcp_tool_call\", codex_sensitive_action: true, codex_request_type: \"approval_request\", connector_id: \"browser-use\", connector_name: \"Browser Use\", persist: [\"session\", \"always\"], tool_params: { origin: \"https://example.com\" } } },\n    },\n    {\n        name: \"browsing history (message-only, not mcp_tool_call)\",\n        params: { message: \"Allow Browser Use to read browsing history?\", requestedSchema: { type: \"object\", properties: {} }, _meta: { connector_id: \"browser-use\", connector_name: \"Browser Use\", sensitive_data: \"browsing_history\" } },\n    },\n    {\n        name: \"download (persist, file_transfer)\",\n        params: { message: \"Allow download from example.com?\", requestedSchema: { type: \"object\", properties: {} }, _meta: { codex_approval_kind: \"mcp_tool_call\", connector_id: \"browser-use\", persist: [\"session\"], file_transfer: \"download\", origin: \"https://example.com\" } },\n    },\n    {\n        name: \"raw CDP (high risk)\",\n        params: { message: \"Allow full Chrome DevTools Protocol access?\", requestedSchema: { type: \"object\", properties: {} }, _meta: { codex_approval_kind: \"mcp_tool_call\", connector_id: \"browser-use\", riskLevel: \"high\", full_cdp_access: true } },\n    },\n    {\n        name: \"WebMCP (strict auto review + sensitive)\",\n        params: { message: \"Allow WebMCP tool call?\", requestedSchema: { type: \"object\", properties: {} }, _meta: { codex_approval_kind: \"mcp_tool_call\", codex_strict_auto_review: true, codex_sensitive_action: true, connector_id: \"browser-use\" } },\n    },\n    {\n        name: \"email OTP\",\n        params: { message: \"Enter the one-time code\", requestedSchema: { type: \"object\", properties: { approved: { type: \"boolean\" } } }, _meta: { codex_approval_kind: \"browser_email_otp\", codex_requires_user_input: true, connector_id: \"browser-use\" } },\n    },\n    {\n        name: \"browser auth\",\n        params: { message: \"Sign in\", requestedSchema: { type: \"object\", properties: {} }, _meta: { codex_approval_kind: \"browser_auth\", codex_requires_user_input: true, connector_id: \"browser-use\" } },\n    },\n    {\n        name: \"url mode\",\n        params: { mode: \"url\", message: \"Open this URL\", url: \"https://example.com\", _meta: { connector_id: \"browser-use\" } },\n    },\n    {\n        name: \"js execution approval (node_repl, empty schema) → auto\",\n        params: { message: \"Allow js execution?\", requestedSchema: { type: \"object\", properties: {} }, _meta: { connector_id: \"node_repl\", tool_name: \"js\", codex_approval_kind: \"mcp_tool_call\", codex_strict_auto_review: true, codex_request_type: \"approval_request\" } },\n    },\n    {\n        name: \"js approval but sensitive → not auto\",\n        params: { message: \"Allow js execution?\", requestedSchema: { type: \"object\", properties: {} }, _meta: { connector_id: \"node_repl\", tool_name: \"js\", codex_approval_kind: \"mcp_tool_call\", codex_sensitive_action: true } },\n    },\n    {\n        name: \"form with string/boolean/enum/integer\",\n        params: { message: \"Fill in\", requestedSchema: { type: \"object\", properties: { name: { type: \"string\", title: \"Name\", minLength: 1 }, ok: { type: \"boolean\", default: true }, color: { type: \"string\", enum: [\"r\", \"g\"], enumNames: [\"Red\", \"Green\"] }, count: { type: \"integer\", minimum: 0 } }, required: [\"name\"] }, _meta: {} },\n    },\n    {\n        name: \"form with unsupported array field\",\n        params: { message: \"Fill in\", requestedSchema: { type: \"object\", properties: { items: { type: \"array\" } } }, _meta: {} },\n    },\n];\nfor (const { name, params } of cases) {\n    const c = e.classify(params);\n    const options = [\"tool-approval\", \"message-only\"].includes(c.kind) ? e.buildOptions(c).map((o) => o.label) : null;\n    console.log(`\\n# ${name}\\n  kind=${c.kind} persist=${JSON.stringify(c.persistModes)} strict=${c.isStrictAutoReview} sensitive=${c.isSensitiveAction} userInput=${c.requiresUserInput}`);\n    if (options) console.log(`  options=${JSON.stringify(options)}`);\n    if (c.kind === \"form\") console.log(`  fields=${JSON.stringify(c.fields.map((f) => `${f.id}:${f.input.kind}${f.required ? \"!\" : \"\"}`))}`);\n    if (c.declineReason) console.log(`  decline=\"${c.declineReason}\"`);\n    if (c.kind === \"tool-approval\" || c.kind === \"message-only\") console.log(`  title=${JSON.stringify(e.formatDialogTitle(c))}`);\n}\nconsole.log(\"\\n# responses\");\nfor (const choice of [\"accept\", \"accept_session\", \"accept_always\", \"decline\", \"cancel\", undefined]) console.log(`  ${choice ?? \"dismissed\"} → ${JSON.stringify(e.responseForChoice(choice))}`);\nconsole.log(`  auto → ${JSON.stringify(e.AUTO_APPROVE_RESPONSE)}`);\nconsole.log(`  decline(msg) → ${JSON.stringify(e.declineWithMessage(\"why\"))}`);\n"
+        },
+        {
+            "path": "/tmp/cua-04/confirm-driver.mjs",
+            "purpose": "Stage 2: RPC driver answering select dialogs from ANSWERS (Allow / Allow for this session / Cancel / delay:<ms>:<answer> / abort / dismiss)",
+            "content": "// Drives pi in RPC mode through a scripted set of confirmation answers.\n//   ANSWERS='Allow,Allow,Allow for this session,none' node confirm-driver.mjs <pi-binary> <pi args...> -- <prompt>\n// Answer tokens: \"Allow\", \"Allow for this session\", \"Always allow\", \"Deny\", \"Cancel\", \"delay:<ms>:<answer>\",\n// \"abort\" (send RPC abort while the dialog is open, like Esc), \"dismiss\" (cancelled: true).\nimport { spawn } from \"node:child_process\";\n\nconst argv = process.argv.slice(2);\nconst separator = argv.indexOf(\"--\");\nconst [piBinary, ...piArgs] = argv.slice(0, separator);\nconst prompt = argv.slice(separator + 1).join(\" \");\nconst answers = (process.env.ANSWERS ?? \"\").split(\",\").map((a) => a.trim()).filter(Boolean);\nlet answerIndex = 0;\nconst child = spawn(piBinary, piArgs, { stdio: [\"pipe\", \"pipe\", \"pipe\"] });\nchild.stderr.on(\"data\", (chunk) => {\n    const text = chunk.toString();\n    if (!text.startsWith(\"Warning: No models\")) process.stdout.write(`[stderr] ${text}`);\n});\nconst send = (record) => {\n    console.log(`>>> ${JSON.stringify(record).slice(0, 220)}`);\n    child.stdin.write(`${JSON.stringify(record)}\\n`);\n};\nconst sleep = (ms) => new Promise((r) => setTimeout(r, ms));\nconst t0 = Date.now();\nconst stamp = () => `+${((Date.now() - t0) / 1000).toFixed(1)}s`;\nconst handleSelect = async (record) => {\n    const token = answers[answerIndex] ?? \"Cancel\";\n    answerIndex += 1;\n    console.log(`<<< ${stamp()} select #${answerIndex} title=${JSON.stringify(record.title)} options=${JSON.stringify(record.options)} → ${token}`);\n    let answer = token;\n    if (token.startsWith(\"delay:\")) {\n        const [, ms, real] = token.split(\":\");\n        console.log(`    waiting ${ms} ms before answering ${real}`);\n        await sleep(Number(ms));\n        answer = real;\n    }\n    if (answer === \"abort\") {\n        send({ type: \"abort\" });\n        return;\n    }\n    if (answer === \"dismiss\") {\n        send({ type: \"extension_ui_response\", id: record.id, cancelled: true });\n        return;\n    }\n    const match = record.options.find((option) => option.startsWith(`${answer} —`) || option === answer);\n    if (!match) {\n        console.log(`    no option matches ${answer}; dismissing`);\n        send({ type: \"extension_ui_response\", id: record.id, cancelled: true });\n        return;\n    }\n    send({ type: \"extension_ui_response\", id: record.id, value: match });\n};\nlet buffer = \"\";\nchild.stdout.on(\"data\", (chunk) => {\n    buffer += chunk.toString();\n    let nl = buffer.indexOf(\"\\n\");\n    while (nl !== -1) {\n        const line = buffer.slice(0, nl).trim();\n        buffer = buffer.slice(nl + 1);\n        nl = buffer.indexOf(\"\\n\");\n        if (!line) continue;\n        let record;\n        try {\n            record = JSON.parse(line);\n        } catch {\n            console.log(`<<< (raw) ${line.slice(0, 200)}`);\n            continue;\n        }\n        if (record.type === \"extension_ui_request\") {\n            if (record.method === \"select\") void handleSelect(record);\n            else if (record.method === \"notify\") console.log(`<<< ${stamp()} notify ${JSON.stringify(record.message).slice(0, 200)}`);\n            else if (record.method === \"confirm\" || record.method === \"input\") {\n                console.log(`<<< ${stamp()} ${record.method} ${JSON.stringify(record.title).slice(0, 200)} → dismiss`);\n                send({ type: \"extension_ui_response\", id: record.id, cancelled: true });\n            }\n            continue;\n        }\n        if (record.type === \"response\") {\n            console.log(`<<< ${stamp()} response ${JSON.stringify(record).slice(0, 160)}`);\n            continue;\n        }\n        if (record.type === \"tool_execution_start\") console.log(`<<< ${stamp()} tool start ${record.toolName} ${JSON.stringify(record.args?.code ?? \"\").slice(0, 120)}`);\n        else if (record.type === \"tool_execution_end\") console.log(`<<< ${stamp()} tool end isError=${record.isError} ${JSON.stringify(record.result?.content?.map((b) => (b.type === \"text\" ? b.text.slice(0, 160) : b.type)) ?? \"\")}`);\n        else if (record.type === \"agent_end\") {\n            console.log(`<<< ${stamp()} agent_end`);\n            setTimeout(() => child.kill(\"SIGTERM\"), Number(process.env.LINGER_MS ?? 3000));\n        } else if (record.type === \"message_end\" && record.message?.role === \"assistant\") {\n            const text = (record.message.content ?? []).filter((c) => c.type === \"text\").map((c) => c.text).join(\" \");\n            if (text) console.log(`<<< ${stamp()} assistant: ${text.slice(0, 400)}`);\n        }\n    }\n});\nchild.on(\"exit\", (code, signal) => console.log(`pi exited code=${code} signal=${signal}`));\nsetTimeout(() => send({ id: \"p1\", type: \"prompt\", message: prompt }), 1500);\nsetTimeout(() => {\n    console.log(\"timeout: killing pi\");\n    child.kill(\"SIGKILL\");\n}, Number(process.env.MAX_MS ?? 400_000)).unref();\n"
+        }
+    ]
+}

@@ -1,0 +1,33 @@
+{
+    "$schema": "https://unpkg.com/release-it@21.0.1/schema/release-it.json",
+    "git": {
+        "commit": true,
+        "tag": true,
+        "push": true,
+        "requireBranch": "main",
+        "requireUpstream": true,
+        "tagName": "pi-codex-fast-mode-v${version}",
+        "tagMatch": "pi-codex-fast-mode-v[0-9]*",
+        "commitsPath": ".",
+        "commitMessage": "chore(Codex Fast 모드 ${version} 배포): ${branchName}\n\n1. 패키지 버전을 올리고 미배포 변경 이력을 ${version} 절로 확정"
+    },
+    "npm": {
+        "publish": false,
+        "versionArgs": [
+            "--ignore-scripts",
+            "--package-lock=false",
+            "--workspaces-update=false"
+        ]
+    },
+    "github": { "release": false },
+    "gitlab": { "release": false },
+    "hooks": {
+        "before:init": [
+            "node ../../scripts/release/changelog.mjs check",
+            "pnpm run build",
+            "pnpm run typecheck",
+            "node ../../scripts/codex/check-package.mjs ."
+        ],
+        "after:bump": "node ../../scripts/release/changelog.mjs stamp ${version}"
+    }
+}

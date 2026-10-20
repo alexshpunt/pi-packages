@@ -1,0 +1,423 @@
+{
+  "schemaVersion": 2,
+  "status": "complete",
+  "implementationStatus": "implemented",
+  "sourceDigest": "d974186a8bc5188c366702e701e5acc852bf21b4b1e83493735e4249ff8a2c69",
+  "contractDigest": "7c16ec541fca790264aca75860a393e675013c8f273ed60516a80f93c9f44379",
+  "recoveryProvenance": {
+    "kind": "reconstructed",
+    "searched": "Current repository files and reachable Git history",
+    "originalDockerCode": "No project-owned Docker harness located; previous Docker execution remains unverified",
+    "preservedHistory": "docs/handoffs/auto-review/01-evidence.json"
+  },
+  "packagePins": {
+    "@earendil-works/pi-coding-agent": "0.99.1",
+    "@anthropic-ai/sandbox-runtime": "0.0.78",
+    "pi-ollama-cloud": "0.12.2"
+  },
+  "packageIdentity": {
+    "sourceDigest": "d974186a8bc5188c366702e701e5acc852bf21b4b1e83493735e4249ff8a2c69",
+    "contractDigest": "7c16ec541fca790264aca75860a393e675013c8f273ed60516a80f93c9f44379",
+    "packages": {
+      "@earendil-works/pi-coding-agent": "0.99.1",
+      "@anthropic-ai/sandbox-runtime": "0.0.78",
+      "pi-ollama-cloud": "0.12.2"
+    },
+    "plugin": {
+      "name": "pi-codex-auto-review",
+      "version": "1.0.0",
+      "sha256": "331e5e3cd88a0d12bfe4aabd3a9c3488fb7bfe4e2f11ba16e3ddb06ffda4efac",
+      "integrity": "sha512-yz7GdDq9Mj2euAGxazsYT1+T72mC+WhgbKtZuJ77s+vUk623cyZjACf8l4Chzc4HNyYJ5kr7O6Lc6PczTif8vQ=="
+    },
+    "installation": "npm ci with locked provider; npm pack artifact extracted into an isolated consumer sharing the locked dependencies"
+  },
+  "imageDigest": "sha256:fe79facbc6ff0a5188f39bb65f0b496fb9395b5d29ecb2317c86506caf5df187",
+  "baseImage": "node:24.14.0-bookworm-slim@sha256:d8e448a56fc63242f70026718378bd4b00f8c82e78d20eefb199224a4d8e33d8",
+  "provider": {
+    "package": "pi-ollama-cloud",
+    "version": "0.12.2",
+    "id": "ollama-cloud",
+    "requestedModel": "glm-5.3",
+    "authentication": "runtime OLLAMA_API_KEY only; no local Ollama daemon",
+    "webTools": false,
+    "usagePolling": false
+  },
+  "offline": {
+    "status": "pass",
+    "platform": "linux-x64",
+    "sourceDigest": "d974186a8bc5188c366702e701e5acc852bf21b4b1e83493735e4249ff8a2c69",
+    "tests": 72,
+    "startup": {
+      "guardLoaded": true,
+      "providerLoaded": true,
+      "reloadPassed": true,
+      "webToolsAbsent": true,
+      "usagePolling": false,
+      "offlineModelCalls": {
+        "main": 0,
+        "reviewer": 0
+      }
+    },
+    "nativeCapabilities": {
+      "platform": "linux-x64",
+      "processArchitecture": "x64",
+      "kernelArchitecture": "arm64",
+      "reportedMachine": "x86_64",
+      "seccompHelperArchitecture": "arm64",
+      "bwrap": "bubblewrap 0.8.0",
+      "fd": "fd 10.3.0",
+      "weakerNestedSandbox": false,
+      "weakerNetworkIsolation": false,
+      "preflight": {
+        "permittedEffect": true,
+        "deniedEffect": true,
+        "platform": "linux-x64"
+      },
+      "controls": [
+        {
+          "kind": "allow",
+          "effect": "shell output/cwd/caller environment and nonzero status",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "allow",
+          "effect": "owned Unix socket control works outside the sandbox and the workload starts inside it",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "deny",
+          "effect": "Unix socket creation denied by native enforcement; workload=x64, helper=arm64",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "allow",
+          "effect": "workspace write/read and read-only read",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "deny",
+          "effect": "outside sentinel unchanged under shell/file/descendant/symlink and read-only paths; protected read blocked",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "allow",
+          "effect": "one authorized proxy request reached owned Unix socket service",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "deny",
+          "effect": "domain-denied and direct requests did not reach owned service",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "allow",
+          "effect": "explicitly disclosed runtime directory grant reached the named owned target",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "deny",
+          "effect": "runtime convenience directory did not override read-only or broaden an exact-file grant",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "allow",
+          "effect": "exact metadata file and one reviewed command changed their owned targets",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "deny",
+          "effect": "metadata sibling, later unapproved write and absolute protected credential read remained blocked",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "allow",
+          "effect": "broker-authorized dynamic destination reached owned service",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "deny",
+          "effect": "denied and subsequent invocation destinations did not reach service",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "deny",
+          "effect": "caller cancellation and seconds deadline terminated running process groups; no delayed descendant mutation",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "allow",
+          "effect": "one exact elevated target changed",
+          "isObserved": true,
+          "platform": "linux-x64"
+        },
+        {
+          "kind": "deny",
+          "effect": "concurrent/subsequent siblings, hard-deny delta and invalid IPC left target unchanged",
+          "isObserved": true,
+          "platform": "linux-x64"
+        }
+      ]
+    },
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T02-02-38-099Z-a8a4edfe-7a4a-4213-aa6a-d9b852fa48d5/linux-x64/docker-offline.json"
+  },
+  "requiredPlatforms": [
+    "darwin-arm64",
+    "linux-x64"
+  ],
+  "linuxX64": {
+    "status": "pass",
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T02-02-38-099Z-a8a4edfe-7a4a-4213-aa6a-d9b852fa48d5/linux-x64/docker-offline.json",
+    "kernelArchitecture": "arm64",
+    "usesArchitectureEmulation": true
+  },
+  "live": {
+    "status": "pass",
+    "model": "glm-5.3",
+    "mainCalls": 8,
+    "reviewerCalls": 2,
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T02-12-46-204Z-c2e6b649-4e7f-4c43-bec7-e34bd54fe7e8/linux-x64/docker-conformance.json",
+    "handoff": "docs/handoffs/auto-review/09-live-cloud.json"
+  },
+  "corrections": [
+    {
+      "owner": "06-docker-cloud",
+      "change": "Explicit trusted provider loading and print/SDK session-start restoration after successful reload; existing beforeSessionStart option preserved"
+    },
+    {
+      "owner": "04-permissions",
+      "change": "The complete custom agent directory is an absolute credential/control deny"
+    },
+    {
+      "owner": "04-permissions",
+      "change": "Linux read mounts are partitioned around narrow write mounts; runtime proxy sockets are restored through the read mask without relaxing domain or direct-network controls"
+    },
+    {
+      "owner": "04-permissions",
+      "change": "New Linux file creation includes the existing parent directory in the reviewed delta; this wider native scope is disclosed before admission and lasts one invocation"
+    },
+    {
+      "owner": "06-docker-cloud",
+      "change": "Official fd 10.3.0 assets are architecture-specific and SHA256-pinned because Debian fd lacks the Pi find option"
+    }
+  ],
+  "commands": {
+    "offlineRequired": "npm run verify:docker -- --mode offline --platform linux/amd64",
+    "offlineAdditional": "npm run verify:docker -- --mode offline --platform linux/arm64",
+    "live": "npm run verify:docker -- --mode live --platform linux/arm64 --model glm-5.3",
+    "imageReuse": "Append --image followed by the exact imageDigest from a matching-source run",
+    "results": ".reports/pi-guard/runs/<run-id>/<platform>/docker-orchestration.json; containerResult points to imported immutable evidence",
+    "cleanup": "Only the exact owned container ID is removed after report export; no host mounts or ports; images retained"
+  },
+  "limitations": [
+    "Pi execution/approval scope only; no MCP/app/Computer Use, Windows, enterprise service or proprietary-model equivalence.",
+    "Controller and native mandatory protections remain absolute; literal .rules subset does not execute general Starlark.",
+    "Guarded startup disables automatic context-file discovery; only actual runtime-supplied instruction sources are trusted.",
+    "Linux creation and runtime default scratch/log paths may require enclosing-directory authority, shown in the reviewed delta; exact-file creation confinement is not claimed. Unsupported partial SDK scopes fail closed.",
+    "Deterministic model doubles and real OS effects do not establish live GLM5.3 behavior.",
+    "The locked dependency audit reported three high-severity entries. No unverified downgrade or automatic audit fix was applied."
+  ],
+  "artifactPaths": [
+    ".reports/pi-guard/runs/2026-10-03T02-02-38-099Z-a8a4edfe-7a4a-4213-aa6a-d9b852fa48d5/linux-x64/docker-offline.json",
+    ".reports/pi-guard/runs/2026-10-03T02-12-46-204Z-c2e6b649-4e7f-4c43-bec7-e34bd54fe7e8/linux-x64/docker-conformance.json",
+    ".reports/pi-guard/runs/2026-10-03T02-14-34-627Z-3dff3dc7-fc36-4f8e-8503-91a206c31aea/darwin-arm64/auto-review-conformance.json"
+  ],
+  "recordedAt": "2026-10-03T02:15:15.497Z",
+  "finalFollowup": {
+    "status": "complete",
+    "sourceDigest": "d974186a8bc5188c366702e701e5acc852bf21b4b1e83493735e4249ff8a2c69",
+    "finalReport": "docs/handoffs/auto-review/07-conformance.json",
+    "liveReport": "docs/handoffs/auto-review/09-live-cloud.json"
+  },
+  "seccompResolution": {
+    "status": "complete",
+    "handoff": "docs/handoffs/auto-review/08-seccomp.json",
+    "finalReport": "docs/handoffs/auto-review/07-conformance.json",
+    "sourceDigest": "d974186a8bc5188c366702e701e5acc852bf21b4b1e83493735e4249ff8a2c69",
+    "linuxX64Status": "pass",
+    "tests": 72,
+    "imageDigest": "sha256:fe79facbc6ff0a5188f39bb65f0b496fb9395b5d29ecb2317c86506caf5df187",
+    "liveStatus": "pass"
+  },
+  "historicalMilestone": {
+    "status": "environment-blocked",
+    "sourceDigest": "427251356a6de980425eff1923c84878e624e97bc046ad32abdaae617c803e8e",
+    "imageDigest": "sha256:88138d20379396da38643f9132bffe74f02807798843e598e0f9cf2f08ab0264",
+    "offline": {
+      "status": "pass",
+      "platform": "linux-arm64",
+      "tests": 65,
+      "startup": {
+        "guardLoaded": true,
+        "providerLoaded": true,
+        "reloadPassed": true,
+        "webToolsAbsent": true,
+        "usagePolling": false,
+        "offlineModelCalls": {
+          "main": 0,
+          "reviewer": 0
+        }
+      },
+      "nativeCapabilities": {
+        "platform": "linux-arm64",
+        "kernel": "aarch64",
+        "bwrap": "bubblewrap 0.8.0",
+        "fd": "fd 10.3.0",
+        "weakerNestedSandbox": false,
+        "weakerNetworkIsolation": false,
+        "preflight": {
+          "permittedEffect": true,
+          "deniedEffect": true,
+          "platform": "linux-arm64"
+        },
+        "controls": [
+          {
+            "kind": "allow",
+            "effect": "shell output/cwd/caller environment and nonzero status",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          },
+          {
+            "kind": "allow",
+            "effect": "workspace write/read and read-only read",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          },
+          {
+            "kind": "deny",
+            "effect": "outside sentinel unchanged under shell/file/descendant/symlink and read-only paths; protected read blocked",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          },
+          {
+            "kind": "allow",
+            "effect": "one authorized proxy request reached owned Unix socket service",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          },
+          {
+            "kind": "deny",
+            "effect": "domain-denied and direct requests did not reach owned service",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          },
+          {
+            "kind": "allow",
+            "effect": "exact metadata file and one reviewed command changed their owned targets",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          },
+          {
+            "kind": "deny",
+            "effect": "metadata sibling, later unapproved write and absolute protected credential read remained blocked",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          },
+          {
+            "kind": "allow",
+            "effect": "broker-authorized dynamic destination reached owned service",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          },
+          {
+            "kind": "deny",
+            "effect": "denied and subsequent invocation destinations did not reach service",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          },
+          {
+            "kind": "deny",
+            "effect": "caller cancellation and seconds deadline terminated running process groups; no delayed descendant mutation",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          },
+          {
+            "kind": "allow",
+            "effect": "one exact elevated target changed",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          },
+          {
+            "kind": "deny",
+            "effect": "concurrent/subsequent siblings, hard-deny delta and invalid IPC left target unchanged",
+            "isObserved": true,
+            "platform": "linux-arm64"
+          }
+        ]
+      },
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-21-14-264Z-40a59bf8-726e-4263-b5fb-ce06baeaeac6/linux-arm64/docker-offline.json"
+    },
+    "live": {
+      "status": "environment-blocked",
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-23-05-487Z-e425ac3f-e726-4837-ad5e-9864aece3b53/linux-arm64/docker-orchestration.json",
+      "model": "glm-5.3",
+      "blockedReasons": [
+        "ENVIRONMENT_BLOCKED: live verification requires runtime OLLAMA_API_KEY and a selected OLLAMA_MODEL / --model"
+      ],
+      "keySourceChecked": "/Users/buyong/.zshrc sourced with output hidden, named variable exported; no value printed",
+      "modelCalls": 0
+    },
+    "linuxX64": {
+      "status": "environment-blocked",
+      "imageDigest": "sha256:5eef7763c69178e12b96306908313da94386ae5737ae7d6d0b90bd0f2555733d",
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-21-24-498Z-62108f28-be33-4b35-8ffe-f92c6089db7e/linux-x64/docker-offline.json",
+      "blockedReasons": [
+        "ENVIRONMENT_BLOCKED: native qualification failed: Native worker failed (1): apply-seccomp: prctl(PR_SET_SECCOMP): Invalid argument\n"
+      ],
+      "hostArchitecture": "aarch64",
+      "usesArchitectureEmulation": true
+    },
+    "limitations": [
+      "Required Linux x64 cannot qualify under this Docker ARM host emulation while strong native seccomp is enabled. ARM64 does not substitute for x64.",
+      "Live provider/startup acceptance awaits a nonempty runtime OLLAMA_API_KEY; selected model remains glm-5.3.",
+      "Linux file creation may require parent-directory write authority; arbitrary exact-file creation semantics are not claimed.",
+      "npm audit reported three high-severity dependency entries; no automatic downgrade or blanket fix applied."
+    ],
+    "finalFollowup": {
+      "sourceDigest": "a9472e6027c7866d1c6e524511018ef0ef88abe14a43fac90bed1ff3110f2f19",
+      "contractDigest": "7c16ec541fca790264aca75860a393e675013c8f273ed60516a80f93c9f44379",
+      "platformResults": {
+        "darwin-arm64": {
+          "status": "pass",
+          "tests": 71,
+          "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-38-38-870Z-58e6b235-a503-4c32-92e3-3360dea2dd94/darwin-arm64/platform.json"
+        },
+        "linux-x64": {
+          "status": "environment-blocked",
+          "tests": 0,
+          "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-38-07-412Z-cf557ca0-87f5-4a10-96c0-66074bf96361/linux-x64/docker-offline.json"
+        },
+        "linux-arm64": {
+          "status": "pass",
+          "tests": 71,
+          "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-37-58-990Z-d948c0be-dd4c-453a-ba86-c82bed05b0b5/linux-arm64/docker-offline.json"
+        }
+      },
+      "finalReport": "docs/handoffs/auto-review/07-conformance.json",
+      "finalStatus": "environment-blocked",
+      "liveAttempt": ".reports/pi-guard/runs/2026-10-03T01-37-05-187Z-3631be38-118d-4539-aa45-0073da5299a4/linux-arm64/docker-orchestration.json",
+      "liveStatus": "environment-blocked: runtime key absent; zero model calls"
+    },
+    "artifactPaths": [
+      ".reports/pi-guard/runs/2026-10-03T01-21-14-264Z-40a59bf8-726e-4263-b5fb-ce06baeaeac6/linux-arm64/docker-offline.json",
+      ".reports/pi-guard/runs/2026-10-03T01-21-24-498Z-62108f28-be33-4b35-8ffe-f92c6089db7e/linux-x64/docker-offline.json",
+      ".reports/pi-guard/runs/2026-10-03T01-23-05-487Z-e425ac3f-e726-4837-ad5e-9864aece3b53/linux-arm64/docker-orchestration.json"
+    ],
+    "recordedAt": "2026-10-03T01:23:06.093Z"
+  },
+  "completionReport": "docs/handoffs/auto-review/07-conformance.json",
+  "completedAt": "2026-10-03T02:15:15.497Z"
+}

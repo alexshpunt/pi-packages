@@ -1,0 +1,75 @@
+{
+    "status": "complete",
+    "supersededBy": "docs/handoffs/image-gen/09-openai-provider.json — this successful prior trial is not evidence of final openai image success",
+    "followUp": "docs/handoffs/image-gen/08-package-completion.json — production routing and documentation were subsequently corrected; the single live generation result recorded here is unchanged.",
+    "scope": "사용자가 승인한 구독 이미지 생성 1회 검증. 패키지 전체의 통합 검증 완료를 뜻하지 않음.",
+    "verifiedOn": "2026-10-05",
+    "worktree": "../pi-codex-permission-codex-image-gen",
+    "branch": "feat/codex-image-gen",
+    "runtime": "로컬 Pi 1.0.2, 기존 사용자 확장을 그대로 로드. 모델 호출 없이 session_start에서 ImagesClient를 직접 실행.",
+    "effectiveAuthentication": {
+        "openai": {
+            "baseUrl": "https://api.openai.com/v1",
+            "api": "openai-responses",
+            "configured": true,
+            "authType": "oauth",
+            "hasChatGPTAccountClaim": false
+        },
+        "openai-codex": {
+            "baseUrl": "https://chatgpt.com/backend-api",
+            "api": "openai-codex-responses",
+            "configured": true,
+            "authType": "oauth",
+            "hasChatGPTAccountClaim": true
+        },
+        "resolution": "Pi 모델 레지스트리의 getProviderAuth('openai-codex')로 기존 구독 인증을 조회. 자격 증명 파일을 직접 읽거나 새 로그인하지 않음. 토큰과 계정 ID는 메모리에만 사용."
+    },
+    "request": {
+        "operation": "generate",
+        "endpoint": "https://chatgpt.com/backend-api/codex/images/generations",
+        "prompt": "귀여운 강아지 일본만화툰으로 이미지만들어줘",
+        "model": "gpt-image-2",
+        "background": "opaque",
+        "quality": "auto",
+        "size": "auto",
+        "contentType": "application/json",
+        "headerNames": ["Authorization", "chatgpt-account-id", "originator", "User-Agent", "x-codex-image-turn-id", "Content-Type"],
+        "requestCount": 1,
+        "automaticNetworkRetries": 0,
+        "promptAugmentation": false
+    },
+    "result": {
+        "httpStatus": 200,
+        "outcome": "success",
+        "elapsedMs": 28058,
+        "savedPath": "/Users/buyong/.pi/agent/generated_images/01a10adf-233b-76ae-ac1c-3fa2fe2b07e4/subscription-verification-fbcf75b0-b8f2-40fb-944d-efd7ad5a13c4.png",
+        "imageBytes": 2121588,
+        "format": "PNG, 1254 x 1254, 8-bit RGB, non-interlaced",
+        "resultContentTypes": ["image", "text"],
+        "visualInspection": "read 도구로 실제 PNG를 열어 귀여운 강아지를 그린 일본 만화풍 6칸 구성을 확인. 생성된 파일은 한 장.",
+        "configuredSessionFile": "/Users/buyong/.pi/agent/sessions/--Users-buyong-workspace-private-opensource-pi-codex-permission-codex-image-gen--/2026-10-05T07-02-38-139Z_01a10adf-233b-76ae-ac1c-3fa2fe2b07e4.jsonl",
+        "sessionPersisted": false,
+        "sessionNote": "session_start에서만 실행하고 모델 호출 없이 종료해 Pi 세션 파일은 디스크에 기록되지 않음. 실제 생성 파일, scratch JSON/log, 이 인계 파일로 결과를 보존함."
+    },
+    "execution": {
+        "command": "pi --print -e tmp/verify/try-subscription-generation.mjs </dev/null",
+        "scratchReport": "tmp/verify/subscription-generation.json",
+        "scratchLog": "tmp/verify/subscription-generation.log",
+        "packageModulesUsed": ["dist/arguments.js", "dist/backend.js", "dist/artifact.js", "dist/result.js"],
+        "userSettingsChanged": false,
+        "productionSourceChanged": false,
+        "toolModelInvocationTested": false
+    },
+    "secretScan": {
+        "populationFiles": 17,
+        "scope": "기존 worktree용 Pi 세션 파일, docs/handoffs/image-gen의 JSON 7개, scratch 생성 보고서와 로그",
+        "matches": [],
+        "result": "rg --no-ignore의 비밀 패턴 검사 종료 코드 1: 일치 없음. 토큰이나 계정 ID 값은 출력하지 않음."
+    },
+    "correctionToPriorConclusion": "공개 Images API에 Pi openai 토큰을 보내 받은 401은 구독용 이미지 API가 없거나 재로그인이 필요하다는 증거가 아님. 기존 Pi openai-codex 인증과 Codex 구독 경로로는 생성이 성공함.",
+    "remainingWorkAtVerificationTime": [
+        "현재 production auth.ts와 exposure.ts는 openai 인증만 조회한다. 구독 경로를 패키지 도구에 연결하는 구현과 FDD 정책 수정은 아직 적용하지 않음.",
+        "Codex 구독 편집 요청은 JSON images 배열이다. 현재 공개 API용 multipart 편집과 구분해야 하지만 실제 편집 호출은 실행하지 않음.",
+        "편집, 투명 배경, 도구의 모델 호출을 포함한 전체 통합 동작은 이번 단일 생성 검증의 범위가 아님."
+    ]
+}

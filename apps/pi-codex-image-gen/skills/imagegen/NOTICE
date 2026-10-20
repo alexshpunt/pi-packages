@@ -1,0 +1,11 @@
+OpenAI Codex
+Copyright 2025 OpenAI
+
+This directory contains a modified copy of the "imagegen" skill bundled with OpenAI Codex
+(https://github.com/openai/codex, codex-rs/skills/src/assets/samples/imagegen), licensed under the
+Apache License, Version 2.0 (LICENSE.txt). Each modified file carries a modification notice at its
+top. The CLI fallback mode, its scripts and references, and the Codex UI metadata were removed.
+
+The description of the `image_gen` tool in this package (@buyong/pi-codex-image-gen) is derived
+from codex-rs/ext/image-generation/imagegen_description.md of the same project under the same
+license, with the modifications listed in the package source (src/description.ts).

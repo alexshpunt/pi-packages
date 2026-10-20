@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 1,
+  "state": "ready",
+  "sourceDigest": "53b927482747a5ce3b4a517f69b4b4ba49f6f39e47886819dbdf22293225bd76",
+  "contractDigest": "a21607fbe065593e3fdb78321d7b34cf299134e9854ad257953d538d46518165",
+  "runtimeVersions": {
+    "node": "v24.14.0",
+    "@earendil-works/pi-coding-agent": "0.99.1",
+    "@earendil-works/pi-ai": "0.99.1"
+  },
+  "modulePaths": [
+    "src/contracts.ts",
+    "src/reports.ts"
+  ],
+  "moduleHashes": {
+    "src/contracts.ts": "7c5be7fd89df9a22011b690e1f4db55e0049b5f4d936ea28b4be01ad6d9b7309",
+    "src/reports.ts": "f5a36d123d3559975be46f001838a242440fa6d2bb79a7c62a03dd7a5479926f"
+  },
+  "testFiles": [
+    "test/unit/contracts.test.mjs",
+    "test/unit/dependency-security.test.mjs"
+  ],
+  "coveredBehavior": [
+    "identity",
+    "profiles",
+    "ipc",
+    "evidence",
+    "public-api",
+    "dependency-security"
+  ],
+  "results": [
+    {
+      "schemaVersion": 2,
+      "runId": "2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0",
+      "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/contracts.json",
+      "startedAt": "2026-10-04T06:14:20.554Z",
+      "provenance": "executed",
+      "suite": "contracts",
+      "status": "pass",
+      "command": "npm run test:contracts",
+      "testFiles": [
+        "test/unit/contracts.test.mjs",
+        "test/unit/dependency-security.test.mjs"
+      ],
+      "coveredBehavior": [
+        "identity",
+        "profiles",
+        "ipc",
+        "evidence",
+        "public-api",
+        "dependency-security"
+      ],
+      "tests": [
+        {
+          "name": "[identity] canonical snapshots bind final input/cwd/source/session/policy/profile independently",
+          "status": "pass"
+        },
+        {
+          "name": "[profiles] profiles are immutable and read-only cannot silently gain writes",
+          "status": "pass"
+        },
+        {
+          "name": "[ipc] invalid protocol frames cannot be treated as worker success",
+          "status": "pass"
+        },
+        {
+          "name": "[evidence] incomplete, stale, blocked, skipped, duplicate or simulated-native proof cannot pass",
+          "status": "pass"
+        },
+        {
+          "name": "[evidence] concurrent synthetic platform and same-platform storage preserves immutable bytes",
+          "status": "pass"
+        },
+        {
+          "name": "[public-api] supported installed Pi exposes complete tool contracts and protected startup seams",
+          "status": "pass"
+        },
+        {
+          "name": "[identity] retry semantics survive a new invocation but bind session, policy and context",
+          "status": "pass"
+        },
+        {
+          "name": "[profiles] old settings adapt while new routing and model settings reject malformed values",
+          "status": "pass"
+        },
+        {
+          "name": "[dependency-security] the extension has no sandbox runtime or bundled production dependencies",
+          "status": "pass"
+        },
+        {
+          "name": "[dependency-security] Pi brace expansion handles bounded adversarial input without a crash or event-loop stall",
+          "status": "pass"
+        }
+      ],
+      "platform": "darwin-arm64",
+      "sourceDigest": "53b927482747a5ce3b4a517f69b4b4ba49f6f39e47886819dbdf22293225bd76",
+      "contractDigest": "a21607fbe065593e3fdb78321d7b34cf299134e9854ad257953d538d46518165",
+      "runtimeVersions": {
+        "node": "v24.14.0",
+        "@earendil-works/pi-coding-agent": "0.99.1",
+        "@earendil-works/pi-ai": "0.99.1"
+      },
+      "evidenceKind": "unit-doubles",
+      "blockedReasons": [],
+      "recordedAt": "2026-10-04T06:14:21.194Z"
+    }
+  ],
+  "buildProof": {
+    "command": "npm run build",
+    "cwd": "/Users/buyong/workspace/private-opensource/pi-codex-permission/",
+    "status": "pass",
+    "exitCode": 0,
+    "recordedAt": "2026-10-04T06:14:20.547Z"
+  },
+  "publicPiApis": [
+    "createGuardExtension (package)",
+    "createAgentSessionServices",
+    "createAgentSessionFromServices",
+    "createAgentSessionRuntime",
+    "DefaultResourceLoader",
+    "createCodemodeExtension",
+    "createBashToolDefinition",
+    "createReadToolDefinition",
+    "createEditToolDefinition",
+    "createWriteToolDefinition",
+    "createGrepToolDefinition",
+    "createFindToolDefinition",
+    "createLsToolDefinition",
+    "ModelRegistry.streamSimple",
+    "AgentSession.bindExtensions",
+    "AgentSession.reload",
+    "AgentSession.executeBash",
+    "AgentSessionRuntime.dispose"
+  ],
+  "referenceComparison": {
+    "installedPi": "0.99.1",
+    "copiedPi": "0.99.2",
+    "qualifiedPi": [
+      "0.99.1"
+    ],
+    "referenceFiles": [
+      "tmp/pi-main/packages/coding-agent/src/index.ts",
+      "tmp/pi-main/packages/coding-agent/src/core/extensions/types.ts",
+      "tmp/pi-main/packages/coding-agent/src/core/tools/bash.ts"
+    ],
+    "result": "Selected hooks, tool factories, nested execution, timeout units and public SDK modes are present in installed declarations and verified by executable tests. The newer snapshot is a read-only reference; 0.99.2 is not qualified."
+  },
+  "requestContract": {
+    "schemaVersion": 1,
+    "fields": [
+      "toolCallId",
+      "tool",
+      "source",
+      "args",
+      "cwd",
+      "sessionId",
+      "policyRevision",
+      "permissionDigest",
+      "digest"
+    ],
+    "serialization": "sorted finite JSON snapshot; recursive freeze; cwd resolved to canonical path"
+  },
+  "decisionContract": {
+    "outcomes": [
+      "allow",
+      "ask",
+      "deny"
+    ],
+    "hardDeny": "dominates review and every cached grant"
+  },
+  "permissionContract": {
+    "modes": [
+      "read-only",
+      "workspace-write"
+    ],
+    "delta": [
+      "readPaths",
+      "writePaths",
+      "domains"
+    ],
+    "readOnlyPaths": "reviewable metadata writes, separate from absolute denyRead/denyWrite",
+    "authority": [
+      "scoped-permissions",
+      "command-rule",
+      "reviewed-command"
+    ],
+    "isolation": "approval metadata only; no OS filesystem or network isolation"
+  },
+  "grantContract": {
+    "scopes": [
+      "once",
+      "session",
+      "persistent"
+    ],
+    "consumption": "once at logical admission; helper I/O remains inside that action"
+  },
+  "reportContract": {
+    "statuses": [
+      "pass",
+      "fail",
+      "environment-blocked",
+      "not-run"
+    ],
+    "required": [
+      "suite",
+      "command",
+      "testFiles",
+      "coveredBehavior",
+      "tests",
+      "platform",
+      "sourceDigest",
+      "contractDigest",
+      "runtimeVersions",
+      "evidenceKind"
+    ],
+    "native": "observed permitted and denied OS controls are mandatory; a declaration alone cannot pass"
+  },
+  "fixtureContract": {
+    "root": "owned mkdtemp root, canonicalized before permission creation",
+    "credentials": "in-memory synthetic provider; inherited environment cleared before Pi imports; catalog/auth probes replaced by offline double",
+    "cleanup": "after-hooks scan owned audit population and remove only the owned root"
+  },
+  "workerProtocol": {
+    "schemaVersion": 1,
+    "frames": [
+      "data",
+      "update",
+      "result",
+      "error"
+    ],
+    "privateBrokerFrames": [
+      "workload-started",
+      "network-request",
+      "network-response"
+    ],
+    "controlTransport": "private Node IPC never inherited by workloads",
+    "payload": "validated JSON over stdin/stdout; worker output cannot impersonate broker control frames"
+  },
+  "startupProtection": {
+    "entry": "dist/cli.js or createGuardedRuntime",
+    "barrier": "version/extension/controller checks plus prompt/reload/direct user shell guards",
+    "ordinaryPi": "Extension loader may discard failures; ordinary startup is not protected"
+  },
+  "timeoutUnits": {
+    "modelTimeoutMs": "milliseconds",
+    "uiTimeoutMs": "milliseconds",
+    "BashOperations": "seconds"
+  },
+  "commands": {
+    "contracts": "npm run test:contracts",
+    "policy": "npm run test:policy",
+    "reviewer": "npm run test:reviewer",
+    "approvals": "npm run test:approvals",
+    "execution": "npm run test:execution",
+    "integration": "npm run test:integration",
+    "e2e": "npm run test:e2e",
+    "conformance": "npm run test:conformance"
+  },
+  "recordedAt": "2026-10-04T06:14:34.669Z",
+  "runId": "2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0",
+  "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/01-contracts.json"
+}

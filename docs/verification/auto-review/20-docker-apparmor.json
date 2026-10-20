@@ -1,0 +1,49 @@
+{
+  "status": "pass",
+  "sourceDigest": "a4055a1b9476620ac4b7d94aa8724bc91be231d0f735047a2e254757eb9f8cc4",
+  "contractDigest": "a11f4c3f5597b471d254b713560e208af55e2df58199c54cc531603d41f9310a",
+  "ci": "https://github.com/buYoung/pi-codex-permission/actions/runs/37100490026",
+  "before": {
+    "status": "environment-blocked",
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T05-19-35-976Z-fa7bf28e-1b5c-4d78-802e-7acc73aca8a4/linux-x64/docker-orchestration.json",
+    "blockedReasons": [
+      "ENVIRONMENT_BLOCKED: native qualification failed: Native worker failed (1): bwrap: Failed to make / slave: Permission denied\n",
+      "Container exited 1; see retained container.log"
+    ]
+  },
+  "after": {
+    "status": "pass",
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T05-43-21-302Z-912ea615-75e5-4ce5-9e66-4583b41345f3/linux-x64/docker-orchestration.json",
+    "containerResult": ".reports/pi-guard/runs/2026-10-03T05-46-19-895Z-c93f5369-c1b8-4e26-a830-ebf4ec95cd69/linux-x64/docker-offline.json",
+    "imageDigest": "sha256:0dca86af3f3536ce8f80a8acbc7c9cf34c8719aea567f9eed56916d2f86778a2",
+    "dockerHostArchitecture": "x86_64",
+    "usesArchitectureEmulation": false,
+    "outerContainer": {
+      "init": true,
+      "pidsLimit": 256,
+      "capabilities": "all dropped",
+      "noNewPrivileges": true,
+      "seccomp": "unconfined to permit nested namespaces; inner sandbox-runtime seccomp and filesystem/network controls remain enabled",
+      "systemPaths": "unconfined to permit inner proc namespace mount",
+      "apparmor": {
+        "enabledOnDaemon": true,
+        "requested": "unconfined",
+        "effectiveProfile": "unconfined"
+      },
+      "hostMounts": [],
+      "publishedPorts": []
+    },
+    "containerRemoved": true
+  },
+  "fix": "Docker AppArmor 지원을 확인한 뒤 소유한 검증 컨테이너에만 중첩 마운트를 허용하는 프로필을 적용하고 실제 프로필을 검사한다.",
+  "preserved": [
+    "내부 파일·네트워크·Unix 소켓·seccomp 격리",
+    "모든 capability 제거, no-new-privileges, PID 한도 256",
+    "호스트 마운트·공개 포트 없음",
+    "기존 실패 실행 및 로그 보존"
+  ],
+  "references": [
+    "https://docs.docker.com/engine/security/apparmor/",
+    "https://github.com/moby/profiles/blob/main/apparmor/template.go"
+  ]
+}

@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Config } from "release-it";
 import semver from "semver";
-import { readPublicPiApps } from "../pi-apps.mjs";
+import { readReleaseTargets } from "../pi-apps.mjs";
 import { LANGUAGES, readChangelogFiles } from "./changelog.mjs";
 
 export const root = realpathSync(fileURLToPath(new URL("../../", import.meta.url)));
@@ -38,18 +38,55 @@ export function upstreamBranch() {
   }
 }
 
-/** Every public Pi app that the publish workflow can release, with its release-it configuration path. */
+/** Every release target that the publish workflow can release, with its release-it configuration path. */
 export function listTargets() {
-  return readPublicPiApps().map(({ slug, path: appPath, name }) => {
+  return readReleaseTargets().map(({ slug, path: appPath, name, workspaceDependencies, bundledDependencies }) => {
     const directory = path.join(root, appPath);
-    return { slug, path: appPath, name, directory, hasConfig: existsSync(path.join(directory, ".release-it.json")) };
+    return {
+      slug,
+      path: appPath,
+      name,
+      directory,
+      workspaceDependencies,
+      bundledDependencies,
+      hasConfig: existsSync(path.join(directory, ".release-it.json")),
+    };
   });
+}
+
+/**
+ * `workspace:` runtime dependencies that npm installs from the registry: packing writes their current version, so it
+ * must be on npm before this target ships. Bundled ones travel inside the archive instead.
+ */
+export function registryWorkspaceDependencies(target, targets) {
+  return target.workspaceDependencies
+    .filter((name) => !target.bundledDependencies.includes(name))
+    .map((name) => {
+      const dependency = targets.find((entry) => entry.name === name);
+      if (!dependency) throw new Error(`${target.name} installs ${name} from npm, but ${name} is not a release target.`);
+      return { name, version: readVersion(dependency) };
+    });
+}
+
+/** true or false from `npm view`; undefined when npm could not answer (offline, registry error). */
+export function isPublishedOnNpm(name, version) {
+  try {
+    return !!execFileSync("npm", ["view", `${name}@${version}`, "version", "--json"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 20_000,
+    }).trim();
+  } catch (error) {
+    const output = `${error.stdout ?? ""}${error.stderr ?? ""}`;
+    return /E404|No match found for version/.test(output) ? false : undefined;
+  }
 }
 
 export function requireConfiguredTargets(targets) {
   const missing = targets.filter((target) => !target.hasConfig).map((target) => target.path);
-  if (missing.length) throw new Error(`Every public Pi app needs a .release-it.json; missing: ${missing.join(", ")}`);
-  if (!targets.length) throw new Error("No public Pi app found under apps/.");
+  if (missing.length) throw new Error(`Every release target needs a .release-it.json; missing: ${missing.join(", ")}`);
+  if (!targets.length) throw new Error("No release target found under apps/ or packages/.");
 }
 
 export function findTarget(targets, wanted) {

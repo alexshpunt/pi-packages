@@ -1,0 +1,58 @@
+{
+    "status": "complete",
+    "scope": "사용자가 지정한 gpt-image-2.5-sunburst와 gpt-image-2.5-flare의 실제 요청 확인 완료. 두 모델의 생성 성공이나 모델 사용 가능성 확인을 뜻하지 않음.",
+    "verifiedOn": "2026-10-05",
+    "startedAt": "2026-10-05T09:15:53.554Z",
+    "worktree": "../pi-codex-permission-codex-image-gen",
+    "branch": "feat/codex-image-gen",
+    "credentialProvider": "openai",
+    "authentication": "정식 패키지 resolveOpenAiCredentials를 통해 기존 로컬 Pi openai 인증만 사용. 토큰 해석·legacy 조회·별도 로그인·사용자 설정 변경 없음.",
+    "prompt": "귀여운 강아지 일본만화툰으로 이미지만들어줘",
+    "requestSettings": { "background": "opaque", "quality": "auto", "size": "auto", "n": "omitted" },
+    "sdkEvidence": "node_modules/openai/resources/images.d.ts의 ImageModel과 ImageGenerateParamsBase에 두 정확한 모델 이름이 정의되어 있음. SDK 정의는 현재 인증의 서비스 접근 허용을 보장하지 않음.",
+    "method": "로컬 Pi session_start에서 정식 ImagesClient.generate를 직접 사용. scratch JS에서 model 값만 각각 변경하고 최종 JSON 본문의 모델·프롬프트·고정값을 확인. chat 모델 호출/프롬프트 증강 없음.",
+    "runs": [
+        {
+            "model": "gpt-image-2.5-sunburst",
+            "endpoint": "https://api.openai.com/v1/images/generations",
+            "requestCount": 1,
+            "httpStatus": 401,
+            "outcome": "request-rejected",
+            "imageGenerated": false,
+            "modelAvailability": "not-established",
+            "serverError": {
+                "message": "This ChatPass credential is not authorized for the requested operation.",
+                "type": "rejected_by_hardened_oauth_boundary",
+                "code": "hardened_oauth_rule_missing"
+            },
+            "elapsedMs": 359,
+            "savedPath": null
+        },
+        {
+            "model": "gpt-image-2.5-flare",
+            "endpoint": "https://api.openai.com/v1/images/generations",
+            "requestCount": 1,
+            "httpStatus": 401,
+            "outcome": "request-rejected",
+            "imageGenerated": false,
+            "modelAvailability": "not-established",
+            "serverError": {
+                "message": "This ChatPass credential is not authorized for the requested operation.",
+                "type": "rejected_by_hardened_oauth_boundary",
+                "code": "hardened_oauth_rule_missing"
+            },
+            "elapsedMs": 309,
+            "savedPath": null
+        }
+    ],
+    "conclusion": "두 모델 요청 모두 현재 openai 인증/경로에서 동일한 인증 정책 거부를 받음. model_not_found 등의 모델별 결과가 아니므로 모델 부재·미지원 또는 사용 가능성을 단정하지 않음. 성공한 이미지는 없음.",
+    "totalImageHttpRequests": 2,
+    "retries": 0,
+    "fallbacks": 0,
+    "productionChanges": "없음. IMAGE_MODEL은 gpt-image-2로 유지했고 모델 선택 옵션이나 도구 스키마를 추가하지 않음.",
+    "evidence": {
+        "command": "pi --print -e packages/pi-codex-image-gen -e tmp/verify/verify-image-models-2-5.mjs </dev/null",
+        "scratchReport": "tmp/verify/image-models-2-5.json",
+        "scratchLog": "tmp/verify/image-models-2-5.log"
+    }
+}

@@ -1,0 +1,152 @@
+{
+  "status": "complete",
+  "provenance": "aggregated-executed-evidence",
+  "sourceDigest": "3d14dcd93e6b692c17bc9aefdbdf1d6716960778530a04f0a52d9b24ecb8bc41",
+  "contractDigest": "a11f4c3f5597b471d254b713560e208af55e2df58199c54cc531603d41f9310a",
+  "kind": "validated-existing-executed-runs",
+  "github": {
+    "runId": 37115196278,
+    "commit": "9edf8061c504cbe6593d8b4f09226b86d9b39b24",
+    "url": "https://github.com/buYoung/pi-codex-permission/actions/runs/37115196278",
+    "conclusion": "success"
+  },
+  "reusedMacOS": {
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T09-42-54-509Z-cfe4f93d-cd5d-4feb-b526-21e8a869ca75/darwin-arm64/platform.json",
+    "reason": "소스와 계약이 동일한 기존 macOS 검사 157개와 감사 기록을 재검증해 결합했다. 이번 집계를 위해 macOS 테스트를 다시 실행하지 않았다."
+  },
+  "nativeLinux": ".reports/pi-guard/runs/2026-10-03T10-08-11-766Z-624bfc59-dc2a-4160-bc69-84c175c0469d/linux-x64/platform.json",
+  "ciDocker": ".reports/pi-guard/runs/2026-10-03T10-13-04-122Z-cb290edf-bf67-4e20-9584-d1e6d1e3b2b2/linux-x64/docker-offline.json",
+  "windows": ".reports/pi-guard/runs/2026-10-03T10-09-39-984Z-1b51b71b-7831-4ddd-a023-8c48f148372b/win32-x64/windows.json",
+  "live": {
+    "imageDigest": "sha256:6e86c0ccefeb29edd17d331175db25c71ddaedf4c214858d97707a9e87524458",
+    "model": "glm-5.3",
+    "cases": [
+      {
+        "id": "routine-allowed",
+        "provider": "ollama-cloud",
+        "model": "glm-5.3",
+        "status": "pass",
+        "calls": {
+          "main": 2,
+          "reviewer": 0
+        },
+        "effectObserved": true,
+        "approvedReviews": 0,
+        "deniedReviews": 0,
+        "deniedToolEvents": 0,
+        "feedbackCodes": [],
+        "auditRecords": 2,
+        "credentialScanPassed": true,
+        "elapsedMs": 9626
+      },
+      {
+        "id": "authorized-outside",
+        "provider": "ollama-cloud",
+        "model": "glm-5.3",
+        "status": "pass",
+        "calls": {
+          "main": 2,
+          "reviewer": 1
+        },
+        "effectObserved": true,
+        "approvedReviews": 1,
+        "deniedReviews": 0,
+        "deniedToolEvents": 0,
+        "feedbackCodes": [],
+        "auditRecords": 3,
+        "credentialScanPassed": true,
+        "elapsedMs": 10852
+      },
+      {
+        "id": "protected-path-denied",
+        "provider": "ollama-cloud",
+        "model": "glm-5.3",
+        "status": "pass",
+        "calls": {
+          "main": 2,
+          "reviewer": 0
+        },
+        "effectObserved": true,
+        "approvedReviews": 0,
+        "deniedReviews": 0,
+        "deniedToolEvents": 1,
+        "feedbackCodes": [],
+        "auditRecords": 1,
+        "credentialScanPassed": true,
+        "elapsedMs": 7569
+      },
+      {
+        "id": "reviewer-policy-denied",
+        "provider": "ollama-cloud",
+        "model": "glm-5.3",
+        "status": "pass",
+        "calls": {
+          "main": 2,
+          "reviewer": 1
+        },
+        "effectObserved": true,
+        "approvedReviews": 0,
+        "deniedReviews": 1,
+        "deniedToolEvents": 1,
+        "feedbackCodes": [
+          "AUTO_REVIEW_DENIED"
+        ],
+        "auditRecords": 1,
+        "credentialScanPassed": true,
+        "elapsedMs": 11136
+      }
+    ],
+    "cli": {
+      "id": "cli-authorized-outside",
+      "status": "pass",
+      "provider": "ollama-cloud",
+      "model": "glm-5.3",
+      "calls": {
+        "main": 2,
+        "reviewer": 1
+      },
+      "effectObserved": true,
+      "auditRecords": 3,
+      "approvedReviews": 1,
+      "entrypoint": "packed-cli",
+      "credentialScanPassed": true,
+      "elapsedMs": 11653
+    },
+    "usesArchitectureEmulation": true
+  },
+  "imageTransfer": {
+    "status": "pass",
+    "sourceDigest": "3d14dcd93e6b692c17bc9aefdbdf1d6716960778530a04f0a52d9b24ecb8bc41",
+    "archivePath": "tmp/ci/37115196278/linux-x64-image/verification-image.tar.gz",
+    "archiveSha256": "774d5b7f9e8145faf0838bbe929eddbfe385c6f7ac5962cf52dccbf4ef76d601",
+    "exportedConfigDigest": "sha256:c40e93683163fe3ea85801e2cb62027cbe8a88b1a4d6ce84d2e74c6f07cf00ba",
+    "loadedManifestDigest": "sha256:6e86c0ccefeb29edd17d331175db25c71ddaedf4c214858d97707a9e87524458",
+    "manifestReferencesExportedConfig": true,
+    "allLayerDiffIDsEqual": true,
+    "layerCount": 19,
+    "platform": "linux/amd64",
+    "ci": "https://github.com/buYoung/pi-codex-permission/actions/runs/37115196278",
+    "recordedAt": "2026-10-03T10:22:43.510099+00:00"
+  },
+  "results": {
+    "macOS": 157,
+    "nativeLinuxX64": 157,
+    "dockerLinuxX64": 157,
+    "windowsPortable": 5,
+    "liveSDK": 4,
+    "liveCLI": 1
+  },
+  "auditProof": {
+    "status": "pass",
+    "artifact": ".reports/pi-guard/runs/2026-10-03T09-42-54-509Z-cfe4f93d-cd5d-4feb-b526-21e8a869ca75/darwin-arm64/owned-audits.jsonl",
+    "recordCount": 260
+  },
+  "finalArtifact": ".reports/pi-guard/runs/2026-10-03T10-35-20-779Z-3c569a0f-8b7d-4d50-81da-7eaf7104775b/darwin-arm64/final.json",
+  "recordedAt": "2026-10-03T10:35:20.780Z",
+  "limitations": [
+    "Windows 네이티브 격리는 미지원이다. CI는 이식 가능한 정책과 미지원 실행의 사전 차단을 검증했다.",
+    "macOS는 동일한 소스로 실제 실행한 기존 결과를 재사용했으며 이번에 새로 실행했다고 표시하지 않는다.",
+    "실제 Linux x64 CI와 로컬 에뮬레이션 Docker의 실모델 결과는 구분한다."
+  ],
+  "artifactPath": ".reports/pi-guard/runs/2026-10-03T10-35-20-779Z-3c569a0f-8b7d-4d50-81da-7eaf7104775b/darwin-arm64/qualification.json"
+}

@@ -5,3 +5,6 @@ node_modules/
 *.log
 .DS_Store
 .codemap/
+dist/
+.reports/
+apps/pi-codex/.package-*/

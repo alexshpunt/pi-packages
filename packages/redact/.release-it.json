@@ -1,0 +1,34 @@
+{
+    "$schema": "https://unpkg.com/release-it@21.0.1/schema/release-it.json",
+    "git": {
+        "commit": true,
+        "tag": true,
+        "push": true,
+        "requireBranch": "main",
+        "requireUpstream": true,
+        "tagName": "redact-v${version}",
+        "tagMatch": "redact-v[0-9]*",
+        "commitsPath": ".",
+        "commitMessage": "chore(redact ${version} 배포): ${branchName}\n\n1. 패키지 버전을 올리고 미배포 변경 이력을 ${version} 절로 확정"
+    },
+    "npm": {
+        "publish": false,
+        "versionArgs": [
+            "--ignore-scripts",
+            "--package-lock=false",
+            "--workspaces-update=false"
+        ]
+    },
+    "github": { "release": false },
+    "gitlab": { "release": false },
+    "hooks": {
+        "before:init": [
+            "node ../../scripts/release/changelog.mjs check",
+            "pnpm run build",
+            "pnpm run typecheck",
+            "pnpm run test:unit",
+            "node ../../scripts/codex/check-package.mjs ."
+        ],
+        "after:bump": "node ../../scripts/release/changelog.mjs stamp ${version}"
+    }
+}

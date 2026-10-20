@@ -24,6 +24,7 @@ import {
   dryRunOptions,
   findTarget,
   git,
+  isPublishedOnNpm,
   listTargets,
   loadTargetOptions,
   RELEASE_BRANCH,
@@ -31,6 +32,7 @@ import {
   readChangelogs,
   readLocalTag,
   readVersion,
+  registryWorkspaceDependencies,
   releaseOptions,
   resolveVersion,
   root,
@@ -280,6 +282,19 @@ async function main() {
   check("remote-main", remoteMain.status, remoteMain.detail);
   check("remote-tag", remoteTag.status, remoteTag.detail);
   check("npm-version", npmVersion.status, npmVersion.detail);
+  // Packing writes each workspace dependency's current version; npm then installs it from the registry.
+  for (const { name, version } of registryWorkspaceDependencies(target, targets)) {
+    const isPublished = isPublishedOnNpm(name, version);
+    check(
+      "workspace-dependency",
+      isPublished ? "pass" : isPublished === false ? "fail" : "warn",
+      isPublished
+        ? `${name}@${version} is on npm.`
+        : isPublished === false
+          ? `${name}@${version} is not on npm; release it before ${target.name}.`
+          : `Could not confirm ${name}@${version} on npm.`,
+    );
+  }
 
   const hooks = { "before:init": [options.hooks?.["before:init"] ?? []].flat(), "after:bump": [options.hooks?.["after:bump"] ?? []].flat() };
   let hookResults;

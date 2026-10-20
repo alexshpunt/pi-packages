@@ -1,0 +1,83 @@
+{
+    "name": "@buyong/pi-codex-auto-review",
+    "version": "0.5.1",
+    "description": "Automatic execution approval review for Pi, inspired by Codex's \"Approve for me\". Reviews tool execution with rules and Pi's current model, requesting user approval when needed.",
+    "license": "Apache-2.0",
+    "keywords": [
+        "pi-package",
+        "pi-extension",
+        "approval",
+        "auto-review"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/buYoung/pi-packages.git",
+        "directory": "apps/pi-codex-auto-review"
+    },
+    "homepage": "https://github.com/buYoung/pi-packages/tree/main/apps/pi-codex-auto-review#readme",
+    "bugs": {
+        "url": "https://github.com/buYoung/pi-packages/issues"
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
+    },
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": "./dist/index.js",
+        "./startup": "./dist/startup.js"
+    },
+    "bin": {
+        "pi-codex-auto-review": "dist/cli.js"
+    },
+    "pi": {
+        "extensions": [
+            "./dist/index.js"
+        ]
+    },
+    "scripts": {
+        "build": "tsc",
+        "typecheck": "tsc --noEmit",
+        "lint": "biome check .",
+        "test:unit": "node --import ./tests/harness/environment.mjs --test --test-concurrency=1 --test-timeout=120000 \"tests/**/*.test.mjs\"",
+        "prepack": "tsc && node ../../scripts/codex/check-package.mjs ."
+    },
+    "dependencies": {
+        "@buyong/redact": "workspace:*"
+    },
+    "peerDependencies": {
+        "@earendil-works/pi-ai": "*",
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "catalog:",
+        "@earendil-works/pi-ai": "catalog:",
+        "@earendil-works/pi-coding-agent": "catalog:",
+        "@earendil-works/pi-tui": "catalog:",
+        "@repo/typescript-config": "workspace:*",
+        "@types/node": "catalog:",
+        "pi-ollama-cloud": "0.12.2",
+        "typescript": "catalog:"
+    },
+    "engines": {
+        "node": ">=22.19.0"
+    },
+    "files": [
+        "dist/**/*.js",
+        "dist/**/*.d.ts",
+        "dist/**/*.js.map",
+        "README.md",
+        "README.ko.md",
+        "LICENSE",
+        "NOTICE",
+        "docs/usage.md",
+        "docs/usage.ko.md",
+        "docs/security/dependencies.md",
+        "docs/security/dependencies.ko.md",
+        "docs/testing/auto-review-protection.md",
+        "docs/testing/auto-review-protection.ko.md"
+    ]
+}

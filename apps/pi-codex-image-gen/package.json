@@ -1,0 +1,73 @@
+{
+    "name": "@buyong/pi-codex-image-gen",
+    "version": "0.2.3",
+    "description": "Codex-compatible image_gen tool for Pi using Pi's openai-codex ChatGPT subscription login for image requests, without changing the chat provider. Bundles the adapted imagegen skill.",
+    "license": "Apache-2.0",
+    "keywords": [
+        "pi-package",
+        "pi-extension",
+        "image-generation",
+        "gpt-image"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/buYoung/pi-packages.git",
+        "directory": "apps/pi-codex-image-gen"
+    },
+    "homepage": "https://github.com/buYoung/pi-packages/tree/main/apps/pi-codex-image-gen#readme",
+    "bugs": {
+        "url": "https://github.com/buYoung/pi-packages/issues"
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
+    },
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": "./dist/index.js"
+    },
+    "pi": {
+        "extensions": [
+            "./dist/index.js"
+        ],
+        "skills": [
+            "./skills"
+        ]
+    },
+    "scripts": {
+        "build": "tsc",
+        "typecheck": "tsc --noEmit",
+        "lint": "biome check .",
+        "prepack": "tsc && node ../../scripts/codex/check-package.mjs ."
+    },
+    "peerDependencies": {
+        "@earendil-works/pi-ai": "*",
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "catalog:",
+        "@earendil-works/pi-ai": "catalog:",
+        "@earendil-works/pi-coding-agent": "catalog:",
+        "@earendil-works/pi-tui": "catalog:",
+        "@repo/typescript-config": "workspace:*",
+        "@types/node": "catalog:",
+        "typescript": "catalog:"
+    },
+    "engines": {
+        "node": ">=22.19.0"
+    },
+    "files": [
+        "dist/**/*.js",
+        "dist/**/*.d.ts",
+        "dist/**/*.js.map",
+        "README.md",
+        "README.ko.md",
+        "LICENSE",
+        "skills/**/*.md",
+        "skills/**/LICENSE.txt",
+        "skills/**/NOTICE"
+    ]
+}

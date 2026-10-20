@@ -1,0 +1,15 @@
+{
+  "status": "pass",
+  "sourceDigest": "a4055a1b9476620ac4b7d94aa8724bc91be231d0f735047a2e254757eb9f8cc4",
+  "archivePath": "tmp/ci/37100490026-linux/linux-x64-image/verification-image.tar.gz",
+  "exportedConfigDigest": "sha256:0dca86af3f3536ce8f80a8acbc7c9cf34c8719aea567f9eed56916d2f86778a2",
+  "loadedManifestDigest": "sha256:1113eaf711aac2e47fc7bf5ac4a8100d4d193b186c3ce83bbbc50696915b8a7b",
+  "manifestReferencesExportedConfig": true,
+  "allLayerDiffIDsEqual": true,
+  "layerCount": 19,
+  "platform": "linux/amd64",
+  "recordedAt": "2026-10-03T05:55:09.697062+00:00",
+  "ci": "https://github.com/buYoung/pi-codex-permission/actions/runs/37100490026",
+  "verification": "아카이브의 두 메타데이터 바이트를 SHA-256으로 검증하고, 매니페스트의 설정 참조와 로컬 Docker의 Descriptor·19개 RootFS 레이어·플랫폼·소스 레이블을 대조했다.",
+  "operatorRule": "가져온 이미지의 로컬 ID로 오프라인 검증과 실모델 검증을 연속 수행한다. 서로 다른 ID의 결과를 변경하거나 자동으로 동일하게 취급하지 않는다."
+}

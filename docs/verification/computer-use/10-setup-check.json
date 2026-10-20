@@ -1,0 +1,70 @@
+{
+    "status": "complete",
+    "date": "2026-10-05",
+    "branch": "feat/codex-computer-use",
+    "request": "Add /computer-use-check for prerequisite checking and setup guidance without putting diagnostics back into /computer-use settings.",
+    "command": "/computer-use-check",
+    "compatibilityAlias": "/computer-use check",
+    "changes": {
+        "commands.ts": "Registers the standalone no-argument command, shares runCheck with the existing alias, reports missing/unverified/user-owned counts and ordered setup guidance, exposes settings validation errors, rejects unexpected arguments and reports diagnostic failures without claiming installation/repair.",
+        "install.ts": "Adds formatSetupGuide: supported platforms, Codex Desktop vs CLI, subscription/login user confirmation, first-time native service setup/OS permissions, Chrome extension/native host setup, recheck and independent pi switches. macOS app-bundle launch config/service paths are unverified rather than marked missing/ready.",
+        "index.ts": "Exports CHECK_COMMAND_NAME and formatSetupGuide without changing settings schema or runtime options.",
+        "docs": "English/Korean README and usage guide use /computer-use-check as the primary diagnostic entry; original alias retained."
+    },
+    "constraints": [
+        "/computer-use remains a single two-feature list.",
+        "No app-access task or browser tab is executed by the check.",
+        "No installation, service copying, native-host registration repair, feature setting change, credential read or privacy permission grant.",
+        "Successful prerequisite/file checks do not guarantee successful live automation; subscription/login and OS permissions need user confirmation."
+    ],
+    "verification": {
+        "build": "npm run build -- --filter=@buyong/pi-codex-computer-use passed",
+        "check": "npm run check passed (117 files)",
+        "installed": "Real pi print invocation: 0 missing, 1 unverified, 3 user-owned confirmations; report and guide present",
+        "noApp": "Empty CODEX_HOME + nonexistent macOS app override: 5 missing; app-not-found and Desktop-not-CLI setup guidance",
+        "noPluginCache": "Empty CODEX_HOME with installed Desktop: fallback reported explicitly; missing/unverified state retained and standard Desktop first-use setup recommended",
+        "windowsSimulated": "plugin-cache-missing, unverified platform checks and no-Windows-fallback guidance; no real Windows execution claimed",
+        "linuxSimulated": "Supported-platform guidance only; no misleading recommendation to install the local proprietary runtime on unsupported Linux",
+        "tui": "Actual pi 0.99.1 PTY: /computer-use-check summary/guide rendered; /computer-use still opens the simple settings view; exit 0",
+        "rpc": "Both /computer-use-check and /computer-use check returned report/guide with disposition handled; unexpected arguments rejected",
+        "settingsIntegrity": "Temporary feature flags stayed false/false after every report; the empty test CODEX_HOME remained empty",
+        "package": "node scripts/check-package.mjs passed for both packages; prepack/postpack passed; 52-file archive rebuilt",
+        "docs": "English/Korean command code blocks match"
+    },
+    "archive": {
+        "path": "tmp/cua-publish/buyong-pi-codex-computer-use-0.1.0.tgz",
+        "entryCount": 52,
+        "sizeBytes": 81790,
+        "shasum": "cad08843fc9440e2282087456584b6aa53518660",
+        "version": "0.1.0 (unpublished)"
+    },
+    "limits": [
+        "Windows execution and cold native service launch are still unverified.",
+        "The check deliberately does not validate live account eligibility or macOS privacy grants by reading credentials/TCC data.",
+        "No live app/browser automation was run for this command-only update."
+    ],
+    "notPerformed": [
+        "commit",
+        "merge",
+        "npm publish",
+        "tag",
+        "push",
+        "new automated test suite"
+    ],
+    "wordingRevision": {
+        "request": "Remove verbose/AI-slop wording from /computer-use-check output.",
+        "changes": [
+            "Removed status legend, repeated disclaimers and closing notes",
+            "Shortened check details/actions, runtime discovery messages and Windows platform label",
+            "Removed duplicated Platform/Runtime header lines and duplicated discovery messages",
+            "Setup guide reduced to four steps; unsupported platforms get one line",
+            "Notify level is warning only for missing prerequisites or settings errors; unverified items stay visible in the summary"
+        ],
+        "verification": [
+            "build and npm run check passed",
+            "print-mode output reviewed for installed macOS, no app, no plugin cache, simulated Windows and simulated Linux",
+            "RPC: installed report is info, missing-app report is warning; /computer-use status hint updated",
+            "settings files and empty CODEX_HOME unchanged; package check passed; archive rebuilt"
+        ]
+    }
+}

@@ -1,0 +1,45 @@
+{
+  "status": "local-verified-remote-pending",
+  "sourceDigest": "9fcff185b2e9f0dda82e3957873b12504abcad8b86835616c2093d4e909de1d6",
+  "contractDigest": "a11f4c3f5597b471d254b713560e208af55e2df58199c54cc531603d41f9310a",
+  "firstRemoteRun": "https://github.com/buYoung/pi-codex-permission/actions/runs/37097824391",
+  "observedFailures": [
+    "Windows Cargo checkout exceeded the path-length limit before compilation.",
+    "Linux default profiles could not qualify the full hard-link scan; workload launch was blocked.",
+    "Unrecorded project MCP configuration caused an owned server startup effect before tool approval.",
+    "Sequential directory iteration caused the packed-probe execution limit to fail."
+  ],
+  "fixes": [
+    "Short Windows Cargo home and Git long-path configuration",
+    "Opaque subtrees remain natively unreadable and unwritable; unlistable searchable scopes still fail closed",
+    "Stored or explicit project trust gates project resources and MCP startup",
+    "Bounded batches of directory reads replace per-entry asynchronous traversal"
+  ],
+  "verification": [
+    {
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T05-03-09-636Z-e9ccbce7-f71d-48cd-af19-685cf2e361ae/darwin-arm64/integration.json",
+      "suite": "integration",
+      "status": "pass",
+      "tests": 31,
+      "sourceDigest": "b9867ce1b90453e7426c6a1f91fcb1c75243a7bbf278bec6d430403301d440cd"
+    },
+    {
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T05-11-35-175Z-2f6dbbbf-b8f9-41ce-8c0d-2635f057da20/darwin-arm64/native.json",
+      "suite": "native",
+      "status": "pass",
+      "tests": 28,
+      "sourceDigest": "9fcff185b2e9f0dda82e3957873b12504abcad8b86835616c2093d4e909de1d6"
+    },
+    {
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T05-12-09-916Z-1142259a-08af-4575-9d80-760bebb0cfe8/darwin-arm64/e2e.json",
+      "suite": "e2e",
+      "status": "pass",
+      "tests": 5,
+      "sourceDigest": "9fcff185b2e9f0dda82e3957873b12504abcad8b86835616c2093d4e909de1d6"
+    }
+  ],
+  "limitations": [
+    "The integration evidence precedes the final directory traversal optimization; final same-source cross-platform qualification remains mandatory.",
+    "Concurrent mutation by an unsandboxed host remains outside the hard-link guarantee."
+  ]
+}

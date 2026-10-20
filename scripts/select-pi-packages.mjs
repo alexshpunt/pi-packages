@@ -1,10 +1,25 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { readPublicPiApps } from "./pi-apps.mjs";
+import { readReleaseTargets } from "./pi-apps.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const apps = readPublicPiApps();
+const apps = readReleaseTargets();
+
+/** Adds every target that installs or bundles a selected one through `workspace:`, so a component change rechecks it. */
+function withDependents(selected) {
+  const names = new Set(selected.map((app) => app.name));
+  for (let isGrowing = true; isGrowing; ) {
+    isGrowing = false;
+    for (const app of apps) {
+      if (!names.has(app.name) && app.workspaceDependencies.some((name) => names.has(name))) {
+        names.add(app.name);
+        isGrowing = true;
+      }
+    }
+  }
+  return apps.filter((app) => names.has(app.name));
+}
 
 const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
 const isRelease = process.env.GITHUB_EVENT_NAME === "push" && process.env.GITHUB_REF?.startsWith("refs/tags/");
@@ -14,7 +29,7 @@ if (isRelease) {
   const tag = process.env.GITHUB_REF.slice("refs/tags/".length);
   selectedApps = apps.filter((app) => tag === `${app.slug}-v${app.version}`);
   if (selectedApps.length !== 1) {
-    throw new Error(`Release tag ${tag} must match exactly one public Pi app and its package.json version.`);
+    throw new Error(`Release tag ${tag} must match exactly one release target and its package.json version.`);
   }
 } else {
   const baseCommit = event.pull_request?.base?.sha ?? event.before;
@@ -29,7 +44,9 @@ if (isRelease) {
     const hasSharedChanges = changedFiles.some((path) =>
       /^(?:package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|biome\.json$|turbo\.json$|\.npmrc$|packages\/|scripts\/|\.github\/workflows\/pi-packages\.yml$)/.test(path),
     );
-    selectedApps = hasSharedChanges ? apps : apps.filter((app) => changedFiles.some((path) => path.startsWith(`${app.path}/`)));
+    selectedApps = hasSharedChanges
+      ? apps
+      : withDependents(apps.filter((app) => changedFiles.some((path) => path.startsWith(`${app.path}/`))));
   }
 }
 

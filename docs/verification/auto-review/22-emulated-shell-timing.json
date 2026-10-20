@@ -1,0 +1,37 @@
+{
+  "status": "verified",
+  "sourceDigest": "3caadb996f7de930cf1f5c19af8f6e5b943e21ee01fac1010e28d88e55b12030",
+  "contractDigest": "a11f4c3f5597b471d254b713560e208af55e2df58199c54cc531603d41f9310a",
+  "reproduction": {
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T05-55-11-344Z-f29462bd-ecf1-439a-8804-6db9819cadd2/linux-x64/docker-offline.json",
+    "status": "fail",
+    "passed": 141,
+    "total": 142,
+    "platform": "linux-x64",
+    "kernelArchitecture": "arm64",
+    "failure": "[user-bash] ! and !! return handled operations with native output and denial, never host fallback",
+    "error": "Native execution exceeded 3 seconds"
+  },
+  "fix": "정상 출력과 승인 경로를 검사하는 사례의 호출자 지정 실행 시간을 15초로 늘려 에뮬레이션 시작 비용을 수용한다.",
+  "preserved": "실행기의 시간 제한 전달과 구현은 변경하지 않았다. 별도 네이티브 생명주기 사례의 실제 2초 제한, 3.5초 반환 상한, 지연된 자식 프로세스의 파일 변경 차단 검사를 유지한다.",
+  "focusedVerification": {
+    "command": "node --test --test-concurrency=1 --test-name-pattern='native-lifecycle|user-bash' test/native/sandbox.test.mjs test/integration/pi-tools.test.mjs",
+    "platform": "darwin-arm64",
+    "status": "pass",
+    "tests": 3,
+    "skipped": 0,
+    "exitCode": 0,
+    "provenance": "observed tool output"
+  },
+  "limitations": [
+    "최종 동일 소스의 전체 운영체제·Docker·실모델 판정은 최종 인계에서 확인한다."
+  ],
+  "finalDockerVerification": {
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T06-23-37-187Z-a95ef323-818c-4d00-8c28-421f94243405/linux-x64/docker-offline.json",
+    "status": "pass",
+    "tests": 142,
+    "integration": "pass",
+    "native": "pass",
+    "usesArchitectureEmulation": true
+  }
+}

@@ -1,0 +1,46 @@
+{
+    "status": "complete",
+    "scope": "이미지 인증을 Pi openai-codex 로그인으로 확정하고 ChatGPT Images 경로로 실제 생성까지 검증. 채팅 공급자는 변경하지 않음.",
+    "verifiedOn": "2026-10-05",
+    "worktree": "../pi-codex-permission-codex-image-gen",
+    "branch": "feat/openai-image-generation",
+    "baseCommit": "c3bd760",
+    "treeState": "미커밋. 커밋·푸시·병합·사용자 설정 변경 없음.",
+    "decision": "사용자 결정: 이미지 생성은 openai-codex 로그인으로 지원. 채팅은 기존 공급자(openai 등) 유지.",
+    "openaiTokenAttempts": {
+        "summary": "Pi openai(Sign in with ChatGPT, dynamic_agent_client) 토큰은 세 경로 모두 서버가 거부. 토큰에 chatgpt_account_id 클레임 없음(auth 클레임 키: per_user_salt, encrypted_auth_metadata).",
+        "attempts": [
+            { "endpoint": "https://api.openai.com/v1/images/generations", "status": 401, "code": "hardened_oauth_rule_missing", "source": "이전 세션 기록" },
+            { "endpoint": "https://chatgpt.com/backend-api/codex/images/generations", "status": 401, "code": "no_matching_rule", "body": "prompt 없는 인증 시험 요청(생성 불가)", "evidence": "tmp/verify/probe-openai-token-backend.json" },
+            { "endpoint": "https://api.openai.com/v1/responses (tools: image_generation)", "status": 400, "code": "subscription_sharing_unsupported_capability", "message": "User subscription sharing currently supports only 'web_search' and developer-defined 'function' and 'custom' tools ... tool 'image_generation' is not supported.", "evidence": "tmp/verify/openai-responses-image.json" }
+        ],
+        "pocLabelNote": "사용자 수정 PoC의 20:03 성공 실행은 보고서 이름표만 'openai'였고 getProviderAuth/getProvider는 'openai-codex'였음. 두 줄까지 'openai'로 바꾼 사본은 계정 클레임 부재로 요청 전 실패(requestCount 0)."
+    },
+    "implemented": {
+        "authentication": "getProviderAuth('openai-codex')만 사용. 토큰의 https://api.openai.com/auth.chatgpt_account_id를 메모리에서만 읽음(Pi의 openai-codex extractAccountId와 같은 방식). 클레임 없음·갱신 실패는 요청 전 /login openai-codex 안내.",
+        "endpoint": "auth.baseUrl > provider.baseUrl > https://chatgpt.com/backend-api, 끝 / 정리 후 /codex 한 번만 추가(Codex to_api_provider의 ChatGPT 주소).",
+        "headers": "Pi 추가 헤더 보존 + Authorization Bearer, chatgpt-account-id, originator: pi, User-Agent: pi-codex-image-gen, x-codex-image-turn-id: 도구 호출 ID, Content-Type: application/json.",
+        "requestBodies": "생성 JSON {prompt, background, model, quality, size}. 편집 JSON {images:[{image_url:'data:<MIME>;base64,...'}], prompt, background, model, quality, size} (Codex ImageEditRequest). n 미전송.",
+        "exposure": "getProviderAuthStatus('openai-codex').configured로 도구·스킬 노출. 사용자 비활성·분기 소유 상태 규칙은 기존 그대로.",
+        "removed": "openai 전용 인증·공개 Images API multipart 편집. 미커밋이던 'openai 구독이면 도구 숨김' 변경은 되돌림.",
+        "preserved": "도구 이름·스키마·설명 해시·인자 검사·오류 문구·재시도·저장·결과 안내.",
+        "skill": "SKILL.md 인증 안내를 /login openai-codex로 정정."
+    },
+    "checks": {
+        "build": "npm run build: 2/2 pass",
+        "check": "npm run check: 112 files, pass",
+        "offline": "arguments 27/27, declaration schema deep-equal + description sha256 fb3b4a41…aa7e, backend 27/27(JSON 편집 본문·데이터 URL 순서/바이트 포함), tool 15/15(ChatGPT Images 경로·계정/originator/턴 헤더·클레임 없는 토큰 거부 포함), reference images 20/20(Codex JSON 편집 본문), exposure 11/11 (scratch, tmp/verify/12-offline-checks.log)"
+    },
+    "liveEndToEnd": {
+        "command": "pi --print -ne -e ./packages/pi-codex-image-gen --model openai/gpt-6-astra \"귀여운 강아지 일본만화툰으로 이미지만들어줘\"",
+        "chatModel": "openai/gpt-6-astra",
+        "imageGenCalls": 1,
+        "toolResultIsError": false,
+        "operation": "generate",
+        "savedPath": "~/.pi/agent/generated_images/01a10bc1-dc43-7771-86fe-19b69cbdf8b8/call_SGWkZzPA2c4djBCU0WDG87JF_fc_0d5964597eb0d12a016ac385a01f2487d09ca026b71135914b.png",
+        "image": "PNG 1254x1254, 2010296 bytes, 내용 확인(일본 만화풍 강아지)",
+        "elapsed": "약 42초(채팅 포함)",
+        "evidence": "tmp/verify/12-live-e2e.log, 세션 2026-10-05T11-10-16-643Z_01a10bc1-dc43-7771-86fe-19b69cbdf8b8.jsonl"
+    },
+    "unverified": ["실제 편집(경로·대화 이미지)", "투명 배경 실제 결과", "토큰 갱신 직후 호출", "Pi가 openai-codex 공급자를 제거할 경우의 대체 경로"]
+}

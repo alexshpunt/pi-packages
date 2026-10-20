@@ -1,0 +1,2775 @@
+{
+    "status": "pass",
+    "brief": "docs/briefs/2026-10-05-feat-reviewer-redact-02-pii-catalog.md",
+    "sourceRevision": {
+        "repository": "/Users/buyong/workspace/private/buyong-mcp",
+        "path": "apps/codemap-search/src/redact/pii, apps/codemap-search/tests/fixtures/redact_app",
+        "commit": "86a772b418495f9799b297f99e5ae797187e3203",
+        "purpose": "sync traceability, not a license notice",
+        "workingTreeMatchesPin": true,
+        "check": "git diff --stat 86a772b -- <both paths> is empty at buyong-mcp HEAD 9191694"
+    },
+    "dataFileDigests": {
+        "vendor/presidio-pii/catalog.json": "e43c7495393a2a44933b0cf18cb4c566a8a21e0a40afc802725220962869b680",
+        "vendor/presidio-pii/iban_formats.json": "bc8db95b129964e4c4cea36b495830046d57588d409847ee1a32bbd5450179f0",
+        "vendor/presidio-pii/validation_data.json": "680006e721a0d7ed4ea3b13d4cb80a0cd2877b3e01128f52276e58f0e120e774",
+        "test/fixtures/redaction/pii-cases.jsonl": "0a4707ab0032227e249b00bfc0429ca55f6fac15fc88aca1fb94d0ddc9520a58",
+        "copy": "byte-for-byte from apps/codemap-search/src/redact/pii into the repository-root vendor/ directory, which the existing biome.json already excludes, so formatting cannot rewrite them; the package itself ships only the generated modules",
+        "embedding": "packages/redact/scripts/generate-pii-data.mjs (npm run generate:pii-data --workspace packages/redact) reads vendor/presidio-pii and writes src/pii/data/{catalog,iban-formats,validation-data}.ts as string constants in the formatter's style; the [pii] data-asset test checks the SHA-256 of each embedded string against the pinned digests, so it also runs in the Docker image without vendor/"
+    },
+    "entityCount": 90,
+    "caseCount": 1653,
+    "casesWithMatches": 993,
+    "casesWithoutMatches": 660,
+    "failedCases": [],
+    "boundaryTranslation": {
+        "approach": "translateRustRegex() in packages/redact/src/pii/regex.ts; the superset search removes \\b as the source does, and the anchored check runs the full translated pattern at the candidate start with the d and y flags",
+        "flags": "u plus s; i when is_case_insensitive; g for the search and dy for the anchored check",
+        "leftBoundary": "^(?:<translated left_boundary>)$ tested on the code point before the candidate",
+        "unsupportedConstructs": "translateRustRegex throws UnsupportedRegexError; none occur in the catalog",
+        "constructs": {
+            "\\b": {
+                "meaning": "Unicode word boundary -> lookaround over [\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]; removed from the superset search",
+                "patterns": 151
+            },
+            "\\B": {
+                "meaning": "Unicode non-boundary -> lookaround alternation over the same word class",
+                "patterns": 0
+            },
+            "\\d": {
+                "meaning": "Unicode decimal digit -> \\p{Nd}",
+                "patterns": 138
+            },
+            "\\w": {
+                "meaning": "Unicode word character -> explicit word class",
+                "patterns": 30
+            },
+            "\\s": {
+                "meaning": "Unicode whitespace -> \\p{White_Space}",
+                "patterns": 27
+            },
+            "(?i)": {
+                "meaning": "inline case-insensitive flag -> dropped; the entry compiles with the i flag",
+                "patterns": 12
+            },
+            "(?P<": {
+                "meaning": "Python-style named group -> (?<",
+                "patterns": 27
+            },
+            "^/$": {
+                "meaning": "multi-line anchors -> (?<![^\\n]) / (?![^\\n])",
+                "patterns": 2
+            },
+            "\\z": {
+                "meaning": "end of text -> (?![\\s\\S])",
+                "patterns": 21
+            }
+        },
+        "patterns": [
+            {
+                "entity": "AU_ABN",
+                "pattern": "ABN (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "AU_ABN",
+                "pattern": "ABN (Low)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "AU_ACN",
+                "pattern": "ACN (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "AU_ACN",
+                "pattern": "ACN (Low)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "AU_MEDICARE",
+                "pattern": "Australian Medicare Number (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "AU_MEDICARE",
+                "pattern": "Australian Medicare Number (Low)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "AU_TFN",
+                "pattern": "TFN (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "AU_TFN",
+                "pattern": "TFN (Low)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "CA_POSTAL_CODE",
+                "pattern": "CA Postal Code (strict, with space)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "CA_POSTAL_CODE",
+                "pattern": "CA Postal Code (weak, no space)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "CA_SIN",
+                "pattern": "SIN (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "CA_SIN",
+                "pattern": "SIN (medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "FI_PERSONAL_IDENTITY_CODE",
+                "pattern": "Finnish Personal Identity Code (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "FI_PERSONAL_IDENTITY_CODE",
+                "pattern": "Finnish Personal Identity Code (Very Weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_BSNR",
+                "pattern": "Betriebsstättennummer BSNR (9 digits)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_FUEHRERSCHEIN",
+                "pattern": "Führerscheinnummer (Post-2013 EU-Format, 11 Zeichen)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_HANDELSREGISTER",
+                "pattern": "Handelsregisternummer HRA/HRB",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "DE_HEALTH_INSURANCE",
+                "pattern": "Krankenversicherungsnummer KVNR (letter + 9 digits)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_ID_CARD",
+                "pattern": "Personalausweisnummer nPA (ICAO charset + check digit)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "DE_ID_CARD",
+                "pattern": "Personalausweisnummer alt (T + 8 Ziffern)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_KFZ",
+                "pattern": "KFZ-Kennzeichen (mit Leerzeichen)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "\\s",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "DE_KFZ",
+                "pattern": "KFZ-Kennzeichen (mit Leerzeichen)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "DE_KFZ",
+                "pattern": "KFZ-Kennzeichen (mit Bindestrich)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "DE_KFZ",
+                "pattern": "KFZ-Kennzeichen (mit Bindestrich)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "DE_KFZ",
+                "pattern": "KFZ-Kennzeichen (Bindestrich + Leerzeichen)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "\\s",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "DE_KFZ",
+                "pattern": "KFZ-Kennzeichen (Bindestrich + Leerzeichen)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "DE_KFZ",
+                "pattern": "KFZ-Kennzeichen (ASCII only, mit Leerzeichen)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "\\s",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "DE_KFZ",
+                "pattern": "KFZ-Kennzeichen (ASCII only, mit Leerzeichen)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "DE_KFZ",
+                "pattern": "KFZ-Kennzeichen (ASCII only, Bindestrich + Leerzeichen)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "\\s",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "DE_KFZ",
+                "pattern": "KFZ-Kennzeichen (ASCII only, Bindestrich + Leerzeichen)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "DE_LANR",
+                "pattern": "Lebenslange Arztnummer LANR (9 digits)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_PASSPORT",
+                "pattern": "Reisepassnummer (Strict ICAO charset)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "DE_PLZ",
+                "pattern": "Postleitzahl (5 digits, very low base confidence – context required)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_SOCIAL_SECURITY",
+                "pattern": "Rentenversicherungsnummer (Strict, with birth date structure)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_SOCIAL_SECURITY",
+                "pattern": "Rentenversicherungsnummer (Relaxed)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_TAX_ID",
+                "pattern": "Steueridentifikationsnummer (High)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_TAX_NUMBER",
+                "pattern": "Steuernummer ELSTER (bundeseinheitlich, 13-stellig)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_TAX_NUMBER",
+                "pattern": "Steuernummer mit Schrägstrich (Bayern/BW: 3/3/5)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "DE_TAX_NUMBER",
+                "pattern": "Steuernummer mit Schrägstrich (Bayern/BW: 3/3/5)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "DE_TAX_NUMBER",
+                "pattern": "Steuernummer mit Schrägstrich (NW: 3/4/4 oder allgemein 2-3/3-4/4-5)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "DE_TAX_NUMBER",
+                "pattern": "Steuernummer mit Schrägstrich (NW: 3/4/4 oder allgemein 2-3/3-4/4-5)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "DE_VAT_ID",
+                "pattern": "Umsatzsteuer-Identifikationsnummer USt-IdNr. (DE + 9 digits)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DE_VAT_ID",
+                "pattern": "Umsatzsteuer-Identifikationsnummer USt-IdNr. (with separators)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "IN_AADHAAR",
+                "pattern": "AADHAAR (Very Weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "IN_AADHAAR",
+                "pattern": "AADHAR (Very Weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "IN_GSTIN",
+                "pattern": "GSTIN (High)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "IN_GSTIN",
+                "pattern": "GSTIN (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "IN_GSTIN",
+                "pattern": "GSTIN (Low)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "IN_PAN",
+                "pattern": "PAN (High)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "IN_PAN",
+                "pattern": "PAN (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "IN_PAN",
+                "pattern": "PAN (Low)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\w",
+                    "^/$"
+                ]
+            },
+            {
+                "entity": "IN_PASSPORT",
+                "pattern": "PASSPORT",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "IN_VEHICLE_REGISTRATION",
+                "pattern": "India Vehicle Registration (Very Weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IN_VEHICLE_REGISTRATION",
+                "pattern": "India Vehicle Registration (Very Weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IN_VEHICLE_REGISTRATION",
+                "pattern": "India Vehicle Registration (Very Weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IN_VEHICLE_REGISTRATION",
+                "pattern": "India Vehicle Registration (Weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IN_VEHICLE_REGISTRATION",
+                "pattern": "India Vehicle Registration (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IN_VEHICLE_REGISTRATION",
+                "pattern": "India Vehicle Registration",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IN_VEHICLE_REGISTRATION",
+                "pattern": "India Vehicle Registration",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IN_VEHICLE_REGISTRATION",
+                "pattern": "India Vehicle Registration",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IN_VEHICLE_REGISTRATION",
+                "pattern": "India Vehicle Registration",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IN_VOTER",
+                "pattern": "VOTER",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "IN_VOTER",
+                "pattern": "VOTER",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "IT_DRIVER_LICENSE",
+                "pattern": "Driver License",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "(?i)"
+                ]
+            },
+            {
+                "entity": "IT_FISCAL_CODE",
+                "pattern": "Fiscal Code",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "(?i)"
+                ]
+            },
+            {
+                "entity": "IT_IDENTITY_CARD",
+                "pattern": "Paper-based Identity Card (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s",
+                    "(?i)"
+                ]
+            },
+            {
+                "entity": "IT_IDENTITY_CARD",
+                "pattern": "Electronic Identity Card (CIE) 2.0 (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "(?i)"
+                ]
+            },
+            {
+                "entity": "IT_IDENTITY_CARD",
+                "pattern": "Electronic Identity Card (CIE) 3.0 (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "(?i)"
+                ]
+            },
+            {
+                "entity": "IT_PASSPORT",
+                "pattern": "Passport (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "(?i)"
+                ]
+            },
+            {
+                "entity": "IT_VAT_CODE",
+                "pattern": "IT Vat code (piva)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "KR_BRN",
+                "pattern": "BRN (Weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "KR_BRN",
+                "pattern": "BRN (Weak)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "KR_BRN",
+                "pattern": "BRN (Very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "KR_BRN",
+                "pattern": "BRN (Very weak)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "KR_DRIVER_LICENSE",
+                "pattern": "Driver License (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "KR_DRIVER_LICENSE",
+                "pattern": "Driver License (very weak)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "KR_FRN",
+                "pattern": "FRN (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "KR_FRN",
+                "pattern": "FRN (Medium)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "KR_PASSPORT",
+                "pattern": "Passport Number (Current)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "KR_PASSPORT",
+                "pattern": "Passport Number (Previous)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "KR_RRN",
+                "pattern": "RRN (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "KR_RRN",
+                "pattern": "RRN (Medium)",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "NG_NIN",
+                "pattern": "NIN (Very Weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "NG_VEHICLE_REGISTRATION",
+                "pattern": "Nigeria Vehicle Registration",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "PH_PASSPORT",
+                "pattern": "PH Passport (weak: 1L7D1L or 2L7D)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "PH_TIN",
+                "pattern": "TIN (Low)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "PH_TIN",
+                "pattern": "TIN (Very Low)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "PH_UMID",
+                "pattern": "UMID (with dashes)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "PH_UMID",
+                "pattern": "UMID (without dashes)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "SG_NRIC_FIN",
+                "pattern": "Nric (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "(?i)"
+                ]
+            },
+            {
+                "entity": "SG_NRIC_FIN",
+                "pattern": "Nric (medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "(?i)"
+                ]
+            },
+            {
+                "entity": "SG_UEN",
+                "pattern": "UEN (low)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ZA_COMPANY_REGISTRATION",
+                "pattern": "South African Company Registration (modern)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ZA_COMPANY_REGISTRATION",
+                "pattern": "South African Company Registration (legacy)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ZA_DRIVER_LICENSE",
+                "pattern": "South African Driver's Licence",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ZA_ID_NUMBER",
+                "pattern": "South African ID Number",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ZA_INCOME_TAX_NUMBER",
+                "pattern": "South African Income Tax Number",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ZA_LICENSE_PLATE",
+                "pattern": "ZA Licence Plate (compact)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ZA_LICENSE_PLATE",
+                "pattern": "ZA Licence Plate (spaced)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "ZA_LICENSE_PLATE",
+                "pattern": "ZA Licence Plate (prefix digits)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "ZA_LICENSE_PLATE",
+                "pattern": "ZA Licence Plate (EC numeric prefix)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "ZA_PASSPORT",
+                "pattern": "South African Passport",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ZA_TRAFFIC_REGISTER_NUMBER",
+                "pattern": "South African Traffic Register Number",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ZA_VAT_NUMBER",
+                "pattern": "South African VAT Number",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ES_NIE",
+                "pattern": "NIE",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "ES_NIF",
+                "pattern": "NIF",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "ES_PASSPORT",
+                "pattern": "ES_PASSPORT",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "SE_ORGANISATIONSNUMMER",
+                "pattern": "Swedish Organisationsnummer (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "SE_ORGANISATIONSNUMMER",
+                "pattern": "Swedish Organisationsnummer (Weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "SE_PERSONNUMMER",
+                "pattern": "Swedish Personnummer (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "SE_PERSONNUMMER",
+                "pattern": "Swedish Personnummer (Very Weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "TH_TNIN",
+                "pattern": "TNIN (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "TR_LICENSE_PLATE",
+                "pattern": "TR License Plate (space)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "TR_LICENSE_PLATE",
+                "pattern": "TR License Plate (hyphen)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "TR_NATIONAL_ID",
+                "pattern": "TR_NATIONAL_ID",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "UK_DRIVING_LICENCE",
+                "pattern": "UK Driving Licence",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "UK_NHS",
+                "pattern": "NHS (medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "UK_NINO",
+                "pattern": "NINO (medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "UK_PASSPORT",
+                "pattern": "UK Passport (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "UK_POSTCODE",
+                "pattern": "UK Postcode",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\s"
+                ]
+            },
+            {
+                "entity": "UK_VEHICLE_REGISTRATION",
+                "pattern": "UK Vehicle Registration (current)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "UK_VEHICLE_REGISTRATION",
+                "pattern": "UK Vehicle Registration (prefix)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "UK_VEHICLE_REGISTRATION",
+                "pattern": "UK Vehicle Registration (suffix)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ABA_ROUTING_NUMBER",
+                "pattern": "ABA routing number (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "ABA_ROUTING_NUMBER",
+                "pattern": "ABA routing number",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "MEDICAL_LICENSE",
+                "pattern": "USA DEA Certificate Number (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_BANK_NUMBER",
+                "pattern": "Bank Account (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_DRIVER_LICENSE",
+                "pattern": "Driver License - Alphanumeric (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_DRIVER_LICENSE",
+                "pattern": "Driver License - Digits (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_HEALTH_INSURANCE_MEMBER_ID",
+                "pattern": "Health insurance member ID (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_PRIOR_AUTHORIZATION_NUMBER",
+                "pattern": "Prior authorization number (labelled)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s",
+                    "(?P<"
+                ]
+            },
+            {
+                "entity": "US_PRIOR_AUTHORIZATION_NUMBER",
+                "pattern": "Prior authorization number (labelled)",
+                "field": "field_regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_PRIOR_AUTHORIZATION_NUMBER",
+                "pattern": "Prior authorization number (weak prefixed)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_CLAIM_NUMBER",
+                "pattern": "Claim number (labelled)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s",
+                    "(?P<"
+                ]
+            },
+            {
+                "entity": "US_CLAIM_NUMBER",
+                "pattern": "Claim number (labelled)",
+                "field": "field_regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_CLAIM_NUMBER",
+                "pattern": "Claim number (weak prefixed)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_PRESCRIPTION_NUMBER",
+                "pattern": "Prescription number (Rx labelled)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s",
+                    "(?P<"
+                ]
+            },
+            {
+                "entity": "US_PRESCRIPTION_NUMBER",
+                "pattern": "Prescription number (Rx labelled)",
+                "field": "field_regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_PRESCRIPTION_NUMBER",
+                "pattern": "Prescription number (labelled)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s",
+                    "(?P<"
+                ]
+            },
+            {
+                "entity": "US_PRESCRIPTION_NUMBER",
+                "pattern": "Prescription number (weak prefixed)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_REFERRAL_NUMBER",
+                "pattern": "Referral number (labelled)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s",
+                    "(?P<"
+                ]
+            },
+            {
+                "entity": "US_REFERRAL_NUMBER",
+                "pattern": "Referral number (labelled)",
+                "field": "field_regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_REFERRAL_NUMBER",
+                "pattern": "Referral number (weak prefixed)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_PROVIDER_TAX_ID",
+                "pattern": "Provider tax ID (labelled)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d",
+                    "\\s",
+                    "(?P<"
+                ]
+            },
+            {
+                "entity": "US_PROVIDER_TAX_ID",
+                "pattern": "Provider tax ID (labelled)",
+                "field": "field_regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_PROVIDER_TAX_ID",
+                "pattern": "Provider tax ID (weak valid EIN)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_ITIN",
+                "pattern": "Itin (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_ITIN",
+                "pattern": "Itin (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_ITIN",
+                "pattern": "Itin (medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_MBI",
+                "pattern": "MBI (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_MBI",
+                "pattern": "MBI (medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_NPI",
+                "pattern": "NPI (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_NPI",
+                "pattern": "NPI (medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "US_PASSPORT",
+                "pattern": "Passport (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_PASSPORT",
+                "pattern": "Passport Next Generation (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_SSN",
+                "pattern": "SSN1 (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_SSN",
+                "pattern": "SSN2 (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_SSN",
+                "pattern": "SSN3 (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_SSN",
+                "pattern": "SSN4 (very weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "US_SSN",
+                "pattern": "SSN5 (medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "CREDIT_CARD",
+                "pattern": "All Credit Cards (weak)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "Datetime (yyyy-mm-ddThh:mm[:ss[.f]] with timezone)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "mm/dd/yyyy or mm/dd/yy",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "dd/mm/yyyy or dd/mm/yy",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "yyyy/mm/dd",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "mm-dd-yyyy",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "dd-mm-yyyy",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "yyyy-mm-dd",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "dd.mm.yyyy or dd.mm.yy",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "dd-MMM-yyyy or dd-MMM-yy",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "MMM-yyyy or MMM-yy",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "dd-MMM or dd-MMM",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "mm/yyyy or m/yyyy",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "DATE_TIME",
+                "pattern": "mm/yy or m/yy",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "EMAIL_ADDRESS",
+                "pattern": "Email (Medium)",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\w",
+                    "^/$"
+                ]
+            },
+            {
+                "entity": "IBAN_CODE",
+                "pattern": "IBAN Generic",
+                "field": "regex",
+                "constructs": [
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "IP_ADDRESS",
+                "pattern": "IPv4_mapped",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IP_ADDRESS",
+                "pattern": "IPv4_mapped",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "IP_ADDRESS",
+                "pattern": "IPv4_embedded",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IP_ADDRESS",
+                "pattern": "IPv4_embedded",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "IP_ADDRESS",
+                "pattern": "IPv4",
+                "field": "regex",
+                "constructs": [
+                    "\\b",
+                    "\\d"
+                ]
+            },
+            {
+                "entity": "IP_ADDRESS",
+                "pattern": "IPv6",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "IP_ADDRESS",
+                "pattern": "IPv6",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "IP_ADDRESS",
+                "pattern": "IPv6_unspecified",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "IP_ADDRESS",
+                "pattern": "IPv6_unspecified",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "MAC_ADDRESS",
+                "pattern": "MAC_COLON_OR_HYPHEN",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "MAC_ADDRESS",
+                "pattern": "MAC_COLON_OR_HYPHEN",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "MAC_ADDRESS",
+                "pattern": "MAC_CISCO_DOT",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            },
+            {
+                "entity": "URL",
+                "pattern": "Standard Url",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "\\s",
+                    "(?i)",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "URL",
+                "pattern": "Standard Url",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "URL",
+                "pattern": "Non schema URL",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "\\s",
+                    "(?i)",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "URL",
+                "pattern": "Non schema URL",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "URL",
+                "pattern": "Quoted URL",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "\\s",
+                    "(?i)",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "URL",
+                "pattern": "Quoted URL",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "URL",
+                "pattern": "Quoted Non-schema URL",
+                "field": "regex",
+                "constructs": [
+                    "\\d",
+                    "\\w",
+                    "\\s",
+                    "(?i)",
+                    "(?P<",
+                    "\\z"
+                ]
+            },
+            {
+                "entity": "URL",
+                "pattern": "Quoted Non-schema URL",
+                "field": "left_boundary",
+                "constructs": [
+                    "\\w"
+                ]
+            },
+            {
+                "entity": "UUID",
+                "pattern": "UUID (hyphenated)",
+                "field": "regex",
+                "constructs": [
+                    "\\b"
+                ]
+            }
+        ]
+    },
+    "rangeConversion": {
+        "rule": "cases.jsonl ranges are UTF-8 byte offsets; the engine reports UTF-16 indices; the tests convert expected byte offsets with Buffer slicing",
+        "nonAsciiCases": 24,
+        "withExplicitRanges": 20,
+        "countOnly": 4,
+        "roundTripMismatches": 0,
+        "cases": [
+            {
+                "entity": "DE_BSNR",
+                "source": "test_de_bsnr_recognizer.py:test_when_all_de_bsnr_numbers_then_succeed:4",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        24,
+                        33
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        23,
+                        32
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        23,
+                        32
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        24,
+                        33
+                    ]
+                ]
+            },
+            {
+                "entity": "DE_FUEHRERSCHEIN",
+                "source": "test_de_fuehrerschein_recognizer.py:test_when_all_de_fuehrerschein_numbers_then_succeed:7",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": null,
+                "expectedUtf16Ranges": null,
+                "actualUtf16Ranges": [
+                    [
+                        20,
+                        31
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        21,
+                        32
+                    ]
+                ]
+            },
+            {
+                "entity": "DE_HANDELSREGISTER",
+                "source": "test_de_handelsregister_recognizer.py:test_when_all_de_handelsregister_numbers_then_succeed:5",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": null,
+                "expectedUtf16Ranges": null,
+                "actualUtf16Ranges": [
+                    [
+                        20,
+                        29
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        21,
+                        30
+                    ]
+                ]
+            },
+            {
+                "entity": "DE_HANDELSREGISTER",
+                "source": "test_de_handelsregister_recognizer.py:test_when_all_de_handelsregister_numbers_then_succeed:6",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": null,
+                "expectedUtf16Ranges": null,
+                "actualUtf16Ranges": [
+                    [
+                        15,
+                        24
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        15,
+                        24
+                    ]
+                ]
+            },
+            {
+                "entity": "DE_ID_CARD",
+                "source": "test_de_id_card_recognizer.py:test_when_all_de_id_cards_then_succeed:9",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        12,
+                        21
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        12,
+                        21
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        12,
+                        21
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        12,
+                        21
+                    ]
+                ]
+            },
+            {
+                "entity": "DE_PLZ",
+                "source": "test_de_plz_recognizer.py:test_when_all_de_plz_then_succeed:6",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": null,
+                "expectedUtf16Ranges": null,
+                "actualUtf16Ranges": [
+                    [
+                        13,
+                        18
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        13,
+                        18
+                    ]
+                ]
+            },
+            {
+                "entity": "ES_NIE",
+                "source": "test_es_nie_recognizer.py:test_when_all_es_nie_then_succeed:6",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        47,
+                        57
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        45,
+                        55
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        45,
+                        55
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        47,
+                        57
+                    ]
+                ]
+            },
+            {
+                "entity": "ES_PASSPORT",
+                "source": "test_es_passport_recognizer.py:test_when_all_es_passport_then_succeed:3",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ]
+            },
+            {
+                "entity": "ES_PASSPORT",
+                "source": "test_es_passport_recognizer.py:test_when_all_es_passport_then_succeed:7",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ]
+            },
+            {
+                "entity": "ES_PASSPORT",
+                "source": "test_es_passport_recognizer.py:test_when_all_es_passport_then_succeed:11",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        0,
+                        9
+                    ]
+                ]
+            },
+            {
+                "entity": "FI_PERSONAL_IDENTITY_CODE",
+                "source": "test_fi_personal_identity_code_recognizer.py:test_when_all_finnish_personal_identity_code_then_succeed:6",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        25,
+                        36
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        24,
+                        35
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        24,
+                        35
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        25,
+                        36
+                    ]
+                ]
+            },
+            {
+                "entity": "KR_PASSPORT",
+                "source": "test_kr_passport_recognizer.py:test_when_all_passports_then_succeed:9",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        16,
+                        25
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        6,
+                        15
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        6,
+                        15
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        16,
+                        25
+                    ]
+                ]
+            },
+            {
+                "entity": "KR_PASSPORT",
+                "source": "test_kr_passport_recognizer.py:test_when_all_passports_then_succeed:15",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        20,
+                        29
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        8,
+                        17
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        8,
+                        17
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        20,
+                        29
+                    ]
+                ]
+            },
+            {
+                "entity": "SE_ORGANISATIONSNUMMER",
+                "source": "test_se_organisationsnummer_recognizer.py:test_when_all_swedish_organisationsnummer_then_succeed:5",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        0,
+                        11
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        0,
+                        11
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        0,
+                        11
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        0,
+                        11
+                    ]
+                ]
+            },
+            {
+                "entity": "SE_ORGANISATIONSNUMMER",
+                "source": "test_se_organisationsnummer_recognizer.py:test_when_all_swedish_organisationsnummer_then_succeed:6",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        0,
+                        11
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        0,
+                        11
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        0,
+                        11
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        0,
+                        11
+                    ]
+                ]
+            },
+            {
+                "entity": "SE_PERSONNUMMER",
+                "source": "test_se_personnummer_recognizer.py:test_when_all_swedish_personnummer_then_succeed:5",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        0,
+                        12
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        0,
+                        12
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        0,
+                        12
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        0,
+                        12
+                    ]
+                ]
+            },
+            {
+                "entity": "SE_PERSONNUMMER",
+                "source": "test_se_personnummer_recognizer.py:test_when_all_swedish_personnummer_then_succeed:6",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        0,
+                        13
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        0,
+                        13
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        0,
+                        13
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        0,
+                        13
+                    ]
+                ]
+            },
+            {
+                "entity": "TH_TNIN",
+                "source": "test_th_tnin_recognizer.py:test_when_tnin_in_text_then_all_tnins_found:10",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        56,
+                        69
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        20,
+                        33
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        20,
+                        33
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        56,
+                        69
+                    ]
+                ]
+            },
+            {
+                "entity": "TH_TNIN",
+                "source": "test_th_tnin_recognizer.py:test_when_tnin_in_text_then_all_tnins_found:38",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        43,
+                        56
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        15,
+                        28
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        15,
+                        28
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        43,
+                        56
+                    ]
+                ]
+            },
+            {
+                "entity": "TR_LICENSE_PLATE",
+                "source": "test_tr_license_plate_recognizer.py:test_when_license_plate_in_text_then_all_plates_found:6",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        15,
+                        26
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        13,
+                        24
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        13,
+                        24
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        15,
+                        26
+                    ]
+                ]
+            },
+            {
+                "entity": "TR_LICENSE_PLATE",
+                "source": "test_tr_license_plate_recognizer.py:test_when_license_plate_in_text_then_all_plates_found:17",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        16,
+                        24
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        15,
+                        23
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        15,
+                        23
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        16,
+                        24
+                    ]
+                ]
+            },
+            {
+                "entity": "TR_NATIONAL_ID",
+                "source": "test_tr_national_id_recognizer.py:test_when_tckn_in_text_then_all_tckns_found:8",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        34,
+                        45
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        32,
+                        43
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        32,
+                        43
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        34,
+                        45
+                    ]
+                ]
+            },
+            {
+                "entity": "TR_NATIONAL_ID",
+                "source": "test_tr_national_id_recognizer.py:test_when_tckn_in_text_then_all_tckns_found:9",
+                "expectedLength": 2,
+                "expectedUtf8Ranges": [
+                    [
+                        15,
+                        26
+                    ],
+                    [
+                        42,
+                        53
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        14,
+                        25
+                    ],
+                    [
+                        40,
+                        51
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        14,
+                        25
+                    ],
+                    [
+                        40,
+                        51
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        15,
+                        26
+                    ],
+                    [
+                        42,
+                        53
+                    ]
+                ]
+            },
+            {
+                "entity": "TR_NATIONAL_ID",
+                "source": "test_tr_national_id_recognizer.py:test_when_tckn_in_text_then_all_tckns_found:23",
+                "expectedLength": 1,
+                "expectedUtf8Ranges": [
+                    [
+                        23,
+                        34
+                    ]
+                ],
+                "expectedUtf16Ranges": [
+                    [
+                        21,
+                        32
+                    ]
+                ],
+                "actualUtf16Ranges": [
+                    [
+                        21,
+                        32
+                    ]
+                ],
+                "actualUtf8Ranges": [
+                    [
+                        23,
+                        34
+                    ]
+                ]
+            }
+        ]
+    },
+    "linearTime": {
+        "threshold": "< 8x from 256 KiB to 1 MiB",
+        "sweep": {
+            "method": "every entity, detect(text, true) and find(text), best of 2 runs, 19 generic fragments plus up to 18 fragments derived from each entity's first six cases (example + space, example minus last character, example with a trailing é)",
+            "worstRatios": [
+                {
+                    "entity": "AU_ABN",
+                    "fragment": "528247535563é",
+                    "ratio": 15.48,
+                    "smallMs": 8.09,
+                    "largeMs": 125.19,
+                    "verdict": "noise: measured while tsc ran; isolated best-of-5 is 4.0 ms -> 16.1 ms (4.0x) and 2 MiB 33.3 ms"
+                },
+                {
+                    "entity": "IT_PASSPORT",
+                    "fragment": "aa765432é",
+                    "ratio": 7.59,
+                    "smallMs": 0.5,
+                    "largeMs": 3.8,
+                    "verdict": "sub-millisecond floor; isolated best-of-5 is 0.5 ms -> 1.7 ms (3.4x)"
+                },
+                {
+                    "entity": "DE_HEALTH_INSURANCE",
+                    "fragment": "A00050001",
+                    "ratio": 5.22
+                }
+            ],
+            "allOthers": "<= 5.22"
+        },
+        "rewrite": {
+            "entity": "EMAIL_ADDRESS",
+            "before": "16 KiB -> 64 KiB of 'x' took 139 ms -> 2200 ms (15.8x): without \\b every start of a long [L.] run scanned to the run end for '@'",
+            "after": "packages/redact/src/pii/accelerators.ts: the leftmost start is the first non-dot of the [L.] run before the first '@' whose local tail and domain match; 'x' x 1 MiB detects in under 0.1 ms; '...@a.b' suffixed inputs stay linear",
+            "selection": "used only while the catalog pattern text equals the one it was written for",
+            "differential": "80,000 random strings (seeds 1 and 777) compared at every code point cursor in two orders against the translated search regex: 0 mismatches; the suite repeats 5,000 strings",
+            "otherPatterns": "no other pattern needed a rewrite"
+        },
+        "regressionTest": "[linear-time] PII patterns grow less than 8x from 256 KiB to 1 MiB: every entity on 'x', '0123456789', 'a@', its first case + space, and its first case with a trailing é; best of 2, re-measured with 5 runs before failing; baselines floored at 1 ms"
+    },
+    "divergences": [
+        "Without tree-sitter identifier protection a PII match on an identifier is masked: `const member = sha256;` becomes `const member = ******;` (recorded in the [pii] context test and both READMEs).",
+        "Ranges are UTF-16 indices; cases.jsonl byte ranges are converted in the tests.",
+        "EMAIL_ADDRESS uses a linear candidate search with the same results as the translated catalog pattern.",
+        "The Rust RegexSet prefilter is not ported; each enabled pattern runs its own search, which changes cost, not results.",
+        "The application fixture keeps only the 4,500 manifest lines of the five generated sources, as test/fixtures/redaction/pii-app-fields.jsonl with source SHA-256 values in its header.",
+        "The source test's final configuration-disable step is not ported; the library has no enable switch.",
+        "On Node.js 24 and later (Unicode 17.0), characters first assigned in Unicode 17.0 are letters or digits to the translated \\b, \\w and \\d, while the source's regex-syntax 0.8.11 uses Unicode 16.0; recorded in both READMEs and under rustDifferential.unicodeVersion."
+    ],
+    "testCounts": {
+        "suite": "redaction",
+        "files": [
+            "test/unit/redaction.test.mjs",
+            "test/unit/redaction-pii.test.mjs"
+        ],
+        "tests": 1712,
+        "passed": 1712,
+        "piiFile": {
+            "cases": 1653,
+            "portedTestsRsFunctions": 19,
+            "added": [
+                "data assets",
+                "default off",
+                "e-mail differential",
+                "PII linear time"
+            ]
+        },
+        "coreFileChange": "[pii] the PII extension point is off by default and accepts only catalog names (replaces the empty-catalog assertion)",
+        "suiteDurationSeconds": 74
+    },
+    "notice": {
+        "file": "packages/redact/NOTICE",
+        "content": "Presidio MIT notice ('Copyright (c) Presidio Contributors.' and the permission text from apps/codemap-search/vendor/presidio/LICENSE), naming dist/pii/data, vendor/presidio-pii, and the pii-cases.jsonl fixture",
+        "packed": true
+    },
+    "packedFiles": {
+        "@buyong/redact": "77 files: LICENSE, NOTICE, README.md, README.ko.md, package.json, dist/**/*.{js,d.ts,js.map} including dist/pii/data/*.js; no src/, test/, data/, or scripts/ path"
+    },
+    "sideEffects": {
+        "biome": "no lint or format configuration changed; byte-exact data lives under the already excluded vendor/, generated modules follow the formatter, and the application fixture is JSONL (not checked by Biome)",
+        "docker": "test/docker/Dockerfile and scripts/verify-docker.mjs copy packages/redact README pair, LICENSE, and NOTICE so the image packs the same @buyong/redact file set",
+        "lintFixes": "isAscii no longer uses a control-character regex; the regex helper escape() is renamed translateEscape(); behavior unchanged",
+        "suites": "scripts/suites.mjs redaction.files gains test/unit/redaction-pii.test.mjs",
+        "packageScripts": "packages/redact/package.json gains generate:pii-data",
+        "rustDifferential": "packages/redact/scripts/rust-differential/ (run.mjs, generate-inputs.mjs, javascript-side.mjs, compare.mjs, rust/) and the verify:rust-differential script in packages/redact/package.json; outside the packed files (still 77) and CI. Builds and results go to the OS temp directory."
+    },
+    "commands": [
+        "npm run generate:pii-data --workspace packages/redact",
+        "npm run build",
+        "npm run test:redaction",
+        "node scratchpad/email-differential.mjs 1 20000 && node scratchpad/email-differential.mjs 777 60000",
+        "node scratchpad/pii-timing.mjs 262144,1048576",
+        "node scratchpad/pii-one.mjs AU_ABN 528247535563é find",
+        "npm pack --workspace @buyong/redact --dry-run --json --ignore-scripts",
+        "node_modules/.bin/biome check .",
+        "npm run verify:rust-differential --workspace @buyong/redact -- --source /Users/buyong/workspace/private/buyong-mcp",
+        "/private/tmp/claude-501/-Users-buyong-workspace-private-opensource-pi-codex-permission/6599dc8d-733e-425d-acec-ea653a6face0/scratchpad/node-v22.19.0-darwin-arm64/bin/node packages/redact/scripts/rust-differential/run.mjs --source /Users/buyong/workspace/private/buyong-mcp",
+        "node packages/redact/scripts/rust-differential/run.mjs --source /Users/buyong/workspace/private/buyong-mcp --scale 5 --seed 1013904223 (and the same with Node.js 22.19)"
+    ],
+    "rustDifferential": {
+        "status": "pass",
+        "tool": "packages/redact/scripts/rust-differential/run.mjs (npm run verify:rust-differential --workspace @buyong/redact -- --source <buyong-mcp checkout>)",
+        "sourceRevision": "9191694ab4ecfe79603cbf9472e0fd2393d5255f",
+        "method": [
+            "Rust side: rust/ built with regex 1.13.1, regex-automata 0.4.18 and regex-syntax 0.8.11, the versions in the source apps/codemap-search/Cargo.lock (checked on every run), plus byte-identical copies of the source redact/rules.rs and redact/text.rs taken at run time. PII patterns are compiled with the source RegexBuilder options: case_insensitive per entity, multi_line, and dot_matches_new_line.",
+            "JavaScript side: packages/redact/dist, with PII patterns built exactly as compilePiiRule builds them (including the EMAIL_ADDRESS candidate scanner) and core results from BUILT_IN_RULES, detectPrivateKeys and detectAssignments.",
+            "Compared for each of the 179 PII regex and field_regex entries: the superset search start from every code-point cursor, the anchored candidate (secret or pii_candidate) at every start, and the left-boundary result for every preceding character. Compared for the core: every built-in rule, PEM, and assignment detection range, with and without ENV/INI file paths.",
+            "Inputs: the 1,653 pii-cases.jsonl texts, the 4,500 app-fixture texts, 24 seeds for patterns that no fixture reaches, 57 core templates, deterministic mutations of all of them with Unicode digits, whitespace, line breaks, combining marks, case-folding characters and astral characters, and random strings. Characters assigned after Unicode 16.0 are excluded.",
+            "Naive control: the same inputs with Rust syntax given to RegExp unchanged must differ from Rust, so a pass cannot come from inputs that miss the semantics that differ. Coverage: every PII pattern must match and every built-in rule id must detect at least once."
+        ],
+        "runs": [
+            {
+                "node": "v24.14.0",
+                "unicode": "17.0",
+                "scale": 1,
+                "seed": 2654435769,
+                "status": "pass",
+                "inputs": {
+                    "piiPatterns": 179,
+                    "piiTexts": 42295,
+                    "coreTexts": 29265
+                },
+                "engineMismatches": {
+                    "core": 0,
+                    "pii": 0
+                },
+                "naiveControl": {
+                    "coreMismatches": 847,
+                    "coreRuleIds": 14,
+                    "piiMismatches": 114183,
+                    "piiGroups": 326,
+                    "compileErrors": 10
+                },
+                "coverage": {
+                    "piiPatternsMatched": 179,
+                    "piiPatterns": 179,
+                    "ruleIdsDetected": 16,
+                    "ruleIds": 16
+                }
+            },
+            {
+                "node": "v22.19.0",
+                "unicode": "16.0",
+                "scale": 1,
+                "seed": 2654435769,
+                "status": "pass",
+                "inputs": {
+                    "piiPatterns": 179,
+                    "piiTexts": 42295,
+                    "coreTexts": 29265
+                },
+                "engineMismatches": {
+                    "core": 0,
+                    "pii": 0
+                },
+                "naiveControl": {
+                    "coreMismatches": 847,
+                    "coreRuleIds": 14,
+                    "piiMismatches": 114183,
+                    "piiGroups": 326,
+                    "compileErrors": 10
+                },
+                "coverage": {
+                    "piiPatternsMatched": 179,
+                    "piiPatterns": 179,
+                    "ruleIdsDetected": 16,
+                    "ruleIds": 16
+                }
+            },
+            {
+                "node": "v24.14.0",
+                "unicode": "17.0",
+                "scale": 5,
+                "seed": 1013904223,
+                "status": "pass",
+                "inputs": {
+                    "piiPatterns": 179,
+                    "piiTexts": 186767,
+                    "coreTexts": 121265
+                },
+                "engineMismatches": {
+                    "core": 0,
+                    "pii": 0
+                },
+                "naiveControl": {
+                    "coreMismatches": 4212,
+                    "coreRuleIds": 14,
+                    "piiMismatches": 1209612,
+                    "piiGroups": 329,
+                    "compileErrors": 10
+                },
+                "coverage": {
+                    "piiPatternsMatched": 179,
+                    "piiPatterns": 179,
+                    "ruleIdsDetected": 16,
+                    "ruleIds": 16
+                }
+            },
+            {
+                "node": "v22.19.0",
+                "unicode": "16.0",
+                "scale": 5,
+                "seed": 1013904223,
+                "status": "pass",
+                "inputs": {
+                    "piiPatterns": 179,
+                    "piiTexts": 186767,
+                    "coreTexts": 121265
+                },
+                "engineMismatches": {
+                    "core": 0,
+                    "pii": 0
+                },
+                "naiveControl": {
+                    "coreMismatches": 4212,
+                    "coreRuleIds": 14,
+                    "piiMismatches": 1209612,
+                    "piiGroups": 329,
+                    "compileErrors": 10
+                },
+                "coverage": {
+                    "piiPatternsMatched": 179,
+                    "piiPatterns": 179,
+                    "ruleIdsDetected": 16,
+                    "ruleIds": 16
+                }
+            }
+        ],
+        "unicodeVersion": {
+            "rustTables": "regex-syntax 0.8.11 tables are generated from Unicode 16.0.0 (unicode_tables/perl_word.rs: ucd-generate perl-word ucd-16.0.0).",
+            "runtimes": "Node.js v22.19.0 reports Unicode 16.0; v24.14.0 reports Unicode 17.0.",
+            "changedCodePoints": "4,700 code points classify differently between the two runtimes for the translator's properties (Alphabetic 4,662, M 42, Lu 28, Ll 27, Nd 10). All but U+0295 were first assigned in Unicode 17.0; U+0295 only became Ll and stays Alphabetic, so word, digit and whitespace decisions for characters assigned in Unicode 16.0 are unchanged.",
+            "exploratoryRun": "Before the tool was committed, a scratch run at scale 5 with seed 1013904223 injected 197 of the changed characters: Node.js 22.19 showed no difference; Node.js 24.14 showed 5,630 core and 791,406 PII result differences, every one in an input containing a changed character. Core detections found only by Rust: 5,740; only by JavaScript: 31.",
+            "decision": "Accepted as a documented divergence in both READMEs (user decision); the tool's inputs exclude characters assigned after Unicode 16.0."
+        },
+        "notCovered": "PII validators, context labels, URL quote trimming and IBAN token trimming are code rather than regex; the 1,653 parity cases and the 4,500 app-fixture cases cover them, not this differential."
+    }
+}

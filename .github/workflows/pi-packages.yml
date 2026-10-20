@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
-    tags: ["pi-*-v*"]
+    tags: ["*-v[0-9]*"]
   workflow_dispatch:
 
 permissions:
@@ -52,11 +52,17 @@ jobs:
           package-manager-cache: false
       - uses: pnpm/action-setup@v4
       - run: pnpm install --frozen-lockfile
+      # Compiled packages type-check and test against their own and their workspace dependencies' dist/.
+      - run: pnpm --filter "$PACKAGE_NAME..." run --if-present build
       - run: pnpm --filter "$PACKAGE_NAME" run --if-present lint
       - run: pnpm --filter "$PACKAGE_NAME" typecheck
       - run: pnpm --filter "$PACKAGE_NAME" run --if-present test:unit
       - name: Check the distributable package
-        run: pnpm --dir "$PACKAGE_DIR" pack --pack-destination "$RUNNER_TEMP/package"
+        # pnpm packs bundleDependencies only with hoisted linking; the package's prepack stages the bundle itself.
+        run: |
+          pack_args=()
+          if node -e "process.exit(require('./$PACKAGE_DIR/package.json').bundleDependencies ? 0 : 1)"; then pack_args+=(--config.node-linker=hoisted); fi
+          pnpm --dir "$PACKAGE_DIR" pack "${pack_args[@]}" --pack-destination "$RUNNER_TEMP/package"
       - name: Verify Ollama source and packed runtime contracts
         if: matrix.slug == 'pi-ollama-cloud'
         run: pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report "$RUNNER_TEMP/ollama-offline.json"
@@ -231,8 +237,12 @@ jobs:
           version=$(node -p "require('./$PACKAGE_DIR/package.json').version")
           (cd "$PACKAGE_DIR" && node "$GITHUB_WORKSPACE/scripts/release/changelog.mjs" notes "$version") > "$RUNNER_TEMP/release-notes.md"
 
+      - run: pnpm --filter "$PACKAGE_NAME..." run --if-present build
       - name: Pack with resolved workspace and catalog references
-        run: pnpm --dir "$PACKAGE_DIR" pack --pack-destination "$RUNNER_TEMP/package"
+        run: |
+          pack_args=()
+          if node -e "process.exit(require('./$PACKAGE_DIR/package.json').bundleDependencies ? 0 : 1)"; then pack_args+=(--config.node-linker=hoisted); fi
+          pnpm --dir "$PACKAGE_DIR" pack "${pack_args[@]}" --pack-destination "$RUNNER_TEMP/package"
       - name: Publish the selected package to npm through OIDC
         env:
           DIST_TAG: ${{ steps.metadata.outputs.dist-tag }}

@@ -1,0 +1,63 @@
+{
+    "status": "complete",
+    "date": "2026-10-05",
+    "branch": "feat/codex-computer-use",
+    "request": "Use /computer-use as the settings entry and make the internal on/off interaction native to pi rather than a one-shot picker.",
+    "command": "/computer-use",
+    "replacedCommand": "/codex-computer-use",
+    "settingsPathUnchanged": "<agentDir>/codex-computer-use/settings.json",
+    "stateSchemaUnchanged": {"computerUse": "boolean", "browserUse": "boolean"},
+    "defaultsUnchanged": {"computerUse": true, "browserUse": true},
+    "files": {
+        "packages/pi-codex-computer-use/src/commands.ts": "Canonical computer-use command. TUI custom settings view; RPC repeating dialogs; print/JSON status and explicit arguments. All changes share setFeature, preserving waitForIdle and updateState's persistence/restart flow.",
+        "packages/pi-codex-computer-use/src/settings-ui.ts": "ComputerUseSettingsPanel built with pi DynamicBorder, SettingsList, Text, active theme and keybindings. Three tabs, in-place asynchronous saving/checks, feedback, input lock during pending operations, persisted value restoration after failed save, deferred close during pending operations.",
+        "scripts/check-package.mjs": "Requires dist/settings-ui.js in the new package.",
+        "README and usage docs (en/ko)": "Describe /computer-use, native tabs/keys, immediate persistence, RPC fallback and unchanged settings directory. Prior runtime/approval limitations retained."
+    },
+    "interaction": {
+        "tabs": ["Computer Use", "Browser Use", "Status"],
+        "switchTabs": "Tab / Shift+Tab",
+        "changeFeature": "Enter / Space on Enabled cycles on/off",
+        "diagnostics": "Status → Check setup, arrow keys select result rows and reveal details",
+        "close": "Esc closes the screen without reverting saved changes; waits for an in-flight save/check rather than disposing its context mid-operation",
+        "save": "wait for idle → persist the existing two-key schema → restart shared cua_repl → refresh registered tools and actual UI values",
+        "errors": "Shown in the same screen; the optimistic SettingsList value is reset to the persisted state until saving finishes",
+        "width": "Short tab labels on narrower terminals; active tab name/index when narrower than 35 columns; compact diagnostic labels with full selected-row details"
+    },
+    "modes": {
+        "tui": "Persistent native settings tabs",
+        "rpc": "Repeating feature/status/check picker, then on/off choice; both flags can be edited within one invocation; Close/dismiss exits",
+        "print": "Bare command prints current status, explicit status/check/computer/browser arguments work",
+        "json": "Same no-UI command behavior; diagnostic text remains on stderr"
+    },
+    "verification": {
+        "build": {"command": "npm run build -- --filter=@buyong/pi-codex-computer-use", "result": "passed"},
+        "check": {"command": "npm run check", "result": "117 files, no errors"},
+        "tui": {
+            "method": "Actual pi 0.99.1 subprocess in a pseudo-terminal, isolated PI_CODING_AGENT_DIR, offline mode, no model requests or app/browser operations",
+            "regularDark": "80 columns × 32 rows: /computer-use opens; Enter turns Computer Use off; Tab+Space turns Browser Use off; MCP stops with both off; Shift+Tab+Enter turns Computer Use on; Esc closes; reopening retains the saved values; Status tab opens; pi exits 0",
+            "fullscreenLightNarrow": "38 columns × 28 rows: same keyboard/persistence/close flow passed with light theme and fullscreen mode",
+            "saveRecoveryAndDiagnostics": "38-column fullscreen/light: force save to fail by replacing the temporary settings path with a directory after startup; EISDIR shown in-place; removing the obstruction and retrying persists Computer off while retaining Browser on. Status Check setup completes in-place; result rows navigated with arrows; Esc and pi exit succeed",
+            "cleanup": "Only temporary verification agent directories used; each final successful pi run exited 0 and its package-owned MCP process closed. No user app was operated."
+        },
+        "rpc": "One /computer-use invocation edited Computer Use off, then Browser Use off using five select requests, then Close returned disposition handled. Persisted flags were false/false.",
+        "print": "Bare /computer-use with those flags returned status on stderr, no terminal component attempted",
+        "packaging": "node scripts/check-package.mjs passed (existing 136 files, new 52). npm pack prepack/postpack passed; settings-ui JS/declarations/maps included. Extracted archive installed with runtime dependencies in an isolated pi directory, /computer-use status connected with defaults true/true, and removal left no package entry.",
+        "docs": "English/Korean command code blocks match; canonical command changed without altering the codex-computer-use settings directory",
+        "diff": "git diff --check passed; existing package source unchanged"
+    },
+    "archive": {
+        "path": "tmp/cua-publish/buyong-pi-codex-computer-use-0.1.0.tgz",
+        "entryCount": 52,
+        "sizeBytes": 80150,
+        "shasum": "2dc7b259a37d73fb00da34c266ea59032a7a0a50",
+        "version": "0.1.0 (unpublished)"
+    },
+    "limits": [
+        "Windows was not tested; no new cross-platform runtime claim.",
+        "Approval dialogs, browser automation and Codex's runtime engine were not changed or re-exercised by this settings-only update.",
+        "The actual TUI verification used a pseudo-terminal rather than a human-operated terminal window.",
+        "Existing cold-service-launch, Desktop-quit, persistent-grant and Guardian limits remain in the earlier handoffs."
+    ],
+    "notPerformed": ["commit", "merge", "npm publish", "tag", "push", "new automated test suite"]
+}

@@ -1,0 +1,137 @@
+{
+    "status": "complete",
+    "brief": "docs/briefs/2026-10-05-feat-codex-cua-05-browser-use.md",
+    "date": "2026-10-05",
+    "consumed": [
+        "docs/handoffs/computer-use/04-mcp-bridge.json",
+        "docs/handoffs/computer-use/05-confirmations.json"
+    ],
+    "approval": {
+        "testURL": "https://example.com",
+        "desktopState": "keep-running",
+        "scope": "Chrome and iab tab creation, accessibility read, cleanup, mcpapps availability check; no login, form submission, uploads or downloads"
+    },
+    "verifiedBackends": [
+        "chrome"
+    ],
+    "runtime": {
+        "desktopVersion": "26.930.31730",
+        "platform": "darwin",
+        "chromeInstalledVersion": "154.0.8037.95"
+    },
+    "chrome": {
+        "status": "verified",
+        "host": "live pi 0.99.1 RPC session with openai-codex/gpt-5.5, Browser Use on and Computer Use off",
+        "calls": [
+            "let piChromeTab = await cua.createBrowserTab(\"chrome\", \"https://example.com\", {sessionName: \"🔎 pi test\"});",
+            "nodeRepl.write(await piChromeTab.getAXState());",
+            "await piChromeTab.close(); nodeRepl.write(\"pi Chrome test tab closed\");"
+        ],
+        "result": "Example Domain accessibility state reached the model; each of the three calls succeeded",
+        "originConfirmations": 1,
+        "cleanup": "Explicit close succeeded. A subsequent getState inventory reported testTabPresent:false for the created tab id. No existing user tab was closed."
+    },
+    "desktopAppRequired": {
+        "value": null,
+        "verifiedState": "running",
+        "quitState": "skipped by user's decision to keep Codex Desktop and its sessions running; no independence from Desktop claimed"
+    },
+    "unavailableBackends": {
+        "iab": {
+            "call": "cua.createBrowserTab(\"iab\", \"https://example.com\", {visible: false})",
+            "error": "Browser is not available: iab",
+            "tabCreated": false
+        },
+        "mcpapps": {
+            "call": "cua.getBrowser({id: \"mcpapps\"})",
+            "error": "Browser is not available: mcpapps"
+        },
+        "edge": {
+            "status": "not tested; outside supported backends of this package"
+        }
+    },
+    "envPolicy": {
+        "owner": "runtime.ts applyBrowserEnvironment, consumed by connection.ts composeEnvironment",
+        "changed": {
+            "BROWSER_USE_AVAILABLE_BACKENDS": "chrome when browserUse is true"
+        },
+        "unchanged": [
+            "CUA_REPL_BROWSER_ENV (runtime default codex-app)",
+            "CUA_REPL_BROWSER_GUIDANCE",
+            "other BROWSER_USE_* variables from the Codex Desktop launch config"
+        ],
+        "computerOnly": "The browser policy adds no variables and leaves the base launch environment intact; surfaces computer and trusted services sky remain unchanged.",
+        "restartVerification": "Built and restarted after the policy change; getState returned only a Chrome extension-backed browser, apps:[] in the browser-only session; model reported {browserTypes:[extension], testTabPresent:false}.",
+        "instructions": "Runtime instructions passed through verbatim. They can still mention Desktop-only backends despite the chrome-only runtime policy; package docs explicitly identify those as unsupported."
+    },
+    "confirmationsObserved": [
+        {
+            "message": "Allow Browser use to access https://example.com?",
+            "requestedSchema": {
+                "type": "object",
+                "properties": {}
+            },
+            "meta": {
+                "connector_id": "browser-use",
+                "codex_approval_kind": "mcp_tool_call",
+                "codex_sensitive_action": true,
+                "codex_request_type": "approval_request",
+                "persist": "always",
+                "tool_name": "access_browser_origin",
+                "tool_title": "Access browser origin"
+            },
+            "options": [
+                "Allow",
+                "Always allow",
+                "Cancel"
+            ],
+            "response": {
+                "action": "accept"
+            },
+            "note": "No session option because persist is the string always; no Deny for mcp_tool_call. No automated safety precheck was observed."
+        }
+    ],
+    "prerequisites": {
+        "owner": "browser-checks.ts browserPrerequisiteChecks; install.ts invokes it with the runtime's node, commands.ts reports missing Chrome prerequisites when Browser Use is on",
+        "checks": {
+            "browser-installed": "Chrome app/executable exists at the usual macOS or Windows location; read macOS bundle version",
+            "browser-running": "Codex Chrome plugin scripts/chrome-is-running.js --browser chrome --json",
+            "chrome-extension": "scripts/check-extension-installed.js --browser chrome --json; exit 0 installed/enabled, 1 disabled, 2 missing",
+            "chrome-native-host": "scripts/check-native-host-manifest.js --browser chrome --json; exit 0 correct, 1 missing/incorrect; includes Windows registry validation"
+        },
+        "diagnosticsLocation": "newest installed chrome plugin under CODEX_HOME/plugins/cache/openai-bundled/chrome/<version>/scripts; package never copies these files",
+        "thisMac": "all four checks ok; Default profile extension installed and enabled; native messaging manifest matches host name and extension origins",
+        "missingManifestSimulation": "CODEX_CHROMIUM_NATIVE_HOST_MANIFEST_PATH=/nonexistent/pi-cua-manifest.json yields missing chrome-native-host plus enable/reinstall Browser/Chrome plugin guidance; no registration repair is performed",
+        "windows": "implemented but not executed on Windows. Platform report remains unverified; no cross-platform runtime success claimed",
+        "diagnosticPerformance": "installed-browsers.js took 16.69 s due to LaunchServices scanning. Replaced only this check with direct usual-install-path checks. Full package check on this Mac completed in about 1.6 s."
+    },
+    "verification": {
+        "build": "npm run build: 2 tasks successful",
+        "check": "npm run check: 116 files checked, no errors",
+        "computerOnlyComposition": "surfaces computer; trusted services [sky]; existing BROWSER_USE_AVAILABLE_BACKENDS base value retained but no browser provider is enabled",
+        "nativeHostIntegrity": "SHA-1 before/after comparisons of chrome-native-hosts-v2.json and the Chrome native-host manifest matched",
+        "settingsRestored": "computerUse:true, browserUse:true",
+        "processes": "package-owned cua_repl stopped after each pi session; existing Codex Desktop processes were not killed",
+        "codexDesktopOwnBrowserUse": "not separately tested; app and existing sessions preserved"
+    },
+    "limitations": [
+        "Only Chrome is verified and enabled as a browser backend; iab and mcpapps are unavailable from pi on this installation.",
+        "Whether Chrome Browser Use works when Codex Desktop is quit is unverified (user chose to keep the app running).",
+        "Windows runtime, service and Chrome transport have not been exercised on a real Windows machine; Linux is unsupported.",
+        "Browser authentication, OTP and URL-mode elicitation have no pi surface and are declined; automated safety prechecks requiring Guardian can fail without an automatic reviewer.",
+        "Downloads, uploads, raw CDP and WebMCP were not tested or enabled by this probe.",
+        "The proprietary runtime's instructions may still describe unsupported Desktop-only backends."
+    ],
+    "unresolved": [
+        "Real Windows validation",
+        "Desktop-quit behavior",
+        "A cold native service launch from the app-bundle fallback"
+    ],
+    "scratchScripts": [
+        {
+            "path": "/tmp/cua-05/driver.mjs",
+            "purpose": "pi RPC session driver, restored from 05-confirmations.json; answered approved origin request with Allow and observed tool results",
+            "content": "// Drives pi in RPC mode through a scripted set of confirmation answers.\n//   ANSWERS='Allow,Allow,Allow for this session,none' node confirm-driver.mjs <pi-binary> <pi args...> -- <prompt>\n// Answer tokens: \"Allow\", \"Allow for this session\", \"Always allow\", \"Deny\", \"Cancel\", \"delay:<ms>:<answer>\",\n// \"abort\" (send RPC abort while the dialog is open, like Esc), \"dismiss\" (cancelled: true).\nimport { spawn } from \"node:child_process\";\n\nconst argv = process.argv.slice(2);\nconst separator = argv.indexOf(\"--\");\nconst [piBinary, ...piArgs] = argv.slice(0, separator);\nconst prompt = argv.slice(separator + 1).join(\" \");\nconst answers = (process.env.ANSWERS ?? \"\").split(\",\").map((a) => a.trim()).filter(Boolean);\nlet answerIndex = 0;\nconst child = spawn(piBinary, piArgs, { stdio: [\"pipe\", \"pipe\", \"pipe\"] });\nchild.stderr.on(\"data\", (chunk) => {\n    const text = chunk.toString();\n    if (!text.startsWith(\"Warning: No models\")) process.stdout.write(`[stderr] ${text}`);\n});\nconst send = (record) => {\n    console.log(`>>> ${JSON.stringify(record).slice(0, 220)}`);\n    child.stdin.write(`${JSON.stringify(record)}\\n`);\n};\nconst sleep = (ms) => new Promise((r) => setTimeout(r, ms));\nconst t0 = Date.now();\nconst stamp = () => `+${((Date.now() - t0) / 1000).toFixed(1)}s`;\nconst handleSelect = async (record) => {\n    const token = answers[answerIndex] ?? \"Cancel\";\n    answerIndex += 1;\n    console.log(`<<< ${stamp()} select #${answerIndex} title=${JSON.stringify(record.title)} options=${JSON.stringify(record.options)} → ${token}`);\n    let answer = token;\n    if (token.startsWith(\"delay:\")) {\n        const [, ms, real] = token.split(\":\");\n        console.log(`    waiting ${ms} ms before answering ${real}`);\n        await sleep(Number(ms));\n        answer = real;\n    }\n    if (answer === \"abort\") {\n        send({ type: \"abort\" });\n        return;\n    }\n    if (answer === \"dismiss\") {\n        send({ type: \"extension_ui_response\", id: record.id, cancelled: true });\n        return;\n    }\n    const match = record.options.find((option) => option.startsWith(`${answer} —`) || option === answer);\n    if (!match) {\n        console.log(`    no option matches ${answer}; dismissing`);\n        send({ type: \"extension_ui_response\", id: record.id, cancelled: true });\n        return;\n    }\n    send({ type: \"extension_ui_response\", id: record.id, value: match });\n};\nlet buffer = \"\";\nchild.stdout.on(\"data\", (chunk) => {\n    buffer += chunk.toString();\n    let nl = buffer.indexOf(\"\\n\");\n    while (nl !== -1) {\n        const line = buffer.slice(0, nl).trim();\n        buffer = buffer.slice(nl + 1);\n        nl = buffer.indexOf(\"\\n\");\n        if (!line) continue;\n        let record;\n        try {\n            record = JSON.parse(line);\n        } catch {\n            console.log(`<<< (raw) ${line.slice(0, 200)}`);\n            continue;\n        }\n        if (record.type === \"extension_ui_request\") {\n            if (record.method === \"select\") void handleSelect(record);\n            else if (record.method === \"notify\") console.log(`<<< ${stamp()} notify ${JSON.stringify(record.message).slice(0, 200)}`);\n            else if (record.method === \"confirm\" || record.method === \"input\") {\n                console.log(`<<< ${stamp()} ${record.method} ${JSON.stringify(record.title).slice(0, 200)} → dismiss`);\n                send({ type: \"extension_ui_response\", id: record.id, cancelled: true });\n            }\n            continue;\n        }\n        if (record.type === \"response\") {\n            console.log(`<<< ${stamp()} response ${JSON.stringify(record).slice(0, 160)}`);\n            continue;\n        }\n        if (record.type === \"tool_execution_start\") console.log(`<<< ${stamp()} tool start ${record.toolName} ${JSON.stringify(record.args?.code ?? \"\").slice(0, 120)}`);\n        else if (record.type === \"tool_execution_end\") console.log(`<<< ${stamp()} tool end isError=${record.isError} ${JSON.stringify(record.result?.content?.map((b) => (b.type === \"text\" ? b.text.slice(0, 160) : b.type)) ?? \"\")}`);\n        else if (record.type === \"agent_end\") {\n            console.log(`<<< ${stamp()} agent_end`);\n            setTimeout(() => child.kill(\"SIGTERM\"), Number(process.env.LINGER_MS ?? 3000));\n        } else if (record.type === \"message_end\" && record.message?.role === \"assistant\") {\n            const text = (record.message.content ?? []).filter((c) => c.type === \"text\").map((c) => c.text).join(\" \");\n            if (text) console.log(`<<< ${stamp()} assistant: ${text.slice(0, 400)}`);\n        }\n    }\n});\nchild.on(\"exit\", (code, signal) => console.log(`pi exited code=${code} signal=${signal}`));\nsetTimeout(() => send({ id: \"p1\", type: \"prompt\", message: prompt }), 1500);\nsetTimeout(() => {\n    console.log(\"timeout: killing pi\");\n    child.kill(\"SIGKILL\");\n}, Number(process.env.MAX_MS ?? 400_000)).unref();\n"
+        }
+    ]
+}

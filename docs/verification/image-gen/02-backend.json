@@ -1,0 +1,99 @@
+{
+    "status": "complete",
+    "supersededBy": "docs/handoffs/image-gen/09-openai-provider.json — current authentication/transport contract; prior checks retained below",
+    "statusNote": "Complete for the revised approved scope: subscription routing and headers are integrated into the production tool, edits use Codex JSON, existing local checks pass. The single actual subscription generation remains the earlier 07 evidence; no additional live image call was made after integration. Initial verification entries below are historical; current evidence is in 08.",
+    "currentRevision": "docs/handoffs/image-gen/08-package-completion.json",
+    "brief": "docs/briefs/2026-10-05-feat-codex-image-gen-02-backend.md",
+    "verifiedOn": "2026-10-05",
+    "modules": {
+        "backend": "packages/pi-codex-image-gen/src/backend.ts (ImagesClient, ImageRequestError, RETRY_POLICY, ReferenceImage, ImageResponse)",
+        "artifact": "packages/pi-codex-image-gen/src/artifact.ts (sanitizeArtifactName, imageGenerationArtifactPath, saveGeneratedImage, imageGenerationOutputHint)",
+        "result": "packages/pi-codex-image-gen/src/result.ts (detailsForPlan, errorResult, generatedImageResult, ImageGenDetails)",
+        "tool": "packages/pi-codex-image-gen/src/tool.ts execute(): collect references -> progress -> existing subscription credential -> per-turn header -> JSON generation/edit client -> data[0] -> saveGeneratedImage -> image+hint; cancellation checked before network and saving; no pending placeholders"
+    },
+    "endpoints": {
+        "generate": "POST {baseUrl}/images/generations, Content-Type: application/json",
+        "edit": "POST {baseUrl}/images/edits, Content-Type: application/json",
+        "baseUrl": "resolveOpenAiCredentials uses existing Pi openai-codex authentication and its configured base URL, normalized to end with /codex; default https://chatgpt.com/backend-api/codex",
+        "headers": "bearer Authorization, chatgpt-account-id, originator, User-Agent, x-codex-image-turn-id; additional caller headers preserved; secrets reflected in errors are redacted"
+    },
+    "requestShapes": {
+        "generateJson": { "prompt": "<prompt>", "background": "transparent|opaque", "model": "gpt-image-2", "quality": "auto", "size": "auto" },
+        "editJson": { "images": [{ "image_url": "data:<mimeType>;base64,<bytes>" }], "prompt": "<prompt>", "background": "transparent|opaque", "model": "gpt-image-2", "quality": "auto", "size": "auto" },
+        "omitted": ["n"]
+    },
+    "retryPolicy": {
+        "attempts": "1 + 4 retries (RETRY_POLICY.maxRetries = 4)",
+        "retryOn": "HTTP 5xx; timeout (undici UND_ERR_HEADERS_TIMEOUT/UND_ERR_BODY_TIMEOUT); connection errors (ECONNREFUSED, ENOTFOUND, EAI_AGAIN, EHOSTUNREACH, ENETUNREACH, ETIMEDOUT, UND_ERR_CONNECT_TIMEOUT, TLS certificate codes); other network errors",
+        "noRetryOn": "429 and every other 4xx",
+        "backoff": "200 ms × 2^(retry−1) × jitter in [0.9, 1.1), floored to ms (observed 200/400 with jitter fixed at 1.0; 5 attempts ≈ 3.0 s total)",
+        "retryAfter": "Retry-After seconds or HTTP-date honored (deadline measured from receipt; observed ≈1 s for `Retry-After: 1`)",
+        "abort": "AbortSignal aborts the in-flight fetch and any backoff sleep; the AbortError propagates and Pi reports 'Operation aborted'",
+        "finalError": "after the last attempt the last failure's text is returned (Codex returns the last error, not `retry limit reached`)"
+    },
+    "errorStrings": {
+        "prefix": "image generation failed: ",
+        "http": "http <status> <IANA reason>: Some(\"<body, Rust Debug-escaped>\") — an empty body yields Some(\"\") exactly as Codex's ReqwestTransport (String::from_utf8(bytes).ok()), not None",
+        "timeout": "timeout",
+        "connection": "connection failed: <Node cause message>",
+        "network": "network error: <Node cause message>",
+        "decode": "stream error: failed to decode image generation response: <serde-style message> (image edit response for edits); missing `created`/`data`/`b64_json`, invalid types, unknown enum variants for background/quality, and JSON syntax errors (Node's JSON.parse message) are covered",
+        "noImage": "image generation returned no image data (tool-level, when data is empty)",
+        "missingCredentials": "see 01-tool-contract.json auth.missingCredentialMessage"
+    },
+    "artifact": {
+        "root": "getAgentDir() (PI_CODING_AGENT_DIR or ~/.pi/agent)",
+        "pattern": "<root>/generated_images/<sanitize(sessionId)>/<sanitize(toolCallId)>.png",
+        "sanitize": "each code point outside [A-Za-z0-9_-] -> '_', empty -> 'generated_image' (observed sess/ion:1 -> sess_ion_1, call/1|fc_2 -> call_1_fc_2)",
+        "base64": "strict standard base64 with padding, trimmed, as Codex's BASE64_STANDARD; invalid data counts as a save failure",
+        "mkdir": "recursive",
+        "overwrite": true,
+        "saveFailure": "result stays successful; hint omitted; details.savedPath absent (observed with a 0o500 root)",
+        "hintByteLimit": 1024,
+        "hintText": "Generated images are saved to <dir> as <path> by default.\\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
+    },
+    "resultShape": {
+        "success": "content: [{ type: 'image', data: <b64 as returned>, mimeType: 'image/png' }, { type: 'text', text: <hint> }?]; details: { operation: 'generate'|'edit', background, savedPath? }; no isError",
+        "emptyB64": "treated as success (empty image block, 0-byte file)",
+        "progress": "onUpdate once before the credential check with text 'Generating image…' and details"
+    },
+    "editClient": {
+        "signature": "ImagesClient.edit(plan: ImageRequestPlan, images: readonly ReferenceImage[], signal?: AbortSignal): Promise<ImageResponse>",
+        "referenceImage": "{ bytes: Uint8Array; mimeType: string; fileName: string }",
+        "pendingError": null
+    },
+    "verification": {
+        "stage1": "tmp/verify/02-backend.mjs (scratch) against a local http server: 27/27 checks (body/headers, 500,500,200 with ~200/~400 ms gaps, 429 once, 401 string without the key, {} and missing data decode errors, Retry-After, 5×502 then Some(\"\"), abort during backoff, non-JSON decode form, empty b64_json success, multipart parts/order/bytes, edit decode name, ECONNREFUSED after ~3 s)",
+        "stage2offline": "tmp/verify/02-tool.mjs (scratch) drives execute() with a stubbed ctx and PI_CODING_AGENT_DIR: 15/15 checks (progress, JSON request, image block, exact hint, details.savedPath, PNG header, overwrite, transparent, missing credentials/refresh failure without request, pending-04 edits without request, pre-aborted call sends nothing, read-only root -> image without hint)",
+        "stage2live": "pi 1.0.2, `pi -ne -e <pi-ollama-cloud entry> -e packages/pi-codex-image-gen/dist/index.js -e tmp/verify/mock-provider.mjs -e tmp/verify/probe.mjs --model ollama-cloud/glm-5.3-flash --print ...`; mock-provider registers openai { baseUrl: http://127.0.0.1:<port>/v1 } for the session only. Observed: one JSON POST /v1/images/generations {prompt, background:'opaque', model:'gpt-image-2', quality:'auto', size:'auto'} with a bearer Authorization header; tool result = image block (mimeType image/png) + hint with real paths; ~/.pi/agent/generated_images/01a10ab8-f3b3-7399-b0d8-0228dcbd7e28/call_34n8kwmh.png is 'PNG image data, 1 x 1, 8-bit/color RGBA'; session file has 1 image block and no bearer-token or sk- strings; the model echoed the hint verbatim",
+        "anthropicNote": "anthropic/claude-haiku-4-5 could not be used as the chat model (account 'out of extra usage', HTTP 400); no cost incurred",
+        "buildCheck": "npm run build and npm run check exit 0"
+    },
+    "liveRuns": [
+        {
+            "date": "2026-10-05",
+            "credentialType": "chatgpt-signin (pi auth check: authType oauth; getProviderAuthStatus source 'stored')",
+            "operation": "generate",
+            "endpoint": "POST https://api.openai.com/v1/images/generations",
+            "model": "gpt-image-2",
+            "httpStatus": 401,
+            "outcome": "rejected",
+            "userPrompt": "귀여운 강아지 일본만화툰으로 이미지만들어줘 (fixed by the user)",
+            "chatModel": "openai/gpt-6-astra (Pi default)",
+            "command": "pi -ne -ns -e packages/pi-codex-image-gen/dist/index.js -e tmp/verify/probe.mjs --skill packages/pi-codex-image-gen/skills/imagegen --print '<prompt>'",
+            "observedFlow": "model read the imagegen SKILL.md, then made one image_gen call (Korean structured prompt, transparent_background false); one request, no retry (4xx), no file under generated_images/01a10ac8-536f-71e7-af73-1bc585370137, error result returned to the model, model told the user to /login with an image-capable account or set OPENAI_API_KEY",
+            "toolError": "image generation failed: http 401 Unauthorized: Some(\"{\\n  \\\"error\\\": {\\n    \\\"message\\\": \\\"This ChatPass credential is not authorized for the requested operation.\\\",\\n    \\\"type\\\": \\\"rejected_by_hardened_oauth_boundary\\\",\\n    \\\"code\\\": \\\"hardened_oauth_rule_missing\\\",\\n    \\\"param\\\": null\\n  },\\n  \\\"status\\\": 401\\n}\")",
+            "secretCheck": "no bearer/sk-/JWT strings in the probe log or the session file",
+            "savedPath": null
+        }
+    ],
+    "subscriptionVerification": "docs/handoffs/image-gen/07-subscription-live.json — exact prompt, existing Pi openai-codex OAuth, one request, HTTP 200, 1254 x 1254 PNG saved, no new login or settings/source changes.",
+    "pendingApproval": "The user limited the additional live verification to one subscription generation; it is complete. No further live image calls are planned or executed.",
+    "unresolved": [
+        "Subscription routing correction is integrated and checked through the production resolver, final tool consumer, native Pi package loading, and local mocks (08). Real subscription edits and transparent-background generation remain untested; the user limited live verification to one generation.",
+        "Whether an OpenAI API key can use gpt-image-2 on /v1/images/* (not verifiable without a key).",
+        "Node fetch (undici) defaults apply: 300 s headers/body timeouts and a 10 s connect timeout; Codex sets no request timeout. A generation slower than 300 s would surface as `image generation failed: timeout` (FDD §13).",
+        "Transport error detail text comes from Node's error causes (format parity only, FDD §9.11).",
+        "The brief's 'None when the body is empty' was not implemented because Codex yields Some(\"\") for an empty error body; None only arises when a bounded body read fails, which this client never does."
+    ]
+}

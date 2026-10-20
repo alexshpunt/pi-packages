@@ -1,0 +1,30 @@
+{
+  "status": "local-verified",
+  "sourceDigest": "49143ee18f9f163330dc8236825cd568a9a8411dff27856c9bf97ba27c1841c4",
+  "contractDigest": "97f51da512d33dbfe03d06596acd5060e696b84fe958bd7814d61ea64706f0b0",
+  "reference": "a956835d020762cb2b570053af06f643a11c0ecc",
+  "implementation": [
+    "Codex annotation precedence and auto/prompt/writes/approve routing",
+    "Strict automatic review bypasses hints and remembered approvals",
+    "Final execution binds registration/schema/arguments and preserves cancellation/results",
+    "Live-origin-bound nested Computer Use review with synchronous sensitive checks",
+    "Required human input never reaches automatic inference",
+    "Pi MCP config, stdio/HTTP transports and scoped OAuth storage retained"
+  ],
+  "verification": {
+    "integrationPassed": 30,
+    "evidence": ".reports/pi-guard/runs/2026-10-03T04-21-39-503Z-6f940ac8-91d8-4425-a503-6c3de92b8ebd/darwin-arm64/integration.json",
+    "earlierRegression": {
+      "contracts": 11,
+      "approvals": 10
+    }
+  },
+  "limits": [
+    "Approval-only elicitation forms are supported. Nonempty input forms and URL authentication requests are declined by this adapter; it does not fabricate input.",
+    "External executors and configured MCP servers remain trusted host integrations, not native filesystem-isolated workers.",
+    "Computer Use execution tools must be registered by an installed provider; no browser or desktop executor is bundled.",
+    "Account identity is bound when supplied by the registered provider metadata.",
+    "Default transport/config helpers use the version-qualified Pi 0.99.1 module seam because they are not re-exported by its package root.",
+    "Final Docker/live qualification follows the remaining changes."
+  ]
+}

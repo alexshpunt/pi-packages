@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "state": "ready",
+  "sourceDigest": "53b927482747a5ce3b4a517f69b4b4ba49f6f39e47886819dbdf22293225bd76",
+  "contractDigest": "a21607fbe065593e3fdb78321d7b34cf299134e9854ad257953d538d46518165",
+  "runtimeVersions": {
+    "node": "v24.14.0",
+    "@earendil-works/pi-coding-agent": "0.99.1",
+    "@earendil-works/pi-ai": "0.99.1"
+  },
+  "modulePaths": [
+    "src/reviewer.ts",
+    "src/review/policy.ts",
+    "src/review/context.ts",
+    "src/review/investigation.ts",
+    "src/review/lifecycle.ts",
+    "src/approvals.ts",
+    "src/audit.ts",
+    "src/signals.ts"
+  ],
+  "moduleHashes": {
+    "src/reviewer.ts": "c62dd831c571b41c792a49a4330a55aa0310251600a7ccfc37fd1f1970430140",
+    "src/review/policy.ts": "4dbf84964cee9fb2d3f11026bb25c3b97ed8391c04f6cb9d2e6c9dec610a2041",
+    "src/review/context.ts": "93e758ecfb21456e1e5674174a3735af790facfa2d07798fec9a7d912ef00b7a",
+    "src/review/investigation.ts": "181fd968cf1db9155259582e6281ada7ed07a007dc1d7ba5aadb990c4d1b4230",
+    "src/review/lifecycle.ts": "a485e218d15aded40a09a857297722a6777d962b40d4d47f054537de76ebd8e1",
+    "src/approvals.ts": "2358c126485fa3c88942518bab63c091e79b143571cf67ac5072ba363918f122",
+    "src/audit.ts": "6c8c720d74c822ce2541347bb24d17415cce1256688dd5df2ec02f605145525f",
+    "src/signals.ts": "1c71d2e676dd6569fad3a049c03b93bbeec0966afc3e26b7580f21d393d4363c"
+  },
+  "testFiles": [
+    "test/unit/reviewer.test.mjs",
+    "test/unit/approvals.test.mjs"
+  ],
+  "coveredBehavior": [
+    "review",
+    "deadlines",
+    "cancellation",
+    "context-binding",
+    "grants",
+    "queue",
+    "persistence",
+    "audit"
+  ],
+  "results": [
+    {
+      "schemaVersion": 2,
+      "runId": "2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0",
+      "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/reviewer.json",
+      "startedAt": "2026-10-04T06:14:26.316Z",
+      "provenance": "executed",
+      "suite": "reviewer",
+      "status": "pass",
+      "command": "npm run test:reviewer",
+      "testFiles": [
+        "test/unit/reviewer.test.mjs"
+      ],
+      "coveredBehavior": [
+        "review",
+        "deadlines",
+        "cancellation",
+        "context-binding"
+      ],
+      "tests": [
+        {
+          "name": "[review] only ambiguous actions call a separate tool-free current-model request",
+          "status": "pass"
+        },
+        {
+          "name": "[review] malformed, failed, tool-bearing or permission-widening model replies never authorize",
+          "status": "pass"
+        },
+        {
+          "name": "[deadlines] configured milliseconds reach the final provider signal and expire at the boundary",
+          "status": "pass"
+        },
+        {
+          "name": "[cancellation] caller cancellation reaches the final provider even when it ignores the signal",
+          "status": "pass"
+        },
+        {
+          "name": "[review] pinned short/full assessments and policy retain risk thresholds and distinct failures",
+          "status": "pass"
+        },
+        {
+          "name": "[review] retained authorization survives follow-ups, compaction and branch restoration without trusting tool text or thinking",
+          "status": "pass"
+        },
+        {
+          "name": "[review] registered model override, bounded read-only tools and final values reach the provider",
+          "status": "pass"
+        },
+        {
+          "name": "[review] authorization and visible evidence retain chronology and removed runtime instructions lose authority",
+          "status": "pass"
+        },
+        {
+          "name": "[review] the production model cannot switch to the legacy approval protocol",
+          "status": "pass"
+        },
+        {
+          "name": "[context-binding] changed context or permission contents cannot reach the reviewer under an old digest",
+          "status": "pass"
+        },
+        {
+          "name": "[context-binding] bounded durable evidence retains provenance, truncation, prior assessments and branch-local user consent",
+          "status": "pass"
+        },
+        {
+          "name": "[context-binding] dialog observation preserves UI receivers and cancellation and never retains password values or stale answers",
+          "status": "pass"
+        }
+      ],
+      "platform": "darwin-arm64",
+      "sourceDigest": "53b927482747a5ce3b4a517f69b4b4ba49f6f39e47886819dbdf22293225bd76",
+      "contractDigest": "a21607fbe065593e3fdb78321d7b34cf299134e9854ad257953d538d46518165",
+      "runtimeVersions": {
+        "node": "v24.14.0",
+        "@earendil-works/pi-coding-agent": "0.99.1",
+        "@earendil-works/pi-ai": "0.99.1"
+      },
+      "evidenceKind": "simulated-provider-ui",
+      "blockedReasons": [],
+      "recordedAt": "2026-10-04T06:14:26.380Z"
+    },
+    {
+      "schemaVersion": 2,
+      "runId": "2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0",
+      "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/approvals.json",
+      "startedAt": "2026-10-04T06:14:26.385Z",
+      "provenance": "executed",
+      "suite": "approvals",
+      "status": "pass",
+      "command": "npm run test:approvals",
+      "testFiles": [
+        "test/unit/approvals.test.mjs"
+      ],
+      "coveredBehavior": [
+        "grants",
+        "queue",
+        "persistence",
+        "audit"
+      ],
+      "tests": [
+        {
+          "name": "[grants] disabled categories never call reviewers or dialogs and user routing skips the provider",
+          "status": "pass"
+        },
+        {
+          "name": "[grants] denial breaker uses three consecutive or ten of fifty reviews and retains at most ten recent denials",
+          "status": "pass"
+        },
+        {
+          "name": "[cancellation] direct user actions preserve caller and session cancellation without resetting a stopped model turn",
+          "status": "pass"
+        },
+        {
+          "name": "[grants] exact one-use retry reaches review again while changed inputs and consumed markers do not authorize",
+          "status": "pass"
+        },
+        {
+          "name": "[queue] concurrent denials interrupt once and cancel a still-running review before it can authorize",
+          "status": "pass"
+        },
+        {
+          "name": "[audit] structured review metadata is bounded and redacted without retaining requests",
+          "status": "pass"
+        },
+        {
+          "name": "[grants] one-use is consumed once while session rules bind exact inputs/profile/revision/source",
+          "status": "pass"
+        },
+        {
+          "name": "[queue] concurrent UI requests serialize and queued cancellation/session replacement cannot cross-authorize",
+          "status": "pass"
+        },
+        {
+          "name": "[queue] approval deadline preserves milliseconds at the actual dialog and denies on expiry",
+          "status": "pass"
+        },
+        {
+          "name": "[persistence] persistent rules require explicit UI selection, atomic save and successful compensation",
+          "status": "pass"
+        },
+        {
+          "name": "[audit] nonempty success/denial/failure population omits content and redacts synthetic markers",
+          "status": "pass"
+        }
+      ],
+      "platform": "darwin-arm64",
+      "sourceDigest": "53b927482747a5ce3b4a517f69b4b4ba49f6f39e47886819dbdf22293225bd76",
+      "contractDigest": "a21607fbe065593e3fdb78321d7b34cf299134e9854ad257953d538d46518165",
+      "runtimeVersions": {
+        "node": "v24.14.0",
+        "@earendil-works/pi-coding-agent": "0.99.1",
+        "@earendil-works/pi-ai": "0.99.1"
+      },
+      "evidenceKind": "simulated-provider-ui",
+      "blockedReasons": [],
+      "recordedAt": "2026-10-04T06:14:26.455Z"
+    }
+  ],
+  "buildProof": {
+    "command": "npm run build",
+    "cwd": "/Users/buyong/workspace/private-opensource/pi-codex-permission/",
+    "status": "pass",
+    "exitCode": 0,
+    "recordedAt": "2026-10-04T06:14:20.547Z"
+  },
+  "decisionFallbacks": "Structured allow grants the reviewed invocation delta or command authority. Denied/timed-out/aborted/failed remain distinct; technical failures never become approvals or UI fallbacks. Legacy decision/reason providers cannot widen authority automatically.",
+  "context": "Trusted retained user/developer/AGENTS/confirmation sources remain distinct from visible assistant/tool evidence; no hidden reasoning",
+  "commands": {
+    "approve": "select automatic or user review",
+    "approveModel": "select auxiliary registered model; main model unchanged"
+  },
+  "grantScopes": [
+    "once",
+    "session",
+    "persistent"
+  ],
+  "redactionRules": "No command/argument/content/provider/worker payload in audit. Bounded risk, authorization and rationale metadata is redacted.",
+  "exports": [
+    "reviewAction",
+    "PiReviewProvider",
+    "ApprovalManager",
+    "FileGrantPersistence",
+    "AuditLog"
+  ],
+  "recordedAt": "2026-10-04T06:14:34.671Z",
+  "runId": "2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0",
+  "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/03-review.json"
+}

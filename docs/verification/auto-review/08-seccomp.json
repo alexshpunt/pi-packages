@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 2,
+  "status": "complete",
+  "scope": "Resolve Docker x64 PR_SET_SECCOMP failure without weakening native isolation",
+  "sourceDigest": "d974186a8bc5188c366702e701e5acc852bf21b4b1e83493735e4249ff8a2c69",
+  "contractDigest": "7c16ec541fca790264aca75860a393e675013c8f273ed60516a80f93c9f44379",
+  "rootCause": "The pinned runtime selected apply-seccomp from emulated Node process.arch=x64, while the Docker Linux kernel architecture is arm64. The helper must install the filter using the kernel ISA.",
+  "architecture": {
+    "dockerHost": "aarch64",
+    "workload": "x64",
+    "kernel": "arm64",
+    "seccompHelper": "arm64",
+    "usesArchitectureEmulation": true,
+    "physicalX64HostTested": false
+  },
+  "implementation": {
+    "input": "docker info Architecture -> trusted PI_GUARD_KERNEL_ARCH",
+    "consumer": "nativeConfig -> broker SandboxManager.initialize(seccomp.applyPath) -> pinned native helper -> inherited workload filter",
+    "helperSource": "@anthropic-ai/sandbox-runtime@0.0.78 vendor/seccomp/{kernel architecture}/apply-seccomp",
+    "untrustedOverride": "workloadEnvironment rejects PI_GUARD_KERNEL_ARCH supplied by tool callers",
+    "unsupportedArchitecture": "Fails closed; no arbitrary helper path or disabled-filter fallback",
+    "cancellation": "Recheck cancellation after asynchronous sandbox wrapping; kill a late reported workload process group when admission has already been cancelled or timed out"
+  },
+  "diagnostic": {
+    "baseImage": "sha256:f3dd62afb04e930009bacf9f0cb141b49c585c698e7b744d6ef4e0052a5ba349",
+    "outsideUnixSocketControl": "pass",
+    "x64Helper": {
+      "exitCode": 1,
+      "error": "apply-seccomp: prctl(PR_SET_SECCOMP): Invalid argument"
+    },
+    "arm64Helper": {
+      "exitCode": 0,
+      "seccompMode": 2,
+      "filters": 1,
+      "unixSocketError": "EPERM"
+    },
+    "kind": "Owned diagnostic container; not substituted for the final full-suite run"
+  },
+  "timingVerification": {
+    "observedEmulatedWorkloadReadyMs": 1230,
+    "observedTwoSecondTimeoutReturnMs": 2040,
+    "lateMutationObserved": false,
+    "fixtureTimeoutSeconds": 2,
+    "completionUpperBoundMs": 3500,
+    "note": "The running-workload fixture now allows initialization to finish, preserves the existing completion ceiling, and checks the delayed write after its scheduled execution time. Production timeout settings are unchanged."
+  },
+  "verification": {
+    "status": "pass",
+    "platformCounts": {
+      "darwin-arm64": 72,
+      "linux-x64": 72
+    },
+    "matrixRows": 17,
+    "auditRecords": 109,
+    "dockerReport": ".reports/pi-guard/runs/2026-10-03T02-01-48-907Z-60730713-d921-423f-abd3-670624095ddc/linux-x64/docker-orchestration.json",
+    "containerReport": ".reports/pi-guard/runs/2026-10-03T02-02-38-099Z-a8a4edfe-7a4a-4213-aa6a-d9b852fa48d5/linux-x64/docker-offline.json",
+    "aggregateReport": ".reports/pi-guard/runs/2026-10-03T02-05-59-276Z-8c5b0d6a-173c-495e-8017-23b4818ed07e/darwin-arm64/auto-review-conformance.json",
+    "nativeControls": [
+      {
+        "kind": "allow",
+        "effect": "shell output/cwd/caller environment and nonzero status",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "allow",
+        "effect": "owned Unix socket control works outside the sandbox and the workload starts inside it",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "deny",
+        "effect": "Unix socket creation denied by native enforcement; workload=x64, helper=arm64",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "allow",
+        "effect": "workspace write/read and read-only read",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "deny",
+        "effect": "outside sentinel unchanged under shell/file/descendant/symlink and read-only paths; protected read blocked",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "allow",
+        "effect": "one authorized proxy request reached owned Unix socket service",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "deny",
+        "effect": "domain-denied and direct requests did not reach owned service",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "allow",
+        "effect": "explicitly disclosed runtime directory grant reached the named owned target",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "deny",
+        "effect": "runtime convenience directory did not override read-only or broaden an exact-file grant",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "allow",
+        "effect": "exact metadata file and one reviewed command changed their owned targets",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "deny",
+        "effect": "metadata sibling, later unapproved write and absolute protected credential read remained blocked",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "allow",
+        "effect": "broker-authorized dynamic destination reached owned service",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "deny",
+        "effect": "denied and subsequent invocation destinations did not reach service",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "deny",
+        "effect": "caller cancellation and seconds deadline terminated running process groups; no delayed descendant mutation",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "allow",
+        "effect": "one exact elevated target changed",
+        "isObserved": true,
+        "platform": "linux-x64"
+      },
+      {
+        "kind": "deny",
+        "effect": "concurrent/subsequent siblings, hard-deny delta and invalid IPC left target unchanged",
+        "isObserved": true,
+        "platform": "linux-x64"
+      }
+    ],
+    "weakerNestedSandbox": false,
+    "weakerNetworkIsolation": false,
+    "containerRemoved": true
+  },
+  "imageDigest": "sha256:fe79facbc6ff0a5188f39bb65f0b496fb9395b5d29ecb2317c86506caf5df187",
+  "pluginArtifactDigest": "331e5e3cd88a0d12bfe4aabd3a9c3488fb7bfe4e2f11ba16e3ddb06ffda4efac",
+  "commands": [
+    "npm run build && npm run test:native",
+    "npm run verify:docker -- --mode offline --platform linux/amd64",
+    "npm run verify:guard"
+  ],
+  "parentStatus": {
+    "state": "environment-blocked",
+    "remaining": [
+      "No same-source, same-image GLM5.3 live conformance run qualifies on required linux-x64; real model calls and all four effects are mandatory."
+    ],
+    "note": "Seccomp is resolved. Live GLM5.3 qualification is a separate, still-unverified prerequisite."
+  },
+  "retainedFailedAttempt": ".reports/pi-guard/runs/2026-10-03T01-52-48-081Z-09ea4441-75ab-44a9-bfe0-970770e03601/linux-x64/docker-offline.json",
+  "recordedAt": "2026-10-03T02:06:40.605Z"
+}

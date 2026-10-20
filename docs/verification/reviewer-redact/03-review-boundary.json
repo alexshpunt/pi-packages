@@ -1,0 +1,165 @@
+{
+    "status": "pass",
+    "brief": "docs/briefs/2026-10-05-feat-reviewer-redact-03-review-boundary.md",
+    "settingsContract": {
+        "key": "redaction",
+        "shape": "{ sensitiveFields: string[], rules: { id, pattern, flags? }[], exceptions: { ruleId, value }[], piiEntities: string[] }",
+        "default": {
+            "sensitiveFields": [],
+            "rules": [],
+            "exceptions": [],
+            "piiEntities": []
+        },
+        "validation": "validateSettings() requires a plain object, runs normalizeRedactionConfig(), and throws GuardError('INVALID_SETTINGS', 'Invalid redaction: <key>[<index>]: <message>') for any issue; unknown nested keys are issues; messages never contain a pattern, exception value, or RegExp parser text",
+        "stored": "validated settings carry the normalized config, so files saved by this version contain all four lists",
+        "inputType": "GuardSettingsInput (Partial<Omit<GuardSettings, 'redaction'>> & { redaction?: RedactionConfig }) for GuardOptions.settings and ApprovalSettingsStore defaults, matching validation that fills omitted lists",
+        "noDisableSwitch": true,
+        "redactorLifetime": "reviewRedactor(config) caches one redactor per immutable settings value; GuardController.reviewRedactor reads the current settings, so changes apply to evidence added afterwards"
+    },
+    "hostRules": {
+        "rules": [
+            {
+                "id": "host.synthetic-marker",
+                "pattern": "SYNTHETIC_[A-Z0-9_:-]+",
+                "flags": "i"
+            },
+            {
+                "id": "host.bearer",
+                "pattern": "\\bBearer\\s+(?<secret>[^\\s\"']+)",
+                "flags": "i"
+            },
+            {
+                "id": "host.assignment",
+                "pattern": "\\b(?:api[_-]?key|token|password|secret)\\s*[=:]\\s*(?<secret>\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'|[^\\s,;\"']+)",
+                "flags": "i"
+            },
+            {
+                "id": "host.access-key",
+                "pattern": "\\b(?:sk-[A-Za-z0-9_-]{8,}|AKIA[A-Z0-9]{16})\\b"
+            }
+        ],
+        "sensitiveFields": [
+            "authorization"
+        ],
+        "structuralLegacy": "non-string values under keys matching ^(authorization|api[_-]?key|token|password|secret)$ become \"[REDACTED]\" before the engine runs, as 0.3.0 did, and are reported as field.sensitive locations",
+        "legacySample": "'token=private password=secret Bearer abcdef SYNTHETIC_SECRET_MARKER sk-12345678' keeps none of the raw values"
+    },
+    "identifierPositions": {
+        "contextItemContent": "top-level toolCallId, callIdentity, parentToolCallId, parentCallIdentity, actionDigest, stage, tool, role, isError, and result.{actionDigest, contextDigest, policyDigest}",
+        "request": {
+            "context": "sessionId, contextId, turnId, digest; items[i].{id, source, trust, isTruncated}; items[i].content as above",
+            "untrustedAction": "schemaVersion, toolCallId, tool, source, sessionId, policyRevision, permissionDigest, digest (args and cwd are scanned)"
+        },
+        "neverByName": "keys inside args, tool output, and text content are scanned regardless of their names",
+        "evidence": "[context-binding] identifier-shaped PII leaves session, call, item and digest identifiers unchanged (piiEntities: ['UUID'])"
+    },
+    "requestMasking": {
+        "removed": "the 'Exact action contains credential material that cannot enter the reviewer prompt' refusal",
+        "masked": "context, untrustedAction, requestedPermissionDelta, policyReason, executionContext, and approvalRequest pass redactReviewData() as one JSON value; each string is scanned whole",
+        "redactedActionFields": "[{ path: (string|number)[], ruleId }] relative to the action, present only when the action copy changed",
+        "binding": "actionDigest, contextDigest, and policyDigest still use the original action, context, and policy; the action object is never modified",
+        "budget": "reviewContextChars still checks the masked request.data; redactedActionFields adds about 60 characters per masked field, and an overflow fails closed as before"
+    },
+    "policyDigestChange": {
+        "paragraph": "The controller masks credentials, private keys, configured sensitive values and enabled personal data before review. ... Do not assume withheld text is harmless or harmful; judge the action from its visible structure and effects.",
+        "before": "b893de49820dbd8c4a8cbefdb89add57f3e7c52c5c69aafd0342be35a385af66",
+        "after": "abb6a82a1db2f183cf0594e5a476cd93d20a0024561482a63c3c4d0139d1e8a6",
+        "check": "the 'before' value equals both the main checkout build and the new text without the paragraph",
+        "consumers": "recorded in ReviewResult only; stored results with the 0.3.0 digest still load as evidence"
+    },
+    "downgradeLimit": "Settings saved by this version contain redaction; 0.3.0 and earlier reject the file with 'Unknown setting: redaction'. Remove the key before downgrading (docs/usage.md, docs/usage.ko.md).",
+    "persistence": {
+        "currentEntries": "AUTHORIZATION_ENTRY text and REVIEW_CONTEXT_ENTRY items written by this version reload unchanged, and re-authorizing the same masked text does not change scopeVersion",
+        "legacyEntries": "0.3.0 masked text 'token=[REDACTED] password=[REDACTED] Bearer [REDACTED] [REDACTED]' reloads unchanged; no one-time authorizationVersion bump was observed for it",
+        "olderUnmaskedText": "authorization text stored unmasked before 0.3.0 would be masked on reload and count as a changed authorization once; not exercised"
+    },
+    "dependency": {
+        "declaration": "packages/pi-codex-auto-review/package.json dependencies { '@buyong/redact': '0.1.0' } (exact pin), package-lock.json links packages/redact",
+        "checkPackage": "scripts/check-package.mjs asserts the dependency equals the workspace @buyong/redact version and that nothing is bundled",
+        "probes": "test/e2e/guard.test.mjs and test/docker/package.mjs pack @buyong/redact and extract it into the consumer's node_modules/@buyong/redact; the e2e probe prints factoryLoaded:true",
+        "releaseOrder": "publish @buyong/redact 0.1.0 directly first, connect its Trusted Publisher, then release @buyong/pi-codex-auto-review (docs/publishing.md, docs/publishing.ko.md)"
+    },
+    "documents": [
+        "docs/usage.md / docs/usage.ko.md: redaction settings row and Reviewer redaction section",
+        "docs/security/dependencies.md / docs/security/dependencies.ko.md: @buyong/redact runtime dependency",
+        "docs/publishing.md / docs/publishing.ko.md: release order and the @buyong/redact Actions test step"
+    ],
+    "testCounts": {
+        "policy": {
+            "passed": 300,
+            "failed": 0,
+            "added": [
+                "[settings] reviewer redaction settings default to empty lists and reject entries without echoing values"
+            ]
+        },
+        "reviewer": {
+            "passed": 16,
+            "failed": 0,
+            "added": [
+                "[review] credential-bearing exact actions reach the reviewer masked and stay bound to the original",
+                "[review] a token in the command, a PEM block, a sensitive assignment and an opted-in e-mail address are masked for the reviewer",
+                "[context-binding] identifier-shaped PII leaves session, call, item and digest identifiers unchanged",
+                "[review] settings rules, exceptions and the 0.3.0 reviewer patterns mask reviewer data"
+            ]
+        },
+        "integration": {
+            "passed": 59,
+            "failed": 0,
+            "added": [
+                "[review-context] masked evidence written by this version and 0.3.0 masked text reload unchanged"
+            ]
+        },
+        "e2e": {
+            "passed": 15,
+            "failed": 0
+        },
+        "approvals": {
+            "passed": 11,
+            "failed": 0
+        },
+        "contracts": {
+            "passed": 10,
+            "failed": 0
+        },
+        "conformance": {
+            "passed": 33,
+            "failed": 0
+        },
+        "redaction": {
+            "passed": 1712,
+            "failed": 0
+        },
+        "node22": "test/unit/reviewer.test.mjs and test/unit/policy.test.mjs pass on Node 22.19.0"
+    },
+    "verifyDocker": {
+        "command": "npm run verify:docker (offline, linux/amd64)",
+        "status": "pass",
+        "blockedReasons": [],
+        "containerTests": {
+            "passed": 2162,
+            "failed": 0
+        },
+        "artifact": ".reports/pi-guard/runs/2026-10-05T05-19-23-807Z-04282493-cda3-4ff3-ae5b-a84bd3d09c8d/linux-x64/docker-orchestration.json",
+        "image": "builds @buyong/redact then @buyong/pi-codex-auto-review; test/docker/package.mjs installs both packed artifacts into the consumer",
+        "earlierAttempt": "a run at 05:09 failed because the image lacked packages/redact NOTICE and the old data/pii path, and sources changed during the run; both causes were fixed before this run"
+    },
+    "sideEffects": {
+        "auditAndUi": "redact() in audit.ts and its audit, /approvals, notification, and lifecycle callers are unchanged",
+        "digests": "actionDigest, contextDigest, permissionDigest, and policyDigest computation and comparison are unchanged",
+        "redactPackage": "packages/redact/** is unchanged by this child",
+        "exports": "package exports '.' and './startup' and the CLI are unchanged",
+        "ciBuild": "npm run build (turbo, dependsOn ^build) builds @buyong/redact before @buyong/pi-codex-auto-review; npm-package.yml's --filter build includes the dependency"
+    },
+    "commands": [
+        "npm install --ignore-scripts --no-audit --no-fund",
+        "npm run build",
+        "npm run test:policy",
+        "npm run test:reviewer",
+        "npm run test:integration",
+        "npm run test:approvals && npm run test:contracts && npm run test:conformance",
+        "npm run test:e2e",
+        "npm pack --workspace @buyong/pi-codex-auto-review --dry-run",
+        "npm run verify:docker",
+        "node_modules/.bin/biome check ."
+    ]
+}
