@@ -182,7 +182,33 @@ The TUI-only screens (the `/devin` screen, the status line and the Fusion picker
 
 The code in this package is MIT licensed ([LICENSE](LICENSE)).
 
-The protocol schema shipped in `proto/` is based on a descriptor that the third-party repository [leookun/devin-2api](https://github.com/leookun/devin-2api) says it extracted from the Devin CLI. This package then analyzed the protocol itself and added four definitions the base descriptor lacks; they are marked `[added field]`/`[added value]` in the sources and listed in `proto/README.md`. The runtime loads `proto/` directly. The original copyright and distribution rights of the base schema have not been verified.
+The protocol schema shipped in `proto/` is based on a descriptor that the third-party repository [leookun/devin-2api](https://github.com/leookun/devin-2api) says it extracted from the Devin CLI. This package then analyzed the protocol itself and added four definitions the base descriptor lacks; they are marked `[added field]`/`[added value]` in the sources and listed in `proto/README.md`. The runtime loads `proto/` directly.
+
+leookun/devin-2api is distributed under the MIT License, and its notice is reproduced below as that license requires. The license covers leookun's work; the copyright and distribution rights of the schema it says it extracted from the Devin CLI have not been verified.
+
+```text
+MIT License
+
+Copyright (c) 2026 leookun
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
 
 ## Development
 
