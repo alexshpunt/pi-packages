@@ -1,0 +1,46 @@
+{
+  "status": "local-verified-remote-pending",
+  "sourceDigest": "fc94cd7586ff8fb6b1aa1406d623060d9f96d27caa0156902176b8e673cd117d",
+  "contractDigest": "a11f4c3f5597b471d254b713560e208af55e2df58199c54cc531603d41f9310a",
+  "upstream": {
+    "revision": "a956835d020762cb2b570053af06f643a11c0ecc",
+    "references": [
+      "core/src/mcp_tool_call.rs:1490",
+      "core/src/state/turn.rs:247",
+      "core/src/session/mod.rs:3273"
+    ]
+  },
+  "fixes": [
+    "일반 MCP 경로는 자동 검토자 선택과 별개로 도구 annotation과 승인 모드를 적용한다.",
+    "엄격 검토·민감 작업·필수 사용자 입력은 신규 승인을 요구한다.",
+    "중첩 요청은 원래 호출의 엄격 검토 요구를 낮출 수 없다."
+  ],
+  "verification": [
+    {
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T05-28-04-131Z-dbb8f690-c13c-4b0a-bae0-1308de5b6624/darwin-arm64/policy.json",
+      "suite": "policy",
+      "status": "pass",
+      "tests": 16,
+      "sourceDigest": "fc94cd7586ff8fb6b1aa1406d623060d9f96d27caa0156902176b8e673cd117d"
+    },
+    {
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T05-28-05-098Z-18d6d9e4-27f1-4a6f-a404-d52c3b522dcf/darwin-arm64/approvals.json",
+      "suite": "approvals",
+      "status": "pass",
+      "tests": 10,
+      "sourceDigest": "fc94cd7586ff8fb6b1aa1406d623060d9f96d27caa0156902176b8e673cd117d"
+    },
+    {
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T05-28-05-525Z-19cbe764-616e-48c3-bc23-1f1aef7e9208/darwin-arm64/integration.json",
+      "suite": "integration",
+      "status": "pass",
+      "tests": 33,
+      "sourceDigest": "fc94cd7586ff8fb6b1aa1406d623060d9f96d27caa0156902176b8e673cd117d"
+    }
+  ],
+  "supersedes": "14-external-tools.json의 auto_review 전체 강제 검토 설명을 이 승인 경로 구분으로 정정한다.",
+  "limitations": [
+    "공개 Codex 구현의 일반·엄격 분기를 반영하며 독점 검토 모델의 동등성은 입증하지 않는다.",
+    "최종 동일 소스의 Linux·Docker 검증은 후속 종합 결과로 확인한다."
+  ]
+}

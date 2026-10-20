@@ -32,6 +32,7 @@ import {
   configProblems,
   git,
   interactiveOptions,
+  isPublishedOnNpm,
   listTargets,
   loadTargetOptions,
   RELEASE_BRANCH,
@@ -39,6 +40,7 @@ import {
   readChangelogs,
   readLocalTag,
   readVersion,
+  registryWorkspaceDependencies,
   releaseOptions,
   requireConfiguredTargets,
   root,
@@ -201,6 +203,16 @@ try {
   // With --update, untracked files stay out of the release commit; --all would sweep them in.
   if (options.git.addUntrackedFiles && git("ls-files", "--others", "--exclude-standard", "--", target.path)) {
     throw new Error("Untracked files would enter the release commit; handle them before releasing.");
+  }
+  for (const { name, version } of registryWorkspaceDependencies(target, targets)) {
+    const isPublished = isPublishedOnNpm(name, version);
+    if (!isPublished) {
+      throw new Error(
+        isPublished === false
+          ? `Release ${name} ${version} first: ${target.name} installs it from npm.`
+          : `Could not confirm ${name}@${version} on npm; check the connection and retry.`,
+      );
+    }
   }
   await offerChangelogDraft();
   // before:init runs the same check; failing here avoids asking for a version that cannot be released.

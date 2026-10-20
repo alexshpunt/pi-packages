@@ -1,0 +1,507 @@
+{
+    "status": "pass",
+    "brief": "docs/briefs/2026-10-05-feat-reviewer-redact-01-core-engine.md",
+    "sourceRevision": {
+        "repository": "/Users/buyong/workspace/private/buyong-mcp",
+        "path": "apps/codemap-search/src/redact, apps/codemap-search/src/config/redact.rs",
+        "commit": "86a772b418495f9799b297f99e5ae797187e3203",
+        "purpose": "sync traceability, not a license notice",
+        "workingTreeMatchesPin": true
+    },
+    "regexTranslation": [
+        {
+            "ruleId": "token.aws-access-key",
+            "javascript": "(?<!W)(?:AKIA|ASIA)[A-Z0-9]{16}(?!W)",
+            "flags": "u",
+            "implementation": "regex",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character",
+                "Rust Unicode \\b -> (?![...word class...]) after a word character"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 3.81,
+                "node22.19.0": 3.86,
+                "worstInput": "\"AKIA\"+\"K\""
+            }
+        },
+        {
+            "ruleId": "token.github",
+            "javascript": "(?<!W)(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})(?!W)",
+            "flags": "u",
+            "implementation": "regex",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character",
+                "Rust Unicode \\b -> (?![...word class...]) after a word character"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 4.2,
+                "node22.19.0": 4.15,
+                "worstInput": "\"github_pat_\"+\"é\""
+            }
+        },
+        {
+            "ruleId": "token.openai",
+            "javascript": "(?<!W)sk-[A-Za-z0-9_\\-]{16,}",
+            "flags": "u",
+            "implementation": "regex",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 2.16,
+                "node22.19.0": 2.08,
+                "worstInput": "\"sk-aaaa\"+\"\""
+            }
+        },
+        {
+            "ruleId": "token.google",
+            "javascript": "(?<!W)AIza[A-Za-z0-9_\\-]{30,}",
+            "flags": "u",
+            "implementation": "regex",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 2.16,
+                "node22.19.0": 2.13,
+                "worstInput": "\"AIza-\"+\"K\""
+            }
+        },
+        {
+            "ruleId": "token.slack",
+            "javascript": "(?<!W)xox[baprs]-[A-Za-z0-9\\-]{10,}",
+            "flags": "u",
+            "implementation": "regex",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 2.4,
+                "node22.19.0": 2.24,
+                "worstInput": "\"xoxb-\"+\"\""
+            }
+        },
+        {
+            "ruleId": "token.jwt",
+            "javascript": "reference (?<!W)eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+; shipped as matchJwt()",
+            "flags": "u",
+            "implementation": "linear-scanner",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character",
+                "Linear rewrite: the direct translation grows 15.1x for 4x input on 'eyJ-' repeated (16->64 KiB) because every 'eyJ' after '-' rescans the shared run. matchJwt() caches each segment run end; differential fuzz against the reference translation shows identical spans."
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 4.13,
+                "node22.19.0": 4.33,
+                "worstInput": "\"Bearer \"+\"K\""
+            }
+        },
+        {
+            "ruleId": "token.stripe",
+            "javascript": "(?<!W)(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}",
+            "flags": "u",
+            "implementation": "regex",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 4.04,
+                "node22.19.0": 4.03,
+                "worstInput": "\"sk_live_\"+\"K\""
+            }
+        },
+        {
+            "ruleId": "token.gitlab",
+            "javascript": "(?<!W)glpat-[A-Za-z0-9_\\-]{20,}",
+            "flags": "u",
+            "implementation": "regex",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 2.23,
+                "node22.19.0": 2.19,
+                "worstInput": "\"glpat-\"+\"é\""
+            }
+        },
+        {
+            "ruleId": "token.npm",
+            "javascript": "(?<!W)npm_[A-Za-z0-9]{20,}",
+            "flags": "u",
+            "implementation": "regex",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 4,
+                "node22.19.0": 4.11,
+                "worstInput": "\"npm_\"+\"K\""
+            }
+        },
+        {
+            "ruleId": "token.sendgrid",
+            "javascript": "(?<!W)SG\\.[A-Za-z0-9_\\-]{16,}\\.[A-Za-z0-9_\\-]{20,}",
+            "flags": "u",
+            "implementation": "regex",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 4.7,
+                "node22.19.0": 4.06,
+                "worstInput": "\"SG.aaaaaaaaaaaaaaaa.\"+\"K\""
+            }
+        },
+        {
+            "ruleId": "credential.authorization",
+            "javascript": "(?<!W)(?:authorization|proxy[\\-_]authorization)[\"']?[ \\t]*[:=][ \\t]*[\"']?(?:Bearer|Basic)[ \\t]+(?<secret>[A-Za-z0-9_~+/=.\\-]+)",
+            "flags": "iu",
+            "implementation": "regex",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character",
+                "(?i) -> i flag; (?P<secret> -> (?<secret>; secret span read from d-flag indices"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 4.13,
+                "node22.19.0": 4.05,
+                "worstInput": "\"a.password=\"+\"K\""
+            }
+        },
+        {
+            "ruleId": "credential.bearer",
+            "javascript": "(?<!W)Bearer[ \\t]+(?<secret>[A-Za-z0-9_~+/=.\\-]{8,})",
+            "flags": "u",
+            "implementation": "regex",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character",
+                "(?P<secret> -> (?<secret>"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 4.18,
+                "node22.19.0": 4.17,
+                "worstInput": "\"Bearer \"+\"é\""
+            }
+        },
+        {
+            "ruleId": "credential.url-password",
+            "javascript": "reference (?<!W)[a-z][a-z0-9+.\\-]*://[^\\p{White_Space}/:@]+:(?<secret>[^\\p{White_Space}/@]+)@; shipped as matchUrlPassword()",
+            "flags": "iu",
+            "implementation": "linear-scanner",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character",
+                "\\s -> \\p{White_Space} (JS \\s adds U+FEFF and lacks U+0085)",
+                "(?i)[a-z] also matches U+017F and U+212A in both engines",
+                "Linear rewrite: the direct translation grows 14.1x for 4x input on 'a.' repeated because every scheme start rescans the scheme run. matchUrlPassword() resolves each '://' once from the leftmost valid start; differential fuzz shows identical spans."
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 4.25,
+                "node22.19.0": 4.37,
+                "worstInput": "\"a://b:c/\"+\"K\""
+            }
+        },
+        {
+            "ruleId": "credential.webhook-url",
+            "javascript": "reference (?<!W)https?://[^\\p{White_Space}/\"'`<>]+/(?:[^\\p{White_Space}?#\"'`<>]*/)?hooks/(?<secret>[A-Za-z0-9_\\-]{16,}(?:[/?#][^\\p{White_Space}\"'`<>]*)?); shipped as matchWebhookUrl()",
+            "flags": "iu",
+            "implementation": "linear-scanner",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character",
+                "\\# -> # (identity escapes are invalid with the u flag)",
+                "\\s -> \\p{White_Space}",
+                "Linear rewrite: the direct translation grows 15.1x for 4x input on 'http://a/' repeated because nested URLs rescan the same path run. matchWebhookUrl() caches the last '/hooks/' slash per path run, preserving the greedy last-slash preference; differential fuzz shows identical spans."
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 4.29,
+                "node22.19.0": 4.21,
+                "worstInput": "\"http://a/hooks/\"+\"!\""
+            }
+        },
+        {
+            "ruleId": "private-key.pem",
+            "javascript": "-----BEGIN (?<kind>(?:(?:RSA|EC|DSA|OPENSSH|ENCRYPTED) )?PRIVATE KEY)-----",
+            "flags": "g",
+            "implementation": "regex+cached-search",
+            "notes": [
+                "END marker search cached per kind; the naive per-BEGIN indexOf grows 8.8x for 4x input on repeated unterminated BEGIN markers (also quadratic in the Rust source)"
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 5.99,
+                "node22.19.0": 5.73,
+                "worstInput": "\"-----BEGIN PRIVATE KEY-----\"+\"K\""
+            }
+        },
+        {
+            "ruleId": "field.sensitive",
+            "javascript": "reference \\b(?<key>[A-Za-z_][A-Za-z0-9_.\\-]*)[\"']?[ \\t]*(?::[ \\t]*(?:&(?:'static[ \\t]+)?str|String|string|str))?[ \\t]*(?:=|:)[ \\t]*; shipped as key runs + sticky tail [\"']?[ \\t]*(?::[ \\t]*(?:TYPE)[ \\t]*)?(?:=|:)[ \\t]*",
+            "flags": "u/y",
+            "implementation": "linear-scanner",
+            "notes": [
+                "Rust Unicode \\b -> (?<![\\p{Alphabetic}\\p{M}\\p{Nd}\\p{Pc}\\p{Join_Control}]) before a word character",
+                "Linear rewrite: the direct translation grows 15.5x on 'a.' repeated (starts after '.'/'-' rescan the key run) and 15.7x on long space runs (two adjacent [ \\t]* runs). Keys always extend to the end of their run, so the leftmost valid start decides each run; the second whitespace run moved into the optional type group. Line-start, line-end, '#', bare-terminator and '(' lookups are cached so repeated assignments on one line stay linear."
+            ],
+            "timingRatio256KiBTo1MiB": {
+                "node24.14.0": 4.59,
+                "node22.19.0": 4.66,
+                "worstInput": "\"password=\"+\"\""
+            }
+        }
+    ],
+    "nodeFloorCheck": {
+        "node": "v22.19.0 (V8 12.4.254.21-node.29), downloaded from nodejs.org into a scratch directory",
+        "inlineModifierGroup": "new RegExp('(?i:a)b') throws SyntaxError on 22.19.0; supported on 24.14.0",
+        "unicodePropertyLookbehind": "supported",
+        "dFlagIndicesGroups": "supported",
+        "caseFoldingIu": "/[a-z]/iu matches U+212A and U+017F",
+        "redactionSuiteOnNode22_19": "node --test test/unit/redaction.test.mjs: 36 pass, 0 fail"
+    },
+    "linearTimeBaseline": {
+        "method": "min of 3 runs per input, 256 KiB vs 1 MiB, 56 fragment x 4 tail adversarial inputs, baselines floored at 0.5 ms",
+        "maxRatio": {
+            "node24.14.0": 5.99,
+            "node22.19.0": 5.82
+        },
+        "threshold": "< 8",
+        "wholePipelineRedactText": {
+            "node24.14.0": 4.98,
+            "node22.19.0": 5.82,
+            "worstInput": "\"eyJabcdefgh.a.\"+\"\""
+        },
+        "naiveTranslationRatios16To64KiB": {
+            "token.jwt": 15.1,
+            "credential.url-password": 14.1,
+            "credential.webhook-url": 15.1,
+            "assignment (a.)": 15.5,
+            "assignment (spaces)": 15.7,
+            "private-key.pem (naive END search)": 8.8
+        }
+    },
+    "portedCaseInventory": [
+        {
+            "test": "test_credentials_are_hidden_without_changing_safe_code_or_line_breaks",
+            "status": "ported",
+            "cases": 15,
+            "target": "[core-parity] credentials are hidden without changing safe code or line breaks"
+        },
+        {
+            "test": "test_response_keeps_source_locations_and_protocol_structure",
+            "status": "ported",
+            "cases": 1,
+            "target": "[json] response masking keeps source locations and protocol structure"
+        },
+        {
+            "test": "test_configuration_layers_and_cli_do_not_silently_enable_or_disable_redaction",
+            "status": "divergence",
+            "reason": "the library has no enable switch, request activation, or repository/global layering; the caller decides whether to call a redactor"
+        },
+        {
+            "test": "test_syntax_masks_values_and_preserves_references_and_types",
+            "status": "ported-with-divergence",
+            "cases": 10,
+            "target": "[core-parity] file-path scans mask values and keep references through the text fallback",
+            "reason": "config.py keeps no 'password: str = external_value' assertion: the text fallback masks the bare reference after a line-leading key"
+        },
+        {
+            "test": "test_original_spans_preserve_adjacent_literals_and_unicode",
+            "status": "ported-with-divergence",
+            "cases": 1,
+            "target": "[core-parity] detections keep original UTF-16 spans next to Unicode text",
+            "reason": "SourceScan::literal() literal mapping depends on tree-sitter literals and is not ported"
+        },
+        {
+            "test": "test_vendor_catalog_and_overlap_cover_the_whole_original_value",
+            "status": "ported",
+            "cases": 7,
+            "target": "[core-parity] vendor catalog and overlaps cover the whole original value"
+        },
+        {
+            "test": "test_custom_rules_exact_exceptions_and_per_key_fallback",
+            "status": "ported-with-divergence",
+            "cases": 6,
+            "target": "[configuration] custom rules, exact exceptions, and per-key fallback",
+            "reason": "repository/global layering is not part of the library; per-key fallback is checked through normalizeRedactionConfig"
+        },
+        {
+            "test": "test_interpolated_concatenated_and_unrecognized_values_retain_coverage",
+            "status": "ported-with-divergence",
+            "cases": 3,
+            "target": "[core-parity] concatenated and unrecognized values retain coverage",
+            "reason": "value.ts (template interpolation), value.py (concatenation) and value.json (escaped JSON key) depend on tree-sitter"
+        },
+        {
+            "test": "test_stale_partial_and_ambiguous_literals_are_conservative",
+            "status": "divergence",
+            "reason": "SourceScan::literal() is not ported (tree-sitter literal mapping)"
+        },
+        {
+            "test": "test_custom_capture_ranges_and_member_names",
+            "status": "ported-with-divergence",
+            "cases": 1,
+            "target": "[configuration] custom capture groups limit masking to the secret",
+            "reason": "member names such as config.internalCredential normalize to configinternalcredential and do not equal a user field in the text fallback (same as the Rust text fallback); the port uses an object-literal key"
+        }
+    ],
+    "ruleIds": {
+        "builtIn": [
+            "token.aws-access-key",
+            "token.github",
+            "token.openai",
+            "token.google",
+            "token.slack",
+            "token.jwt",
+            "token.stripe",
+            "token.gitlab",
+            "token.npm",
+            "token.sendgrid",
+            "credential.authorization",
+            "credential.bearer",
+            "credential.url-password",
+            "credential.webhook-url"
+        ],
+        "privateKey": "private-key.pem",
+        "sensitiveField": "field.sensitive",
+        "user": "custom.<[A-Za-z0-9._-]+>",
+        "host": "host.<[A-Za-z0-9._-]+> (kind \"host\")",
+        "pii": "pii.<entity lowercased, _ -> ->"
+    },
+    "publicApi": {
+        "values": [
+            "createRedactor(config?: RedactionConfig, host?: HostRedactionAdditions): Redactor",
+            "normalizeRedactionConfig(input: unknown): RedactionConfigNormalization",
+            "RedactionConfigError (issues: readonly RedactionConfigIssue[])",
+            "formatIssue(issue: RedactionConfigIssue): string",
+            "EMPTY_REDACTION_CONFIG",
+            "hideValue(value: string): string",
+            "maskRanges(text: string, ranges: readonly TextRange[]): string",
+            "REDACTION_MARKER = \"[REDACTED]\"",
+            "isSupportedPiiEntity(name: string): boolean",
+            "listSupportedPiiEntities(): readonly string[]",
+            "piiRuleId(entity: string): string",
+            "BUILT_IN_RULE_IDS",
+            "PRIVATE_KEY_RULE_ID = \"private-key.pem\"",
+            "SENSITIVE_FIELD_RULE_ID = \"field.sensitive\"",
+            "normalizeFieldName(name: string): string"
+        ],
+        "types": [
+            "Redactor { config; isSensitiveField(name); scan(text, options?): TextScan; redactText(text, options?); scanNamedValue(name, value): TextScan; redactNamedValue(name, value); redactJson<T>(value, options?): RedactJsonResult<T> }",
+            "TextScan { detections; render(text); renderRange(text, start, end) }",
+            "ScanOptions { mode?: ScanMode; filePath?: string }",
+            "ScanMode = \"full\" | \"context-free\"",
+            "Detection { start; end; ruleId; kind }",
+            "DetectionKind = \"sensitive-field\" | \"token\" | \"credential\" | \"private-key\" | \"custom\" | \"host\" | \"pii\"",
+            "RedactJsonOptions { stringScope?: \"whole\" | \"line\"; textContent?: \"full\" | \"context-free\"; shouldPreserve?(path): boolean }",
+            "RedactJsonResult<T> { value: T; maskedLocations: readonly MaskedLocation[] }",
+            "MaskedLocation { path: readonly JsonPathSegment[]; ruleId }",
+            "JsonPathSegment = string | number",
+            "RedactionConfig { sensitiveFields?; rules?; exceptions?; piiEntities? }",
+            "NormalizedRedactionConfig { sensitiveFields; rules; exceptions; piiEntities }",
+            "RedactionRuleConfig { id; pattern; flags? }",
+            "RedactionExceptionConfig { ruleId; value }",
+            "RedactionConfigIssue { key; index?; message }",
+            "RedactionConfigNormalization { config; issues }",
+            "HostRedactionAdditions { rules?: HostRedactionRule[]; sensitiveFields?: string[] }",
+            "HostRedactionRule { id: `host.${string}`; pattern; flags? }",
+            "TextRange = readonly [start, end]"
+        ],
+        "sourceMapping": {
+            "begin_request/is_enabled + is_redact_enabled": "no switch; the caller decides whether to call a redactor",
+            "SourceScan + render/render_range": "redactor.scan() + TextScan.render()/renderRange()",
+            "in_file(path, source)": "redactor.redactText(text, { filePath })",
+            "source(text)": "redactor.redactText(text)",
+            "named_value(name, value)": "redactor.redactNamedValue(name, value) / scanNamedValue()",
+            "response(value)": "redactor.redactJson(value, { stringScope: \"line\", textContent: \"context-free\" })",
+            "hidden(value)": "hideValue(value)",
+            "MARKER": "REDACTION_MARKER",
+            "is_supported_pii_entity": "isSupportedPiiEntity",
+            "node_text": "[deferred] with tree-sitter"
+        }
+    },
+    "hostRuleNamespace": {
+        "option": "createRedactor(config, { rules: [{ id: \"host.*\", pattern, flags? }], sensitiveFields: [...] })",
+        "idFormat": "^host\\.[A-Za-z0-9._-]+$; user rules may not use host. and host rules may not use custom.",
+        "kind": "host",
+        "validation": "same pattern, flag, and empty-match checks as user rules; any issue throws RedactionConfigError with keys host.rules / host.sensitiveFields",
+        "sensitiveFields": "exact normalized names, merged with user sensitiveFields"
+    },
+    "identifierOptions": {
+        "redactJson.shouldPreserve": "predicate over the JSON path (string | number segments); true copies the value or subtree unchanged",
+        "redactJson.stringScope": "whole (default) or line",
+        "redactJson.textContent": "full (default) or context-free for {type:\"text\", text}",
+        "maskedLocations": "path + ruleId for every detection whose span changes when hidden; already-masked input yields none"
+    },
+    "piiExtensionPoint": {
+        "module": "packages/redact/src/pii/index.ts",
+        "frozenSignatures": [
+            "listSupportedPiiEntities(): readonly string[]",
+            "isSupportedPiiEntity(name: string): boolean",
+            "piiRuleId(entity: string): string",
+            "createPiiDetector(entities: readonly string[]): PiiDetector | undefined (must return undefined for an empty list before loading any catalog data)",
+            "interface PiiDetector { detect(text: string, canUseLabels: boolean): Detection[] }"
+        ],
+        "callers": {
+            "normalizeRedactionConfig": "piiEntities entries must satisfy isSupportedPiiEntity; any unsupported name invalidates the key without echoing it",
+            "scan mode full / redactNamedValue / redactJson whole and line scope": "detect(text, true)",
+            "scan mode context-free / redactJson textContent context-free": "detect(text, false)"
+        },
+        "detectionKind": "pii",
+        "afterDetection": "finishDetections() applies exact rule-id + whole-value exceptions and ordering to PII detections like any other",
+        "currentCatalog": "empty: no entity is supported and createPiiDetector throws for a non-empty list (unreachable through validated configuration)"
+    },
+    "dataAssetMechanism": {
+        "choice": "generated TypeScript modules",
+        "reason": "Pi loads extensions through jiti (tryNative: false for compiled builds, see @earendil-works/pi-coding-agent dist/core/extensions/loader.js), so JSON import attributes and runtime file reads relative to import.meta.url are avoided; generated modules compile into dist/**/*.js, which package.json files already covers",
+        "layout": "byte-for-byte JSON copies in packages/redact/data/pii/*.json (not packed); generated modules in packages/redact/src/pii/data/*.ts that export the parsed data; a generator script and a test asserting the generated data deep-equals the JSON copies",
+        "packaging": "no manifest change needed: dist/**/*.js and NOTICE are already in files"
+    },
+    "divergences": [
+        "Only the text fallback is ported; tree-sitter syntax decisions (node_text, literal mapping, syntax-decided references, PII identifier protection) are deferred.",
+        "No enable switch, request-scoped activation, configuration layering, or detection cache.",
+        "Ranges and the marker-length comparison use UTF-16 code units instead of UTF-8 bytes; short non-ASCII values render as '*' runs where the source printed [REDACTED].",
+        "token.jwt, credential.url-password, credential.webhook-url, the assignment fallback, and the PEM END search use linear scanners equivalent to the source patterns.",
+        "normalizeRedactionConfig keeps sensitiveFields as written and normalizes when matching; issues are returned instead of logged.",
+        "File-name handling splits paths on both '/' and '\\\\'.",
+        "User rule patterns are JavaScript RegExp source with optional flags i/m/s/u.",
+        "The 'line-break position' acceptance check is verified as an unchanged sequence of CR/LF characters with every masked line no longer than its input line, because shorter replacements move absolute offsets."
+    ],
+    "testCounts": {
+        "suite": "redaction",
+        "file": "test/unit/redaction.test.mjs",
+        "tests": 36,
+        "passed": 36,
+        "portedTestsRsFunctions": 8,
+        "documentedDivergenceFunctions": 2,
+        "ruleIdTests": 16,
+        "behaviors": [
+            "core-parity",
+            "rules",
+            "masking",
+            "json",
+            "configuration",
+            "properties",
+            "linear-time",
+            "pii"
+        ]
+    },
+    "sideEffects": {
+        "autoReviewDist": "packages/pi-codex-auto-review/dist after a clean build is byte-identical to the main checkout build (diff -rq empty)",
+        "checkPackage": "npm pack --workspace @buyong/pi-codex-auto-review --dry-run runs prepack (tsc, shared-file copy, scripts/check-package.mjs) and prints 'Package verified'; running scripts/check-package.mjs alone fails on LICENSE before the prepack copy, as on master",
+        "testContracts": "npm run test:contracts exit 0",
+        "releaseChooser": "npm query .workspace lists @buyong/pi-codex-auto-review and @buyong/redact, both non-private, so scripts/release.mjs now offers @buyong/redact",
+        "sourceDigest": "sourceDigest() now also hashes packages/redact/src, package.json, and tsconfig.json; evidence recorded before this change is stale for new comparisons",
+        "verifyDocker": "npm run verify:docker -- --mode offline --platform linux/arm64 exit 0, status pass (Docker 29.2.1); live and conformance modes not run",
+        "npmPackageWorkflow": "auto-review steps unchanged; @buyong/redact runs 'npm run build && npm run test:redaction' because scripts/run-tests.mjs imports the auto-review evidence validator"
+    },
+    "commands": [
+        "npm install --ignore-scripts --no-audit --no-fund",
+        "rm -rf packages/redact/dist packages/pi-codex-auto-review/dist && npx turbo run build --force",
+        "npm run test:redaction",
+        "node --test test/unit/redaction.test.mjs (Node 22.19.0)",
+        "npm pack --workspace @buyong/redact --dry-run --json",
+        "npm pack --workspace @buyong/pi-codex-auto-review --dry-run",
+        "npm run test:contracts",
+        "npm run verify:docker -- --mode offline --platform linux/arm64",
+        "npx biome check packages/redact test/unit/redaction.test.mjs scripts package.json .github test/docker"
+    ],
+    "packedFiles": {
+        "@buyong/redact": "34 files: LICENSE, README.md, README.ko.md, package.json, dist/**/*.{js,d.ts,js.map}; no src/ or test/ path"
+    }
+}

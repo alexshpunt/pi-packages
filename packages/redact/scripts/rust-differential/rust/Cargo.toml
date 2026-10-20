@@ -1,0 +1,17 @@
+[package]
+name = "redact-rust-differential"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Same versions as buyong-mcp apps/codemap-search/Cargo.lock, with default features as in
+# the source. run.mjs refuses to run when the source lock file pins different versions.
+[dependencies]
+regex = "=1.13.1"
+regex-automata = "=0.4.18"
+regex-syntax = "=0.8.11"
+aho-corasick = "=1.1.5"
+memchr = "=2.8.3"
+
+[profile.release]
+debug = false

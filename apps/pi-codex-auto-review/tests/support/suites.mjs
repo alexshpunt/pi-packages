@@ -1,0 +1,112 @@
+export const suites = {
+    contracts: {
+        files: [
+            "tests/unit/contracts.test.mjs",
+            "tests/unit/dependency-security.test.mjs",
+        ],
+        kind: "unit-doubles",
+        behavior: [
+            "identity",
+            "profiles",
+            "ipc",
+            "evidence",
+            "public-api",
+            "dependency-security",
+        ],
+    },
+    policy: {
+        files: [
+            "tests/unit/policy.test.mjs",
+            "tests/unit/execpolicy.test.mjs",
+            "tests/unit/execpolicy-parity.test.mjs",
+            "tests/unit/context-files.test.mjs",
+            "tests/unit/external.test.mjs",
+        ],
+        kind: "unit-doubles",
+        behavior: [
+            "paths",
+            "rules",
+            "shell",
+            "settings",
+            "context-files",
+            "external-policy",
+        ],
+    },
+    reviewer: {
+        files: ["tests/unit/reviewer.test.mjs"],
+        kind: "simulated-provider-ui",
+        behavior: ["review", "deadlines", "cancellation", "context-binding"],
+    },
+    approvals: {
+        files: ["tests/unit/approvals.test.mjs"],
+        kind: "simulated-provider-ui",
+        behavior: ["grants", "queue", "persistence", "audit"],
+    },
+    execution: {
+        files: ["tests/execution/executor.test.mjs"],
+        kind: "workflow",
+        behavior: ["execution", "cancellation"],
+    },
+    integration: {
+        files: [
+            "tests/integration/pi-tools.test.mjs",
+            "tests/integration/mcp.test.mjs",
+            "tests/integration/approval-settings.test.mjs",
+            "tests/integration/review-context.test.mjs",
+        ],
+        kind: "simulated-provider-ui",
+        behavior: [
+            "tools",
+            "final-input",
+            "user-bash",
+            "startup",
+            "nested",
+            "options",
+            "context-files",
+            "external-tools",
+            "approval-settings",
+            "review-context",
+        ],
+    },
+    e2e: {
+        files: ["tests/e2e/guard.test.mjs"],
+        kind: "workflow",
+        behavior: ["workflow", "package", "cleanup"],
+    },
+    redaction: {
+        files: [
+            "../../packages/redact/tests/unit/redaction.test.mjs",
+            "../../packages/redact/tests/unit/redaction-pii.test.mjs",
+        ],
+        kind: "unit-doubles",
+        behavior: [
+            "core-parity",
+            "rules",
+            "masking",
+            "json",
+            "configuration",
+            "properties",
+            "linear-time",
+            "pii",
+        ],
+    },
+    conformance: {
+        files: [
+            "tests/conformance/auto-review.test.mjs",
+            "tests/conformance/protection.test.mjs",
+        ],
+        kind: "simulated-provider-ui",
+        behavior: [
+            "reference",
+            "joined",
+            "creation",
+            "failures",
+            "evidence-join",
+            "scenario-harness",
+            "boundary-matrix",
+            "review-routing",
+            "scoped-grants",
+            "review-cancellation",
+        ],
+    },
+};

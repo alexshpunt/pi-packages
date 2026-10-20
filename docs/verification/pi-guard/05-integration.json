@@ -1,0 +1,355 @@
+{
+  "schemaVersion": 1,
+  "state": "ready",
+  "sourceDigest": "53b927482747a5ce3b4a517f69b4b4ba49f6f39e47886819dbdf22293225bd76",
+  "contractDigest": "a21607fbe065593e3fdb78321d7b34cf299134e9854ad257953d538d46518165",
+  "runtimeVersions": {
+    "node": "v24.14.0",
+    "@earendil-works/pi-coding-agent": "0.99.1",
+    "@earendil-works/pi-ai": "0.99.1"
+  },
+  "modulePaths": [
+    "src/index.ts",
+    "src/startup.ts",
+    "src/cli.ts",
+    "src/tools/controller.ts",
+    "src/approval-commands.ts",
+    "src/approval-settings.ts"
+  ],
+  "moduleHashes": {
+    "src/index.ts": "729e339be565c2509f4bf744fa83c6363d49b0ea8c5a254aff4d978b4f7d42d1",
+    "src/startup.ts": "37e8c27c84c9f955a991981f20e6139632af0a1533673e6ad42a654b7ecf77f8",
+    "src/cli.ts": "579d8181afd61b791769a90f25c0de130f1a5bc221554d9ba9affb644d23c26f",
+    "src/tools/controller.ts": "fb6552c9e883be0ba777d8a7f8ffa71fd27c1e3956784ce3c19cd29a00d99df0",
+    "src/approval-commands.ts": "262e37acd2a112f39ceb247c1b98ebc888a9cb91df3231b8cab684975bca4b3b",
+    "src/approval-settings.ts": "58cfa8fd8a82cfc4888e601a1c16204f8b5f84fbbb9e73174590030a8d5a6059"
+  },
+  "testFiles": [
+    "test/integration/pi-tools.test.mjs",
+    "test/integration/mcp.test.mjs",
+    "test/integration/approval-settings.test.mjs",
+    "test/integration/review-context.test.mjs"
+  ],
+  "coveredBehavior": [
+    "tools",
+    "final-input",
+    "user-bash",
+    "startup",
+    "nested",
+    "options",
+    "context-files",
+    "external-tools",
+    "approval-settings",
+    "review-context"
+  ],
+  "results": [
+    {
+      "schemaVersion": 2,
+      "runId": "2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0",
+      "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/integration.json",
+      "startedAt": "2026-10-04T06:14:27.683Z",
+      "provenance": "executed",
+      "suite": "integration",
+      "status": "pass",
+      "command": "npm run test:integration",
+      "testFiles": [
+        "test/integration/pi-tools.test.mjs",
+        "test/integration/mcp.test.mjs",
+        "test/integration/approval-settings.test.mjs",
+        "test/integration/review-context.test.mjs"
+      ],
+      "coveredBehavior": [
+        "tools",
+        "final-input",
+        "user-bash",
+        "startup",
+        "nested",
+        "options",
+        "context-files",
+        "external-tools",
+        "approval-settings",
+        "review-context"
+      ],
+      "tests": [
+        {
+          "name": "[tools] public Pi routes preserve read/edit/write/grep/find/ls schemas, results and final native effects",
+          "status": "pass"
+        },
+        {
+          "name": "[final-input] a later mutable hook is checked at the final consumer and cannot reuse harmless inputs",
+          "status": "pass"
+        },
+        {
+          "name": "[user-bash] ! and !! return handled operations with native output and denial, never host fallback",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] structured automatic approval reaches native outside writes without UI and does not authorize the next call",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] unknown executable commands are reviewed before Pi execution and trusted rules retain precedence",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] the original network command is reviewed once before Pi runs it without replaying earlier effects",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] network URL form config-file cannot bypass automatic or human review",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] network URL form schemeless cannot bypass automatic or human review",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] network URL form config-with-allowed-url cannot bypass automatic or human review",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] actual Pi follow-up review retains original user scope and untrusted tool evidence",
+          "status": "pass"
+        },
+        {
+          "name": "[context-files] discovered instructions reach Pi and review with provenance and refresh on reload",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] read-only reviewer investigation reads owned evidence while mutation and protected paths are rejected",
+          "status": "pass"
+        },
+        {
+          "name": "[user-bash] installed Pi session consumer records ! and !! with the guarded operations",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] TUI/RPC approvals cover one complete edit action and print/JSON deny absent UI",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] outside creation reviews the exact target and cannot approve a later sibling",
+          "status": "pass"
+        },
+        {
+          "name": "[startup] public startup performs no execution qualification and still rejects discarded factories and unknown tools",
+          "status": "pass"
+        },
+        {
+          "name": "[startup] explicit installed cloud provider loads through public Pi TypeScript loader without automatic discovery",
+          "status": "pass"
+        },
+        {
+          "name": "[startup] default permissions protect the complete explicitly selected agent credential directory",
+          "status": "pass"
+        },
+        {
+          "name": "[options] caller metadata permissions remain effective while mandatory Pi control paths stay protected",
+          "status": "pass"
+        },
+        {
+          "name": "[nested] actual built-in codemode calls reach guarded local tools and retain structured bash results",
+          "status": "pass"
+        },
+        {
+          "name": "[options] supplied bash prefix, spawn cwd/env, seconds, signal and streaming reach the final consumer",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] the host file queue waits for a cancelled invocation to settle before admitting another mutation",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] three denied reviews interrupt the actual Pi turn before a fourth action",
+          "status": "pass"
+        },
+        {
+          "name": "[final-input] authorization changed during a pending review cannot reach native execution",
+          "status": "pass"
+        },
+        {
+          "name": "[tools] real Pi approve command changes the approval route without sending a retry prompt",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] strict MCP tools review exact final input despite read-only hints and repeat approvals",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] connected-account evidence is copied only from the explicit registered MCP metadata field",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] MCP denial, required human input and granular policy prevent effects",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] ordinary automatic MCP routing honors read-only hints and configured approval modes",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] user reviewer honors read hints and requires UI for destructive tools",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] MCP node_repl/js cannot nominate another tool or connector for nested approval",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] spoofed origin, user-input requests and forms cannot borrow an ordinary MCP approval",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] a nested MCP request cannot downgrade the originating strict review requirement",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] changed registration and cancellation during review cannot execute a registered adapter",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] real MCP stdio server runs only an approved exact call and preserves structured results",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] explicit human-input flag uses a fresh human dialog without automatic inference",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] ordinary MCP elicitation reviews registered arguments instead of a substituted payload",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] concurrent MCP calls with a reused caller ID cannot borrow another approval",
+          "status": "pass"
+        },
+        {
+          "name": "[external-tools] project MCP startup requires a recorded or explicit project trust decision",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] approve configures user or model review and the selected route reaches the original write tool",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] the searchable picker selects only the auxiliary reviewer and follows the main model when cleared",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] Escape and unavailable UI preserve settings without saving or executing anything",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] reload restores both selections and the persisted model remains selected in the picker",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] concurrent choices preserve each other and a failed save leaves the runtime unchanged",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] settings changes cancel a pending old-model approval before its late allow can write",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] the actual mode picker renders Codex descriptions and all command UI in English",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] both model pickers honor the live scope and reject a selection removed while open",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] Pi session scope selection reaches the auxiliary reviewer and preserves allow and deny effects",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] approve retry reconnects the exact denial to fresh review without a reusable grant",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] the actual Pi retry command preserves its one-use marker through extension-generated input",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] a past critical denial can be reassessed but a fresh critical assessment still prevents execution",
+          "status": "pass"
+        },
+        {
+          "name": "[approval-settings] a genuine later user prompt authorizes fresh Pi review after a critical denial without a retry command",
+          "status": "pass"
+        },
+        {
+          "name": "[review-context] the final provider sees late instructions, final tool results, nested provenance and the active permission profile",
+          "status": "pass"
+        },
+        {
+          "name": "[review-context] final execution inputs and explicit UI approvals survive a real Pi reload",
+          "status": "pass"
+        },
+        {
+          "name": "[review-context] the actual provider HTTP body retains exact input, authority provenance, environment and investigation boundaries",
+          "status": "pass"
+        },
+        {
+          "name": "[review-context] real dialog answers and registered MCP account evidence reach review without trusting forged receipts",
+          "status": "pass"
+        },
+        {
+          "name": "[review-context] a late forced prompt replaces inactive developer and project instructions at the reviewer",
+          "status": "pass"
+        },
+        {
+          "name": "[review-context] live compaction adds its summary as evidence without replacing genuine user restrictions",
+          "status": "pass"
+        }
+      ],
+      "platform": "darwin-arm64",
+      "sourceDigest": "53b927482747a5ce3b4a517f69b4b4ba49f6f39e47886819dbdf22293225bd76",
+      "contractDigest": "a21607fbe065593e3fdb78321d7b34cf299134e9854ad257953d538d46518165",
+      "runtimeVersions": {
+        "node": "v24.14.0",
+        "@earendil-works/pi-coding-agent": "0.99.1",
+        "@earendil-works/pi-ai": "0.99.1"
+      },
+      "evidenceKind": "simulated-provider-ui",
+      "blockedReasons": [],
+      "recordedAt": "2026-10-04T06:14:30.340Z"
+    }
+  ],
+  "buildProof": {
+    "command": "npm run build",
+    "cwd": "/Users/buyong/workspace/private-opensource/pi-codex-permission/",
+    "status": "pass",
+    "exitCode": 0,
+    "recordedAt": "2026-10-04T06:14:20.547Z"
+  },
+  "guardedStartup": [
+    "dist/cli.js",
+    "createGuardedRuntime"
+  ],
+  "modes": [
+    "tui",
+    "rpc",
+    "print",
+    "json"
+  ],
+  "toolRoutes": {
+    "bash": "host Pi formatting and operations -> bound admission -> Pi BashOperations",
+    "files": "host Pi schemas/renderers -> bound admission -> original public Pi definitions",
+    "codemode": "public built-in QuickJS -> ctx.executeTool -> same final wrappers",
+    "userBash": "always handled operations; final prefix/cwd/env/options rechecked",
+    "reload": "readiness barrier prevents discarded extension fallback"
+  },
+  "trustBoundaries": [
+    "Pi and explicitly trusted extensions are controllers",
+    "remote MCP internals and arbitrary trusted in-process effects are outside approval interception",
+    "unknown tools require explicit trusted adapters"
+  ],
+  "qualifiedPlatforms": [
+    "darwin-arm64"
+  ],
+  "recordedAt": "2026-10-04T06:14:34.672Z",
+  "runId": "2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0",
+  "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/05-integration.json"
+}

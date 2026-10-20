@@ -1,0 +1,13 @@
+{
+  "status": "pass",
+  "sourceDigest": "3caadb996f7de930cf1f5c19af8f6e5b943e21ee01fac1010e28d88e55b12030",
+  "archivePath": "tmp/ci/37102123082-linux/linux-x64-image/verification-image.tar.gz",
+  "exportedConfigDigest": "sha256:c6e7335ccc5d2dcf8aad1375011b2851e6692d4b15f137eb7ee01876a92c1d39",
+  "loadedManifestDigest": "sha256:9aaa29b67404a49add9eb0db289508f1f777ebad72c460bb949bd3b9099f0c0e",
+  "manifestReferencesExportedConfig": true,
+  "allLayerDiffIDsEqual": true,
+  "layerCount": 19,
+  "platform": "linux/amd64",
+  "ci": "https://github.com/buYoung/pi-codex-permission/actions/runs/37102123082",
+  "recordedAt": "2026-10-03T06:23:10.586428+00:00"
+}

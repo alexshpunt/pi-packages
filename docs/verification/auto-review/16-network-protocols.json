@@ -1,0 +1,23 @@
+{
+  "status": "local-verified",
+  "sourceDigest": "a92d14d5b63c9dbe6232a11fe075103ee2dcadf097af5af5587db7e27b4dfab1",
+  "contractDigest": "a11f4c3f5597b471d254b713560e208af55e2df58199c54cc531603d41f9310a",
+  "implementation": [
+    "Canonical IPv6 literals pass through settings, Codex network_rule, profiles, deltas and runtime broker review",
+    "HTTPS CONNECT retains real certificate verification",
+    "SOCKS5 TCP validates allowed/denied service effects",
+    "IPv6 proxy and dynamic-review positive controls plus direct/denied isolation",
+    "Owned UDP host positive control and zero extra sandbox datagrams"
+  ],
+  "verification": {
+    "passed": 43,
+    "evidence": [
+      ".reports/pi-guard/runs/2026-10-03T04-34-47-569Z-98ef4f6b-11a2-4416-83fe-9b23bedd12fc/darwin-arm64/policy.json",
+      ".reports/pi-guard/runs/2026-10-03T04-34-48-617Z-c51876a6-b47e-4fb2-becf-27b2b2301978/darwin-arm64/native.json"
+    ]
+  },
+  "limits": [
+    "SOCKS5 UDP support is not claimed; direct sandbox UDP is denied.",
+    "Final native Linux x64, Docker and live-provider qualification remains pending."
+  ]
+}

@@ -1,0 +1,50 @@
+{
+    "status": "complete",
+    "supersededBy": "docs/handoffs/image-gen/09-openai-provider.json — current edit transport is OpenAI multipart, with original image selection preserved",
+    "statusNote": "Implementation complete for the revised scope: path/history selectors reach the Codex subscription JSON edit client, with MIME/bytes/order checked by the existing local validations. Original stage evidence below is historical. Live edit calls are not executed because the user limited live verification to one generated image.",
+    "currentRevision": "docs/handoffs/image-gen/08-package-completion.json",
+    "brief": "docs/briefs/2026-10-05-feat-codex-image-gen-04-ref-images.md",
+    "verifiedOn": "2026-10-05",
+    "modules": {
+        "referenceImages": "packages/pi-codex-image-gen/src/reference-images.ts (sniffImageFormat, loadReferenceImages, collectRecentImages, ReferenceImageError)",
+        "tool": "packages/pi-codex-image-gen/src/tool.ts: reference images are collected before the progress update and the credential check (Codex order: request_for_call_args before emit_started/backend); edit plans call ImagesClient.edit(plan, images, signal)"
+    },
+    "formatDetection": {
+        "method": "content sniffing (image::guess_format equivalent) for the pass-through set only: PNG 8-byte signature, JPEG FF D8 FF, WebP RIFF….WEBP; everything else is 'other'",
+        "decodeCheck": "every file is decoded through Pi's convertToPng(base64, 'application/octet-stream') (non-PNG MIME forces a real decode); null -> process error"
+    },
+    "conversion": {
+        "passThrough": "png -> image/png, jpeg -> image/jpeg, webp -> image/webp with the original bytes (observed byte-identical for sips-made fixtures)",
+        "converted": "every other decodable format (gif, bmp observed) -> PNG bytes from convertToPng with image/png",
+        "fileName": "<basename without extension>.<ext for the sent MIME> (anim.gif -> anim.png)",
+        "noSizeLimit": "a 61.1 MB random-pixel PNG (4000×4000 RGBA) loaded and decoded in ~0.8 s with no local error",
+        "metadata": "convertToPng applies EXIF orientation and drops ICC/EXIF for converted formats (FDD §9.11); pass-through formats are unaffected"
+    },
+    "historySelection": {
+        "source": "ctx.sessionManager.buildSessionProjection().messages (compaction and context edits applied)",
+        "roles": ["user", "custom", "toolResult"],
+        "order": "messages newest-first; blocks within a message last-to-first; stop at exactly N; reverse to chronological",
+        "assistantImages": "ignored (assistant content cannot carry images in Pi; Codex scans Message items of any role, so this is equivalent)",
+        "encoding": "history images are sent as recorded (bytes from the base64 data, recorded mimeType) without re-encoding, as Codex forwards their data URLs unchanged; file names image-<n>.<ext>",
+        "deviationFromBrief": "the brief asked to convert non-png/jpeg/webp history images to PNG; Codex does not re-encode history images, and FDD §9.11 gives Codex behavior precedence, so no conversion is applied"
+    },
+    "errorStrings": {
+        "read": "unable to read referenced image at `<path>`: <Node error message, e.g. ENOENT: no such file or directory, open '<path>'>",
+        "process": "unable to process referenced image at `<path>`: The image format could not be determined | image decoding failed",
+        "history": "requested the last <N> conversation images, but only <M> were available",
+        "note": "collection errors are returned as the tool error without the `image generation failed: ` prefix, as Codex does; no request is sent and no file is written"
+    },
+    "verification": {
+        "offline": "tmp/verify/04-ref-images.mjs (scratch): 20/20 checks — sniffing, pass-through for png/jpeg/webp, gif/bmp -> PNG, undecodable and missing files, 61 MB PNG, collector order/count/errors over a stubbed projection (user/assistant/toolResult/custom/plain-string messages), edit-paths and edit-history dispatch through execute() against a local mock (multipart parts in order, saved path with operation 'edit'), too-many-history and read-failure paths without a request",
+        "liveMock": "pi 1.0.2 with the mock Images API and ollama-cloud/glm-5.3-flash: (g) model called image_gen with referenced_image_paths [<fixture>/red.png] -> POST /v1/images/edits multipart parts [image[] red.png image/png 70 bytes PNG header, prompt, background=opaque, model=gpt-image-2, quality=auto, size=auto]; result image + hint, saved PNG; (h) model read the fixture with the read tool, then called image_gen with num_last_images_to_include=1 -> the collector took the read tool's image from history -> multipart image[] image-1.png; result saved as PNG",
+        "regression": "tmp/verify/02-backend.mjs and tmp/verify/02-tool.mjs still pass on the integrated build",
+        "compaction": "not exercised live; the collector reads buildSessionProjection(), which Pi documents as compaction/context-edit aware (FDD §9.4)"
+    },
+    "liveRuns": [],
+    "pendingApproval": "No additional live edit request is planned: the user narrowed live verification to one subscription generation (07). The final edit format is Codex JSON, not multipart.",
+    "unresolved": [
+        "Actual server execution of subscription JSON edits remains untested (FDD §13); local tool dispatch and Codex wire-shape checks passed in 08.",
+        "Codex's image-crate error wording for decode failures is approximated ('The image format could not be determined' / 'image decoding failed').",
+        "Photon (WASM) availability determines decodability; it was available in this environment."
+    ]
+}

@@ -1,0 +1,61 @@
+{
+    "status": "complete",
+    "supersededBy": "docs/handoffs/image-gen/09-openai-provider.json — current predicate uses openai; branch/user-disable behavior preserved",
+    "currentRevision": "docs/handoffs/image-gen/08-package-completion.json",
+    "recordScope": "Initial runtime matrix is historical. The production predicate and ownership restoration were corrected for the existing image subscription; current boundary checks/native load are in 08.",
+    "brief": "docs/briefs/2026-10-05-feat-codex-image-gen-05-exposure.md",
+    "verifiedOn": "2026-10-05",
+    "modules": {
+        "exposure": "packages/pi-codex-image-gen/src/exposure.ts (isOpenAiConfigured, latestBranchRecord, applyExposureDecision, hideImagegenSkill, EXPOSURE_ENTRY_TYPE, IMAGEGEN_SKILL_NAME)",
+        "wiring": "packages/pi-codex-image-gen/src/index.ts: session_start resets the in-memory state and applies the decision; before_agent_start applies the decision then filters the skill when the tool is not active"
+    },
+    "predicate": "ctx.modelRegistry.getProviderAuthStatus('openai-codex').configured === true, no network or token refresh; openai-only credentials do not enable the image tool",
+    "evaluationPoints": ["session_start (startup, resume, reload, new, fork)", "before_agent_start (every user prompt)"],
+    "decisionTable": {
+        "notRegistered": "do nothing (tools removed by --tools/--exclude-tools/--no-tools never appear in getAllTools())",
+        "activeAndConfigured": "do nothing",
+        "activeAndMissing": "setActiveTools(active without image_gen) + record { hiddenByExtension: true }",
+        "inactiveAndConfigured": "re-enable only if the latest branch record (fallback: in-memory state) says hiddenByExtension: true; then setActiveTools(active + image_gen) + record { hiddenByExtension: false }",
+        "inactiveAndMissing": "do nothing",
+        "otherTools": "only image_gen is added or removed; existing order preserved"
+    },
+    "branchRecord": {
+        "customType": "image_gen.exposure",
+        "shape": { "hiddenByExtension": "boolean", "at": "ISO timestamp" },
+        "written": "on hidden/re-enabled ownership transitions; restored active state clears a stale true record so a later user disable is not undone",
+        "read": "latest custom entry of this type in getBranch; in-memory fallback resets at session_start and to the current branch record on session_tree"
+    },
+    "skillFilter": "in before_agent_start, when image_gen is not active after the decision, event.systemPromptOptions.skills is reassigned without the 'imagegen' entry; skills are never added; /skill:imagegen still loads when invoked explicitly",
+    "observedMatrix": {
+        "login": "Native local Pi 1.0.2: existing subscription resolves, production image_gen registered/active, package imagegen listed (08 native-load log).",
+        "apiKey": "Public-provider credentials do not satisfy the production subscription predicate; no openai/public credential fallback (08 boundary checks; no live call).",
+        "none": "Missing subscription hides image_gen and filters imagegen; other tools/skills remain (existing decision checks and 08 lifecycle harness).",
+        "userDisabled": "With subscription present, an inactive tool not owned by this extension stays inactive and its skill is removed (08 lifecycle harness).",
+        "excluded": "Absent registration is untouched and no entry is written (existing 05 check).",
+        "loginMidSession": "Subscription flag false -> true re-enables only an extension-hidden tool, then records false (08 lifecycle harness).",
+        "treeAndResume": "Current branch replaces stale in-memory ownership; active restored state clears old true ownership before a later user disable (08 lifecycle harness, not an interactive tree test)."
+    },
+    "initialPublicApiMatrix": {
+        "login": "stored ChatGPT sign-in: image_gen active at session_start and before_agent_start, skills=[imagegen], 0 exposure entries",
+        "apiKey": "temporary PI_CODING_AGENT_DIR + OPENAI_API_KEY: configured {source:'environment', label:'OPENAI_API_KEY'}, image_gen active, skills=[imagegen], 0 entries",
+        "none": "temporary PI_CODING_AGENT_DIR without credentials: image_gen inactive from session_start, skills=[] in before_agent_start, 1 entry {hiddenByExtension:true}; /skill:imagegen still expanded into the prompt and the model answered with the /login / OPENAI_API_KEY guidance",
+        "userDisabled": "scratch extension removed image_gen at session_start with credentials present: stays inactive, skills=[], 0 entries",
+        "excluded": "-xt image_gen: not registered, nothing written, skills=[]",
+        "loginMidSession": "two prompts in one session; a scratch extension registered a runtime openai apiKey after the first run: prompt 1 inactive/skills=[] with entry true, prompt 2 active/skills=[imagegen] with entry false (simulates /login)"
+    },
+    "piBehaviors": {
+        "setActiveToolsInBeforeAgentStart": "observed: the change applied to the same prompt's declaration (pi 1.0.2; agent-session.js keeps the live loadout when handlers call setActiveTools)",
+        "skillsMutation": "observed: reassigning event.systemPromptOptions.skills removed the skill from the rendered prompt",
+        "resumeReload": "Pi re-activates extension tools (includeAllExtensionTools) and fires session_start, where the decision re-runs; not exercised live",
+        "tree": "/tree restores tools from the transcript; the branch record then distinguishes extension-hidden from user-disabled; exercised only in the stubbed decision tests (branch record true -> re-enabled; latest false -> stays off)"
+    },
+    "verification": {
+        "unit": "tmp/verify/05-exposure.mjs (scratch): 11/11 decision-table and record cases with a stubbed pi/ctx",
+        "live": "tmp/verify/live-04-05.sh (scratch) on pi 1.0.2 with ollama-cloud/glm-5.3-flash as the chat model; results as in observedMatrix",
+        "sideEffects": "other tools' active set unchanged in every run (only image_gen differs between runs); no network call in the predicate; tool.ts/backend.ts/reference-images.ts/skills untouched by this child"
+    },
+    "unresolved": [
+        "/tree, resume, and /reload transitions were verified against the decision logic with stubs, not in an interactive session.",
+        "A user who disables image_gen while this extension has it hidden cannot be distinguished (FDD §9.9); the tool returns when credentials return."
+    ]
+}

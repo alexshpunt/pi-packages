@@ -1,0 +1,281 @@
+{
+    "status": "complete",
+    "brief": "docs/briefs/2026-10-05-feat-codex-cua-03-mcp-bridge.md",
+    "date": "2026-10-05",
+    "consumed": [
+        "docs/handoffs/computer-use/02-feasibility.json",
+        "docs/handoffs/computer-use/03-package-setup.json"
+    ],
+    "serverInfo": {
+        "name": "rmcp",
+        "version": "1.5.0",
+        "protocolVersion": "2025-06-18",
+        "capabilities": {
+            "experimental": {
+                "codex/sandbox-state-meta": {}
+            },
+            "tools": {
+                "listChanged": true
+            }
+        },
+        "instructions": "UI automation through cua_repl using the initialized cua API.",
+        "toolsListed": [
+            "js",
+            "js_add_node_module_dir",
+            "js_reset",
+            "turn_ended"
+        ],
+        "clientInfo": {
+            "name": "pi-codex-computer-use",
+            "version": "0.1.0",
+            "title": "pi Codex Computer Use"
+        },
+        "clientInfoNote": "The package's own identity was accepted by the runtime (inventory, browser inventory, elicitation path all worked), so Codex's `codex-mcp-client` identity is not imitated.",
+        "capabilitiesDeclared": {
+            "elicitation": {
+                "form": {}
+            }
+        }
+    },
+    "toolNames": [
+        "mcp__cua_repl__js",
+        "mcp__cua_repl__js_reset"
+    ],
+    "toolRegistration": {
+        "namespace": {
+            "name": "mcp__cua_repl",
+            "description": "server `instructions` verbatim"
+        },
+        "description": "server `tools/list` description verbatim (changes with CUA_REPL_ENABLED_SURFACES; computer-only contains `Browser APIs are disabled.`)",
+        "parameters": "server inputSchema verbatim (type/properties defaulted when missing)",
+        "annotations": "boolean hints verbatim (js, js_reset: readOnlyHint true, destructiveHint false, openWorldHint false)",
+        "exposure": "direct while the server runs; previously registered names are re-registered `hidden` when no server runs (pi cannot unregister tools)",
+        "executionMode": "sequential",
+        "neverExposed": [
+            "turn_ended",
+            "js_add_node_module_dir"
+        ],
+        "label": "cua_repl/<tool>"
+    },
+    "modules": {
+        "src/connection.ts": "composeEnvironment(plan, state, hostEnv), enabledSurfaces(state), openConnection({plan, state, log, clientInfo?, elicitationHandler?}) → BridgeConnection {client, pid, serverInfo, protocolVersion, instructions, tools, environment, startedAt, setElicitationHandler(handler), isClosed(), onClose(listener), close()}; LoggingTransport wraps StdioTransport so every JSON-RPC message is logged redacted; PROTOCOL_VERSION, DEFAULT_CLIENT_INFO.",
+        "src/tools.ts": "registerBridgeTools(pi, connection | undefined, deps, previousNames) → registered names; buildCallMeta({callId, sessionId, turnId, turnStartedAtUnixMs, model}); convertCallToolResult(result, {tool, limitBytes, durationMs}); truncateMiddle; constants SERVER_NAME, EXPOSED_TOOLS, NAMESPACE_NAME, TOOL_NAMES, BYTES_PER_TOKEN. Dependencies: getConnection, ensureTurn, log, describeServer, onCancelled?.",
+        "src/turn.ts": "TurnTracker {begin(), ensure(), currentTurn, recordOutcome(outcome), settle() → SettledTurn}; hookEventNameFor(outcome); notifyTurnEnded(connection, sessionId, settledTurn, log) with a 120 s request timeout.",
+        "src/log.ts": "BridgeLog(path).write(kind, payload) → `<iso> <kind> <json>` lines, redaction of keys matching /token|key|secret|account|password|cookie|authorization/i, 64 KiB per line, rotation to `.1` past 5 MiB; redactSecrets().",
+        "src/index.ts": "session_start → load settings, start server when a flag is on (closing any previous connection first), register tools; agent_start → new turn id; agent_end → detects aborted runs from the last assistant message; agent_before_settle → outcome; agent_settled → turn_ended (not awaited); session_shutdown → close; command updateState → save, restart, re-register; describeServer() for status output."
+    },
+    "elicitationHook": {
+        "how": "openConnection registers one `elicitation/create` request handler on the McpClient; `BridgeConnection.setElicitationHandler(handler)` swaps the implementation at any time, and `openConnection({ elicitationHandler })` installs it from the start. 04-confirmations should install its handler right after `openConnection` resolves in index.ts (`startServer`), before tools are registered.",
+        "handlerSignature": "(params: ElicitationParams {message?, requestedSchema?, _meta?}, context: {signal}) => ElicitationResult {action: accept|decline|cancel, content?, _meta?} | Promise",
+        "placeholder": "logs `elicitation-unhandled {message, meta}` and answers `{action: \"cancel\"}` — so app access fails with `Computer Use was not approved to use <App>` until 04 lands",
+        "observedRequestShape": "see 02-feasibility.json elicitation.requests: message `Allow Computer Use to use \"<App>\"?`, empty object schema, _meta {callId (echoes the tools/call callId), codex_approval_kind mcp_tool_call, connector_id computer-use, connector_name, persist [session, always], progressToken, riskLevel, tool_name get_app_state, tool_params {app: bundle id}, tool_params_display, x-codex-turn-metadata (echoed)}"
+    },
+    "envPolicy": {
+        "base": "allow-listed host variables only (PATH, HOME, USER, LOGNAME, TMPDIR, LANG, LC_ALL, LC_CTYPE, SHELL, TERM and the Windows equivalents), then RuntimePlan.env verbatim, then the two derived variables; `inheritEnv: false` on StdioTransport",
+        "baseDeviation": "The brief said to merge over process.env; 02-feasibility.json recommended the allow-list because the shell environment can carry secrets, and every run below worked with it.",
+        "bothOn": {
+            "CUA_REPL_ENABLED_SURFACES": "browser,computer",
+            "trustedServiceKeys": [
+                "browser",
+                "sky"
+            ],
+            "serverStarted": true,
+            "jsDescription": "browser + native app APIs"
+        },
+        "computerOnly": {
+            "CUA_REPL_ENABLED_SURFACES": "computer",
+            "trustedServiceKeys": [
+                "sky"
+            ],
+            "serverStarted": true,
+            "jsDescription": "contains `Browser APIs are disabled.` (verified in tools/list after restart)"
+        },
+        "browserOnly": {
+            "CUA_REPL_ENABLED_SURFACES": "browser",
+            "trustedServiceKeys": [
+                "browser"
+            ],
+            "serverStarted": true,
+            "jsDescription": "native computer APIs disabled (not grepped this run; same launcher logic)"
+        },
+        "bothOff": {
+            "CUA_REPL_ENABLED_SURFACES": null,
+            "trustedServiceKeys": [],
+            "serverStarted": false,
+            "tools": "re-registered hidden when they existed before; nothing registered on a fresh both-off start"
+        },
+        "trustedServicesRule": "NODE_REPL_TRUSTED_SERVICES from the plan is parsed as a JSON object and filtered to `browser` (Browser Use) and `sky` (Computer Use); omitted when absent or unparsable so the launcher recomputes it (source recorded as filtered | omitted-absent | omitted-unparsable)",
+        "serviceAppStrategy": "SKY_CUA_SERVICE_PATH taken from the plan (plugin cache value, or locateServiceApp order for the app-bundle fallback); nothing copied",
+        "untouched": [
+            "BROWSER_USE_AVAILABLE_BACKENDS (05-browser-use)",
+            "CUA_REPL_BROWSER_ENV (not set)"
+        ]
+    },
+    "metaKeys": {
+        "request": [
+            "callId",
+            "sessionId",
+            "threadId",
+            "x-codex-turn-metadata",
+            "openai/confirmation_policies"
+        ],
+        "x-codex-turn-metadata": [
+            "session_id",
+            "thread_id",
+            "turn_id",
+            "model",
+            "auto_review_enabled",
+            "node_repl_auto_review_required",
+            "node_repl_disabled",
+            "turn_started_at_unix_ms"
+        ],
+        "sample": {
+            "callId": "call_<pi tool call id>|fc_<provider id> (pi's toolCallId verbatim)",
+            "sessionId": "<pi session id>",
+            "threadId": "<pi session id>",
+            "x-codex-turn-metadata": {
+                "session_id": "<pi session id>",
+                "thread_id": "<pi session id>",
+                "turn_id": "<uuid per agent_start>",
+                "model": "gpt-5.5",
+                "auto_review_enabled": false,
+                "node_repl_auto_review_required": false,
+                "node_repl_disabled": false,
+                "turn_started_at_unix_ms": 1791180843064
+            },
+            "openai/confirmation_policies": {}
+        },
+        "omitted": [
+            "codex_version",
+            "reasoning_effort",
+            "windowId",
+            "itemId",
+            "plugin_id",
+            "codex/sandbox-state-meta"
+        ],
+        "requestOptions": {
+            "timeoutMs": 0,
+            "signal": "pi's tool signal → notifications/cancelled on abort"
+        },
+        "resultMetaObserved": [
+            "codex/nodeReplExecutionDurationMs",
+            "codex/toolSurface",
+            "codex/browserUse",
+            "browser_use"
+        ]
+    },
+    "resultConversion": {
+        "content": "toLlmContent(result): text and image blocks; text joined and middle-truncated past outputTokenLimit × 4 bytes (100000 bytes for the .mcp.json value 25000) with Codex-style header `Warning: truncated output (original token count: N)` and `[Full output: <tmpdir>/pi-codex-computer-use-<hex>.txt (read it with offset/limit)]`; full text saved with mode 0600",
+        "images": "pass through as ImageContent (verified: nodeRepl.emitImage data URL → image block → model reported receiving an image)",
+        "isError": "MCP isError → pi isError result; empty error text gets `MCP tool cua_repl/<tool> returned an error`",
+        "details": "{server, tool, durationMs, resultMeta, fullOutputPath?, cancelled?}",
+        "replOutputBehavior": "The REPL does not echo bare expression values (`\"a\".repeat(100)`, `1 + 1`, objects all return no content); text comes only from nodeRepl.write(), nodeRepl.emitImage(), and the auto-included state of entry APIs (getState/getApp/getTab)."
+    },
+    "turnLifecycle": {
+        "turnId": "uuid created on agent_start (TurnTracker.begin); a bridged call outside a run starts one on demand",
+        "events": [
+            "agent_start → begin",
+            "agent_end → abort detection from last assistant message (stopReason aborted, or error whose errorMessage names the abort)",
+            "agent_before_settle → outcome (fired for completed and error runs; NOT fired for aborted runs in pi 0.99.1)",
+            "agent_settled → settle + turn_ended (not awaited)",
+            "bridged js cancelled through the signal → outcome aborted (deps.onCancelled)"
+        ],
+        "mapping": {
+            "completed": "Stop",
+            "error": "Stop",
+            "aborted": "Interrupt"
+        },
+        "observed": {
+            "completedRun": "turn-ended Stop, outcome completed, 4 ms",
+            "providerErrorRun": "anthropic 400 (quota) → agent_before_settle outcome error → turn-ended Stop",
+            "abortedRun": "RPC abort during a 45 s/20 s/8 s js sleep → notifications/cancelled sent, tool result `js was cancelled`, agent_before_settle not fired, agent_end stopReason error + errorMessage `This operation was aborted` → turn-ended Interrupt (after onCancelled fix); turn_ended answered only after the cancelled js finished inside the REPL (15.8 s for the 20 s sleep, 3.9 s for the 8 s sleep)",
+            "overlay": "not observable: the user's Codex Desktop session keeps SkyComputerUseService running, and getState does not show the `ChatGPT is using your computer` overlay"
+        },
+        "turnEndedCall": {
+            "name": "turn_ended",
+            "arguments": {
+                "hook_event_name": "Stop | Interrupt",
+                "session_id": "<pi session id>",
+                "turn_id": "<turn id>"
+            },
+            "timeoutMs": 120000,
+            "response": "text `{}`, isError false"
+        },
+        "cancellationNote": "A cancelled js call keeps executing inside node_repl until its own completion/timeout; node_repl serializes later calls (including turn_ended) behind it. The package does not call js_reset on cancel (Codex does not either)."
+    },
+    "restart": {
+        "trigger": "/codex-computer-use computer|browser on|off (after ctx.waitForIdle in the command) → store.save → startServer('settings-change')",
+        "sequence": [
+            "close previous client (StdioTransport: stdin end → SIGTERM process group → SIGKILL)",
+            "discoverRuntime",
+            "openConnection with new surfaces",
+            "registerBridgeTools with the new tools/list (descriptions change) or hidden stubs when both flags are off"
+        ],
+        "observed": "RPC session: browser off → old pid 50033 stopped, new pid 51452 with surfaces computer / trusted sky, status shows the new pid; process count stayed at baseline+1 during the session and returned to baseline after exit; both-off → `server-not-started` and tools-registered {active: [], hidden: [js, js_reset]}",
+        "sessionStartRebind": "startServer always closes an existing connection first; session_shutdown (quit/reload/new/resume/fork) closes the server",
+        "unexpectedExit": "connection.onClose → connection cleared, tools re-registered hidden, warning notified via the last session_start context"
+    },
+    "log": {
+        "path": "<agentDir>/codex-computer-use/mcp.log (agentDir from pi getAgentDir(), normally ~/.pi/agent)",
+        "format": "`<iso> <kind> <json>`; kinds: server-starting, server-connected, tools-registered, server-stop, server-closing, server-not-started, server-start-failed, server-closed-unexpectedly, -> / <- (JSON-RPC), stderr, client-error, elicitation-unhandled, tool-error, tool-cancelled, agent-start, agent-end, agent-before-settle, agent-settled, turn-ended, turn-ended-failed",
+        "redaction": "keys matching /token|key|secret|account|password|cookie|authorization/i → [redacted] (so progressToken is redacted; own fields avoid the word key); env values never logged, only variable names",
+        "rotation": "5 MiB → mcp.log.1",
+        "scan": "credential pattern scan of the log after all runs: 0 matches"
+    },
+    "verification": {
+        "build": "npm run build (2 tasks) and npm run check pass after every change",
+        "fourSettings": "print-mode sessions: both-on surfaces browser,computer / trusted browser,sky; browser off → computer / sky; computer off → not started; browser on → browser / browser; computer on → browser,computer; every session returned the cua-repl process count to Codex Desktop's own baseline",
+        "modelRuns": {
+            "provider": "openai-codex/gpt-5.5 (anthropic returned 400 out-of-usage; pi auth check: openai-codex ready)",
+            "getState": "model called mcp__cua_repl__js with `await cua.getState()`, replied `앱 52개, 브라우저 1개`; mcp.log shows _meta.callId = pi toolCallId, sessionId/threadId, x-codex-turn-metadata.turn_id/model; turn-ended Stop",
+            "image": "two calls (getState, then nodeRepl.emitImage(<1x1 png data url>)); raw result had an image block; model confirmed an image block and no text",
+            "truncation": "direct client call (no model): nodeRepl.write(120000 chars) → model-facing text 100219 chars with the truncation header and the saved full-output path (0600); bare expression values are never echoed by the REPL, so `\"x\".repeat(150000)` yields no content",
+            "firstCallRule": "gpt-5.5 refuses prompts whose first js call is not an entry API because the tool description requires it; tests therefore start with getState"
+        },
+        "abortScenario": "RPC driver (/tmp/cua-03/scenario-driver.mjs): js sleep aborted after 4 s → notifications/cancelled, `js was cancelled`, agent_end, turn-ended Interrupt; the server answered turn_ended once the REPL finished the sleep",
+        "settingsChangeMidSession": "same RPC session: /codex-computer-use browser off restarted the server (new pid, surfaces computer, trusted sky); tools/list of a computer-only server contains `Browser APIs are disabled.`",
+        "coexistence": "print-mode run without -ne (user packages pi-subagents, pi-notify, rpiv-ask-user-question, pi-claude-bridge, pi-powerline-footer, pi-ollama-cloud, pi-web-access plus builtins) → command and server lifecycle unchanged; no unrelated mcp.json server exists on this machine, so built-in MCP coexistence with a configured server was not exercised",
+        "processes": "pgrep -f cua-repl.mjs: baseline 30–31 (Codex Desktop's own), +1 while a pi session runs, back to baseline after every exit; no probe/node_repl leftovers",
+        "settingsRestored": "~/.pi/agent/codex-computer-use/settings.json left at {computerUse: true, browserUse: true}",
+        "notRun": [
+            "/reload inside a TUI session (session_shutdown reason reload path untested)",
+            "Codex Desktop's own Computer Use after the pi sessions (skipped; Codex Desktop kept running throughout with its own processes untouched)",
+            "Windows"
+        ]
+    },
+    "findings": [
+        "pi 0.99.1 does not fire agent_before_settle for aborted runs; the last assistant message carries stopReason `error` with errorMessage `This operation was aborted` when the abort lands during tool execution. The bridge therefore marks the turn aborted when a bridged call is cancelled through the signal and when agent_end shows an abort.",
+        "node_repl serializes tools/call requests: turn_ended sent while a cancelled js is still running is answered only after that js completes. The 10 s timeout used first expired; 120 s and not awaiting the call fixed it.",
+        "The REPL returns no content for bare expression values; models must use nodeRepl.write()/emitImage(). Entry APIs (getState/getApp/getTab) auto-include their state.",
+        "The tool description's first-call rule is enforced by capable models: a prompt asking for arbitrary code as the first call is refused.",
+        "The log redaction regex (/key/i) hides fields such as `trustedServiceKeys`; the package's own log fields avoid the word key."
+    ],
+    "unresolved": [
+        "Overlay (`ChatGPT is using your computer`) behavior after turn_ended was not observable while Codex Desktop runs its own session.",
+        "Whether to send js_reset after a cancelled js call so a long-running action stops immediately (Codex does not; left as is).",
+        "Built-in MCP coexistence with a configured mcp.json server was not exercised (none configured).",
+        "/reload path and Windows process-tree termination (StdioTransport uses taskkill /T on win32) are untested."
+    ],
+    "scratchScripts": [
+        {
+            "path": "/tmp/cua-03/scenario-driver.mjs",
+            "purpose": "RPC driver: aborts a long js call, toggles browser off, reads status; prints records and process counts",
+            "content": "// Drives pi in RPC mode through a scenario: a long js call aborted mid-flight, then a settings change,\n// then a status read; prints records and cua-repl process counts along the way.\n//   node scenario-driver.mjs <pi-binary> <pi args...>\nimport { execFileSync, spawn } from \"node:child_process\";\n\nconst [piBinary, ...piArgs] = process.argv.slice(2);\nconst SLEEP_PROMPT =\n    \"Call the tool mcp__cua_repl__js twice. First call: code set to exactly: await cua.getState()\\nSecond call: argument timeout_ms set to 90000 and code set to exactly: await new Promise((resolve) => setTimeout(resolve, 45000)); \\\"slept\\\"\\nThen reply with one line. Do not call any other tool and do not control anything.\";\nconst allSteps = [\n    { id: \"s1-sleep\", prompt: SLEEP_PROMPT.replace(\"45000\", process.env.SLEEP_MS ?? \"45000\"), abortAfterToolStartMs: 4000 },\n    { id: \"s2-browser-off\", prompt: \"/codex-computer-use browser off\" },\n    { id: \"s3-status\", prompt: \"/codex-computer-use status\" },\n];\nconst steps = process.env.SCENARIO === \"abort-only\" ? [allSteps[0]] : allSteps;\nconst count = () => {\n    try {\n        return execFileSync(\"sh\", [\"-c\", \"pgrep -f cua-repl.mjs | wc -l\"], { encoding: \"utf8\" }).trim();\n    } catch {\n        return \"?\";\n    }\n};\nconsole.log(`cua-repl processes before pi: ${count()}`);\nconst child = spawn(piBinary, piArgs, { stdio: [\"pipe\", \"pipe\", \"pipe\"] });\nchild.stderr.on(\"data\", (chunk) => {\n    const text = chunk.toString();\n    if (!text.startsWith(\"Warning: No models\")) process.stdout.write(`[stderr] ${text}`);\n});\nconst send = (record) => {\n    console.log(`>>> ${JSON.stringify(record).slice(0, 200)}`);\n    child.stdin.write(`${JSON.stringify(record)}\\n`);\n};\nlet stepIndex = -1;\nlet current;\nlet abortTimer;\nconst next = () => {\n    stepIndex += 1;\n    current = steps[stepIndex];\n    if (!current) {\n        const waitMs = Number(process.env.LINGER_MS ?? 1000);\n        console.log(`cua-repl processes before shutdown: ${count()} (lingering ${waitMs} ms for turn_ended)`);\n        setTimeout(() => child.kill(\"SIGTERM\"), waitMs);\n        return;\n    }\n    console.log(`\\n##### ${current.id} (processes now: ${count()})`);\n    send({ id: current.id, type: \"prompt\", message: current.prompt });\n};\nlet buffer = \"\";\nchild.stdout.on(\"data\", (chunk) => {\n    buffer += chunk.toString();\n    let nl = buffer.indexOf(\"\\n\");\n    while (nl !== -1) {\n        const line = buffer.slice(0, nl).trim();\n        buffer = buffer.slice(nl + 1);\n        nl = buffer.indexOf(\"\\n\");\n        if (!line) continue;\n        let record;\n        try {\n            record = JSON.parse(line);\n        } catch {\n            console.log(`<<< (raw) ${line.slice(0, 300)}`);\n            continue;\n        }\n        if (record.type === \"extension_ui_request\") {\n            console.log(`<<< ui ${record.method} ${JSON.stringify(record.message ?? record.statusText ?? \"\").slice(0, 400)}`);\n            continue;\n        }\n        if (record.type === \"response\") {\n            console.log(`<<< response ${JSON.stringify(record).slice(0, 250)}`);\n            if (record.command === \"prompt\" && record.data?.disposition === \"handled\") setTimeout(next, 500);\n            continue;\n        }\n        if (record.type === \"tool_execution_start\") {\n            console.log(`<<< event tool_execution_start ${record.toolName} ${JSON.stringify(record.args ?? \"\").slice(0, 160)}`);\n            const code = typeof record.args?.code === \"string\" ? record.args.code : \"\";\n            if (current?.abortAfterToolStartMs && !abortTimer && code.includes(\"setTimeout\")) {\n                abortTimer = setTimeout(() => {\n                    console.log(`(aborting; processes now: ${count()})`);\n                    send({ type: \"abort\" });\n                }, current.abortAfterToolStartMs);\n            }\n        } else if (record.type === \"tool_execution_end\") {\n            console.log(`<<< event tool_execution_end ${record.toolName} isError=${record.isError} ${JSON.stringify(record.result?.content?.[0]?.text ?? \"\").slice(0, 200)}`);\n        } else if (record.type === \"agent_end\") {\n            console.log(\"<<< event agent_end\");\n            abortTimer = undefined;\n            setTimeout(next, 1500);\n        } else if (record.type === \"agent_start\" || record.type === \"turn_end\") {\n            console.log(`<<< event ${record.type}`);\n        }\n    }\n});\nchild.on(\"exit\", (code, signal) => {\n    console.log(`pi exited code=${code} signal=${signal}; cua-repl processes after exit: ${count()}`);\n});\nsetTimeout(next, 1500);\nsetTimeout(() => {\n    console.log(\"timeout: killing pi\");\n    child.kill(\"SIGKILL\");\n}, 300_000).unref();\n"
+        },
+        {
+            "path": "/tmp/cua-03/interrupt-driver.mjs",
+            "purpose": "earlier single-prompt abort driver (superseded by scenario-driver)",
+            "content": "// Drives pi in RPC mode: sends one prompt, aborts a few seconds after the first tool execution starts,\n// prints the records, then exits once the agent settles. Usage:\n//   node interrupt-driver.mjs <abortDelayMs> <pi-binary> <pi args...> -- <prompt>\nimport { spawn } from \"node:child_process\";\n\nconst argv = process.argv.slice(2);\nconst abortDelayMs = Number(argv[0]);\nconst separator = argv.indexOf(\"--\");\nconst piArgs = argv.slice(1, separator);\nconst prompt = argv.slice(separator + 1).join(\" \");\nconst [piBinary, ...rest] = piArgs;\nconst child = spawn(piBinary, rest, { stdio: [\"pipe\", \"pipe\", \"pipe\"] });\nchild.stderr.on(\"data\", (chunk) => {\n    const text = chunk.toString();\n    if (!text.startsWith(\"Warning: No models\")) process.stdout.write(`[stderr] ${text}`);\n});\nconst send = (record) => {\n    console.log(`>>> ${JSON.stringify(record)}`);\n    child.stdin.write(`${JSON.stringify(record)}\\n`);\n};\nlet aborted = false;\nlet buffer = \"\";\nconst finish = () => {\n    setTimeout(() => {\n        child.kill(\"SIGTERM\");\n    }, 1500);\n};\nchild.stdout.on(\"data\", (chunk) => {\n    buffer += chunk.toString();\n    let nl = buffer.indexOf(\"\\n\");\n    while (nl !== -1) {\n        const line = buffer.slice(0, nl).trim();\n        buffer = buffer.slice(nl + 1);\n        nl = buffer.indexOf(\"\\n\");\n        if (!line) continue;\n        let record;\n        try {\n            record = JSON.parse(line);\n        } catch {\n            console.log(`<<< (raw) ${line.slice(0, 300)}`);\n            continue;\n        }\n        if (record.type === \"extension_ui_request\") {\n            console.log(`<<< ui ${record.method} ${JSON.stringify(record.message ?? record.statusText ?? \"\").slice(0, 300)}`);\n            continue;\n        }\n        if (record.type === \"response\") {\n            console.log(`<<< response ${JSON.stringify(record).slice(0, 300)}`);\n            continue;\n        }\n        const summary =\n            record.type === \"tool_execution_start\"\n                ? `${record.toolName} ${JSON.stringify(record.args ?? \"\").slice(0, 200)}`\n                : record.type === \"tool_execution_end\"\n                  ? `${record.toolName} isError=${record.isError}`\n                  : record.type === \"agent_end\" || record.type === \"agent_settled\" || record.type === \"agent_start\"\n                    ? \"\"\n                    : \"\";\n        if ([\"tool_execution_start\", \"tool_execution_end\", \"agent_start\", \"agent_end\", \"agent_settled\", \"turn_end\", \"message_end\"].includes(record.type))\n            console.log(`<<< event ${record.type} ${summary}`);\n        if (record.type === \"tool_execution_start\" && !aborted) {\n            aborted = true;\n            setTimeout(() => send({ type: \"abort\" }), abortDelayMs);\n        }\n        if (record.type === \"agent_end\") finish();\n    }\n});\nchild.on(\"exit\", (code, signal) => console.log(`pi exited code=${code} signal=${signal}`));\nsetTimeout(() => send({ id: \"p1\", type: \"prompt\", message: prompt }), 1500);\nsetTimeout(() => {\n    console.log(\"timeout: killing pi\");\n    child.kill(\"SIGKILL\");\n}, 180_000).unref();\n"
+        },
+        {
+            "path": "/tmp/cua-03/direct-call.mjs",
+            "purpose": "calls js through the package's own connection without a model to verify truncation and REPL output behavior",
+            "content": "// Calls js through the package's own connection (no model): getState, then a 150000-char string,\n// then a 30000-char string; prints raw result sizes and the converted (truncated) model-facing content.\nimport { join } from \"node:path\";\n\nconst dist = process.argv[2];\nconst { discoverRuntime } = await import(join(dist, \"runtime.js\"));\nconst { openConnection } = await import(join(dist, \"connection.js\"));\nconst { buildCallMeta, convertCallToolResult, BYTES_PER_TOKEN } = await import(join(dist, \"tools.js\"));\nconst { BridgeLog } = await import(join(dist, \"log.js\"));\n\nconst log = new BridgeLog(\"/tmp/cua-03/direct-call.log\");\nconst plan = await discoverRuntime();\nif (plan.kind !== \"plan\") throw new Error(plan.message);\nconst connection = await openConnection({ plan, state: { computerUse: true, browserUse: true }, log });\nconst sessionId = \"direct-call-session\";\nconst turnId = `turn-${Date.now()}`;\nconst call = async (code, label) => {\n    const started = Date.now();\n    const result = await connection.client.request(\n        \"tools/call\",\n        { name: \"js\", arguments: { code, title: label }, _meta: buildCallMeta({ callId: `call_${label}`, sessionId, turnId, model: \"probe\" }) },\n        { timeoutMs: 0 },\n    );\n    const converted = await convertCallToolResult(result, { tool: \"js\", limitBytes: plan.outputTokenLimit * BYTES_PER_TOKEN, durationMs: Date.now() - started });\n    console.log(`\\n### ${label}: isError=${result.isError ?? false} rawBlocks=${result.content.map((b) => `${b.type}:${b.text?.length ?? b.data?.length ?? 0}`).join(\",\")} resultMeta=${JSON.stringify(result._meta ?? null).slice(0, 200)}`);\n    console.log(`converted blocks=${converted.content.map((b) => `${b.type}:${b.text?.length ?? b.data?.length ?? 0}`).join(\",\")} details=${JSON.stringify({ ...converted.details, resultMeta: undefined })}`);\n    const text = converted.content.find((b) => b.type === \"text\")?.text ?? \"\";\n    console.log(`first 160 chars: ${JSON.stringify(text.slice(0, 160))}`);\n    console.log(`last 160 chars: ${JSON.stringify(text.slice(-160))}`);\n    return result;\n};\nawait call(\"await cua.getState()\", \"getState\");\nawait call('\"x\".repeat(150000)', \"repeat150k\");\nawait call('\"y\".repeat(30000)', \"repeat30k\");\nawait call(\"nodeRepl.write(\\\"z\\\".repeat(120000)); \\\"done\\\"\", \"write120k\");\nawait connection.client.request(\"tools/call\", { name: \"turn_ended\", arguments: { hook_event_name: \"Stop\", session_id: sessionId, turn_id: turnId } }, { timeoutMs: 10_000 });\nawait connection.close();\nconsole.log(\"\\nclosed\");\n"
+        },
+        {
+            "path": "/tmp/cua-03/echo-threshold.mjs",
+            "purpose": "checks whether the REPL echoes bare expression values of various sizes (it never does)",
+            "content": "// Finds how large a bare expression value the REPL still echoes as the js result (no model).\nimport { join } from \"node:path\";\nconst dist = process.argv[2];\nconst { discoverRuntime } = await import(join(dist, \"runtime.js\"));\nconst { openConnection } = await import(join(dist, \"connection.js\"));\nconst { buildCallMeta } = await import(join(dist, \"tools.js\"));\nconst { BridgeLog } = await import(join(dist, \"log.js\"));\nconst log = new BridgeLog(\"/tmp/cua-03/echo-threshold.log\");\nconst plan = await discoverRuntime();\nif (plan.kind !== \"plan\") throw new Error(plan.message);\nconst connection = await openConnection({ plan, state: { computerUse: true, browserUse: false }, log });\nconst sessionId = \"echo-threshold\";\nconst turnId = `turn-${Date.now()}`;\nconst call = async (code) => {\n    const result = await connection.client.request(\n        \"tools/call\",\n        { name: \"js\", arguments: { code }, _meta: buildCallMeta({ callId: `call_${Math.random().toString(36).slice(2)}`, sessionId, turnId, model: \"probe\" }) },\n        { timeoutMs: 0 },\n    );\n    return result.content.map((b) => `${b.type}:${b.text?.length ?? 0}`).join(\",\") + (result.isError ? \" (isError)\" : \"\");\n};\nconsole.log(\"getState:\", await call(\"await cua.getState()\"));\nfor (const n of [100, 1000, 4000, 8000, 12000, 16000, 24000]) console.log(`\"a\".repeat(${n}):`, await call(`\"a\".repeat(${n})`));\nconsole.log(\"object:\", await call(\"({ a: 1, b: [1,2,3] })\"));\nconsole.log(\"number:\", await call(\"1 + 1\"));\nconsole.log(\"undefined:\", await call(\"let q = 1;\"));\nconsole.log(\"write 50k + value:\", await call('nodeRepl.write(\"w\".repeat(50000)); \"v\"'));\nawait connection.client.request(\"tools/call\", { name: \"turn_ended\", arguments: { hook_event_name: \"Stop\", session_id: sessionId, turn_id: turnId } }, { timeoutMs: 30_000 });\nawait connection.close();\n"
+        }
+    ]
+}

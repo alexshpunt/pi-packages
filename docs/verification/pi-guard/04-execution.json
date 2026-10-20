@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "state": "ready",
+  "sourceDigest": "53b927482747a5ce3b4a517f69b4b4ba49f6f39e47886819dbdf22293225bd76",
+  "contractDigest": "a21607fbe065593e3fdb78321d7b34cf299134e9854ad257953d538d46518165",
+  "runtimeVersions": {
+    "node": "v24.14.0",
+    "@earendil-works/pi-coding-agent": "0.99.1",
+    "@earendil-works/pi-ai": "0.99.1"
+  },
+  "modulePaths": [
+    "src/tools/executor.ts",
+    "src/tools/environment.ts",
+    "src/tools/mutation-queue.ts"
+  ],
+  "moduleHashes": {
+    "src/tools/executor.ts": "3faf2bfb78080a6b31f0d2bc5843a21b8922637b49bc9013e12563800be94310",
+    "src/tools/environment.ts": "fa54c9fd28c78e0602aa0e3165ef9dd366bbf4668f834180e26c40a5880ee445",
+    "src/tools/mutation-queue.ts": "83336edf9e714bc085219687be542f6c94fbf53252c9a135d049d30cd9a9be3f"
+  },
+  "testFiles": [
+    "test/execution/executor.test.mjs"
+  ],
+  "coveredBehavior": [
+    "execution",
+    "cancellation"
+  ],
+  "results": [
+    {
+      "schemaVersion": 2,
+      "runId": "2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0",
+      "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/execution.json",
+      "startedAt": "2026-10-04T06:14:26.460Z",
+      "provenance": "executed",
+      "suite": "execution",
+      "status": "pass",
+      "command": "npm run test:execution",
+      "testFiles": [
+        "test/execution/executor.test.mjs"
+      ],
+      "coveredBehavior": [
+        "execution",
+        "cancellation"
+      ],
+      "tests": [
+        {
+          "name": "[execution] Pi tools perform write, edit and read using the normal SDK filesystem queue",
+          "status": "pass"
+        },
+        {
+          "name": "[execution] shell cwd, caller environment, output and nonzero status reach Pi unchanged",
+          "status": "pass"
+        },
+        {
+          "name": "[execution] the executor uses the supplied SDK delegate once and exposes the linked caller cancellation",
+          "status": "pass"
+        },
+        {
+          "name": "[execution] starting a shell does not enumerate an unrelated unlistable directory",
+          "status": "pass"
+        },
+        {
+          "name": "[cancellation] SDK caller cancellation and a seconds deadline prevent delayed shell writes",
+          "status": "pass"
+        },
+        {
+          "name": "[cancellation] close settles a running SDK shell and rejects subsequent execution",
+          "status": "pass"
+        }
+      ],
+      "platform": "darwin-arm64",
+      "sourceDigest": "53b927482747a5ce3b4a517f69b4b4ba49f6f39e47886819dbdf22293225bd76",
+      "contractDigest": "a21607fbe065593e3fdb78321d7b34cf299134e9854ad257953d538d46518165",
+      "runtimeVersions": {
+        "node": "v24.14.0",
+        "@earendil-works/pi-coding-agent": "0.99.1",
+        "@earendil-works/pi-ai": "0.99.1"
+      },
+      "evidenceKind": "workflow",
+      "blockedReasons": [],
+      "recordedAt": "2026-10-04T06:14:27.675Z"
+    }
+  ],
+  "buildProof": {
+    "command": "npm run build",
+    "cwd": "/Users/buyong/workspace/private-opensource/pi-codex-permission/",
+    "status": "pass",
+    "exitCode": 0,
+    "recordedAt": "2026-10-04T06:14:20.547Z"
+  },
+  "executor": "Pi public SDK in the host process",
+  "osIsolation": false,
+  "capabilities": [
+    "original SDK delegates",
+    "caller cwd/env/options",
+    "linked cancellation",
+    "seconds deadlines",
+    "no recursive startup qualification"
+  ],
+  "platformResults": [
+    {
+      "platform": "darwin-arm64",
+      "status": "pass",
+      "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/execution.json"
+    }
+  ],
+  "recordedAt": "2026-10-04T06:14:34.671Z",
+  "runId": "2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0",
+  "artifactPath": ".reports/pi-guard/runs/2026-10-04T06-14-18-096Z-7fb64486-53b8-4f75-b3e8-45deae7f99a0/darwin-arm64/04-execution.json"
+}

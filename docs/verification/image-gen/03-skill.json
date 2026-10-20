@@ -1,0 +1,75 @@
+{
+    "status": "complete",
+    "supersededBy": "docs/handoffs/image-gen/09-openai-provider.json — final shipped skill uses openai and /login openai",
+    "currentRevision": "docs/handoffs/image-gen/08-package-completion.json",
+    "recordScope": "Original adaptation and its verification are retained below. The final SKILL.md now describes existing ChatGPT subscription credentials, /login openai-codex, and no public-API fallback. Current native manifest loading and checks are in 08.",
+    "brief": "docs/briefs/2026-10-05-feat-codex-image-gen-03-skill.md",
+    "verifiedOn": "2026-10-05",
+    "source": "tmp/codex-main/codex-rs/skills/src/assets/samples/imagegen (identical to ~/.codex/skills/.system/imagegen; not referenced at runtime)",
+    "files": [
+        "packages/pi-codex-image-gen/skills/imagegen/SKILL.md",
+        "packages/pi-codex-image-gen/skills/imagegen/references/prompting.md",
+        "packages/pi-codex-image-gen/skills/imagegen/references/sample-prompts.md",
+        "packages/pi-codex-image-gen/skills/imagegen/LICENSE.txt (byte-identical copy, sha256 4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9)",
+        "packages/pi-codex-image-gen/skills/imagegen/NOTICE"
+    ],
+    "notShipped": ["scripts/image_gen.py", "scripts/remove_chroma_key.py", "references/cli.md", "references/image-api.md", "references/codex-network.md", "agents/openai.yaml", "assets/imagegen.png", "assets/imagegen-small.svg"],
+    "removedSections": {
+        "SKILL.md": [
+            "'Top-level modes and rules' two-mode framing, CLI subcommand list, CLI/gpt-image-1.5 switch rules, 'batch' CLI note, scripts/image_gen.py rules (replaced by 'Tool and rules')",
+            "'Fallback-only docs/resources for CLI mode' list",
+            "'Built-in edit semantics' (replaced by 'Edit semantics' describing referenced_image_paths / num_last_images_to_include, mirroring the tool description)",
+            "Execution strategy: CLI generate-batch and `n` guidance",
+            "Workflow steps 1 (mode choice), 4 (CLI generate-batch), 7 (view_image-first; replaced by referenced_image_paths/read guidance), 17 (CLI fallback docs), 18 (mode reporting part)",
+            "Shared prompt schema notes about CLI flags and the CLI background parameter (rewritten for transparent_background)",
+            "Prompting best practices: the CLI-only bullet",
+            "'gpt-image-2 guidance for CLI fallback' (entire section)",
+            "'Fallback CLI mode only' (temp/output conventions, dependencies, environment, script-mode notes)",
+            "Reference map entries for cli.md, image-api.md, codex-network.md, image_gen.py"
+        ],
+        "references/prompting.md": [
+            "two-mode intro and fallback-doc pointer",
+            "Text in images: CLI quality bullet",
+            "'Fallback-only execution controls' (replaced by 'Controls that are not tool arguments' keeping the 'do not assume these are tool arguments' rule and naming the four real arguments)",
+            "Use-case tips: 'prefer higher quality in CLI mode' clause"
+        ],
+        "references/sample-prompts.md": [
+            "two-mode intro",
+            "CLI flag sentences in the scaffolding/execution-details paragraphs",
+            "'CLI model notes' block (gpt-image-2 CLI defaults, quality list, 4K sizes, background=transparent / gpt-image-1.5 caveat, input_fidelity)"
+        ]
+    },
+    "changedPhrases": [
+        "frontmatter description: 'Use when Codex should create' -> 'Use when the agent should create' (judgment criteria otherwise unchanged)",
+        "'built-in `image_gen` tool' -> '`image_gen` tool' throughout; 'Ask built-in `image_gen`' -> 'Ask `image_gen`'",
+        "'Does not require `OPENAI_API_KEY`' -> requires Pi `openai` provider credentials (API key via OPENAI_API_KEY or /login, or ChatGPT sign-in via /login)",
+        "'If the built-in tool fails or is unavailable, tell the user the CLI fallback exists…' -> tell the user; for missing credentials point to `/login` (OpenAI) or `OPENAI_API_KEY` + restart; never ask for the key in chat (sentence retained from the Environment section); no one-off runners",
+        "`$CODEX_HOME/generated_images/...` -> Pi agent directory (default ~/.pi/agent) `generated_images/<session>/<call>.png`; the tool result names the saved path",
+        "`view_image` -> `read` tool",
+        "Workflow renumbered 1-16 after removals; step 16 reports saved paths and prompts without the mode",
+        "copy-to-workspace and no-overwrite rules kept verbatim"
+    ],
+    "modificationNotices": "HTML comment at the top of each Markdown file (after the frontmatter in SKILL.md, because Pi requires the frontmatter first) naming the Codex source path, retrieval date 2026-10-05, Apache-2.0, and the nature of the changes",
+    "license": {
+        "LICENSE.txt": "copied unchanged",
+        "NOTICE": "carries 'OpenAI Codex / Copyright 2025 OpenAI' plus a description of the modified copy and of the tool description derived from imagegen_description.md; the Ratatui attribution from the Codex NOTICE is omitted because no Ratatui-derived code is included (Apache-2.0 §4(d))"
+    },
+    "forbiddenTokenScan": {
+        "command": "grep -rnE \"view_image|image_gen\\.py|remove_chroma_key|cli\\.md|image-api\\.md|codex-network\\.md|generate-batch|gpt-image-1\\.5|uv pip|CODEX_HOME|Does not require|python|openai\\.yaml\" packages/pi-codex-image-gen/skills/imagegen/",
+        "population": "find packages/pi-codex-image-gen/skills/imagegen -type f -> exactly the five shipped files",
+        "matches": 0
+    },
+    "manifest": {
+        "pi.skills": ["./skills"],
+        "filesAdded": ["skills/**/*.md", "skills/**/LICENSE.txt", "skills/**/NOTICE"],
+        "packDryRun": "npm pack --dry-run --json --ignore-scripts lists dist/*.js|.d.ts|.js.map, package.json, and the five skill files"
+    },
+    "verification": {
+        "loading": "pi 1.0.2 `pi -ne -ns -e <pi-ollama-cloud entry> -e packages/pi-codex-image-gen/dist/index.js -e tmp/verify/probe.mjs --skill packages/pi-codex-image-gen/skills/imagegen --model ollama-cloud/glm-5.3-flash --print \"/skill:imagegen\"`: before_agent_start saw skills=[\"imagegen\"], the system prompt listed the skill, and the expanded prompt began with <skill name=\"imagegen\" location=…/SKILL.md>, contained `referenced_image_paths` and no `view_image`; the model answered with the adapted guidance (Pi agent-directory save path, /login or OPENAI_API_KEY)",
+        "check": "npm run check exits 0 (Markdown ignored; manifest formatted)",
+        "manifestLoading": "pi.skills manifest discovery was not exercised because the package is not installed as a Pi package in this environment; loading was verified with --skill on the directory"
+    },
+    "unresolved": [
+        "Resolved in 08: DefaultResourceLoader loaded the compiled extension and this package's imagegen skill through pi.extensions/pi.skills with in-memory settings; the normal local Pi CLI also loaded the package directory without --skill or settings writes."
+    ]
+}

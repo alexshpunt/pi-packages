@@ -1,0 +1,12 @@
+pi-codex-auto-review includes a TypeScript port of the execution policy
+contracts and the guardian policy from OpenAI Codex, revision
+a956835d020762cb2b570053af06f643a11c0ecc. The rule interpreter and evaluator
+run as JavaScript; the upstream Rust library and binaries are not bundled.
+The upstream attribution notice is reproduced below.
+
+OpenAI Codex
+Copyright 2025 OpenAI
+
+This project includes code derived from [Ratatui](https://github.com/ratatui/ratatui), licensed under the MIT license.
+Copyright (c) 2016-2022 Florian Dehau
+Copyright (c) 2023-2025 The Ratatui Developers

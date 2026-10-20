@@ -1,0 +1,136 @@
+{
+    "status": "complete",
+    "date": "2026-10-05",
+    "branch": "feat/codex-computer-use",
+    "supersedes": "08-settings-ui.json (three-tab settings)",
+    "request": [
+        "Investigate frequent mcp__cua_repl__js failures against Codex skills/tool instructions",
+        "Use one persistent settings list with Enter/Space toggles"
+    ],
+    "findings": {
+        "observedError": "Browser is not available: iab",
+        "evidence": "Latest user-run failure at 2026-10-05T07:56:08.533Z selected cua.createBrowserTab(iab); earlier iab/mcpapps failures were availability probes. Only this failure category is established by the current log.",
+        "cause": "Browser Use is restricted to chrome, but Codex runtime descriptions retain Desktop-only iab/mcpapps examples. Model-facing host availability was not previously included.",
+        "skills": "Installed Chrome/browser/computer-use skill directories are empty. @oai/cua-repl/README.md explains that Desktop suppresses legacy skills for enabled unified providers; instructions come from the MCP tool and emitted runtime documentation.",
+        "sourcePaths": [
+            "@oai/cua-repl/README.md",
+            "@oai/cua-repl/instructions/macos/{description,browser,computer,output}.md",
+            "codex-rs/core/src/tools/handlers/mcp.rs",
+            "pi-coding-agent/core/{system-prompt,agent-session}.js"
+        ]
+    },
+    "changes": {
+        "tools": "Keep the registered server description/schema/annotations intact. Add promptSnippet/promptGuidelines and annotate model-facing descriptions through prepareLoadout with enabled surfaces/backends, Chrome default, one initial entry call, no legacy bootstrap, output behavior, persistent bindings and compaction/reset rules.",
+        "customPrompt": "No caller system prompt replacement. Host guidance remains in tool declarations even when custom prompts suppress default pi system rules.",
+        "failures": "No automatic retries, code rewriting, backend substitution, reset, timeout change or error suppression.",
+        "settings": "Single SettingsList with Computer Use and Browser Use. Up/Down selects; Enter/Space toggles; selection and view remain open. Esc closes; values persist. No tabs/status/check subviews. Explicit status/check arguments remain.",
+        "rpc": "One repeating picker with two immediate feature toggles and Close; no nested on/off dialogs."
+    },
+    "verification": {
+        "build": "npm run build -- --filter=@buyong/pi-codex-computer-use passed",
+        "check": "npm run check passed (117 files)",
+        "packageCheck": "node scripts/check-package.mjs passed: existing 136 files, new 52",
+        "defaultProviderPayload": {
+            "registeredDescriptionUnchanged": true,
+            "originalDesktopExampleStillPresent": true,
+            "registeredGuidelines": [
+                "cua_repl already initializes the global cua API. Do not bootstrap the legacy node_repl, @oai/sky, or browser-client skill setup; use only APIs in the current tool description or returned runtime documentation.",
+                "On the first cua_repl js call, and after reset or a settings restart, execute exactly one supported cua entry call (optionally assigning its result). Do not combine it with other API calls, waits, or snapshots. Read the returned documentation/state before the next call.",
+                "cua entry APIs and getAXState already emit their documentation/UI state. Do not wrap their results in nodeRepl.write or emitImage. Use nodeRepl.write for additional values and await nodeRepl.emitImage for additional images; bare JavaScript expression values are not output.",
+                "The JavaScript REPL is persistent: reuse established app/tab bindings rather than repeatedly bootstrapping. After context compaction, call await cua.rewriteDocumentation() before continuing an existing UI task. After a reset/restart, reacquire bindings instead of reusing stale variables.",
+                "Browser Use in this pi session has only these enabled backends: chrome. Codex Desktop examples mentioning other backends (iab, mcpapps, edge) do not make them available here. If a user requests an unavailable backend, explain the limit rather than invoking or silently substituting it.",
+                "For a new browser page without an explicit backend request, use cua.createBrowserTab(\"chrome\", url, { sessionName: \"🔎 Task\" }). For an existing tab, use cua.getTab with its known reference and browser; do not invent IDs or open a replacement for a missing/ambiguous reference."
+            ],
+            "systemPromptHasChromeRestriction": true,
+            "providerPayloadHasHostGuidance": true,
+            "providerPayloadHasChromeRestriction": true,
+            "providerPayloadHasRuntimeInstructions": true,
+            "customPromptPreserved": false
+        },
+        "customProviderPayload": {
+            "registeredDescriptionUnchanged": true,
+            "originalDesktopExampleStillPresent": true,
+            "registeredGuidelines": [
+                "cua_repl already initializes the global cua API. Do not bootstrap the legacy node_repl, @oai/sky, or browser-client skill setup; use only APIs in the current tool description or returned runtime documentation.",
+                "On the first cua_repl js call, and after reset or a settings restart, execute exactly one supported cua entry call (optionally assigning its result). Do not combine it with other API calls, waits, or snapshots. Read the returned documentation/state before the next call.",
+                "cua entry APIs and getAXState already emit their documentation/UI state. Do not wrap their results in nodeRepl.write or emitImage. Use nodeRepl.write for additional values and await nodeRepl.emitImage for additional images; bare JavaScript expression values are not output.",
+                "The JavaScript REPL is persistent: reuse established app/tab bindings rather than repeatedly bootstrapping. After context compaction, call await cua.rewriteDocumentation() before continuing an existing UI task. After a reset/restart, reacquire bindings instead of reusing stale variables.",
+                "Browser Use in this pi session has only these enabled backends: chrome. Codex Desktop examples mentioning other backends (iab, mcpapps, edge) do not make them available here. If a user requests an unavailable backend, explain the limit rather than invoking or silently substituting it.",
+                "For a new browser page without an explicit backend request, use cua.createBrowserTab(\"chrome\", url, { sessionName: \"🔎 Task\" }). For an existing tab, use cua.getTab with its known reference and browser; do not invent IDs or open a replacement for a missing/ambiguous reference."
+            ],
+            "systemPromptHasChromeRestriction": false,
+            "providerPayloadHasHostGuidance": true,
+            "providerPayloadHasChromeRestriction": true,
+            "providerPayloadHasRuntimeInstructions": true,
+            "customPromptPreserved": true
+        },
+        "payloadMethod": "Captured before_provider_request and aborted before network/tool execution; second tool_call guard blocked all actions. No UI operation occurred in these inspections.",
+        "guidanceMatrix": "Both-on, computer-only and browser-only register correct enabled/disabled guidance with original schema/description; both-off tools are hidden without active guidance.",
+        "live": {
+            "approval": "User approved one Chrome example.com create/read/close run",
+            "provider": "openai-codex/gpt-5.5",
+            "selectedCodes": [
+                "let verificationTab = await cua.createBrowserTab(\"chrome\", \"https://example.com\", { sessionName: \"🔎 Task\" });",
+                "await verificationTab.getAXState()",
+                "await verificationTab.close()"
+            ],
+            "blocked": [],
+            "results": [
+                {
+                    "tool": "mcp__cua_repl__js",
+                    "isError": false,
+                    "hasExampleDomain": true
+                },
+                {
+                    "tool": "mcp__cua_repl__js",
+                    "isError": false,
+                    "hasExampleDomain": true
+                },
+                {
+                    "tool": "mcp__cua_repl__js",
+                    "isError": false,
+                    "hasExampleDomain": false
+                }
+            ],
+            "outcome": "All three calls succeeded. The prompt left backend choice to current tool guidance; the model chose chrome, read Example Domain AX state, then explicitly closed the created tab."
+        },
+        "tui": "Actual pi 0.99.1 PTY: regular/dark 80x32 and fullscreen/light 38x28. One view, Up/Down+Enter/Space, preserved Browser selection, both-off stops MCP, reopen retains values, exit 0.",
+        "rpc": "Three select requests in one command: toggle Computer off, toggle Browser off, Close; two-key settings false/false persisted.",
+        "docs": "Current English/Korean command examples match; single-list UI and host guidance described."
+    },
+    "archive": {
+        "path": "tmp/cua-publish/buyong-pi-codex-computer-use-0.1.0.tgz",
+        "entryCount": 52,
+        "sizeBytes": 81100,
+        "unpackedSizeBytes": 314305,
+        "shasum": "883ca457b378c07701f6be0cef3c6449c6a28fe8",
+        "version": "0.1.0 (unpublished)"
+    },
+    "limits": [
+        "One known backend-selection cause was improved; overall failure-rate reduction was not measured.",
+        "Other syntax/transport/permission failures require their own error evidence.",
+        "Windows, cold service launch, Desktop-quit operation, permanent grants and Guardian flows remain unverified."
+    ],
+    "scratchScripts": [
+        {
+            "path": "/tmp/pi-cua-improvements/inspect.mjs",
+            "content": "// Verify the final provider payload without sending a model request or executing any UI tool.\nimport { writeFileSync } from 'node:fs';\nexport default function inspect(pi) {\n    pi.on('before_provider_request', (event, ctx) => {\n        const js = pi.getAllTools().find((tool) => tool.name === 'mcp__cua_repl__js');\n        const encoded = JSON.stringify(event.payload);\n        const report = {\n            registeredDescriptionUnchanged: Boolean(js?.description?.startsWith('Control native apps or browsers')),\n            originalDesktopExampleStillPresent: Boolean(js?.description?.includes('cua.createBrowserTab(\"iab\"')),\n            registeredGuidelines: js?.promptGuidelines ?? [],\n            systemPromptHasChromeRestriction: ctx.getSystemPrompt().includes('only these enabled backends: chrome'),\n            providerPayloadHasHostGuidance: encoded.includes('pi host guidance:'),\n            providerPayloadHasChromeRestriction: encoded.includes('only these enabled backends: chrome'),\n            providerPayloadHasRuntimeInstructions: encoded.includes('Codex runtime instructions:'),\n            customPromptPreserved: ctx.getSystemPrompt().includes('CUA_CUSTOM_PROMPT_SENTINEL'),\n        };\n        writeFileSync(process.env.CUA_GUIDANCE_REPORT, JSON.stringify(report, null, 2));\n        ctx.abort();\n    });\n    // A second barrier if a provider ignores the aborted signal: never execute tools in this probe.\n    pi.on('tool_call', () => ({block: true, reason: 'Read-only guidance inspection', terminate: true}));\n}\n"
+        },
+        {
+            "path": "/tmp/pi-cua-improvements/scope.mjs",
+            "content": "// Live verification scope: only create the approved Chrome tab, read its AX state, and close it.\nimport { writeFileSync } from 'node:fs';\nexport default function scope(pi) {\n    const report = { selectedCodes: [], blocked: [], results: [] };\n    const save = () => writeFileSync('/tmp/pi-cua-improvements/live.json', JSON.stringify(report, null, 2));\n    let stage = 0;\n    pi.on('tool_call', (event) => {\n        const code = event.input?.code;\n        let allowed = false;\n        if (event.toolName === 'mcp__cua_repl__js' && typeof code === 'string') {\n            if (stage === 0)\n                allowed = /^\\s*(?:let|var|const)\\s+verificationTab\\s*=\\s*await\\s+cua\\.createBrowserTab\\(\\s*([\"'])chrome\\1\\s*,\\s*([\"'])https:\\/\\/example\\.com\\/?\\2\\s*,\\s*\\{\\s*sessionName:\\s*([\"'])[^\"']*\\3\\s*,?\\s*\\}\\s*\\)\\s*;?\\s*$/.test(code);\n            else if (stage === 1)\n                allowed = /^\\s*await\\s+verificationTab\\.getAXState\\(\\s*\\)\\s*;?\\s*$/.test(code);\n            else if (stage === 2)\n                allowed = /^\\s*await\\s+verificationTab\\.close\\(\\s*\\)\\s*;?\\s*$/.test(code);\n        }\n        if (!allowed) {\n            report.blocked.push({ tool: event.toolName, code }); save();\n            return {block: true, reason: 'This verification allows only the approved create/read/close sequence.', terminate: true};\n        }\n        report.selectedCodes.push(code); stage += 1; save();\n    });\n    pi.on('tool_execution_end', (event) => {\n        report.results.push({ tool: event.toolName, isError: event.isError, hasExampleDomain: JSON.stringify(event.result?.content).includes('Example Domain') }); save();\n    });\n}\n"
+        },
+        {
+            "path": "/tmp/pi-cua-improvements/driver.mjs",
+            "content": "// Drives pi in RPC mode through a scripted set of confirmation answers.\n//   ANSWERS='Allow,Allow,Allow for this session,none' node confirm-driver.mjs <pi-binary> <pi args...> -- <prompt>\n// Answer tokens: \"Allow\", \"Allow for this session\", \"Always allow\", \"Deny\", \"Cancel\", \"delay:<ms>:<answer>\",\n// \"abort\" (send RPC abort while the dialog is open, like Esc), \"dismiss\" (cancelled: true).\nimport { spawn } from \"node:child_process\";\n\nconst argv = process.argv.slice(2);\nconst separator = argv.indexOf(\"--\");\nconst [piBinary, ...piArgs] = argv.slice(0, separator);\nconst prompt = argv.slice(separator + 1).join(\" \");\nconst answers = (process.env.ANSWERS ?? \"\").split(\",\").map((a) => a.trim()).filter(Boolean);\nlet answerIndex = 0;\nconst child = spawn(piBinary, piArgs, { stdio: [\"pipe\", \"pipe\", \"pipe\"] });\nchild.stderr.on(\"data\", (chunk) => {\n    const text = chunk.toString();\n    if (!text.startsWith(\"Warning: No models\")) process.stdout.write(`[stderr] ${text}`);\n});\nconst send = (record) => {\n    console.log(`>>> ${JSON.stringify(record).slice(0, 220)}`);\n    child.stdin.write(`${JSON.stringify(record)}\\n`);\n};\nconst sleep = (ms) => new Promise((r) => setTimeout(r, ms));\nconst t0 = Date.now();\nconst stamp = () => `+${((Date.now() - t0) / 1000).toFixed(1)}s`;\nconst handleSelect = async (record) => {\n    const token = answers[answerIndex] ?? \"Cancel\";\n    answerIndex += 1;\n    console.log(`<<< ${stamp()} select #${answerIndex} title=${JSON.stringify(record.title)} options=${JSON.stringify(record.options)} → ${token}`);\n    let answer = token;\n    if (token.startsWith(\"delay:\")) {\n        const [, ms, real] = token.split(\":\");\n        console.log(`    waiting ${ms} ms before answering ${real}`);\n        await sleep(Number(ms));\n        answer = real;\n    }\n    if (answer === \"abort\") {\n        send({ type: \"abort\" });\n        return;\n    }\n    if (answer === \"dismiss\") {\n        send({ type: \"extension_ui_response\", id: record.id, cancelled: true });\n        return;\n    }\n    const match = record.options.find((option) => option.startsWith(`${answer} —`) || option === answer);\n    if (!match) {\n        console.log(`    no option matches ${answer}; dismissing`);\n        send({ type: \"extension_ui_response\", id: record.id, cancelled: true });\n        return;\n    }\n    send({ type: \"extension_ui_response\", id: record.id, value: match });\n};\nlet buffer = \"\";\nchild.stdout.on(\"data\", (chunk) => {\n    buffer += chunk.toString();\n    let nl = buffer.indexOf(\"\\n\");\n    while (nl !== -1) {\n        const line = buffer.slice(0, nl).trim();\n        buffer = buffer.slice(nl + 1);\n        nl = buffer.indexOf(\"\\n\");\n        if (!line) continue;\n        let record;\n        try {\n            record = JSON.parse(line);\n        } catch {\n            console.log(`<<< (raw) ${line.slice(0, 200)}`);\n            continue;\n        }\n        if (record.type === \"extension_ui_request\") {\n            if (record.method === \"select\") void handleSelect(record);\n            else if (record.method === \"notify\") console.log(`<<< ${stamp()} notify ${JSON.stringify(record.message).slice(0, 200)}`);\n            else if (record.method === \"confirm\" || record.method === \"input\") {\n                console.log(`<<< ${stamp()} ${record.method} ${JSON.stringify(record.title).slice(0, 200)} → dismiss`);\n                send({ type: \"extension_ui_response\", id: record.id, cancelled: true });\n            }\n            continue;\n        }\n        if (record.type === \"response\") {\n            console.log(`<<< ${stamp()} response ${JSON.stringify(record).slice(0, 160)}`);\n            continue;\n        }\n        if (record.type === \"tool_execution_start\") console.log(`<<< ${stamp()} tool start ${record.toolName} ${JSON.stringify(record.args?.code ?? \"\").slice(0, 120)}`);\n        else if (record.type === \"tool_execution_end\") console.log(`<<< ${stamp()} tool end isError=${record.isError} ${JSON.stringify(record.result?.content?.map((b) => (b.type === \"text\" ? b.text.slice(0, 160) : b.type)) ?? \"\")}`);\n        else if (record.type === \"agent_end\") {\n            console.log(`<<< ${stamp()} agent_end`);\n            setTimeout(() => child.kill(\"SIGTERM\"), Number(process.env.LINGER_MS ?? 3000));\n        } else if (record.type === \"message_end\" && record.message?.role === \"assistant\") {\n            const text = (record.message.content ?? []).filter((c) => c.type === \"text\").map((c) => c.text).join(\" \");\n            if (text) console.log(`<<< ${stamp()} assistant: ${text.slice(0, 400)}`);\n        }\n    }\n});\nchild.on(\"exit\", (code, signal) => console.log(`pi exited code=${code} signal=${signal}`));\nsetTimeout(() => send({ id: \"p1\", type: \"prompt\", message: prompt }), 1500);\nsetTimeout(() => {\n    console.log(\"timeout: killing pi\");\n    child.kill(\"SIGKILL\");\n}, Number(process.env.MAX_MS ?? 400_000)).unref();\n"
+        }
+    ],
+    "notPerformed": [
+        "commit",
+        "merge",
+        "npm publish",
+        "tag",
+        "push",
+        "new automated test suite"
+    ]
+}

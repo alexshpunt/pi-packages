@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "sourceDigest": "1ec1c33917e3414c74dd43653cf5fb61d6f1cc5f94f8b85b792c4dd4282e09be",
+  "contractDigest": "216e6a536b2f22a8cf3046503d6fb810286c57ea7d70aedc9b274a70ca54c2eb",
+  "reference": "openai/codex a956835d020762cb2b570053af06f643a11c0ecc",
+  "authorityModes": {
+    "sandbox": "Ordinary commands execute inside unchanged per-invocation native limits without extra model review",
+    "scopedPermissions": "Structured approval carries the exact requested delta without a second UI prompt",
+    "commandRule": "Every safely split segment must have an allow rule; a trusted matched command gets invocation-scoped filesystem/network authority, with absolute controller denies retained",
+    "reviewedCommand": "Explicit bash sandbox_permissions=require_escalated without additional_permissions requests one full command review; structured approval or manual once approval required; no caching of this authority"
+  },
+  "contractAddendum": {
+    "PermissionProfile": "Optional readOnlyPaths distinguishes reviewable base metadata restrictions from absolute denyRead/denyWrite",
+    "ExecutionAuthority": "Added reviewed-command alongside command-rule and scoped-permissions",
+    "ExecutionOptions": "Optional authority and onNetworkRequest callback",
+    "privateIPC": "Version-1 network-request/network-response frames are only accepted on the broker-controller channel; WorkerFrame decoder still rejects them"
+  },
+  "ruleCompatibility": {
+    "format": "Literal prefix_rule(pattern,decision,justification,match,not_match) declarations, comments, trailing commas, single/double strings, alternatives",
+    "precedence": "forbidden > prompt > allow; unsupported scripts match exact outer shell argv",
+    "legacy": "commandRules prefix/allow/ask/deny is adapted to allow/prompt/forbidden; no general Starlark evaluation",
+    "startup": "Explicit trusted ruleFiles; parsed before guard readiness; revision includes their parsed content"
+  },
+  "filesystemMatrix": {
+    "wildcard": "Shared matchesDomain in policy and final configuration; positive native wildcard control",
+    "readWriteClassification": "cat .git/HEAD and ls .git no longer consult denyWrite; mutation still does",
+    "defaults": "Read / except explicit credential/controller denies; workspace and configured temporary roots writable; metadata protected as read-only",
+    "metadata": "Owned .agents exact file grant passed at OS boundary and sibling remained unchanged; default .git pointer/worktree paths and .agents/.codex discovery verified by policy fixtures",
+    "scopedMetadata": "When lifting a base metadata deny, the invocation loses broad workspace write roots and receives only explicit write targets to avoid opening siblings"
+  },
+  "networkMatrix": {
+    "runtime": "Broker callback sends exact host/port to the controller for the already-running originating action",
+    "identity": "Original final command, source, cwd, session, policy and originatingActionDigest accompany runtime destination",
+    "cancellation": "Controller/caller/invocation lifetime cancels reviews and proxy requests; terminal command never replays earlier effects",
+    "isolation": "Each invocation owns a separate broker; denied and subsequent requests did not reach owned service"
+  },
+  "effectEvidence": {
+    "outsideWrite": "Structured allow changed one owned outside sentinel; subsequent denial and never policy left it unchanged",
+    "fullCommand": "Default script stayed confined; explicit reviewed command and trusted exact prefix changed owned sentinel",
+    "absoluteDenial": "Full command still could not read protected owned credential marker",
+    "network": "Exact runtime destination reached owned Unix socket service once; pre-request file append occurred once"
+  },
+  "compatibilityLimits": [
+    "Controller code, dependency roots, configured credential/policy paths remain absolute denies even for command authority; no unguarded host fallback",
+    "sandbox-runtime mandatory protections (such as Git hooks and shell startup files) remain enabled; this is a recorded native-backend difference, not a claim of unrestricted Codex product parity",
+    "General Starlark execution and new external tool surfaces are excluded"
+  ],
+  "commands": [
+    "npm run build",
+    "npm run test:contracts",
+    "npm run test:policy",
+    "npm run test:approvals",
+    "npm run test:native",
+    "npm run test:integration"
+  ],
+  "beforeArtifact": ".reports/pi-guard/runs/2026-10-03T00-09-57-026Z-8498c99c-f215-48d7-882b-dde6e7906d7e/darwin-arm64/boundary-before.json",
+  "artifactPaths": [
+    ".reports/pi-guard/runs/2026-10-03T00-18-57-780Z-47dd6df5-e177-4265-8657-6028313b1aa1/darwin-arm64/integration.json",
+    ".reports/pi-guard/runs/2026-10-03T00-18-47-046Z-f335aaa0-eec0-49e2-a81d-7c72ccac8dd4/darwin-arm64/native.json",
+    ".reports/pi-guard/runs/2026-10-03T00-17-32-017Z-3aebf7f9-24e8-44ad-af79-c8252ceb7483/darwin-arm64/approvals.json",
+    ".reports/pi-guard/runs/2026-10-03T00-17-31-633Z-84867148-0b0f-4454-9a7d-2bb8b645bcdf/darwin-arm64/policy.json",
+    ".reports/pi-guard/runs/2026-10-03T00-17-30-590Z-f1f553e7-3612-459c-ac5c-d19159aa27f9/darwin-arm64/contracts.json"
+  ],
+  "verification": {
+    "contracts": 8,
+    "policy": 8,
+    "approvals": 6,
+    "native": 7,
+    "integration": 15,
+    "platform": "darwin-arm64",
+    "liveProvider": false
+  },
+  "unresolved": [],
+  "recordedAt": "2026-10-03T00:20:12.144Z",
+  "finalFollowup": {
+    "sourceDigest": "a9472e6027c7866d1c6e524511018ef0ef88abe14a43fac90bed1ff3110f2f19",
+    "contractDigest": "7c16ec541fca790264aca75860a393e675013c8f273ed60516a80f93c9f44379",
+    "platformResults": {
+      "darwin-arm64": {
+        "status": "pass",
+        "tests": 71,
+        "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-38-38-870Z-58e6b235-a503-4c32-92e3-3360dea2dd94/darwin-arm64/platform.json"
+      },
+      "linux-x64": {
+        "status": "environment-blocked",
+        "tests": 0,
+        "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-38-07-412Z-cf557ca0-87f5-4a10-96c0-66074bf96361/linux-x64/docker-offline.json"
+      },
+      "linux-arm64": {
+        "status": "pass",
+        "tests": 71,
+        "artifactPath": ".reports/pi-guard/runs/2026-10-03T01-37-58-990Z-d948c0be-dd4c-453a-ba86-c82bed05b0b5/linux-arm64/docker-offline.json"
+      }
+    },
+    "finalReport": "docs/handoffs/auto-review/07-conformance.json",
+    "finalStatus": "environment-blocked",
+    "corrections": [
+      "Linux shell creation discloses the existing-parent native write scope before review.",
+      "Implicit runtime scratch/log writes are denied outside the admitted roots. A narrower SDK scope inside an implicit runtime root fails closed; policy asks for the actual enclosing native scope."
+    ],
+    "reproduction": {
+      "sourceDigestBeforeFix": "5c53e9842e1a49f6b4f76172ce9074b7780d52b2f0f7e1b52abc8e84213a03f0",
+      "platform": "darwin-arm64",
+      "declaredWriteRoots": [],
+      "before": {
+        "exitCode": 0,
+        "isOutsideOwnedSentinelChanged": true
+      },
+      "after": "Both verified platforms deny the implicit write and narrow-grant widening, execute the disclosed directory grant, and deny the following unapproved call.",
+      "ownedFixture": "Unique sentinel under /tmp/claude; only that owned temporary directory was removed."
+    }
+  }
+}

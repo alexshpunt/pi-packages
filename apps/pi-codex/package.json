@@ -1,0 +1,71 @@
+{
+    "name": "@buyong/pi-codex",
+    "version": "0.3.2",
+    "description": "Pi용 Codex 통합 패키지: 자동 승인 검토, Computer Use, Fast 모드, 이미지 생성을 함께 설치합니다.",
+    "license": "Apache-2.0",
+    "keywords": [
+        "pi-package",
+        "pi-extension",
+        "codex"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/buYoung/pi-packages.git",
+        "directory": "apps/pi-codex"
+    },
+    "homepage": "https://github.com/buYoung/pi-packages/tree/main/apps/pi-codex#readme",
+    "bugs": {
+        "url": "https://github.com/buYoung/pi-packages/issues"
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
+    },
+    "type": "module",
+    "pi": {
+        "extensions": [
+            "./node_modules/@buyong/pi-codex-auto-review/dist/index.js",
+            "./node_modules/@buyong/pi-codex-computer-use/dist/index.js",
+            "./node_modules/@buyong/pi-codex-fast-mode/dist/index.js",
+            "./node_modules/@buyong/pi-codex-image-gen/dist/index.js"
+        ],
+        "skills": [
+            "./node_modules/@buyong/pi-codex-image-gen/skills"
+        ]
+    },
+    "scripts": {
+        "build": "node scripts/prepare-package.mjs",
+        "typecheck": "pnpm --filter \"@buyong/pi-codex^...\" run typecheck",
+        "lint": "biome check .",
+        "prepack": "pnpm --filter \"@buyong/pi-codex...\" run build && node ../../scripts/codex/check-package.mjs ."
+    },
+    "dependencies": {
+        "@buyong/pi-codex-auto-review": "workspace:*",
+        "@buyong/pi-codex-computer-use": "workspace:*",
+        "@buyong/pi-codex-fast-mode": "workspace:*",
+        "@buyong/pi-codex-image-gen": "workspace:*"
+    },
+    "bundleDependencies": [
+        "@buyong/pi-codex-auto-review",
+        "@buyong/pi-codex-computer-use",
+        "@buyong/pi-codex-fast-mode",
+        "@buyong/pi-codex-image-gen"
+    ],
+    "peerDependencies": {
+        "@earendil-works/pi-ai": "*",
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "catalog:",
+        "semver": "7.8.5"
+    },
+    "engines": {
+        "node": ">=22.19.0"
+    },
+    "files": [
+        "README.md",
+        "README.ko.md",
+        "LICENSE"
+    ]
+}

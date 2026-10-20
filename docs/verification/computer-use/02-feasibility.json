@@ -1,0 +1,1382 @@
+{
+  "status": "complete",
+  "brief": "docs/briefs/2026-10-05-chore-codex-cua-01-feasibility.md",
+  "date": "2026-10-05",
+  "runtime": {
+    "appPath": "/Applications/ChatGPT.app",
+    "appVersion": "26.930.31730",
+    "bundleId": "com.openai.codex",
+    "runtimeArchive": "cua-node-0.0.27-20260927214556-b77d38801cca-darwin-arm64 (node 24.21.0-cua.1)",
+    "oaiPackages": {
+      "cua-repl": "0.1.0",
+      "cua": "0.2.5",
+      "sky": "0.7.5",
+      "browser-desktop": "0.1.1"
+    },
+    "serviceApp": "~/.codex/computer-use/Codex Computer Use.app (SkyComputerUseService was already running under Codex Desktop during every run)",
+    "mcpConfig": "~/.codex/plugins/cache/openai-bundled/unified-computer-use/26.930.31730/.mcp.json",
+    "serverInfo": "rmcp 1.5.0, protocol 2025-06-18, tools js / js_add_node_module_dir / js_reset / turn_ended",
+    "hostState": "ChatGPT.app (Codex Desktop) was running with its own cua_repl/node_repl processes; probe processes were tracked by pid and none leaked"
+  },
+  "probeDesign": {
+    "client": "hand-written JSON-RPC over stdio (newline-delimited), initialize with protocolVersion 2025-06-18, capabilities.elicitation.form, clientInfo codex-mcp-client/Codex 0.160.0",
+    "environment": "allow-listed base env (PATH, HOME, USER, LOGNAME, TMPDIR, LANG, LC_ALL, SHELL, TERM) underneath the .mcp.json env, so shell secrets never reach the runtime; deviation from the brief's 'merge the process environment' noted deliberately",
+    "metaShape": "callId, sessionId, threadId, x-codex-turn-metadata {session_id, thread_id, turn_id, model, reasoning_effort, auto_review_enabled, node_repl_auto_review_required:false, node_repl_disabled:false, codex_version, turn_started_at_unix_ms}, openai/confirmation_policies {}",
+    "noClientTimeout": "tools/call waits indefinitely (600 s safety guard only); js timeout_ms is passed explicitly",
+    "elicitationPolicy": "stage 1 answers any unexpected request with cancel; stage 2 uses --elicit accept|cancel|delay",
+    "redaction": "keys matching /token|key|secret|account|password|cookie|authorization/i are replaced with [redacted] in logs and summaries; env values are never logged"
+  },
+  "runs": [
+    {
+      "file": "a-2026-10-05T05-54-35-613Z.json",
+      "variant": "a",
+      "startedAt": "2026-10-05T05:54:35.614Z",
+      "configPath": "~/.codex/plugins/cache/openai-bundled/unified-computer-use/26.930.31730/.mcp.json",
+      "envKeys": [
+        "BROWSER_USE_AVAILABLE_BACKENDS",
+        "BROWSER_USE_CODEX_APP_BUILD_FLAVOR",
+        "BROWSER_USE_CODEX_APP_VERSION",
+        "BROWSER_USE_TINYSKY_ENABLED",
+        "CODEX_CLI_PATH",
+        "CODEX_HOME",
+        "CUA_REPL_ENABLED_SURFACES",
+        "CUA_REPL_NODE_REPL_PATH",
+        "HOME",
+        "LOGNAME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE",
+        "NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS",
+        "NODE_REPL_NODE_MODULE_DIRS",
+        "NODE_REPL_NODE_PATH",
+        "NODE_REPL_TRUSTED_CODE_PATHS",
+        "NODE_REPL_TRUSTED_SERVICES",
+        "PATH",
+        "SHELL",
+        "SKY_CUA_SERVICE_PATH",
+        "TERM",
+        "TMPDIR",
+        "USER"
+      ],
+      "overrides": {},
+      "withMeta": true,
+      "probeElicitMode": "cancel",
+      "metaKeysSent": [
+        "callId",
+        "sessionId",
+        "threadId",
+        "x-codex-turn-metadata",
+        "openai/confirmation_policies"
+      ],
+      "code": "await cua.getState()",
+      "verdict": "inventory-received",
+      "jsDurationMs": 1003,
+      "firstError": null,
+      "resultBlocks": [
+        "text:19774",
+        "text:8663"
+      ],
+      "docsBlockLength": 19774,
+      "inventory": {
+        "appsTotal": 52,
+        "appsRunning": 33,
+        "browsers": [
+          {
+            "family": "chrome",
+            "type": "extension",
+            "tabs": 9
+          }
+        ],
+        "errors": [],
+        "otherKeys": []
+      },
+      "resultMeta": {
+        "browser_use": {},
+        "codex/browserUse": true,
+        "codex/nodeReplExecutionDurationMs": 881,
+        "codex/toolSurface": {
+          "backend": "chrome",
+          "browserFamily": "chrome",
+          "browserId": "1",
+          "kind": "browserUse"
+        }
+      },
+      "elicitations": [],
+      "serverRequests": [],
+      "notifications": 0,
+      "stderrChunks": 0,
+      "turnEnded": {
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "length": 2,
+            "text": "{}"
+          }
+        ],
+        "durationMs": 5
+      },
+      "childExit": {
+        "code": 0,
+        "signal": null,
+        "at": "2026-10-05T05:54:37.311Z"
+      },
+      "leakedNodeRepl": [],
+      "servicePids": {
+        "before": [
+          20267
+        ],
+        "after": [
+          20267
+        ]
+      },
+      "codexOwnCuaReplCount": {
+        "before": 31,
+        "afterClose": 31
+      }
+    },
+    {
+      "file": "app-2026-10-05T05-59-36-200Z.json",
+      "variant": "app",
+      "startedAt": "2026-10-05T05:59:36.201Z",
+      "configPath": "~/.codex/plugins/cache/openai-bundled/unified-computer-use/26.930.31730/.mcp.json",
+      "envKeys": [
+        "BROWSER_USE_AVAILABLE_BACKENDS",
+        "BROWSER_USE_CODEX_APP_BUILD_FLAVOR",
+        "BROWSER_USE_CODEX_APP_VERSION",
+        "BROWSER_USE_TINYSKY_ENABLED",
+        "CODEX_CLI_PATH",
+        "CODEX_HOME",
+        "CUA_REPL_ENABLED_SURFACES",
+        "CUA_REPL_NODE_REPL_PATH",
+        "HOME",
+        "LOGNAME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE",
+        "NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS",
+        "NODE_REPL_NODE_MODULE_DIRS",
+        "NODE_REPL_NODE_PATH",
+        "NODE_REPL_TRUSTED_CODE_PATHS",
+        "NODE_REPL_TRUSTED_SERVICES",
+        "PATH",
+        "SHELL",
+        "SKY_CUA_SERVICE_PATH",
+        "TERM",
+        "TMPDIR",
+        "USER"
+      ],
+      "overrides": {},
+      "withMeta": true,
+      "probeElicitMode": "accept",
+      "metaKeysSent": [
+        "callId",
+        "sessionId",
+        "threadId",
+        "x-codex-turn-metadata",
+        "openai/confirmation_policies"
+      ],
+      "code": "let app = await cua.getApp(\"Finder\");\nlet ax = await app.getAXState();\ntypeof ax === \"string\" ? ax : JSON.stringify(ax).slice(0, 8000)",
+      "verdict": "result-received",
+      "jsDurationMs": 760,
+      "firstError": null,
+      "resultBlocks": [
+        "text:19774",
+        "text:372"
+      ],
+      "docsBlockLength": 19774,
+      "inventory": {
+        "raw": "Window: \"Desktop\", App: Finder.\n0 scroll area (disabled) desktop\n\t1 container desktop\n\t\t2 image untitled folder, Secondary Actions: open\n3 menu bar\n\t4 Finder\n\t5 File\n\t6 Edit\n\t7 View\n\t8 Go\n\t9 Window\n\t10 Help\n\nThe focused UI element is 1 container desktopThere has been no change in the accessibility tree for Window: \"Desktop\".\nThe focused UI element is 1 container desktop"
+      },
+      "resultMeta": {
+        "codex/nodeReplExecutionDurationMs": 674,
+        "codex/toolSurface": {
+          "app": {
+            "appId": "com.apple.finder",
+            "kind": "appId"
+          },
+          "kind": "computerUse"
+        }
+      },
+      "stage2Result": {
+        "accessibilityTextLength": 372,
+        "accessibilityTextLines": 15,
+        "errorText": null,
+        "note": "Accessibility text itself is not recorded (it describes the user's Finder windows)."
+      },
+      "elicitations": [
+        {
+          "receivedAt": "2026-10-05T05:59:36.868Z",
+          "respondedAt": "2026-10-05T05:59:36.868Z",
+          "waitedMs": 0,
+          "message": "Allow Computer Use to use \"Finder\"?",
+          "requestedSchema": {
+            "properties": {},
+            "type": "object"
+          },
+          "metaKeys": [
+            "callId",
+            "codex_approval_kind",
+            "connector_id",
+            "connector_name",
+            "persist",
+            "progressToken",
+            "riskLevel",
+            "tool_name",
+            "tool_params",
+            "tool_params_display",
+            "x-codex-turn-metadata"
+          ],
+          "meta": {
+            "callId": "call_83a280f6061f4d66b087352c",
+            "codex_approval_kind": "mcp_tool_call",
+            "connector_id": "computer-use",
+            "connector_name": "Computer Use",
+            "persist": [
+              "session",
+              "always"
+            ],
+            "progressToken": "[redacted]",
+            "riskLevel": "low",
+            "tool_name": "get_app_state",
+            "tool_params": {
+              "app": "com.apple.finder"
+            },
+            "tool_params_display": [
+              {
+                "display_name": "App",
+                "name": "app",
+                "value": "Finder"
+              }
+            ],
+            "x-codex-turn-metadata": {
+              "auto_review_enabled": false,
+              "codex_version": "0.160.0",
+              "model": "gpt-5-codex",
+              "node_repl_auto_review_required": false,
+              "node_repl_disabled": false,
+              "reasoning_effort": "medium",
+              "session_id": "19a08ed0-e703-43d6-945d-8c5ef57f8149",
+              "thread_id": "19a08ed0-e703-43d6-945d-8c5ef57f8149",
+              "turn_id": "cdaa0fc5-1419-4749-8a85-7674481406b4",
+              "turn_started_at_unix_ms": 1791179976580
+            }
+          },
+          "response": {
+            "action": "accept",
+            "content": {}
+          }
+        },
+        {
+          "receivedAt": "2026-10-05T05:59:37.102Z",
+          "respondedAt": "2026-10-05T05:59:37.102Z",
+          "waitedMs": 0,
+          "message": "Allow Computer Use to use \"Finder\"?",
+          "requestedSchema": {
+            "properties": {},
+            "type": "object"
+          },
+          "metaKeys": [
+            "callId",
+            "codex_approval_kind",
+            "connector_id",
+            "connector_name",
+            "persist",
+            "progressToken",
+            "riskLevel",
+            "tool_name",
+            "tool_params",
+            "tool_params_display",
+            "x-codex-turn-metadata"
+          ],
+          "meta": {
+            "callId": "call_83a280f6061f4d66b087352c",
+            "codex_approval_kind": "mcp_tool_call",
+            "connector_id": "computer-use",
+            "connector_name": "Computer Use",
+            "persist": [
+              "session",
+              "always"
+            ],
+            "progressToken": "[redacted]",
+            "riskLevel": "low",
+            "tool_name": "get_app_state",
+            "tool_params": {
+              "app": "com.apple.finder"
+            },
+            "tool_params_display": [
+              {
+                "display_name": "App",
+                "name": "app",
+                "value": "Finder"
+              }
+            ],
+            "x-codex-turn-metadata": {
+              "auto_review_enabled": false,
+              "codex_version": "0.160.0",
+              "model": "gpt-5-codex",
+              "node_repl_auto_review_required": false,
+              "node_repl_disabled": false,
+              "reasoning_effort": "medium",
+              "session_id": "19a08ed0-e703-43d6-945d-8c5ef57f8149",
+              "thread_id": "19a08ed0-e703-43d6-945d-8c5ef57f8149",
+              "turn_id": "cdaa0fc5-1419-4749-8a85-7674481406b4",
+              "turn_started_at_unix_ms": 1791179976580
+            }
+          },
+          "response": {
+            "action": "accept",
+            "content": {}
+          }
+        }
+      ],
+      "serverRequests": [],
+      "notifications": 0,
+      "stderrChunks": 0,
+      "turnEnded": {
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "length": 2,
+            "text": "{}"
+          }
+        ],
+        "durationMs": 1
+      },
+      "childExit": {
+        "code": 0,
+        "signal": null,
+        "at": "2026-10-05T05:59:37.696Z"
+      },
+      "leakedNodeRepl": [],
+      "servicePids": {
+        "before": [
+          20267
+        ],
+        "after": [
+          20267
+        ]
+      },
+      "codexOwnCuaReplCount": {
+        "before": 31,
+        "afterClose": 31
+      }
+    },
+    {
+      "file": "app-2026-10-05T06-00-15-794Z.json",
+      "variant": "app",
+      "startedAt": "2026-10-05T06:00:15.795Z",
+      "configPath": "~/.codex/plugins/cache/openai-bundled/unified-computer-use/26.930.31730/.mcp.json",
+      "envKeys": [
+        "BROWSER_USE_AVAILABLE_BACKENDS",
+        "BROWSER_USE_CODEX_APP_BUILD_FLAVOR",
+        "BROWSER_USE_CODEX_APP_VERSION",
+        "BROWSER_USE_TINYSKY_ENABLED",
+        "CODEX_CLI_PATH",
+        "CODEX_HOME",
+        "CUA_REPL_ENABLED_SURFACES",
+        "CUA_REPL_NODE_REPL_PATH",
+        "HOME",
+        "LOGNAME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE",
+        "NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS",
+        "NODE_REPL_NODE_MODULE_DIRS",
+        "NODE_REPL_NODE_PATH",
+        "NODE_REPL_TRUSTED_CODE_PATHS",
+        "NODE_REPL_TRUSTED_SERVICES",
+        "PATH",
+        "SHELL",
+        "SKY_CUA_SERVICE_PATH",
+        "TERM",
+        "TMPDIR",
+        "USER"
+      ],
+      "overrides": {},
+      "withMeta": true,
+      "probeElicitMode": "cancel",
+      "metaKeysSent": [
+        "callId",
+        "sessionId",
+        "threadId",
+        "x-codex-turn-metadata",
+        "openai/confirmation_policies"
+      ],
+      "code": "let app = await cua.getApp(\"Finder\");\nlet ax = await app.getAXState();\ntypeof ax === \"string\" ? ax : JSON.stringify(ax).slice(0, 8000)",
+      "verdict": "tool-error",
+      "jsDurationMs": 270,
+      "firstError": "Computer Use was not approved to use Finder",
+      "resultBlocks": [
+        "text:43",
+        "text:19774"
+      ],
+      "docsBlockLength": 43,
+      "inventory": {
+        "raw": "## Computer Use\n\nControl native apps and browsers on the user’s computer by reading or operating UI. Prefer purpose-built connectors, APIs, or CLIs when available.\n\n- Use `cua_repl` (JavaScript) for all UI actions.\n- Do not use other technologies besides `cua_repl` for computer interactions, unless specifically requested by the user (e.g. AppleScript, `osascript`, JXA, System Events, CGEvent synthesis).\n- Prefer a dedicated plugin or skill when it can complete the task; use Computer Use for interactions that are not exposed through a more specific interface.\n- `cua_repl` state is persistent across calls\n- If you create a tab or get an app, the initial UI state is automatically included in the tool result.\n\n## API\n\n```typescript\ntype Vec2 = [x: number, y: number];\ntype ObservationOptions = { emit?: boolean };\ntype StateOptions = ObservationOptions & { disableDiffing?: boolean };\ntype StateAndScreenshot = { state: string; screenshot?: Uint8Array };\ntype PasteOptions = { format?: \"text\" | \"md\" | \"html\" };\ntype ClickOptions = { mouseButton?: MouseButton; clickCount?: number };\ntype SelectTextOptions = {\n  prefix?: string;\n  suffix?: string;\n  selectionType?: SelectionType;\n};\ntype Direction = \"up\" | \"down\" | \"left\" | \"right\" | \"u\" | \"d\" | \"l\" | \"r\";\ntype SelectionType = \"text\" | \"cursor_before\" | \"cursor_after\";\ntype MouseButton = \"left\" | \"right\" | \"middle\" | \"l\" | \"r\" | \"m\";\n\ninterface Target {\n  getAXState(options?: StateOptions): Promise<string>;\n  getScreenshot(options?: Obs"
+      },
+      "resultMeta": {
+        "codex/nodeReplExecutionDurationMs": 186,
+        "codex/toolSurface": {
+          "app": {
+            "appId": "com.apple.finder",
+            "kind": "appId"
+          },
+          "kind": "computerUse"
+        }
+      },
+      "stage2Result": {
+        "accessibilityTextLength": null,
+        "accessibilityTextLines": null,
+        "errorText": "Computer Use was not approved to use Finder",
+        "note": "Accessibility text itself is not recorded (it describes the user's Finder windows)."
+      },
+      "elicitations": [
+        {
+          "receivedAt": "2026-10-05T06:00:16.418Z",
+          "respondedAt": "2026-10-05T06:00:16.418Z",
+          "waitedMs": 0,
+          "message": "Allow Computer Use to use \"Finder\"?",
+          "requestedSchema": {
+            "properties": {},
+            "type": "object"
+          },
+          "metaKeys": [
+            "callId",
+            "codex_approval_kind",
+            "connector_id",
+            "connector_name",
+            "persist",
+            "progressToken",
+            "riskLevel",
+            "tool_name",
+            "tool_params",
+            "tool_params_display",
+            "x-codex-turn-metadata"
+          ],
+          "meta": {
+            "callId": "call_ceab12c0cfce47d2ad732c21",
+            "codex_approval_kind": "mcp_tool_call",
+            "connector_id": "computer-use",
+            "connector_name": "Computer Use",
+            "persist": [
+              "session",
+              "always"
+            ],
+            "progressToken": "[redacted]",
+            "riskLevel": "low",
+            "tool_name": "get_app_state",
+            "tool_params": {
+              "app": "com.apple.finder"
+            },
+            "tool_params_display": [
+              {
+                "display_name": "App",
+                "name": "app",
+                "value": "Finder"
+              }
+            ],
+            "x-codex-turn-metadata": {
+              "auto_review_enabled": false,
+              "codex_version": "0.160.0",
+              "model": "gpt-5-codex",
+              "node_repl_auto_review_required": false,
+              "node_repl_disabled": false,
+              "reasoning_effort": "medium",
+              "session_id": "903cb79a-5322-4e42-a9a3-e4d88d89b46a",
+              "thread_id": "903cb79a-5322-4e42-a9a3-e4d88d89b46a",
+              "turn_id": "35876d6a-037f-4204-ac4f-653ece0c355f",
+              "turn_started_at_unix_ms": 1791180016150
+            }
+          },
+          "response": {
+            "action": "cancel"
+          }
+        }
+      ],
+      "serverRequests": [],
+      "notifications": 0,
+      "stderrChunks": 0,
+      "turnEnded": {
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "length": 2,
+            "text": "{}"
+          }
+        ],
+        "durationMs": 0
+      },
+      "childExit": {
+        "code": 0,
+        "signal": null,
+        "at": "2026-10-05T06:00:16.767Z"
+      },
+      "leakedNodeRepl": [],
+      "servicePids": {
+        "before": [
+          20267
+        ],
+        "after": [
+          20267
+        ]
+      },
+      "codexOwnCuaReplCount": {
+        "before": 31,
+        "afterClose": 31
+      }
+    },
+    {
+      "file": "app-2026-10-05T06-00-21-884Z.json",
+      "variant": "app",
+      "startedAt": "2026-10-05T06:00:21.884Z",
+      "configPath": "~/.codex/plugins/cache/openai-bundled/unified-computer-use/26.930.31730/.mcp.json",
+      "envKeys": [
+        "BROWSER_USE_AVAILABLE_BACKENDS",
+        "BROWSER_USE_CODEX_APP_BUILD_FLAVOR",
+        "BROWSER_USE_CODEX_APP_VERSION",
+        "BROWSER_USE_TINYSKY_ENABLED",
+        "CODEX_CLI_PATH",
+        "CODEX_HOME",
+        "CUA_REPL_ENABLED_SURFACES",
+        "CUA_REPL_NODE_REPL_PATH",
+        "HOME",
+        "LOGNAME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE",
+        "NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS",
+        "NODE_REPL_NODE_MODULE_DIRS",
+        "NODE_REPL_NODE_PATH",
+        "NODE_REPL_TRUSTED_CODE_PATHS",
+        "NODE_REPL_TRUSTED_SERVICES",
+        "PATH",
+        "SHELL",
+        "SKY_CUA_SERVICE_PATH",
+        "TERM",
+        "TMPDIR",
+        "USER"
+      ],
+      "overrides": {},
+      "withMeta": true,
+      "probeElicitMode": "delay",
+      "metaKeysSent": [
+        "callId",
+        "sessionId",
+        "threadId",
+        "x-codex-turn-metadata",
+        "openai/confirmation_policies"
+      ],
+      "code": "let app = await cua.getApp(\"Finder\");\nlet ax = await app.getAXState();\ntypeof ax === \"string\" ? ax : JSON.stringify(ax).slice(0, 8000)",
+      "verdict": "tool-error",
+      "jsDurationMs": 60275,
+      "firstError": "Computer Use was not approved to use Finder",
+      "resultBlocks": [
+        "text:43",
+        "text:19774"
+      ],
+      "docsBlockLength": 43,
+      "inventory": {
+        "raw": "## Computer Use\n\nControl native apps and browsers on the user’s computer by reading or operating UI. Prefer purpose-built connectors, APIs, or CLIs when available.\n\n- Use `cua_repl` (JavaScript) for all UI actions.\n- Do not use other technologies besides `cua_repl` for computer interactions, unless specifically requested by the user (e.g. AppleScript, `osascript`, JXA, System Events, CGEvent synthesis).\n- Prefer a dedicated plugin or skill when it can complete the task; use Computer Use for interactions that are not exposed through a more specific interface.\n- `cua_repl` state is persistent across calls\n- If you create a tab or get an app, the initial UI state is automatically included in the tool result.\n\n## API\n\n```typescript\ntype Vec2 = [x: number, y: number];\ntype ObservationOptions = { emit?: boolean };\ntype StateOptions = ObservationOptions & { disableDiffing?: boolean };\ntype StateAndScreenshot = { state: string; screenshot?: Uint8Array };\ntype PasteOptions = { format?: \"text\" | \"md\" | \"html\" };\ntype ClickOptions = { mouseButton?: MouseButton; clickCount?: number };\ntype SelectTextOptions = {\n  prefix?: string;\n  suffix?: string;\n  selectionType?: SelectionType;\n};\ntype Direction = \"up\" | \"down\" | \"left\" | \"right\" | \"u\" | \"d\" | \"l\" | \"r\";\ntype SelectionType = \"text\" | \"cursor_before\" | \"cursor_after\";\ntype MouseButton = \"left\" | \"right\" | \"middle\" | \"l\" | \"r\" | \"m\";\n\ninterface Target {\n  getAXState(options?: StateOptions): Promise<string>;\n  getScreenshot(options?: Obs"
+      },
+      "resultMeta": {
+        "codex/nodeReplExecutionDurationMs": 60193,
+        "codex/toolSurface": {
+          "app": {
+            "appId": "com.apple.finder",
+            "kind": "appId"
+          },
+          "kind": "computerUse"
+        }
+      },
+      "stage2Result": {
+        "accessibilityTextLength": null,
+        "accessibilityTextLines": null,
+        "errorText": "Computer Use was not approved to use Finder",
+        "note": "Accessibility text itself is not recorded (it describes the user's Finder windows)."
+      },
+      "elicitations": [
+        {
+          "receivedAt": "2026-10-05T06:00:22.489Z",
+          "respondedAt": "2026-10-05T06:01:22.490Z",
+          "waitedMs": 60001,
+          "message": "Allow Computer Use to use \"Finder\"?",
+          "requestedSchema": {
+            "properties": {},
+            "type": "object"
+          },
+          "metaKeys": [
+            "callId",
+            "codex_approval_kind",
+            "connector_id",
+            "connector_name",
+            "persist",
+            "progressToken",
+            "riskLevel",
+            "tool_name",
+            "tool_params",
+            "tool_params_display",
+            "x-codex-turn-metadata"
+          ],
+          "meta": {
+            "callId": "call_1da9bd09f93443c49d528a38",
+            "codex_approval_kind": "mcp_tool_call",
+            "connector_id": "computer-use",
+            "connector_name": "Computer Use",
+            "persist": [
+              "session",
+              "always"
+            ],
+            "progressToken": "[redacted]",
+            "riskLevel": "low",
+            "tool_name": "get_app_state",
+            "tool_params": {
+              "app": "com.apple.finder"
+            },
+            "tool_params_display": [
+              {
+                "display_name": "App",
+                "name": "app",
+                "value": "Finder"
+              }
+            ],
+            "x-codex-turn-metadata": {
+              "auto_review_enabled": false,
+              "codex_version": "0.160.0",
+              "model": "gpt-5-codex",
+              "node_repl_auto_review_required": false,
+              "node_repl_disabled": false,
+              "reasoning_effort": "medium",
+              "session_id": "55df76a7-db8e-48d7-8712-368febb9c2de",
+              "thread_id": "55df76a7-db8e-48d7-8712-368febb9c2de",
+              "turn_id": "d4a0bdf7-0b85-453e-8190-253a34945187",
+              "turn_started_at_unix_ms": 1791180022223
+            }
+          },
+          "response": {
+            "action": "cancel"
+          }
+        }
+      ],
+      "serverRequests": [],
+      "notifications": 0,
+      "stderrChunks": 0,
+      "turnEnded": {
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "length": 2,
+            "text": "{}"
+          }
+        ],
+        "durationMs": 0
+      },
+      "childExit": {
+        "code": 0,
+        "signal": null,
+        "at": "2026-10-05T06:01:22.958Z"
+      },
+      "leakedNodeRepl": [],
+      "servicePids": {
+        "before": [
+          20267
+        ],
+        "after": [
+          20267
+        ]
+      },
+      "codexOwnCuaReplCount": {
+        "before": 31,
+        "afterClose": 31
+      }
+    },
+    {
+      "file": "b-2026-10-05T05-55-02-584Z.json",
+      "variant": "b",
+      "startedAt": "2026-10-05T05:55:02.584Z",
+      "configPath": "~/.codex/plugins/cache/openai-bundled/unified-computer-use/26.930.31730/.mcp.json",
+      "envKeys": [
+        "BROWSER_USE_AVAILABLE_BACKENDS",
+        "BROWSER_USE_CODEX_APP_BUILD_FLAVOR",
+        "BROWSER_USE_CODEX_APP_VERSION",
+        "BROWSER_USE_TINYSKY_ENABLED",
+        "CODEX_CLI_PATH",
+        "CODEX_HOME",
+        "CUA_REPL_ENABLED_SURFACES",
+        "CUA_REPL_NODE_REPL_PATH",
+        "HOME",
+        "LOGNAME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE",
+        "NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS",
+        "NODE_REPL_NODE_MODULE_DIRS",
+        "NODE_REPL_NODE_PATH",
+        "NODE_REPL_TRUSTED_CODE_PATHS",
+        "NODE_REPL_TRUSTED_SERVICES",
+        "PATH",
+        "SHELL",
+        "SKY_CUA_SERVICE_PATH",
+        "TERM",
+        "TMPDIR",
+        "USER"
+      ],
+      "overrides": {},
+      "withMeta": false,
+      "probeElicitMode": "cancel",
+      "metaKeysSent": [],
+      "code": "await cua.getState()",
+      "verdict": "inventory-received",
+      "jsDurationMs": 330,
+      "firstError": null,
+      "resultBlocks": [
+        "text:19774",
+        "text:5949"
+      ],
+      "docsBlockLength": 19774,
+      "inventory": {
+        "appsTotal": 52,
+        "appsRunning": 33,
+        "browsers": [],
+        "errors": [
+          "Browsers: Error: Missing required Codex turn metadata: session_id, turn_id"
+        ],
+        "otherKeys": []
+      },
+      "resultMeta": {
+        "codex/nodeReplExecutionDurationMs": 245,
+        "codex/toolSurface": {
+          "app": null,
+          "kind": "computerUse"
+        }
+      },
+      "elicitations": [],
+      "serverRequests": [],
+      "notifications": 0,
+      "stderrChunks": 0,
+      "turnEnded": {
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "length": 2,
+            "text": "{}"
+          }
+        ],
+        "durationMs": 0
+      },
+      "childExit": {
+        "code": 0,
+        "signal": null,
+        "at": "2026-10-05T05:55:03.689Z"
+      },
+      "leakedNodeRepl": [],
+      "servicePids": {
+        "before": [
+          20267
+        ],
+        "after": [
+          20267
+        ]
+      },
+      "codexOwnCuaReplCount": {
+        "before": 31,
+        "afterClose": 31
+      }
+    },
+    {
+      "file": "c-2026-10-05T05-55-08-717Z.json",
+      "variant": "c",
+      "startedAt": "2026-10-05T05:55:08.718Z",
+      "configPath": "~/.codex/plugins/cache/openai-bundled/unified-computer-use/26.930.31730/.mcp.json",
+      "envKeys": [
+        "BROWSER_USE_AVAILABLE_BACKENDS",
+        "BROWSER_USE_CODEX_APP_BUILD_FLAVOR",
+        "BROWSER_USE_CODEX_APP_VERSION",
+        "BROWSER_USE_TINYSKY_ENABLED",
+        "CODEX_CLI_PATH",
+        "CODEX_HOME",
+        "CUA_REPL_ENABLED_SURFACES",
+        "CUA_REPL_NODE_REPL_PATH",
+        "HOME",
+        "LOGNAME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE",
+        "NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS",
+        "NODE_REPL_NODE_MODULE_DIRS",
+        "NODE_REPL_NODE_PATH",
+        "NODE_REPL_TRUSTED_CODE_PATHS",
+        "PATH",
+        "SHELL",
+        "SKY_CUA_SERVICE_PATH",
+        "TERM",
+        "TMPDIR",
+        "USER"
+      ],
+      "overrides": {
+        "CUA_REPL_ENABLED_SURFACES": "computer",
+        "NODE_REPL_TRUSTED_SERVICES": "(removed)"
+      },
+      "withMeta": true,
+      "probeElicitMode": "cancel",
+      "metaKeysSent": [
+        "callId",
+        "sessionId",
+        "threadId",
+        "x-codex-turn-metadata",
+        "openai/confirmation_policies"
+      ],
+      "code": "await cua.getState()",
+      "verdict": "inventory-received",
+      "jsDurationMs": 281,
+      "firstError": null,
+      "resultBlocks": [
+        "text:19774",
+        "text:5861"
+      ],
+      "docsBlockLength": 19774,
+      "inventory": {
+        "appsTotal": 52,
+        "appsRunning": 33,
+        "browsers": [],
+        "errors": [],
+        "otherKeys": []
+      },
+      "resultMeta": {
+        "codex/nodeReplExecutionDurationMs": 198,
+        "codex/toolSurface": {
+          "app": null,
+          "kind": "computerUse"
+        }
+      },
+      "elicitations": [],
+      "serverRequests": [],
+      "notifications": 0,
+      "stderrChunks": 0,
+      "turnEnded": {
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "length": 2,
+            "text": "{}"
+          }
+        ],
+        "durationMs": 0
+      },
+      "childExit": {
+        "code": 0,
+        "signal": null,
+        "at": "2026-10-05T05:55:09.694Z"
+      },
+      "leakedNodeRepl": [],
+      "servicePids": {
+        "before": [
+          20267
+        ],
+        "after": [
+          20267
+        ]
+      },
+      "codexOwnCuaReplCount": {
+        "before": 31,
+        "afterClose": 31
+      }
+    },
+    {
+      "file": "d-2026-10-05T05-55-14-740Z.json",
+      "variant": "d",
+      "startedAt": "2026-10-05T05:55:14.740Z",
+      "configPath": "~/.codex/plugins/cache/openai-bundled/unified-computer-use/26.930.31730/.mcp.json",
+      "envKeys": [
+        "BROWSER_USE_AVAILABLE_BACKENDS",
+        "BROWSER_USE_CODEX_APP_BUILD_FLAVOR",
+        "BROWSER_USE_CODEX_APP_VERSION",
+        "BROWSER_USE_TINYSKY_ENABLED",
+        "CODEX_CLI_PATH",
+        "CODEX_HOME",
+        "CUA_REPL_ENABLED_SURFACES",
+        "CUA_REPL_NODE_REPL_PATH",
+        "HOME",
+        "LOGNAME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME",
+        "NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE",
+        "NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS",
+        "NODE_REPL_NODE_MODULE_DIRS",
+        "NODE_REPL_NODE_PATH",
+        "NODE_REPL_TRUSTED_CODE_PATHS",
+        "NODE_REPL_TRUSTED_SERVICES",
+        "PATH",
+        "SHELL",
+        "SKY_CUA_SERVICE_PATH",
+        "TERM",
+        "TMPDIR",
+        "USER"
+      ],
+      "overrides": {
+        "SKY_CUA_SERVICE_PATH": "/Applications/ChatGPT.app/Contents/Resources/cua_node/lib/node_modules/@oai/sky/Codex Computer Use.app"
+      },
+      "withMeta": true,
+      "probeElicitMode": "cancel",
+      "metaKeysSent": [
+        "callId",
+        "sessionId",
+        "threadId",
+        "x-codex-turn-metadata",
+        "openai/confirmation_policies"
+      ],
+      "code": "await cua.getState()",
+      "verdict": "inventory-received",
+      "jsDurationMs": 770,
+      "firstError": null,
+      "resultBlocks": [
+        "text:19774",
+        "text:8663"
+      ],
+      "docsBlockLength": 19774,
+      "inventory": {
+        "appsTotal": 52,
+        "appsRunning": 33,
+        "browsers": [
+          {
+            "family": "chrome",
+            "type": "extension",
+            "tabs": 9
+          }
+        ],
+        "errors": [],
+        "otherKeys": []
+      },
+      "resultMeta": {
+        "browser_use": {},
+        "codex/browserUse": true,
+        "codex/nodeReplExecutionDurationMs": 692,
+        "codex/toolSurface": {
+          "backend": "chrome",
+          "browserFamily": "chrome",
+          "browserId": "1",
+          "kind": "browserUse"
+        }
+      },
+      "elicitations": [],
+      "serverRequests": [],
+      "notifications": 0,
+      "stderrChunks": 0,
+      "turnEnded": {
+        "isError": false,
+        "content": [
+          {
+            "type": "text",
+            "length": 2,
+            "text": "{}"
+          }
+        ],
+        "durationMs": 1
+      },
+      "childExit": {
+        "code": 0,
+        "signal": null,
+        "at": "2026-10-05T05:55:16.254Z"
+      },
+      "leakedNodeRepl": [],
+      "servicePids": {
+        "before": [
+          20267
+        ],
+        "after": [
+          20267
+        ]
+      },
+      "codexOwnCuaReplCount": {
+        "before": 31,
+        "afterClose": 31
+      }
+    }
+  ],
+  "verdicts": {
+    "a": "inventory-received",
+    "b": "inventory-received",
+    "c": "inventory-received",
+    "d": "inventory-received"
+  },
+  "recommendedEnv": {
+    "variant": "a",
+    "keys": [
+      "BROWSER_USE_AVAILABLE_BACKENDS",
+      "BROWSER_USE_CODEX_APP_BUILD_FLAVOR",
+      "BROWSER_USE_CODEX_APP_VERSION",
+      "BROWSER_USE_TINYSKY_ENABLED",
+      "CODEX_CLI_PATH",
+      "CODEX_HOME",
+      "CUA_REPL_ENABLED_SURFACES",
+      "CUA_REPL_NODE_REPL_PATH",
+      "HOME",
+      "LOGNAME",
+      "NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER",
+      "NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME",
+      "NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE",
+      "NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS",
+      "NODE_REPL_NODE_MODULE_DIRS",
+      "NODE_REPL_NODE_PATH",
+      "NODE_REPL_TRUSTED_CODE_PATHS",
+      "NODE_REPL_TRUSTED_SERVICES",
+      "PATH",
+      "SHELL",
+      "SKY_CUA_SERVICE_PATH",
+      "TERM",
+      "TMPDIR",
+      "USER"
+    ],
+    "rationale": "The verbatim .mcp.json environment plus Codex-shaped _meta returned both the app inventory and the Chrome browser inventory. The bridge derives CUA_REPL_ENABLED_SURFACES and NODE_REPL_TRUSTED_SERVICES from the feature flags (variant c proved computer-only works with NODE_REPL_TRUSTED_SERVICES removed).",
+    "serviceAppStrategy": "Keep SKY_CUA_SERVICE_PATH from .mcp.json when present (~/.codex/computer-use). Variant d (path pointed at the copy inside @oai/sky) also returned the inventory, but the service was already running, so launching from that copy is still unproven.",
+    "baseEnvironment": "Pass an allow-listed base environment, not the whole pi process environment."
+  },
+  "metaRequired": {
+    "computerUse": false,
+    "browserUse": true,
+    "evidence": "Run b (no _meta) returned the 52-app inventory but browsers:[] with errors:[\"Browsers: Error: Missing required Codex turn metadata: session_id, turn_id\"]; run a (with x-codex-turn-metadata) returned the Chrome inventory. node_repl itself reads only model, node_repl_auto_review_required and node_repl_disabled from x-codex-turn-metadata (binary strings); no model-name allow-list was found in the binary."
+  },
+  "elicitation": {
+    "status": "observed",
+    "requests": [
+      {
+        "run": "app-2026-10-05T05-59-36-200Z.json",
+        "receivedAt": "2026-10-05T05:59:36.868Z",
+        "respondedAt": "2026-10-05T05:59:36.868Z",
+        "waitedMs": 0,
+        "message": "Allow Computer Use to use \"Finder\"?",
+        "requestedSchema": {
+          "properties": {},
+          "type": "object"
+        },
+        "metaKeys": [
+          "callId",
+          "codex_approval_kind",
+          "connector_id",
+          "connector_name",
+          "persist",
+          "progressToken",
+          "riskLevel",
+          "tool_name",
+          "tool_params",
+          "tool_params_display",
+          "x-codex-turn-metadata"
+        ],
+        "meta": {
+          "callId": "call_83a280f6061f4d66b087352c",
+          "codex_approval_kind": "mcp_tool_call",
+          "connector_id": "computer-use",
+          "connector_name": "Computer Use",
+          "persist": [
+            "session",
+            "always"
+          ],
+          "progressToken": "[redacted]",
+          "riskLevel": "low",
+          "tool_name": "get_app_state",
+          "tool_params": {
+            "app": "com.apple.finder"
+          },
+          "tool_params_display": [
+            {
+              "display_name": "App",
+              "name": "app",
+              "value": "Finder"
+            }
+          ],
+          "x-codex-turn-metadata": {
+            "auto_review_enabled": false,
+            "codex_version": "0.160.0",
+            "model": "gpt-5-codex",
+            "node_repl_auto_review_required": false,
+            "node_repl_disabled": false,
+            "reasoning_effort": "medium",
+            "session_id": "19a08ed0-e703-43d6-945d-8c5ef57f8149",
+            "thread_id": "19a08ed0-e703-43d6-945d-8c5ef57f8149",
+            "turn_id": "cdaa0fc5-1419-4749-8a85-7674481406b4",
+            "turn_started_at_unix_ms": 1791179976580
+          }
+        },
+        "response": {
+          "action": "accept",
+          "content": {}
+        }
+      },
+      {
+        "run": "app-2026-10-05T05-59-36-200Z.json",
+        "receivedAt": "2026-10-05T05:59:37.102Z",
+        "respondedAt": "2026-10-05T05:59:37.102Z",
+        "waitedMs": 0,
+        "message": "Allow Computer Use to use \"Finder\"?",
+        "requestedSchema": {
+          "properties": {},
+          "type": "object"
+        },
+        "metaKeys": [
+          "callId",
+          "codex_approval_kind",
+          "connector_id",
+          "connector_name",
+          "persist",
+          "progressToken",
+          "riskLevel",
+          "tool_name",
+          "tool_params",
+          "tool_params_display",
+          "x-codex-turn-metadata"
+        ],
+        "meta": {
+          "callId": "call_83a280f6061f4d66b087352c",
+          "codex_approval_kind": "mcp_tool_call",
+          "connector_id": "computer-use",
+          "connector_name": "Computer Use",
+          "persist": [
+            "session",
+            "always"
+          ],
+          "progressToken": "[redacted]",
+          "riskLevel": "low",
+          "tool_name": "get_app_state",
+          "tool_params": {
+            "app": "com.apple.finder"
+          },
+          "tool_params_display": [
+            {
+              "display_name": "App",
+              "name": "app",
+              "value": "Finder"
+            }
+          ],
+          "x-codex-turn-metadata": {
+            "auto_review_enabled": false,
+            "codex_version": "0.160.0",
+            "model": "gpt-5-codex",
+            "node_repl_auto_review_required": false,
+            "node_repl_disabled": false,
+            "reasoning_effort": "medium",
+            "session_id": "19a08ed0-e703-43d6-945d-8c5ef57f8149",
+            "thread_id": "19a08ed0-e703-43d6-945d-8c5ef57f8149",
+            "turn_id": "cdaa0fc5-1419-4749-8a85-7674481406b4",
+            "turn_started_at_unix_ms": 1791179976580
+          }
+        },
+        "response": {
+          "action": "accept",
+          "content": {}
+        }
+      },
+      {
+        "run": "app-2026-10-05T06-00-15-794Z.json",
+        "receivedAt": "2026-10-05T06:00:16.418Z",
+        "respondedAt": "2026-10-05T06:00:16.418Z",
+        "waitedMs": 0,
+        "message": "Allow Computer Use to use \"Finder\"?",
+        "requestedSchema": {
+          "properties": {},
+          "type": "object"
+        },
+        "metaKeys": [
+          "callId",
+          "codex_approval_kind",
+          "connector_id",
+          "connector_name",
+          "persist",
+          "progressToken",
+          "riskLevel",
+          "tool_name",
+          "tool_params",
+          "tool_params_display",
+          "x-codex-turn-metadata"
+        ],
+        "meta": {
+          "callId": "call_ceab12c0cfce47d2ad732c21",
+          "codex_approval_kind": "mcp_tool_call",
+          "connector_id": "computer-use",
+          "connector_name": "Computer Use",
+          "persist": [
+            "session",
+            "always"
+          ],
+          "progressToken": "[redacted]",
+          "riskLevel": "low",
+          "tool_name": "get_app_state",
+          "tool_params": {
+            "app": "com.apple.finder"
+          },
+          "tool_params_display": [
+            {
+              "display_name": "App",
+              "name": "app",
+              "value": "Finder"
+            }
+          ],
+          "x-codex-turn-metadata": {
+            "auto_review_enabled": false,
+            "codex_version": "0.160.0",
+            "model": "gpt-5-codex",
+            "node_repl_auto_review_required": false,
+            "node_repl_disabled": false,
+            "reasoning_effort": "medium",
+            "session_id": "903cb79a-5322-4e42-a9a3-e4d88d89b46a",
+            "thread_id": "903cb79a-5322-4e42-a9a3-e4d88d89b46a",
+            "turn_id": "35876d6a-037f-4204-ac4f-653ece0c355f",
+            "turn_started_at_unix_ms": 1791180016150
+          }
+        },
+        "response": {
+          "action": "cancel"
+        }
+      },
+      {
+        "run": "app-2026-10-05T06-00-21-884Z.json",
+        "receivedAt": "2026-10-05T06:00:22.489Z",
+        "respondedAt": "2026-10-05T06:01:22.490Z",
+        "waitedMs": 60001,
+        "message": "Allow Computer Use to use \"Finder\"?",
+        "requestedSchema": {
+          "properties": {},
+          "type": "object"
+        },
+        "metaKeys": [
+          "callId",
+          "codex_approval_kind",
+          "connector_id",
+          "connector_name",
+          "persist",
+          "progressToken",
+          "riskLevel",
+          "tool_name",
+          "tool_params",
+          "tool_params_display",
+          "x-codex-turn-metadata"
+        ],
+        "meta": {
+          "callId": "call_1da9bd09f93443c49d528a38",
+          "codex_approval_kind": "mcp_tool_call",
+          "connector_id": "computer-use",
+          "connector_name": "Computer Use",
+          "persist": [
+            "session",
+            "always"
+          ],
+          "progressToken": "[redacted]",
+          "riskLevel": "low",
+          "tool_name": "get_app_state",
+          "tool_params": {
+            "app": "com.apple.finder"
+          },
+          "tool_params_display": [
+            {
+              "display_name": "App",
+              "name": "app",
+              "value": "Finder"
+            }
+          ],
+          "x-codex-turn-metadata": {
+            "auto_review_enabled": false,
+            "codex_version": "0.160.0",
+            "model": "gpt-5-codex",
+            "node_repl_auto_review_required": false,
+            "node_repl_disabled": false,
+            "reasoning_effort": "medium",
+            "session_id": "55df76a7-db8e-48d7-8712-368febb9c2de",
+            "thread_id": "55df76a7-db8e-48d7-8712-368febb9c2de",
+            "turn_id": "d4a0bdf7-0b85-453e-8190-253a34945187",
+            "turn_started_at_unix_ms": 1791180022223
+          }
+        },
+        "response": {
+          "action": "cancel"
+        }
+      }
+    ],
+    "reactions": {
+      "app-2026-10-05T05-59-36-200Z.json": {
+        "probeElicitMode": "accept",
+        "responseAction": "accept",
+        "requests": 2,
+        "waitedMs": 0,
+        "verdict": "result-received",
+        "jsDurationMs": 760,
+        "firstError": null,
+        "result": {
+          "accessibilityTextLength": 372,
+          "accessibilityTextLines": 15,
+          "errorText": null,
+          "note": "Accessibility text itself is not recorded (it describes the user's Finder windows)."
+        }
+      },
+      "app-2026-10-05T06-00-15-794Z.json": {
+        "probeElicitMode": "cancel",
+        "responseAction": "cancel",
+        "requests": 1,
+        "waitedMs": 0,
+        "verdict": "tool-error",
+        "jsDurationMs": 270,
+        "firstError": "Computer Use was not approved to use Finder",
+        "result": {
+          "accessibilityTextLength": null,
+          "accessibilityTextLines": null,
+          "errorText": "Computer Use was not approved to use Finder",
+          "note": "Accessibility text itself is not recorded (it describes the user's Finder windows)."
+        }
+      },
+      "app-2026-10-05T06-00-21-884Z.json": {
+        "probeElicitMode": "delay",
+        "responseAction": "cancel",
+        "requests": 1,
+        "waitedMs": 60001,
+        "verdict": "tool-error",
+        "jsDurationMs": 60275,
+        "firstError": "Computer Use was not approved to use Finder",
+        "result": {
+          "accessibilityTextLength": null,
+          "accessibilityTextLines": null,
+          "errorText": "Computer Use was not approved to use Finder",
+          "note": "Accessibility text itself is not recorded (it describes the user's Finder windows)."
+        }
+      }
+    }
+  },
+  "turnEnded": {
+    "accepted": true,
+    "response": {
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "length": 2,
+          "text": "{}"
+        }
+      ],
+      "durationMs": 5
+    },
+    "note": "turn_ended with {hook_event_name: Stop, session_id, turn_id} returned text '{}' in every run; the visible effect on the service overlay was not observable because the user's own Codex session kept the service running."
+  },
+  "permissions": {
+    "macosPrompts": "none appeared; Codex Computer Use.app already held Accessibility/Screen Recording from the user's Codex Desktop use",
+    "serviceAutoLaunch": "not observable: SkyComputerUseService (pid 20267) was running before every run and unchanged after",
+    "parentProcessRestriction": "none observed: a plain node child of the shell reached the service through sky and received list_apps results",
+    "authOrPlanErrors": "none; no stderr output from the runtime in any run"
+  },
+  "sideEffects": {
+    "codexHome": "config.toml, plugins/, computer-use/ and computer-use/config.json modification times unchanged before/after; the runtime's node_repl touched ~/.codex/node_repl/active_execs (its own exec marker directory, also used by Codex); no new files under computer-use/sessions",
+    "processes": "each probe child exited 0 after stdin closed; Codex Desktop's own cua_repl count (31) unchanged; no probe node_repl left running",
+    "codexDesktop": "not re-tested after the probe (Codex Desktop was running throughout and its processes were untouched)"
+  },
+  "unresolved": [
+    "Service auto-launch and macOS permission prompts could not be observed because Codex Desktop had the service running (retest with Codex Desktop quit if needed).",
+    "Whether the copy inside @oai/sky can launch the service when ~/.codex/computer-use is absent remains unproven.",
+    "Whether the 'Browsers: Missing required Codex turn metadata' check needs more than session_id and turn_id (only the full Codex-shaped metadata was tested).",
+    "Codex Desktop's own Computer Use was not exercised after the probe."
+  ],
+  "scratch": {
+    "directory": "/tmp/cua-probe (deleted when the child finishes)",
+    "probeScript": "#!/usr/bin/env node\n// Child 01 feasibility probe: talks MCP over stdio to Codex Desktop's cua_repl exactly as .mcp.json\n// launches it, runs one `js` call, then `turn_ended`, and records everything (redacted).\n//\n//   node probe.mjs <variant> [--app \"<App Name>\"] [--elicit accept|cancel|delay] [--delayMs 60000]\n//                            [--timeoutMs 60000] [--out /tmp/cua-probe/out]\n//\n// variants:\n//   a    .mcp.json env verbatim, Codex-shaped _meta, code `await cua.getState()`\n//   b    same as a but no _meta at all\n//   c    CUA_REPL_ENABLED_SURFACES=computer, NODE_REPL_TRUSTED_SERVICES removed, _meta\n//   d    SKY_CUA_SERVICE_PATH -> copy inside @oai/sky (app bundle), _meta\n//   app  stage 2: `let app = await cua.getApp(<--app>); await app.getAXState()` with _meta\n//\n// Only an allow-listed base environment (PATH, HOME, ...) is passed underneath the .mcp.json env so\n// shell secrets never reach the runtime. Env values are never logged, only key names.\nimport { spawn, execFileSync } from \"node:child_process\";\nimport { randomUUID } from \"node:crypto\";\nimport { appendFile, mkdir, readdir, readFile, writeFile } from \"node:fs/promises\";\nimport { homedir } from \"node:os\";\nimport { join } from \"node:path\";\n\nconst argv = process.argv.slice(2);\nconst options = { _: [] };\nfor (let i = 0; i < argv.length; i += 1) {\n    const arg = argv[i];\n    if (arg.startsWith(\"--\")) {\n        options[arg.slice(2)] = argv[i + 1];\n        i += 1;\n    } else options._.push(arg);\n}\nconst variant = options._[0];\nconst appName = options.app;\nconst elicitMode = options.elicit ?? \"cancel\";\nconst delayMs = Number(options.delayMs ?? 60_000);\nconst jsTimeoutMs = Number(options.timeoutMs ?? 60_000);\nconst outDir = options.out ?? \"/tmp/cua-probe/out\";\nconst maxWaitMs = Number(options.maxWaitMs ?? 600_000);\nif (![\"a\", \"b\", \"c\", \"d\", \"app\"].includes(variant)) {\n    console.error(\"variant must be one of a, b, c, d, app\");\n    process.exit(2);\n}\nif (variant === \"app\" && !appName) {\n    console.error(\"--app <name> is required for the app variant\");\n    process.exit(2);\n}\n\n// ---------- resolve the newest enabled .mcp.json ----------\nconst codexHome = process.env.CODEX_HOME?.trim() || join(homedir(), \".codex\");\nconst cacheDir = join(codexHome, \"plugins\", \"cache\", \"openai-bundled\", \"unified-computer-use\");\nconst compareDesc = (a, b) => {\n    const pa = a.split(\".\").map(Number);\n    const pb = b.split(\".\").map(Number);\n    for (let i = 0; i < Math.max(pa.length, pb.length); i += 1) {\n        const d = (pb[i] ?? 0) - (pa[i] ?? 0);\n        if (d !== 0) return d;\n    }\n    return 0;\n};\nlet server;\nlet configPath;\nfor (const version of (await readdir(cacheDir)).sort(compareDesc)) {\n    const candidate = join(cacheDir, version, \".mcp.json\");\n    try {\n        const parsed = JSON.parse(await readFile(candidate, \"utf8\"));\n        const entry = parsed.mcpServers?.cua_repl;\n        if (entry?.enabled === true && typeof entry.command === \"string\") {\n            server = entry;\n            configPath = candidate;\n            break;\n        }\n    } catch {}\n}\nif (!server) {\n    console.error(`no enabled cua_repl .mcp.json under ${cacheDir}`);\n    process.exit(2);\n}\n\n// ---------- environment ----------\nconst BASE_ENV_KEYS = [\"PATH\", \"HOME\", \"USER\", \"LOGNAME\", \"TMPDIR\", \"LANG\", \"LC_ALL\", \"SHELL\", \"TERM\"];\nconst env = {};\nfor (const key of BASE_ENV_KEYS) if (process.env[key] !== undefined) env[key] = process.env[key];\nObject.assign(env, server.env ?? {});\nconst overrides = {};\nlet withMeta = true;\nif (variant === \"b\") withMeta = false;\nif (variant === \"c\") {\n    env.CUA_REPL_ENABLED_SURFACES = \"computer\";\n    delete env.NODE_REPL_TRUSTED_SERVICES;\n    overrides.CUA_REPL_ENABLED_SURFACES = \"computer\";\n    overrides.NODE_REPL_TRUSTED_SERVICES = \"(removed)\";\n}\nif (variant === \"d\") {\n    const nodeModules = (env.NODE_REPL_NODE_MODULE_DIRS ?? \"\").split(\":\")[0];\n    env.SKY_CUA_SERVICE_PATH = join(nodeModules, \"@oai\", \"sky\", \"Codex Computer Use.app\");\n    overrides.SKY_CUA_SERVICE_PATH = env.SKY_CUA_SERVICE_PATH;\n}\n\n// ---------- redaction + logging ----------\nconst SECRET_KEY = /token|key|secret|account|password|cookie|authorization/i;\nconst redact = (value) => {\n    if (Array.isArray(value)) return value.map(redact);\n    if (value && typeof value === \"object\") {\n        const out = {};\n        for (const [k, v] of Object.entries(value)) out[k] = SECRET_KEY.test(k) ? \"[redacted]\" : redact(v);\n        return out;\n    }\n    return value;\n};\nconst stamp = new Date().toISOString().replace(/[:.]/g, \"-\");\nawait mkdir(outDir, { recursive: true });\nconst logPath = join(outDir, `${variant}-${stamp}.log.jsonl`);\nconst summaryPath = join(outDir, `${variant}-${stamp}.json`);\nconst log = async (direction, payload) => {\n    await appendFile(logPath, `${JSON.stringify({ t: Date.now(), direction, payload: redact(payload) })}\\n`);\n};\nconst pgrep = (pattern) => {\n    try {\n        return execFileSync(\"pgrep\", [\"-f\", pattern], { encoding: \"utf8\" }).trim().split(\"\\n\").filter(Boolean).map(Number);\n    } catch {\n        return [];\n    }\n};\n\nconst summary = {\n    variant,\n    startedAt: new Date().toISOString(),\n    configPath,\n    command: server.command,\n    args: server.args,\n    envKeys: Object.keys(env).sort(),\n    overrides,\n    withMeta,\n    elicitMode,\n    appName: appName ?? null,\n    servicePidsBefore: pgrep(\"SkyComputerUseService\"),\n    cuaPidsBefore: pgrep(\"cua-repl.mjs\"),\n    stderr: [],\n    notifications: [],\n    serverRequests: [],\n    elicitations: [],\n};\n\n// ---------- JSON-RPC over stdio ----------\nconst child = spawn(server.command, server.args, { env, stdio: [\"pipe\", \"pipe\", \"pipe\"] });\nsummary.childPid = child.pid;\nlet nextId = 1;\nconst pending = new Map();\nlet exited = false;\nconst exitPromise = new Promise((resolve) => {\n    child.on(\"exit\", (code, signal) => {\n        exited = true;\n        summary.childExit = { code, signal, at: new Date().toISOString() };\n        for (const [, p] of pending) p.reject(new Error(`transport closed (exit ${code ?? signal})`));\n        pending.clear();\n        resolve();\n    });\n});\nchild.on(\"error\", (error) => {\n    summary.spawnError = String(error);\n});\nchild.stderr.on(\"data\", (chunk) => {\n    const text = chunk.toString();\n    summary.stderr.push(text.slice(0, 2000));\n    void log(\"stderr\", text.slice(0, 4000));\n});\nconst send = (message) => {\n    void log(\"->\", message);\n    child.stdin.write(`${JSON.stringify(message)}\\n`);\n};\nconst request = (method, params) =>\n    new Promise((resolve, reject) => {\n        const id = nextId++;\n        pending.set(id, { resolve, reject, method });\n        send({ jsonrpc: \"2.0\", id, method, params });\n    });\nconst sleep = (ms) => new Promise((r) => setTimeout(r, ms));\n\nconst handleElicitation = async (message) => {\n    const record = {\n        receivedAt: new Date().toISOString(),\n        id: message.id,\n        params: redact(message.params),\n    };\n    summary.elicitations.push(record);\n    console.error(`\\n[elicitation/create] ${message.params?.message}\\n  _meta: ${JSON.stringify(redact(message.params?._meta ?? {}))}\\n  schema: ${JSON.stringify(message.params?.requestedSchema ?? {})}\\n  mode: ${elicitMode}`);\n    let result;\n    if (elicitMode === \"accept\") result = { action: \"accept\", content: {} };\n    else if (elicitMode === \"delay\") {\n        console.error(`  waiting ${delayMs} ms before answering cancel...`);\n        await sleep(delayMs);\n        result = { action: \"cancel\" };\n    } else result = { action: \"cancel\" };\n    record.response = result;\n    record.respondedAt = new Date().toISOString();\n    send({ jsonrpc: \"2.0\", id: message.id, result });\n};\n\nlet buffer = \"\";\nchild.stdout.on(\"data\", (chunk) => {\n    buffer += chunk.toString();\n    let nl = buffer.indexOf(\"\\n\");\n    while (nl !== -1) {\n        const line = buffer.slice(0, nl).trim();\n        buffer = buffer.slice(nl + 1);\n        nl = buffer.indexOf(\"\\n\");\n        if (!line) continue;\n        let message;\n        try {\n            message = JSON.parse(line);\n        } catch {\n            void log(\"<- (raw)\", line.slice(0, 4000));\n            continue;\n        }\n        void log(\"<-\", message);\n        if (message.id !== undefined && message.method === undefined) {\n            const waiter = pending.get(message.id);\n            if (!waiter) continue;\n            pending.delete(message.id);\n            if (message.error) waiter.reject(Object.assign(new Error(message.error.message), { rpc: message.error }));\n            else waiter.resolve(message.result);\n            continue;\n        }\n        if (message.method === \"elicitation/create\") {\n            void handleElicitation(message);\n            continue;\n        }\n        if (message.id !== undefined) {\n            summary.serverRequests.push({ method: message.method, params: redact(message.params) });\n            send({ jsonrpc: \"2.0\", id: message.id, error: { code: -32601, message: `probe does not implement ${message.method}` } });\n            continue;\n        }\n        summary.notifications.push({ method: message.method, params: redact(message.params) });\n    }\n});\n\nconst describeContent = (content) =>\n    (content ?? []).map((block) =>\n        block.type === \"text\"\n            ? { type: \"text\", length: block.text?.length ?? 0, text: (block.text ?? \"\").slice(0, 20_000) }\n            : block.type === \"image\"\n              ? { type: \"image\", mimeType: block.mimeType, base64Length: block.data?.length ?? 0 }\n              : { type: block.type },\n    );\n\nconst sessionId = randomUUID();\nconst turnId = randomUUID();\nconst buildMeta = (callId) => ({\n    callId,\n    sessionId,\n    threadId: sessionId,\n    \"x-codex-turn-metadata\": {\n        session_id: sessionId,\n        thread_id: sessionId,\n        turn_id: turnId,\n        model: \"gpt-5-codex\",\n        reasoning_effort: \"medium\",\n        auto_review_enabled: false,\n        node_repl_auto_review_required: false,\n        node_repl_disabled: false,\n        codex_version: \"0.160.0\",\n        turn_started_at_unix_ms: Date.now(),\n    },\n    \"openai/confirmation_policies\": {},\n});\n\nconst finish = async () => {\n    summary.finishedAt = new Date().toISOString();\n    summary.servicePidsAfter = pgrep(\"SkyComputerUseService\");\n    summary.cuaPidsAfter = pgrep(\"cua-repl.mjs\");\n    summary.childDescendantsBeforeKill = (() => {\n        try {\n            return execFileSync(\"pgrep\", [\"-P\", String(child.pid)], { encoding: \"utf8\" }).trim().split(\"\\n\").filter(Boolean);\n        } catch {\n            return [];\n        }\n    })();\n    if (!exited) {\n        child.stdin.end();\n        await Promise.race([exitPromise, sleep(5000)]);\n    }\n    if (!exited) {\n        child.kill(\"SIGTERM\");\n        await Promise.race([exitPromise, sleep(3000)]);\n    }\n    if (!exited) child.kill(\"SIGKILL\");\n    await Promise.race([exitPromise, sleep(3000)]);\n    summary.cuaPidsAfterClose = pgrep(\"cua-repl.mjs\");\n    summary.leakedNodeRepl = (() => {\n        const mine = new Set(summary.childDescendantsBeforeKill.map(Number));\n        return pgrep(\"cua_node/bin/node_repl\").filter((pid) => mine.has(pid));\n    })();\n    await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\\n`);\n    console.error(`\\nsummary: ${summaryPath}\\nlog: ${logPath}`);\n};\n\nconst guard = setTimeout(async () => {\n    summary.verdict = \"probe-max-wait-exceeded\";\n    await finish();\n    process.exit(3);\n}, maxWaitMs);\nguard.unref();\n\ntry {\n    const t0 = Date.now();\n    summary.initialize = await request(\"initialize\", {\n        protocolVersion: \"2025-06-18\",\n        capabilities: { elicitation: { form: {} } },\n        clientInfo: { name: \"codex-mcp-client\", title: \"Codex\", version: \"0.160.0\" },\n    });\n    send({ jsonrpc: \"2.0\", method: \"notifications/initialized\" });\n    const tools = await request(\"tools/list\", {});\n    summary.tools = (tools.tools ?? []).map((tool) => ({ name: tool.name, descriptionLength: tool.description?.length ?? 0, annotations: tool.annotations }));\n    summary.initializeMs = Date.now() - t0;\n\n    const code =\n        variant === \"app\"\n            ? `let app = await cua.getApp(${JSON.stringify(appName)});\\nlet ax = await app.getAXState();\\ntypeof ax === \"string\" ? ax : JSON.stringify(ax).slice(0, 8000)`\n            : \"await cua.getState()\";\n    const callId = `call_${randomUUID().replace(/-/g, \"\").slice(0, 24)}`;\n    const params = {\n        name: \"js\",\n        arguments: { code, timeout_ms: jsTimeoutMs, title: variant === \"app\" ? `probe: getApp ${appName}`.slice(0, 80) : \"probe: cua.getState()\" },\n    };\n    if (withMeta) params._meta = buildMeta(callId);\n    summary.jsCall = { code, timeout_ms: jsTimeoutMs, metaKeys: withMeta ? Object.keys(params._meta) : [] };\n    console.error(`[js] ${code.replace(/\\n/g, \" \")}`);\n    const t1 = Date.now();\n    try {\n        const result = await request(\"tools/call\", params);\n        summary.jsResult = { isError: result.isError ?? false, content: describeContent(result.content), structuredContent: redact(result.structuredContent), _meta: redact(result._meta), durationMs: Date.now() - t1 };\n        summary.verdict = result.isError ? \"tool-error\" : \"result-received\";\n        const firstText = (result.content ?? []).find((b) => b.type === \"text\")?.text ?? \"\";\n        console.error(`[js result] isError=${result.isError ?? false} durationMs=${Date.now() - t1}\\n${firstText.slice(0, 1500)}`);\n    } catch (error) {\n        summary.jsResult = { error: error.rpc ?? String(error), durationMs: Date.now() - t1 };\n        summary.verdict = error.rpc ? \"rpc-error\" : \"transport-error\";\n        console.error(`[js error] ${JSON.stringify(summary.jsResult.error).slice(0, 1500)}`);\n    }\n\n    const t2 = Date.now();\n    try {\n        const ended = await request(\"tools/call\", {\n            name: \"turn_ended\",\n            arguments: { hook_event_name: \"Stop\", session_id: sessionId, turn_id: turnId },\n        });\n        summary.turnEnded = { isError: ended.isError ?? false, content: describeContent(ended.content), durationMs: Date.now() - t2 };\n    } catch (error) {\n        summary.turnEnded = { error: error.rpc ?? String(error), durationMs: Date.now() - t2 };\n    }\n    console.error(`[turn_ended] ${JSON.stringify(summary.turnEnded).slice(0, 500)}`);\n} catch (error) {\n    summary.fatal = String(error);\n    summary.verdict = summary.verdict ?? \"transport-error\";\n    console.error(`[fatal] ${error}`);\n} finally {\n    clearTimeout(guard);\n    await finish();\n}\n"
+  }
+}

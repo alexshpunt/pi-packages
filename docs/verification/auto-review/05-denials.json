@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "sourceDigest": "6ccbe3dee9efaa01e62b87cef3defb4692687325700896811a42287cba992f35",
+  "contractDigest": "7c16ec541fca790264aca75860a393e675013c8f273ed60516a80f93c9f44379",
+  "terminalStateMap": {
+    "approved": "Structured assessment recorded; native execution still checks binding, cancellation and current user authorization",
+    "denied": "AUTO_REVIEW_DENIED includes rationale, no-circumvention/safer-alternative guidance and recent denial ID",
+    "timed-out": "AUTO_REVIEW_TIMEOUT explicitly says timeout is not proof of unsafe action",
+    "aborted": "AUTO_REVIEW_ABORTED prevents execution",
+    "failed": "AUTO_REVIEW_FAILED asks to resolve the review failure without bypassing review"
+  },
+  "thresholds": {
+    "consecutiveDenials": 3,
+    "rollingDenials": 10,
+    "rollingWindow": 50,
+    "combination": "OR",
+    "historyLimit": 10,
+    "nonDenial": "Resets consecutive count and enters rolling window as false"
+  },
+  "turnHooks": {
+    "begin": "Pi agent_start begins one user agent loop; ordinary model tool iterations do not reset counters",
+    "interrupt": "ReviewLifecycle abort signal cancels pending guarded operations and context.abort interrupts actual Pi turn",
+    "session": "session_start/session_tree/reset clear retry authority and restore selected branch provenance",
+    "staleAuthorization": "Trusted user/instruction scope changes during review invalidate admission before native execution"
+  },
+  "retryBinding": {
+    "command": "/approve [denial-id]",
+    "selection": "TUI/RPC picker or exact supplied ID; critical denials rejected",
+    "identity": "tool/input/source/cwd/session/context/policy/profile; excludes fresh toolCallId and the per-invocation origin digest of an otherwise identical network request",
+    "marker": "Controller-local, atomically consumed once; included only in the exact retry review as user-confirmation; no persistent grant",
+    "execution": "Model/nested retry through normal guarded tools using original caller arguments; direct user shell uses exact guarded command and fresh review",
+    "freshReview": "Never reuses cached grants for a selected retry; critical and absolute policy denials remain non-overridable",
+    "lifetime": "Cleared on session/branch replacement and pending markers invalidated by a new genuine user input"
+  },
+  "statusSurfaces": {
+    "ui": "Bounded Korean reviewing/approved/denied/aborted/timed-out/failed status; concurrent count and denial warning",
+    "audit": "Existing identity fields plus bounded redacted status/riskLevel/userAuthorization/rationale; no request or tool argument storage",
+    "mainAgent": "Typed guard errors and exact-denial instructions"
+  },
+  "commands": [
+    "npm run build",
+    "npm run test:approvals",
+    "npm run test:reviewer",
+    "npm run test:integration"
+  ],
+  "artifactPaths": [
+    ".reports/pi-guard/runs/2026-10-03T00-32-57-031Z-69a5f41d-1120-463c-9fe6-2ddecd3e03c2/darwin-arm64/reviewer.json",
+    ".reports/pi-guard/runs/2026-10-03T00-32-56-722Z-059e76fc-bb97-4142-beee-72d31bf99a45/darwin-arm64/approvals.json",
+    ".reports/pi-guard/runs/2026-10-03T00-31-16-498Z-7cd88675-8f5f-4cbe-b197-43047322714a/darwin-arm64/integration.json"
+  ],
+  "verification": {
+    "approvals": 10,
+    "reviewer": 7,
+    "integration": 18,
+    "actualPiInterruption": true,
+    "actualPiApproveCommand": true,
+    "lateAuthorizationBlockedBeforeNativeEffect": true,
+    "realModel": false
+  },
+  "unresolved": [],
+  "recordedAt": "2026-10-03T00:33:37.334Z"
+}

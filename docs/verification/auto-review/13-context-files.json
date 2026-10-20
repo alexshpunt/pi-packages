@@ -1,0 +1,24 @@
+{
+  "status": "local-verified",
+  "sourceDigest": "72a59aa0720e9562c9d4b6827c8c23ee4abcf12e311295d268692c6d28d6ede4",
+  "contractDigest": "7c16ec541fca790264aca75860a393e675013c8f273ed60516a80f93c9f44379",
+  "reference": "a956835d020762cb2b570053af06f643a11c0ecc:codex-rs/core/src/agents_md.rs",
+  "implementation": [
+    "Pi agent directory global instructions and nearest project root to cwd traversal",
+    "Override precedence, configurable fallback and marker names, aggregate byte budget",
+    "Project trust gate, protected-read and hard-link alias rejection",
+    "Structured source provenance reaches Pi and reviewer; reload refreshes sources"
+  ],
+  "verification": {
+    "passed": 36,
+    "evidence": [
+      ".reports/pi-guard/runs/2026-10-03T04-06-56-484Z-40c1361c-d5f9-4ddb-9fd5-e75f26f64e64/darwin-arm64/policy.json",
+      ".reports/pi-guard/runs/2026-10-03T04-06-57-376Z-11e3da56-01a2-4526-a75e-9d9b90b826ce/darwin-arm64/integration.json"
+    ]
+  },
+  "limits": [
+    "Global instruction home is the explicitly selected Pi agent directory.",
+    "Controller credential denies remain mandatory, including instruction-file aliases.",
+    "Final Docker/live qualification follows the remaining changes."
+  ]
+}

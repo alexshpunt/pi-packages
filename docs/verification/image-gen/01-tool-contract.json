@@ -1,0 +1,108 @@
+{
+    "status": "complete",
+    "supersededBy": "docs/handoffs/image-gen/09-openai-provider.json — current authentication contract; this record is prior-stage evidence",
+    "currentRevision": "docs/handoffs/image-gen/08-package-completion.json",
+    "recordScope": "Initial stage evidence is retained below. The auth contract was updated for the approved subscription route; 08 contains current integrated checks.",
+    "brief": "docs/briefs/2026-10-05-feat-codex-image-gen-01-tool-contract.md",
+    "verifiedOn": "2026-10-05",
+    "environment": {
+        "node": "v24.14.0",
+        "npm": "11.9.0",
+        "workspacePins": "@earendil-works/pi-ai, pi-coding-agent, pi-tui 0.99.1 (devDependencies; types and build)",
+        "liveCli": "global pi 1.0.2 (@earendil-works/pi-coding-agent 1.0.2); the APIs this package uses (registerTool, prepareArguments, getProviderAuth, getProviderAuthStatus, getAgentDir, convertToPng, setActiveTools, appendEntry, buildSessionProjection, BeforeAgentStartEvent.systemPromptOptions.skills) are present in both 0.99.1 and 1.0.2 declaration files",
+        "worktree": "../pi-codex-permission-codex-image-gen on branch feat/codex-image-gen from master d5aa4c2; tmp/codex-main is a symlink to the main checkout's gitignored Codex copy"
+    },
+    "package": {
+        "name": "@buyong/pi-codex-image-gen",
+        "version": "0.1.0",
+        "dir": "packages/pi-codex-image-gen",
+        "manifest": "packages/pi-codex-image-gen/package.json",
+        "entry": "./dist/index.js",
+        "peerDependencies": ">=0.99.1 for @earendil-works/pi-ai, pi-coding-agent, pi-tui",
+        "runtimeImports": ["node:os", "node:path", "./*.js"],
+        "lockfile": "package-lock.json gained only the new workspace link and package entry (24 added lines, no dependency version changes)"
+    },
+    "tool": {
+        "name": "image_gen",
+        "label": "Image generation",
+        "module": "packages/pi-codex-image-gen/src/tool.ts (export imageGenTool, IMAGE_GEN_SCHEMA)",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "num_last_images_to_include": { "type": ["integer", "null"] },
+                "prompt": { "type": "string" },
+                "referenced_image_paths": { "type": ["array", "null"], "items": { "type": "string" } },
+                "transparent_background": {
+                    "type": "boolean",
+                    "description": "Whether the output should have a transparent background. Defaults to false."
+                }
+            },
+            "required": ["prompt"],
+            "additionalProperties": false
+        },
+        "schemaNotes": "Plain JSON Schema (no TypeBox kind); pi-ai sends it unchanged (toToolDeclaration JSON round-trip; getJsonSchemaToolParameters only rewrites when strict is true). Property order follows Codex's BTreeMap serialization. Codex's JsonSchema type keeps type/description/items/required/additionalProperties and drops schemars' maxItems/minimum/maximum/format/default, so the model-facing schema is as listed.",
+        "descriptionSha256": "fb3b4a41a31c4bbaf855f1286940f8c4216eb1c2d85591128f0e469d8643aa7e",
+        "descriptionBytes": 1683,
+        "descriptionSource": "tmp/codex-main/codex-rs/ext/image-generation/imagegen_description.md (2099 bytes); diff shows only the four FDD §9.3 edits: image_gen.imagegen -> image_gen; the first guideline reduced to 'imagegen needs a few minutes to finish.' and the text()/notify() bullet removed; view_image -> read; the python-tool sentence removed",
+        "promptSnippet": null,
+        "promptGuidelines": null,
+        "annotations": { "readOnlyHint": false, "destructiveHint": false, "openWorldHint": true },
+        "exposure": "default (direct), defaultActive default (true)"
+    },
+    "argumentContract": {
+        "module": "packages/pi-codex-image-gen/src/arguments.ts",
+        "exports": ["parseImageGenArguments(args): { arguments: ImageGenArguments; plan: ImageRequestPlan }", "ImageGenArguments", "ImageRequestPlan", "ImageBackground", "IMAGE_MODEL", "MAX_EDIT_IMAGES"],
+        "prepareArguments": "returns parseImageGenArguments(args).arguments (normalized object that the declared schema accepts); execute() re-derives the plan with parseImageGenArguments(params).plan",
+        "planType": "{ kind: 'generate' } | { kind: 'edit-paths'; paths: string[] } | { kind: 'edit-history'; count: number }, each with prompt, background ('transparent' | 'opaque'), model 'gpt-image-2', quality 'auto', size 'auto'",
+        "checkOrder": [
+            "1. serde-style deserialization in key order: unknown field, per-field type errors, path elements as strings, '~' and '~/...' expanded to the home directory, non-absolute paths rejected; then missing `prompt`",
+            "2. `referenced_image_paths` length > 5",
+            "3. selector combination (empty array counts as absent)",
+            "4. `num_last_images_to_include` range 1..=5"
+        ],
+        "errorStrings": {
+            "unknownField": "unknown field `<name>`, expected one of `prompt`, `transparent_background`, `referenced_image_paths`, `num_last_images_to_include`",
+            "missingPrompt": "missing field `prompt`",
+            "typeError": "invalid type: <serde Unexpected>, expected <a string | a boolean | a sequence | path string | usize>",
+            "negativeCount": "invalid value: integer `<n>`, expected usize",
+            "relativePath": "AbsolutePathBuf deserialized without a base path",
+            "nonObject": "invalid type: sequence|map|..., expected struct ImagegenArgs",
+            "tooManyPaths": "`referenced_image_paths` must contain at most 5 paths",
+            "bothSelectors": "provide only one of `referenced_image_paths` or `num_last_images_to_include`",
+            "countRange": "`num_last_images_to_include` must be between 1 and 5"
+        },
+        "verification": "tmp/verify/01-arguments.mjs (scratch, gitignored): 27/27 cases pass including precedence cases; tmp/verify/01-declaration.mjs: every valid shape passes pi-ai validateToolArguments after prepareArguments, and every invalid shape throws the Codex message from prepareArguments"
+    },
+    "auth": {
+        "module": "packages/pi-codex-image-gen/src/auth.ts",
+        "exports": ["resolveOpenAiCredentials(ctx): Promise<{ ok: true; credentials: { apiKey; headers; baseUrl } } | { ok: false; error }>", "MISSING_CREDENTIAL_MESSAGE", "IMAGE_AUTH_PROVIDER", "DEFAULT_OPENAI_BASE_URL"],
+        "source": "ctx.modelRegistry.getProviderAuth('openai-codex') only; missing credentials, refresh failure, or absent ChatGPT account claim yields guidance before the image request; no direct credential-file reads or public-API fallback",
+        "baseUrlRule": "auth.baseUrl ?? getProvider('openai-codex').baseUrl ?? 'https://chatgpt.com/backend-api/codex', trailing slashes removed, append /codex once if absent",
+        "headersRule": "auth.headers preserved; chatgpt-account-id from the token claim; default originator pi and package User-Agent when absent; tool supplies a per-user-turn x-codex-image-turn-id without replacing a provided one",
+        "missingCredentialMessage": "image generation failed: no usable ChatGPT subscription credentials are configured for Pi's `openai-codex` provider. Run `/login openai-codex` and sign in with ChatGPT. This image tool does not use `OPENAI_API_KEY` or the `openai` provider's ChatPass token; your chat model does not need to change.",
+        "liveCheck": "In the verification session Pi reported getProviderAuthStatus('openai') = { configured: true, source: 'stored' } (ChatGPT sign-in); the no-credential path was exercised only through the resolver's code path, not a live session (01 Stage 3 Ends-when partially deferred to 02 Stage 2 where a temporary PI_CODING_AGENT_DIR run is planned)"
+    },
+    "placeholderExecute": {
+        "message": "image generation failed: backend unavailable (pending 02-backend)",
+        "observed": "pi 1.0.2, `pi -ne -e packages/pi-codex-image-gen/dist/index.js -e tmp/verify/probe.mjs --no-session --print ...` with model openai/gpt-6-astra: the model called image_gen with {prompt:'a red circle', transparent_background:false}; tool_execution_end had isError=true, content=[text placeholder], details={operation:'generate', background:'opaque'}; no ~/.pi/agent/generated_images directory was created",
+        "sessionObservations": "active tools at session_start: read, bash, edit, write, image_gen; the rendered system prompt contains neither 'image_gen' nor 'imagegen'"
+    },
+    "commands": {
+        "build": "npm run build (turbo; exit 0, dist/{index,tool,arguments,auth,description}.js)",
+        "check": "npm run check (biome; exit 0, 0 warnings after fixes)",
+        "schemaInspection": "node tmp/verify/01-declaration.mjs",
+        "argumentCases": "node tmp/verify/01-arguments.mjs",
+        "forbiddenTokens": "grep -c 'image_gen.imagegen\\|view_image\\|@exec\\|generatedImage\\|python' packages/pi-codex-image-gen/dist/*.js -> 0 for every file",
+        "liveLoad": "pi -ne -e packages/pi-codex-image-gen/dist/index.js -e tmp/verify/probe.mjs --no-session --print 'Reply with exactly: hi' -> 'hi', no extension load error"
+    },
+    "sideEffects": {
+        "autoReview": "git status --short -- packages/pi-codex-auto-review scripts .github is empty",
+        "distImports": "only node:os, node:path and local modules (pi-coding-agent/pi-ai imports are type-only)"
+    },
+    "unresolved": [
+        "Serde position suffix `at line N column M` is not reproduced (FDD §9.11).",
+        "JSON numbers like 1.0 arrive in JS as the integer 1, so serde's `floating point` wording for integral floats is not reproducible; non-integral floats produce the serde wording.",
+        "Rust Debug string escaping in `invalid type: string \"...\"` is approximated with JSON.stringify (differs only for control characters).",
+        "The live CLI is pi 1.0.2 while the workspace pins 0.99.1; behavior claims were verified against 0.99.1 sources and observed on 1.0.2."
+    ]
+}

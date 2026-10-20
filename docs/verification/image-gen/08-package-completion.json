@@ -1,0 +1,107 @@
+{
+    "status": "complete",
+    "supersededBy": "docs/handoffs/image-gen/09-openai-provider.json — prior revision snapshot; legacy authentication is no longer used",
+    "scope": "사용자가 승인한 정식 패키지의 구독 경로 반영과 추가 실제 이미지 호출 없는 최종 검증. 실제 편집·투명 배경을 모두 검증했다는 뜻은 아님.",
+    "verifiedOn": "2026-10-05",
+    "worktree": "/Users/buyong/workspace/private-opensource/pi-codex-permission-codex-image-gen",
+    "branch": "feat/codex-image-gen",
+    "baseCommit": "d5aa4c253cc5b2a59af32c18b839f3cb6a68ca2a",
+    "treeState": "미커밋. 새 패키지와 관련 FDD/브리프/인계 파일, package-lock.json의 새 workspace 24줄만 작업 범위에 포함. 커밋·병합·게시·사용자 설정 변경 없음.",
+    "package": {
+        "name": "@buyong/pi-codex-image-gen",
+        "version": "0.1.0",
+        "path": "packages/pi-codex-image-gen",
+        "sourceFilesHashed": 17,
+        "sourceDigestAlgorithm": "sha256(sorted relative path + NUL + contents + NUL), src/ + skills/ + package.json + tsconfig.json",
+        "sourceDigest": "5231528ca9ac234c789dd62228f1eb42c6d5daeff42dcdde1cc1114edb011294",
+        "sourceLines": 1630,
+        "devPiVersion": "0.99.1",
+        "nativePiVersion": "1.0.2",
+        "nodeVersion": "v24.14.0",
+        "newRuntimeDependencies": []
+    },
+    "implemented": {
+        "authentication": "기존 Pi openai-codex 구독 인증을 모델 레지스트리로만 조회. auth.baseUrl > provider.baseUrl > 기본 구독 주소 순서를 유지하고 /codex를 한 번만 붙임. 계정 클레임 검증과 계정 헤더, originator/User-Agent 기본값 적용. 정상 기존 로그인 재사용, 채팅 공급자/설정 변경 및 공개 API 대체 경로 없음.",
+        "requestHeaders": "추가 인증 헤더와 호출자가 제공한 값 보존. x-codex-image-turn-id는 현재 사용자 턴 ID 또는 직접 호출 ID이며 제공된 턴 헤더는 덮어쓰지 않음. 요청에 기존 AbortSignal을 그대로 전달.",
+        "editRequest": "생성·편집 모두 JSON. 편집 본문은 images:[{image_url:'data:<MIME>;base64,<bytes>'}]와 고정 prompt/background/model/quality/size. 경로 순서·대화 이미지 시간순·바이트 보존, n 미전송.",
+        "exposure": "구독 인증 설정 여부로 도구/스킬 노출. 사용자 비활성 상태 보존. session_tree에서 분기별 소유 상태 복원, Pi가 활성 상태를 복원한 경우 오래된 hiddenByExtension=true 기록 해제.",
+        "safety": "잘못된 구독 토큰·계정 클레임·갱신 실패는 네트워크 전에 안내. 오류에 반사된 토큰/계정 ID 제거. 취소 상태를 파일 읽기 전·요청 전·저장 전에 확인.",
+        "preserved": "도구 이름·스키마·Codex 인자 검사·설명 해시·promptSnippet/promptGuidelines 미설정·저장 규칙·경로 안내·재시도 정책은 유지.",
+        "skill": "5개 파일 유지, 기존 Pi 구독 로그인과 /login openai-codex 안내로 정정, 공개 API/CLI 대체 금지. Apache-2.0 LICENSE 사본은 원본과 동일.",
+        "documents": "FDD 인증/JSON 편집/노출 정책과 의존 문맥 및 이력 정정. draft 상태 유지, 정확한 커밋 기준의 전체 적합성은 unverified. 부모 브리프의 기존 공개 API·전체 유료 행렬 지시를 현재 승인 범위로 명시적으로 대체. 01~07의 초기 검증 이력은 보존하고 이 현재 기록으로 연결."
+    },
+    "repositoryChecks": {
+        "build": { "command": "npm run build", "outcome": "pass", "packages": "2 successful / 2 total" },
+        "check": { "command": "npm run check", "outcome": "pass", "checkedFiles": 112, "warnings": 0 },
+        "pack": {
+            "command": "npm pack --dry-run --json --ignore-scripts (packages/pi-codex-image-gen)",
+            "outcome": "pass",
+            "fileCount": 36,
+            "fileSet": "10 modules × js/d.ts/js.map, package.json, skill Markdown 3개와 LICENSE.txt/NOTICE. 예상 목록과 정확히 일치. src/tmp/test/scripts 없음.",
+            "evidence": "tmp/verify/08-pack.json"
+        },
+        "outsideScope": "git diff --exit-code로 auto-review 패키지, scripts, .github, 루트 package.json/biome.json/turbo.json/tsconfig.base.json 무변경 확인.",
+        "lockfile": "새 workspace 링크와 패키지 항목 24줄만 추가; 기존 의존성 버전 변경 없음.",
+        "toolingArtifacts": "검색 도구의 패키지 내부 .codemap을 gitignored tmp/verify로 이동. 런타임 또는 배포 파일에 포함하지 않음."
+    },
+    "offlineChecks": {
+        "commands": "node tmp/verify/{01-arguments,01-declaration,02-backend,02-tool,04-ref-images,05-exposure}.mjs (기존 scratch 검사만 현재 계약에 맞춰 재실행)",
+        "results": { "arguments": "27/27", "backend": "27/27", "tool": "13/13", "referenceImages": "20/20", "exposure": "11/11" },
+        "descriptionSha256": "fb3b4a41a31c4bbaf855f1286940f8c4216eb1c2d85591128f0e469d8643aa7e",
+        "schema": "Codex model-facing schema deep-equal; 일반 Pi 검증 전에 Codex 인자 메시지 발생",
+        "evidence": "tmp/verify/08-offline-checks.log",
+        "newCommittedTestFiles": []
+    },
+    "boundaryChecks": {
+        "method": "node --input-type=module의 인라인 검사; 실제 fetch 대신 로컬 Response 또는 mock 서버만 사용",
+        "outcome": "pass",
+        "covered": [
+            "구독 인증 선택, URL 우선순위/정규화, 계정 헤더와 호출자 추가 헤더 보존",
+            "없는/잘못된 구독 인증 거부, 공개 인증 대체 없음",
+            "최종 전송자에서 JSON 이미지 MIME/바이트/순서/요청 값, 원래 AbortSignal 확인",
+            "서버 오류에 반사된 토큰/계정 ID 제거와 Codex HTTP 오류 형식 유지",
+            "로그인 변경과 사용자 비활성 상태, 스킬 필터, 다른 도구/스킬 보존",
+            "분기 이동의 오래된 메모리 소유 상태 제거, 재개 후 사용자가 끄는 경우 보존",
+            "정식 imageGenTool.execute의 구독 URL/턴 헤더/PNG 저장/이미지+안내 결과 (mock)",
+            "Pi DefaultResourceLoader의 실제 package manifest 로딩, 컴파일된 확장과 올바른 imagegen 경로 확인"
+        ],
+        "initialHarnessCorrection": "manifest 검사에서 스킬이 정확히 하나라는 초기 가정이 실패함. 임시 agentDir에서도 전역 find-skills가 발견되는 정상 동작을 반영해, 패키지 imagegen의 정확한 경로와 확장 오류 부재로 검사 조건을 고쳤음. 제품 코드 변경 없이 재검사 통과.",
+        "evidence": "tmp/verify/08-boundary-checks.log"
+    },
+    "nativePiLoad": {
+        "command": "pi --no-session --print -e packages/pi-codex-image-gen -e tmp/verify/inspect-auth-routes.mjs </dev/null",
+        "outcome": "pass",
+        "toolRegistered": true,
+        "toolActive": true,
+        "skillListedFromManifest": true,
+        "productionCredentialResolver": "기존 구독 인증과 계정 헤더를 정상 해석, baseUrl https://chatgpt.com/backend-api/codex, originator pi",
+        "chatProvider": "기존 claude-bridge/claude-opus-5-5 유지",
+        "modelRequests": 0,
+        "imageRequests": 0,
+        "userSettingsWrites": 0,
+        "evidence": "tmp/verify/08-native-pi-load.log"
+    },
+    "documentChecks": {
+        "type": "Feature Design Doc focused update",
+        "fddStructure": "validate_fdd.py --strict: PASS, structural findings 없음",
+        "briefsetStructure": "validate_briefset.py: PASS, 자식 6개와 의존 연결 통과, warnings 0",
+        "semanticScope": "실제 수정된 FDD §9.1/9.5/9.9/9.10/9.11 및 의존 흐름·범위·위험·대안을 Codex 소스, 현재 구현, 실제 생성 07 기록과 대조. 공급자/인증 분리, JSON 형식, 기존 설정·취소 신호 보존, 미확인 범위를 확인. 문서 전체 커밋 적합성이나 새 독립 리뷰로 확대하지 않음.",
+        "status": "draft 유지, verified-against unverified, 최초 whole-document 검증 날짜 유지"
+    },
+    "secretScan": {
+        "method": "rg --no-ignore: credential patterns in worktree Pi sessions, handoff JSON, and selected verification logs/reports",
+        "populationFiles": 22,
+        "matches": [],
+        "outcome": "pass",
+        "limitations": "패턴 검사와 별도로 실제 토큰·계정 ID를 결과에 넣지 않는 데이터 흐름 및 반사 오류 제거를 확인했으며, 모든 종류의 비밀을 자동으로 탐지한다는 뜻은 아님."
+    },
+    "actualGenerationEvidence": "docs/handoffs/image-gen/07-subscription-live.json — 이전에 승인된 프롬프트로 기존 구독 인증 생성 1회, HTTP 200, 28초, 1254 x 1254 PNG. 이번 반영 뒤 새 실요청을 보내거나 실제 모델의 도구 선택을 다시 검증하지 않음.",
+    "additionalLiveImageRequests": 0,
+    "remainingLimitations": [
+        "정식 반영 이후 실제 모델 호출에서의 생성은 추가 실행하지 않았음. 기존 실제 구독 성공, 동일 wire contract, 현재 최종 소비자의 mock 실행과 네이티브 인증 로딩을 구분해 기록함.",
+        "실제 구독 편집과 투명 배경, 만료 토큰의 실제 갱신, interactive /tree/resume/reload는 미확인. 로컬 계약/상태 검사는 통과함.",
+        "Windows, 비전 미지원 모델, codemode 동작은 미확인.",
+        "Node fetch의 기본 대기 시간과 Pi 이미지 변환 기능의 환경별 가용성에 관한 FDD 위험은 남아 있음.",
+        "커밋·master 병합·npm 게시·사용자 설정에 영구 설치는 수행하지 않음."
+    ]
+}

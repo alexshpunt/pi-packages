@@ -26,6 +26,15 @@
     "lineWidth": 120
   },
   "files": {
-    "includes": ["**/*.ts", "**/*.json", "!**/node_modules", "!**/.turbo"]
-  }
+    "includes": ["**/*.ts", "**/*.json", "!**/node_modules", "!**/.turbo", "!!packages/redact/vendor"]
+  },
+  "overrides": [
+    {
+      "includes": ["apps/pi-codex/**", "apps/pi-codex-*/**", "packages/redact/**", "scripts/codex/**"],
+      "formatter": {
+        "indentWidth": 4,
+        "lineWidth": 80
+      }
+    }
+  ]
 }

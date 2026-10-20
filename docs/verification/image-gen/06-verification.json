@@ -1,0 +1,125 @@
+{
+    "status": "complete",
+    "supersededBy": "docs/handoffs/image-gen/09-openai-provider.json — current implementation/local checks only; initial live matrix stays historical",
+    "statusNote": "Complete for the revised user-approved scope: production subscription routing, JSON edits, exposure, skill guidance and FDD are corrected; local final-tool/native package checks and build/check/pack verification are recorded in 08. Real generation remains the earlier successful 07 call; no additional live image request was made. Untested edit/transparent/platform cases below are retained as limitations, not claimed passes.",
+    "currentRevision": "docs/handoffs/image-gen/08-package-completion.json",
+    "brief": "docs/briefs/2026-10-05-chore-codex-image-gen-06-verification.md",
+    "verifiedOn": "2026-10-05",
+    "commit": "d5aa4c2 (master base) — all work is uncommitted on branch feat/codex-image-gen in worktree ../pi-codex-permission-codex-image-gen",
+    "treeState": "git status --short: M package-lock.json; ?? packages/pi-codex-image-gen/; ?? docs/handoffs/image-gen/; ?? docs/FDD/ and the image-gen briefs copied from the main checkout (uncommitted; evidence below is for this uncommitted tree)",
+    "environment": "node v24.14.0, npm 11.9.0, workspace pins @earendil-works/* 0.99.1, live CLI pi 1.0.2, chat model for live sessions ollama-cloud/glm-5.3-flash (anthropic unavailable: out of extra usage; openai default model unusable while its base URL points at the mock)",
+    "repositoryChecks": {
+        "build": "npm run build: 2 successful, 2 total (exit 0)",
+        "check": "npm run check: 112 files, no fixes, 0 warnings (exit 0)",
+        "packDryRun": "npm pack --dry-run --json --ignore-scripts in packages/pi-codex-image-gen: 36 files = dist/*.js|.d.ts|.js.map (10 modules), package.json, skills/imagegen/{SKILL.md, references/prompting.md, references/sample-prompts.md, LICENSE.txt, NOTICE}; no src/, tmp/, or scripts",
+        "autoReviewUnchanged": "git diff --stat -- packages/pi-codex-auto-review scripts .github is empty",
+        "lockfile": "git diff --stat -- package-lock.json: 1 file changed, 24 insertions (workspace link and package entry only)",
+        "distImports": "@earendil-works/pi-coding-agent, node:fs/promises, node:http, node:os, node:path, local modules only",
+        "sourceSize": "1630 lines across packages/pi-codex-image-gen/src/*.ts after subscription integration"
+    },
+    "offlineCases": {
+        "01": "tmp/verify/01-declaration.mjs: schema deep-equals the Codex model-facing schema; tmp/verify/01-arguments.mjs: 27/27 on the integrated build",
+        "02": "tmp/verify/02-backend.mjs: 27/27 (all Codex strings and the retry schedule); tmp/verify/02-tool.mjs: 13/13 after removing the two pending-04 checks",
+        "04": "tmp/verify/04-ref-images.mjs: 20/20",
+        "05": "tmp/verify/05-exposure.mjs: 11/11"
+    },
+    "exposureMatrix": "reproduced live in tmp/verify/live-04-05.sh: login / apiKey / none / userDisabled / excluded / loginMidSession as recorded in 05-exposure.json",
+    "liveMatrix": [
+        {
+            "credentialType": "pi-openai-codex-subscription",
+            "operation": "generate",
+            "httpStatus": 200,
+            "model": "gpt-image-2",
+            "outcome": "success — existing Pi subscription OAuth, one request on the Codex subscription endpoint, exact unmodified user prompt; scratch extension only, not the production tool auth path",
+            "savedPath": "/Users/buyong/.pi/agent/generated_images/01a10adf-233b-76ae-ac1c-3fa2fe2b07e4/subscription-verification-fbcf75b0-b8f2-40fb-944d-efd7ad5a13c4.png",
+            "evidence": "docs/handoffs/image-gen/07-subscription-live.json"
+        },
+        {
+            "credentialType": "pi-openai-chatpass",
+            "operation": "generate",
+            "httpStatus": 401,
+            "model": "gpt-image-2",
+            "outcome": "rejected on the public API — 'This ChatPass credential is not authorized for the requested operation.' (rejected_by_hardened_oauth_boundary / hardened_oauth_rule_missing); exact tool error in 02-backend.json liveRuns",
+            "savedPath": null
+        },
+        {
+            "credentialType": "pi-openai-codex-subscription",
+            "operation": "edit-paths",
+            "httpStatus": null,
+            "model": "gpt-image-2",
+            "outcome": "untested — user limited the live subscription verification to one generation",
+            "savedPath": null
+        },
+        {
+            "credentialType": "pi-openai-codex-subscription",
+            "operation": "edit-history",
+            "httpStatus": null,
+            "model": "gpt-image-2",
+            "outcome": "untested — user limited the live subscription verification to one generation",
+            "savedPath": null
+        },
+        {
+            "credentialType": "pi-openai-codex-subscription",
+            "operation": "generate-transparent",
+            "httpStatus": null,
+            "model": "gpt-image-2",
+            "outcome": "untested — user limited the live subscription verification to one generation",
+            "savedPath": null
+        },
+        {
+            "credentialType": "api-key",
+            "operation": "*",
+            "httpStatus": null,
+            "model": "gpt-image-2",
+            "outcome": "untested — OPENAI_API_KEY is not configured in this environment",
+            "savedPath": null
+        }
+    ],
+    "mockMatrix": "generate, edit-paths, and edit-history each produced a saved PNG and the Codex hint in live pi sessions against the local mock (02-backend.json, 04-ref-images.json)",
+    "failurePaths": {
+        "invalidKey401": "No API-key image route is supported or planned. Generic subscription HTTP 401 formatting and reflected-credential redaction are checked with mocks; the initial public-API 401 remains historical evidence.",
+        "cancellation": "offline: a pre-aborted signal sends nothing and writes nothing; abort during backoff stops retries (02-backend.mjs); interactive Esc not exercised",
+        "readOnlySaveRoot": "offline: image returned without hint, details.savedPath absent (02-tool.mjs)",
+        "nonVisionModel": "untested (no non-vision chat model identified in this environment)",
+        "missingCredentials": "offline: FDD §9.1 message without a request; live: the tool is hidden instead (05)"
+    },
+    "secretScan": {
+        "command": "rg --no-ignore -l 'Bearer[ ]|sk-[A-Za-z0-9]{10,}|eyJ[A-Za-z0-9_-]{20,}' ~/.pi/agent/sessions/--Users-buyong-workspace-private-opensource-pi-codex-permission-codex-image-gen-- docs/handoffs/image-gen tmp/verify/subscription-generation.json tmp/verify/subscription-generation.log tmp/verify/08-offline-checks.log tmp/verify/08-boundary-checks.log tmp/verify/08-native-pi-load.log tmp/verify/08-pack.json",
+        "population": 22,
+        "matches": [],
+        "note": "Final scan after production integration: 22 files (Pi session files, all handoffs, selected subscription and final verification logs/reports), no matches. See 08 for the current scope. The earlier session_start-only live generation did not persist a session file; its PNG and scratch report/log remain evidence."
+    },
+    "parityDeviations": [
+        "Empty error body is reported as Some(\"\") (matches Codex's transport; differs from the 02 brief's expectation of None).",
+        "History images are forwarded as recorded without PNG conversion (matches Codex; differs from the 04 brief's conversion instruction).",
+        "Serde position suffixes, Rust library error wording, and Debug escaping of control characters are approximated (FDD §9.11).",
+        "Undici defaults (300 s headers/body timeouts, 10 s connect timeout) apply where Codex has no request timeout (FDD §13).",
+        "SKILL.md carries its modification notice after the frontmatter rather than as the first line, because Pi requires the frontmatter first."
+    ],
+    "fddRisks": {
+        "settled": [
+            "Existing Pi openai-codex OAuth on /backend-api/codex/images/generations: successful HTTP 200, one request, exact prompt, 1254 x 1254 PNG, visually inspected (07-subscription-live.json).",
+            "Pi openai and openai-codex have separate already-configured OAuth credentials and runtime routes; no new login is needed for the successful subscription call.",
+            "Pi openai ChatPass token on the public /v1/images/generations endpoint: rejected with HTTP 401 (2026-10-05, one live call). This does not imply subscription image generation is unsupported.",
+            "Live error path: one request, no retry on 401, Codex-format error string, no key in the text, no file written, the model relays /login / OPENAI_API_KEY guidance.",
+            "setActiveTools inside before_agent_start affects the same prompt (observed on pi 1.0.2).",
+            "Reassigning systemPromptOptions.skills hides the skill for that prompt (observed).",
+            "convertToPng decodes png/jpeg/webp/gif/bmp here and handled a 61 MB PNG.",
+            "Pi renders/forwards the image block: the session file stores it and the model echoed the hint."
+        ],
+        "open": [
+            "Actual subscription JSON edit execution (wire contract and local dispatch verified; no live edit call).",
+            "Actual subscription transparent-background acceptance and alpha output (request value verified locally).",
+            "Additional accounts/plans are not covered by the single successful local subscription generation.",
+            "Token refresh at call time (only the code path was exercised).",
+            "Generations slower than undici's 300 s header timeout.",
+            "Behavior under codemode and on non-vision models."
+        ]
+    },
+    "unresolved": [
+        "Resolved in 08: production subscription authentication/headers/URL, exposure, JSON edit shape, skill guidance, and FDD policy are corrected and verified locally; user settings/chat model unchanged.",
+        "Live edits and transparent-background generation remain untested under the user's one-image verification limit. The final subscription edit client now uses JSON, not multipart.",
+        "Non-vision behavior remains unverified.",
+        "/tree, resume, and /reload were verified with stubbed decision tests, not interactively."
+    ]
+}

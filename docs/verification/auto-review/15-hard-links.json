@@ -1,0 +1,24 @@
+{
+  "status": "local-verified",
+  "sourceDigest": "7e0207e15fb3d35c189f0fa8a8e957e418f5ad0eae63f99ab391d4702c9eb3cb",
+  "contractDigest": "97f51da512d33dbfe03d06596acd5060e696b84fe958bd7814d61ea64706f0b0",
+  "reproduction": ".reports/pi-guard/security-followup/hardlinks-before.json",
+  "implementation": [
+    "Before-launch inode/link-count qualification for protected reads and admitted read/write scopes",
+    "All aliases inside the admitted scope remain usable",
+    "An exact-file grant cannot silently mutate a linked sibling",
+    "Native NUL-delimited metadata traversal without shell interpolation; cancellation, output and time bounds fail closed"
+  ],
+  "verification": {
+    "passed": 54,
+    "evidence": [
+      ".reports/pi-guard/runs/2026-10-03T04-30-09-328Z-77e38ec0-3ee3-4d29-83c0-0400d24d8dd6/darwin-arm64/native.json",
+      ".reports/pi-guard/runs/2026-10-03T04-30-37-889Z-b742e6ce-38c0-47ee-8971-f9f130f50c0c/darwin-arm64/integration.json"
+    ]
+  },
+  "limits": [
+    "Qualification assumes no privileged or unsandboxed host actor changes link topology concurrently with the workload. It is not a defense against a hostile host.",
+    "Native /usr/bin/find is required on supported Unix hosts. A failed, oversized or timed-out metadata scan blocks execution.",
+    "Final Linux/Docker/live qualification remains pending."
+  ]
+}

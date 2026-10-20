@@ -2,8 +2,16 @@
   "$schema": "https://turborepo.com/schema.json",
   "globalDependencies": ["biome.json", "packages/typescript-config/*.json"],
   "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "@buyong/pi-codex#build": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
     "typecheck": {
-      "dependsOn": ["^typecheck"],
+      "dependsOn": ["^typecheck", "^build"],
       "outputs": []
     },
     "lint": {

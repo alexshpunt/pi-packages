@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "recordedAt": "2026-10-03T00:00:33.685Z",
+  "sourceDigest": "7296ecb081244c9e11e2fbf93af533a9810937f9e6298f4c1166eb2b2be9db2e",
+  "contractDigest": "490d588398b878d177832e21f02b2474f94803dd3f7722d036f8ff4e12950e0f",
+  "reference": {
+    "version": "codex-cli 0.160.0",
+    "tag": "rust-v0.160.0",
+    "annotatedTagObject": "79b1b666f2e8551f8abbbca34957227f67f3f553",
+    "revision": "a956835d020762cb2b570053af06f643a11c0ecc",
+    "sourceFiles": [
+      {
+        "path": "codex-rs/prompts/templates/guardian/policy_template.md",
+        "url": "https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/prompts/templates/guardian/policy_template.md",
+        "sha256": "37441097e4e825e0b195c32c985817ea07da15bb5c20fa753d87b22e2fe47e73"
+      },
+      {
+        "path": "codex-rs/prompts/templates/guardian/policy.md",
+        "url": "https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/prompts/templates/guardian/policy.md",
+        "sha256": "e6b0cf0a2e1c4cabc0a37ac2a0bc424ddd7c89e85d049e32d281a8db6e8d3ce6"
+      },
+      {
+        "path": "codex-rs/ext/guardian-reviewer/src/assessment.rs",
+        "url": "https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/ext/guardian-reviewer/src/assessment.rs",
+        "sha256": "75f86997feccff3e7aa8ca33dd5db68ef962733ae9a44af68629f0f95d7cc5f8"
+      },
+      {
+        "path": "codex-rs/ext/guardian-reviewer/src/routing.rs",
+        "url": "https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/ext/guardian-reviewer/src/routing.rs",
+        "sha256": "6374510e3629945e99f1e02c88e64d03dd69dded9ec87193b311ab4f8c11959a"
+      },
+      {
+        "path": "codex-rs/ext/guardian-reviewer/src/model.rs",
+        "url": "https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/ext/guardian-reviewer/src/model.rs",
+        "sha256": "f00473fcff8f1d7325cd562c7609c7aa4a5e7b1fd2f905fac1eb3ee2bc4d9917"
+      },
+      {
+        "path": "codex-rs/ext/guardian-reviewer/src/circuit_breaker.rs",
+        "url": "https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/ext/guardian-reviewer/src/circuit_breaker.rs",
+        "sha256": "d1afdb51349c21cc371b2be924b2e5300e662e8f7da45e6914ee9339bde9ccf4"
+      },
+      {
+        "path": "codex-rs/ext/guardian-reviewer/src/retry.rs",
+        "url": "https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/ext/guardian-reviewer/src/retry.rs",
+        "sha256": "162880af2e9904b97a959c729aa8ef866c5ac421181a98f5c38f111d39d8e4b3"
+      },
+      {
+        "path": "codex-rs/ext/guardian-reviewer/src/feedback.rs",
+        "url": "https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/ext/guardian-reviewer/src/feedback.rs",
+        "sha256": "d42fee08d776f262167306c2b8b88eee0d7d154cbe9413596a7a7a0d85b15ed3"
+      },
+      {
+        "path": "codex-rs/ext/guardian-reviewer/src/completion.rs",
+        "url": "https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/ext/guardian-reviewer/src/completion.rs",
+        "sha256": "19fe55e283ec8ecc8c5284f794dc835a45daf7c5222a4bc5f5a907bf94b3f3e9"
+      }
+    ],
+    "documentation": {
+      "retrievedAt": "2026-10-03T00:00:33.685Z",
+      "urls": [
+        "https://learn.chatgpt.com/docs/sandboxing/auto-review",
+        "https://learn.chatgpt.com/docs/agent-approvals-security",
+        "https://learn.chatgpt.com/docs/agent-configuration/rules"
+      ]
+    },
+    "unversionedCopy": "tmp/codex-main is not normative; independently cloned public tag is the reference"
+  },
+  "gapOwners": [
+    {
+      "gap": "automatic-boundary-approval",
+      "owner": "04",
+      "consumer": "ApprovalManager.admit -> GuardController -> NativeExecutor",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "policy-risk-and-authorization",
+      "owner": "03",
+      "consumer": "reviewAction -> PiReviewProvider -> ReviewAssessment",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "retained-context-and-trust",
+      "owner": "03",
+      "consumer": "Pi input/context/message/tool hooks -> ReviewContext",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "read-only-investigation",
+      "owner": "03",
+      "consumer": "PiReviewProvider -> bounded native investigation",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "review-model-selection",
+      "owner": "03",
+      "consumer": "Pi ModelRegistry.find -> streamSimple",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "ordinary-actions-and-routing",
+      "owner": "04",
+      "consumer": "PolicyEngine.evaluate -> approvalEligible",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "command-rule-format-and-authority",
+      "owner": "04",
+      "consumer": "prefix_rule parser -> PolicyDecision.authority -> native executor",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "filesystem-temp-protected-paths",
+      "owner": "04",
+      "consumer": "defaultProfile -> native sandbox configuration",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "dynamic-network-origin",
+      "owner": "04",
+      "consumer": "invocation broker -> originating GuardAction -> reviewer",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "distinct-failure-states",
+      "owner": "03",
+      "consumer": "ReviewResult -> admission; lifecycle feedback owned by 05",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "circuit-breaker",
+      "owner": "05",
+      "consumer": "ApprovalManager -> actual Pi context.abort",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "exact-one-retry",
+      "owner": "05",
+      "consumer": "recent denials -> /approve -> retryIdentity -> fresh review",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "UI-and-audit-feedback",
+      "owner": "05",
+      "consumer": "status hooks and payload-free AuditLog",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "wildcard-domain-mismatch",
+      "owner": "04",
+      "consumer": "shared domain matching -> policy and native config",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "shell-read-denyWrite-defect",
+      "owner": "04",
+      "consumer": "read/write operand separation -> native effect",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "Docker-recovery-and-provider",
+      "owner": "06",
+      "consumer": "trusted provider loader -> packaged Pi guard -> immutable reports",
+      "proofOwner": "07",
+      "status": "assigned"
+    },
+    {
+      "gap": "cross-platform-conformance",
+      "owner": "07",
+      "consumer": "matching-source matrix, deterministic/native/live separation",
+      "proofOwner": "07",
+      "status": "assigned"
+    }
+  ],
+  "settings": {
+    "mode": "workspace-write",
+    "commandRules": [],
+    "allowedDomains": [],
+    "reviewTimeoutMs": 20000,
+    "approvalTimeoutMs": 60000,
+    "executionTimeoutSeconds": 120,
+    "trustedTools": [],
+    "approvalPolicy": "on-request",
+    "approvalsReviewer": "auto_review",
+    "reviewModel": null,
+    "reviewPolicy": null,
+    "reviewMaxRounds": 4,
+    "reviewMaxOutputTokens": 2048,
+    "reviewContextChars": 60000,
+    "ruleFiles": [],
+    "writableRoots": [],
+    "excludeSlashTmp": false,
+    "excludeTmpdir": false
+  },
+  "authorityModes": {
+    "sandbox": "Existing immutable profile only",
+    "scopedPermissions": "Exactly reviewed PermissionDelta for one admission; child 04 wires native effect",
+    "commandRule": "Per-command native authority, independently enforced controller absolute denies; child 04 implements; no global full-access mode"
+  },
+  "requestSchema": {
+    "identity": "GuardAction v1 unchanged",
+    "binding": "ReviewBinding(actionDigest, contextDigest, policyDigest)",
+    "producer": "GuardController",
+    "consumer": "reviewAction"
+  },
+  "assessmentSchema": {
+    "type": "ReviewAssessment",
+    "fields": [
+      "risk_level",
+      "user_authorization",
+      "outcome",
+      "rationale"
+    ],
+    "outcomes": [
+      "allow",
+      "deny"
+    ],
+    "legacy": "ReviewReply decision/reason providers remain supported through an explicit conservative adapter"
+  },
+  "terminalStates": [
+    "approved",
+    "denied",
+    "timed-out",
+    "aborted",
+    "failed"
+  ],
+  "contextContract": {
+    "type": "ReviewContext",
+    "items": "ReviewContextItem",
+    "authorizationSources": [
+      "user",
+      "developer",
+      "agents",
+      "user-confirmation"
+    ],
+    "evidenceSources": [
+      "assistant",
+      "tool-call",
+      "tool-result"
+    ],
+    "provenance": "Only runtime-supplied source classification establishes trust; text or tool names never promote content",
+    "excludes": "Hidden reasoning; credentials; unbounded opaque payloads",
+    "retry": "retryIdentity binds semantic action, sessionId, contextId; new toolCallId allowed"
+  },
+  "protocolCompatibility": {
+    "GuardAction": 1,
+    "WorkerFrame": 1,
+    "BrokerControlFrame": 1,
+    "existingKeys": "Preserved; any later private broker additions require validation at both endpoints"
+  },
+  "grantMigration": {
+    "readability": "Existing Grant and persistent JSON shapes retained",
+    "invalidation": "New default settings enter policyRevision digest; previous-policy grants cannot authorize new actions; later lifecycle surfaces invalidation",
+    "scopes": [
+      "once",
+      "session",
+      "persistent"
+    ]
+  },
+  "providerLoading": {
+    "package": "pi-ollama-cloud",
+    "providerId": "ollama-cloud",
+    "qualifiedPi": "0.99.1",
+    "supportedApi": "DefaultResourceLoaderOptions.additionalExtensionPaths with noExtensions:true",
+    "owner": "06",
+    "plannedOption": "GuardedRuntimeOptions.trustedExtensionPaths",
+    "restrictions": [
+      "explicit trusted package entry only",
+      "preserve noExtensions and guard readiness barriers",
+      "PI_OLLAMA_WEB_TOOLS=0",
+      "runtime OLLAMA_API_KEY; no host credentials"
+    ]
+  },
+  "evidenceContract": {
+    "handoff": "docs/handoffs/auto-review/01-evidence.json",
+    "schemaVersion": 2,
+    "requiredPlatforms": [
+      "darwin-arm64",
+      "linux-x64"
+    ],
+    "noSharedMutableSuiteWrites": true
+  },
+  "excluded": [
+    "new MCP/app/Computer Use implementations",
+    "Windows qualification",
+    "enterprise services",
+    "unrestricted full access",
+    "identical stochastic outputs or proprietary model parity",
+    "model-specific cyber specialty overrides"
+  ],
+  "commands": [
+    "npm run build",
+    "npm run test:contracts",
+    "npm run test:policy",
+    "npm run test:approvals"
+  ],
+  "artifactPaths": [
+    ".reports/pi-guard/runs/2026-10-02T23-59-58-375Z-6dadbefd-307a-4721-9813-e46d8d987432/darwin-arm64/approvals.json",
+    ".reports/pi-guard/runs/2026-10-02T23-59-58-042Z-fe90af5d-f0e8-4d92-8471-3d8435472387/darwin-arm64/policy.json",
+    ".reports/pi-guard/runs/2026-10-02T23-59-57-188Z-c3b6d2b6-bec3-4db0-a81b-a83987bbc168/darwin-arm64/contracts.json"
+  ],
+  "unresolved": []
+}

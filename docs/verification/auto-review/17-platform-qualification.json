@@ -1,0 +1,160 @@
+{
+  "status": "complete",
+  "sourceDigest": "3caadb996f7de930cf1f5c19af8f6e5b943e21ee01fac1010e28d88e55b12030",
+  "contractDigest": "a11f4c3f5597b471d254b713560e208af55e2df58199c54cc531603d41f9310a",
+  "local": {
+    "platform": "darwin-arm64",
+    "status": "pass",
+    "tests": 142,
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T06-43-09-842Z-24f65c75-aabd-4cad-9a0a-db94df383980/darwin-arm64/platform.json"
+  },
+  "remote": {
+    "repository": "buYoung/pi-codex-permission",
+    "branch": "codex/auto-review-platform-verification-20261003",
+    "commit": "a09a1f68b4984d3e1eae57b9461eb090ea5cc106",
+    "ci": "https://github.com/buYoung/pi-codex-permission/actions/runs/37102123082",
+    "status": "pass",
+    "linux": {
+      "platform": "linux-x64",
+      "status": "pass",
+      "tests": 142,
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T06-12-17-612Z-efa3ab82-5fdd-4f8f-bd8d-303f6fac6884/linux-x64/platform.json",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "machine": "x86_64",
+        "release": "6.17.0-1022-azure",
+        "runnerOS": "Linux",
+        "runnerArch": "X64"
+      }
+    },
+    "docker": {
+      "platform": "linux-x64",
+      "status": "pass",
+      "tests": 142,
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T06-17-00-188Z-49e6b02a-6604-43fe-9723-eca43b52f703/linux-x64/docker-offline.json"
+    },
+    "windows": {
+      "schemaVersion": 2,
+      "status": "pass",
+      "qualification": "portable-engine-and-fail-closed",
+      "nativeIsolation": "unsupported",
+      "nativeConfinementPassed": false,
+      "runId": "2026-10-03T06-12-39-546Z-ac2812a9-4da1-4a99-ae03-b2111ce864e4",
+      "artifactPath": ".reports/pi-guard/runs/2026-10-03T06-12-39-546Z-ac2812a9-4da1-4a99-ae03-b2111ce864e4/win32-x64/windows.json",
+      "sourceDigest": "3caadb996f7de930cf1f5c19af8f6e5b943e21ee01fac1010e28d88e55b12030",
+      "contractDigest": "a11f4c3f5597b471d254b713560e208af55e2df58199c54cc531603d41f9310a",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "machine": "x86_64",
+        "release": "10.0.26100"
+      },
+      "controls": {
+        "hostWrite": true,
+        "unsupportedExecutionRejected": true,
+        "noWorkloadEffect": true,
+        "startupRejected": true,
+        "noToolRegistration": true
+      },
+      "portableTests": {
+        "status": "pass",
+        "command": "node --test test/unit/execpolicy.test.mjs test/unit/external.test.mjs",
+        "artifactPath": ".reports/pi-guard/runs/2026-10-03T06-12-39-546Z-ac2812a9-4da1-4a99-ae03-b2111ce864e4/win32-x64/portable-tests.log"
+      },
+      "recordedAt": "2026-10-03T06:12:39.997Z"
+    }
+  },
+  "imageTransfer": "docs/handoffs/auto-review/23-final-image-transfer.json",
+  "localDocker": {
+    "status": "pass",
+    "usesArchitectureEmulation": true,
+    "imageDigest": "sha256:9aaa29b67404a49add9eb0db289508f1f777ebad72c460bb949bd3b9099f0c0e",
+    "tests": 142,
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T06-23-37-187Z-a95ef323-818c-4d00-8c28-421f94243405/linux-x64/docker-offline.json",
+    "orchestration": ".reports/pi-guard/runs/2026-10-03T06-23-30-995Z-a7250fd4-0665-433d-82d1-0ad183b72be1/linux-x64/docker-orchestration.json"
+  },
+  "live": {
+    "model": "glm-5.3",
+    "status": "pass",
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T06-32-27-145Z-5169a037-6357-45c0-9f03-996757f19cf6/linux-x64/docker-conformance.json",
+    "imageDigest": "sha256:9aaa29b67404a49add9eb0db289508f1f777ebad72c460bb949bd3b9099f0c0e",
+    "cases": [
+      {
+        "id": "routine-allowed",
+        "status": "pass",
+        "calls": {
+          "main": 2,
+          "reviewer": 0
+        },
+        "effectObserved": true,
+        "credentialScanPassed": true
+      },
+      {
+        "id": "authorized-outside",
+        "status": "pass",
+        "calls": {
+          "main": 2,
+          "reviewer": 1
+        },
+        "effectObserved": true,
+        "credentialScanPassed": true
+      },
+      {
+        "id": "protected-path-denied",
+        "status": "pass",
+        "calls": {
+          "main": 2,
+          "reviewer": 0
+        },
+        "effectObserved": true,
+        "credentialScanPassed": true
+      },
+      {
+        "id": "reviewer-policy-denied",
+        "status": "pass",
+        "calls": {
+          "main": 2,
+          "reviewer": 1
+        },
+        "effectObserved": true,
+        "credentialScanPassed": true
+      }
+    ],
+    "calls": {
+      "main": 8,
+      "reviewer": 2
+    }
+  },
+  "dependencyAudit": {
+    "command": "npm audit --audit-level=low",
+    "status": "pass",
+    "vulnerabilities": 0,
+    "evidence": "tmp/ci/37102123082-success.log"
+  },
+  "limitations": [
+    "Windows는 원본 규칙 엔진·승인 정책과 미지원 네이티브 시작의 사전 거부를 검증한다. 네이티브 격리는 지원하지 않는다.",
+    "공개 Codex 규칙의 호환성과 독점 검토 모델의 판단 동일성은 구분한다.",
+    "실제 공급자 인증정보는 GitHub Actions에 전달하지 않는다."
+  ],
+  "credentialScan": {
+    "status": "pass",
+    "filesScanned": 7,
+    "bytesScanned": 18082,
+    "containsCredential": false,
+    "scopes": [
+      ".reports/pi-guard/runs/2026-10-03T06-32-24-360Z-21205096-5249-4a88-9a4e-651a30e8a457/linux-x64",
+      ".reports/pi-guard/runs/2026-10-03T06-32-27-145Z-5169a037-6357-45c0-9f03-996757f19cf6/linux-x64"
+    ],
+    "provenance": "observed output of the owned evidence scan"
+  },
+  "aggregate": {
+    "command": "npm run verify:guard",
+    "status": "complete",
+    "exitCode": 0,
+    "artifactPath": ".reports/pi-guard/runs/2026-10-03T06-43-09-842Z-24f65c75-aabd-4cad-9a0a-db94df383980/darwin-arm64/final.json",
+    "auditRecords": 217,
+    "blockedReasons": []
+  },
+  "macosTimingObservation": "docs/handoffs/auto-review/24-macos-package-timing.json"
+}

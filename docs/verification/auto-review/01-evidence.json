@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "status": "complete",
+  "sourceDigest": "19116eb96e6c274173770f2cd6d9d524671aa60f99c6e3e571343e8fb77d7993",
+  "contractDigest": "b82a6b7cc9616a038fa8d0690b11f25c6333e12d6a8f155dc23456e9391e3949",
+  "recordedAt": "2026-10-02T23:56:04.724Z",
+  "digestRules": {
+    "source": "Sorted src/, test/ (including future Docker fixtures), scripts/, package.json, package-lock.json and tsconfig.json bytes; checked before and after execution",
+    "contract": "src/contracts.ts + src/reports.ts"
+  },
+  "runLayout": ".reports/pi-guard/runs/<timestamp-uuid>/<os-arch>/{started,<suite>,platform,final,build}.json; owned-audits.jsonl scoped to this run",
+  "requiredPlatforms": [
+    "darwin-arm64",
+    "linux-x64"
+  ],
+  "legacyInventory": {
+    "archive": ".reports/pi-guard/archives/before-auto-review-20261002T235225Z",
+    "kind": "preserved-legacy",
+    "recordedAt": "20261002T235225Z",
+    "files": [
+      {
+        "path": ".reports/pi-guard/approvals.json",
+        "sha256": "d538a162dfef45484f63e035950e290f26a117e8c622f98b08a0dbbb0e14bf14",
+        "size": 1526,
+        "mtimeNs": 1790982648106203000,
+        "provenance": {
+          "platform": "darwin-arm64",
+          "sourceDigest": "ea9d9c52e09ec5e5344f0b10411ad126a0817f2756b8b5fc095b1d32283155a4",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-02T23:10:48.104Z",
+          "status": "pass"
+        }
+      },
+      {
+        "path": ".reports/pi-guard/contracts.json",
+        "sha256": "ee8c05de4b5319bdde0be7d768b7a59657b95181ca1c3b7a657f3279459e53f8",
+        "size": 1473,
+        "mtimeNs": 1790982648879477000,
+        "provenance": {
+          "platform": "darwin-arm64",
+          "sourceDigest": "ea9d9c52e09ec5e5344f0b10411ad126a0817f2756b8b5fc095b1d32283155a4",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-02T23:10:48.877Z",
+          "status": "pass"
+        }
+      },
+      {
+        "path": ".reports/pi-guard/e2e.json",
+        "sha256": "edf7631161372964c3a8ca82ce345ad39b416fd7cea4470f684767f4a7751be9",
+        "size": 1477,
+        "mtimeNs": 1790982778242555100,
+        "provenance": {
+          "platform": "darwin-arm64",
+          "sourceDigest": "ea9d9c52e09ec5e5344f0b10411ad126a0817f2756b8b5fc095b1d32283155a4",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-02T23:12:58.241Z",
+          "status": "pass"
+        }
+      },
+      {
+        "path": ".reports/pi-guard/integration.json",
+        "sha256": "01c9ebf5366775aab855dee8301ca1bb4fc5bdadc7e9ae17fde4b6ead9b513b3",
+        "size": 2313,
+        "mtimeNs": 1790982773836953900,
+        "provenance": {
+          "platform": "darwin-arm64",
+          "sourceDigest": "ea9d9c52e09ec5e5344f0b10411ad126a0817f2756b8b5fc095b1d32283155a4",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-02T23:12:53.835Z",
+          "status": "pass"
+        }
+      },
+      {
+        "path": ".reports/pi-guard/native.json",
+        "sha256": "83f7e5c4a7a40d21640bf9f0f01afd830a605a8c9142c011689d7d01f5024e37",
+        "size": 3041,
+        "mtimeNs": 1790982752934308000,
+        "provenance": {
+          "platform": "darwin-arm64",
+          "sourceDigest": "ea9d9c52e09ec5e5344f0b10411ad126a0817f2756b8b5fc095b1d32283155a4",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-02T23:12:32.933Z",
+          "status": "pass"
+        }
+      },
+      {
+        "path": ".reports/pi-guard/owned-audits.jsonl",
+        "sha256": "651a18b6a283e8153e0b8c354f146cc5f037dd1aaaac963026c301b95286a9bb",
+        "size": 17597,
+        "mtimeNs": 1790982777658030800
+      },
+      {
+        "path": ".reports/pi-guard/policy.json",
+        "sha256": "eb4afa407a3c3e8f8d78373827c6ffebed4e2c0d49a970b0c6fb302ce6effe47",
+        "size": 1323,
+        "mtimeNs": 1790982648116296700,
+        "provenance": {
+          "platform": "darwin-arm64",
+          "sourceDigest": "ea9d9c52e09ec5e5344f0b10411ad126a0817f2756b8b5fc095b1d32283155a4",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-02T23:10:48.115Z",
+          "status": "pass"
+        }
+      },
+      {
+        "path": ".reports/pi-guard/reviewer.json",
+        "sha256": "e039c2cf71359f8f9e0b26e85d2ebe516404d01d96b38ed73a4af9538b06bedc",
+        "size": 1333,
+        "mtimeNs": 1790982648101319400,
+        "provenance": {
+          "platform": "darwin-arm64",
+          "sourceDigest": "ea9d9c52e09ec5e5344f0b10411ad126a0817f2756b8b5fc095b1d32283155a4",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-02T23:10:48.100Z",
+          "status": "pass"
+        }
+      },
+      {
+        "path": "docs/handoffs/pi-guard/01-contracts.json",
+        "sha256": "9342fa67fea26b0782a2ab53bbbf0c58547d2ba7bdd6bb943c8790edd60126a3",
+        "size": 6435,
+        "mtimeNs": 1790981451298510300,
+        "provenance": {
+          "sourceDigest": "a9365a0f73a67fdc5ffcd96134eee9934bcaec130bdbdf198e8a0107eab9961e",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-01T06:41:15.654Z",
+          "state": "ready"
+        }
+      },
+      {
+        "path": "docs/handoffs/pi-guard/02-policy.json",
+        "sha256": "e91b294a06ee0ebe327beaeab84f3f288f403b416de8cf7e256442e388e35ccd",
+        "size": 3144,
+        "mtimeNs": 1790981451298597600,
+        "provenance": {
+          "sourceDigest": "a9365a0f73a67fdc5ffcd96134eee9934bcaec130bdbdf198e8a0107eab9961e",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-01T06:41:15.655Z",
+          "state": "ready"
+        }
+      },
+      {
+        "path": "docs/handoffs/pi-guard/03-review.json",
+        "sha256": "632b9e5ea2e5934fe37d7f2f78f38ff04306eb0a60a5d6b66613432fe0d05faa",
+        "size": 5150,
+        "mtimeNs": 1790981451298683000,
+        "provenance": {
+          "sourceDigest": "a9365a0f73a67fdc5ffcd96134eee9934bcaec130bdbdf198e8a0107eab9961e",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-01T06:41:15.656Z",
+          "state": "ready"
+        }
+      },
+      {
+        "path": "docs/handoffs/pi-guard/04-sandbox.json",
+        "sha256": "8be74c48d7300c8298fd657d9f701f14672dfbbbc037f1689a0530e5c3622dcf",
+        "size": 5606,
+        "mtimeNs": 1790981451298755300,
+        "provenance": {
+          "sourceDigest": "a9365a0f73a67fdc5ffcd96134eee9934bcaec130bdbdf198e8a0107eab9961e",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-01T06:41:15.657Z",
+          "state": "ready"
+        }
+      },
+      {
+        "path": "docs/handoffs/pi-guard/05-integration.json",
+        "sha256": "4c97eb08063848aee9c582af508e9fb100cfbc0253ff642f4b70cb9e4193b417",
+        "size": 4856,
+        "mtimeNs": 1790981451298844400,
+        "provenance": {
+          "sourceDigest": "a9365a0f73a67fdc5ffcd96134eee9934bcaec130bdbdf198e8a0107eab9961e",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-01T06:41:15.658Z",
+          "state": "ready"
+        }
+      },
+      {
+        "path": "docs/handoffs/pi-guard/06-verification.json",
+        "sha256": "951679e48c120a03830970b51211c53a6bb6d339251ecdf12ad770cc138ce366",
+        "size": 33149,
+        "mtimeNs": 1790981451298953500,
+        "provenance": {
+          "sourceDigest": "a9365a0f73a67fdc5ffcd96134eee9934bcaec130bdbdf198e8a0107eab9961e",
+          "contractDigest": "af3cea2d2af2bf8153425ea61bb139375e1d5b0242df8dbf5db94b5db295a64d",
+          "recordedAt": "2026-10-01T06:41:15.658Z",
+          "state": "environment-blocked"
+        }
+      }
+    ]
+  },
+  "reproduction": {
+    "suiteCollision": "Two isolated legacy writeFile calls at the same suite path replace the first bytes; synthetic fixture only",
+    "auditReset": "Original scripts/verify-guard.mjs:13 removes shared owned-audits.jsonl; removed from migrated aggregate",
+    "storageProof": "Four concurrent synthetic runs plus non-overwrite assertion in contracts suite; not Linux qualification"
+  },
+  "commands": [
+    "npm run build",
+    "npm run test:contracts",
+    "npm run test:e2e"
+  ],
+  "artifactPaths": [
+    ".reports/pi-guard/runs/2026-10-02T23-55-07-649Z-997504be-712d-423e-af0f-6babbc335c02/darwin-arm64/contracts.json",
+    ".reports/pi-guard/runs/2026-10-02T23-55-24-089Z-c69d5e4b-0e2d-4bba-a7f5-09c01c9c81e8/darwin-arm64/e2e.json"
+  ],
+  "failedAttempt": ".reports/pi-guard/runs/2026-10-02T23-55-08-444Z-8bfb8ec0-b452-4726-bd57-237bfefac3d7/darwin-arm64/e2e.json",
+  "verification": {
+    "build": "pass",
+    "contracts": 6,
+    "e2e": 5,
+    "hostLimitation": "First E2E hit outer sandbox listen EPERM; approved rerun passed all cases; both runs retained"
+  },
+  "unresolved": []
+}

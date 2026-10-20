@@ -1,0 +1,256 @@
+{
+    "status": "complete",
+    "brief": "docs/briefs/2026-10-05-feat-codex-cua-02-package-setup.md",
+    "date": "2026-10-05",
+    "worktree": {
+        "branch": "feat/codex-computer-use",
+        "baseCommit": "d5aa4c2",
+        "note": "Work happens in a git worktree beside the main checkout; briefs and handoffs were copied in, tmp/codex-main is a symlink to the main checkout's reference source."
+    },
+    "package": {
+        "name": "@buyong/pi-codex-computer-use",
+        "version": "0.1.0",
+        "directory": "packages/pi-codex-computer-use",
+        "entry": "dist/index.js",
+        "piExtensions": [
+            "./dist/index.js"
+        ],
+        "exports": {
+            ".": "./dist/index.js"
+        },
+        "dependencies": {
+            "@earendil-works/pi-mcp": "0.99.1"
+        },
+        "peerDependencies": "@earendil-works/pi-ai, pi-coding-agent, pi-tui >=0.86.1 (dev-pinned 0.99.1)",
+        "engines": {
+            "node": ">=22.19.0"
+        },
+        "build": "tsc via `npm run build` (Turborepo), formatting/lint via `npm run check` (Biome, 4-space indent)",
+        "filesSkeleton": [
+            "dist/**/*.js",
+            "dist/**/*.d.ts",
+            "dist/**/*.js.map"
+        ],
+        "noAutoReviewDependency": "grep -r pi-codex-auto-review packages/pi-codex-computer-use/dist → no matches; packages/pi-codex-auto-review has no diff"
+    },
+    "modules": {
+        "src/index.ts": "default export factory: resolves the settings path, loads settings on session_start (reports invalid files, mirrors to stderr without UI), sets the footer status `codex-cua: computer on · browser on`, registers /codex-computer-use. Starts no process. Re-exports every public symbol below.",
+        "src/settings.ts": "FeatureState {computerUse, browserUse}, DEFAULT_FEATURE_STATE (true/true), DISABLED_FEATURE_STATE, validateFeatureState (exactly two boolean keys, unknown keys rejected), FeatureSettingsStore.load() → SettingsLoadResult {source: defaults|file|invalid, state, error?}, FeatureSettingsStore.save() (mkdir 0o700, temp file + rename, mode 0o600), describeFeatureState.",
+        "src/platform.ts": "detectPlatform(env, hostPlatform) → PlatformInfo (darwin verified, win32 unverified, others unsupported; PI_CODEX_COMPUTER_USE_PLATFORM override sets isSimulated when it differs from the host), resolveCodexHome (CODEX_HOME, else USERPROFILE/.codex on real win32, else ~/.codex), describePlatform.",
+        "src/runtime.ts": "discoverRuntime({env, platform}) → RuntimePlan | RuntimeUnavailable; locateServiceApp (SKY_CUA_SERVICE_PATH → $CODEX_HOME/computer-use → @oai/sky copy); readRuntimeManifest; readBundleInfo (plutil); describeRuntime; constants CUA_REPL_SERVER_NAME, SURFACES_VARIABLE, TRUSTED_SERVICES_VARIABLE, SERVICE_APP_PATH_VARIABLE, CODEX_DESKTOP_BUNDLE_ID, SERVICE_APP_NAME, pluginCacheDir.",
+        "src/install.ts": "checkPrerequisites({env, runSetupScript, setupTimeoutMs}) → PrerequisiteReport {platform, runtime, checks[], setupScript?, piVersion}; formatPrerequisiteReport → string[]. Runs Codex's setup script and the package's own runtime validation; everything else is read-only.",
+        "src/commands.ts": "registerCodexComputerUseCommand(pi, {settingsPath, getSettings, updateState, describeServer}); COMMAND_NAME, COMMAND_USAGE; argument completions; `report()` mirrors notify text to stderr when ctx.hasUI is false."
+    },
+    "settings": {
+        "path": "<agentDir>/codex-computer-use/settings.json where agentDir = getAgentDir() from pi (PI_CODING_AGENT_DIR, else ~/.pi/agent)",
+        "schema": {
+            "computerUse": "boolean",
+            "browserUse": "boolean"
+        },
+        "defaults": {
+            "computerUse": true,
+            "browserUse": true
+        },
+        "missingFile": "defaults, nothing is written until the first toggle",
+        "invalidFile": "reported on session_start and by every command; both features treated as off for the session; toggles are refused with the error so the file is never overwritten silently",
+        "unknownKeys": "rejected (file is invalid)",
+        "write": "atomic temp file + rename, directory 0o700, file 0o600, pretty JSON with the two keys only"
+    },
+    "platforms": {
+        "darwin": {
+            "support": "supported",
+            "verification": "verified",
+            "discovery": [
+                "plugin-cache (.mcp.json under $CODEX_HOME/plugins/cache/openai-bundled/unified-computer-use/<version>/)",
+                "app-bundle fallback (/Applications/ChatGPT.app, ~/Applications/ChatGPT.app, /Applications/Codex.app, ~/Applications/Codex.app, or PI_CODEX_COMPUTER_USE_APP_PATH; bundle id com.openai.codex checked through plutil)"
+            ],
+            "setupScript": "bash cua_node/bin/setup.sh",
+            "serviceCheck": "locateServiceApp order SKY_CUA_SERVICE_PATH → $CODEX_HOME/computer-use/Codex Computer Use.app → <node_modules>/@oai/sky/Codex Computer Use.app",
+            "chromeCheck": "~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.openai.codexextension.json and its `path`"
+        },
+        "win32": {
+            "support": "supported",
+            "verification": "unverified",
+            "discovery": [
+                "plugin-cache only (CODEX_HOME, else %USERPROFILE%\\.codex); no app-bundle fallback → RuntimeUnavailable plugin-cache-missing with guidance to enable Computer Use once in Codex Desktop"
+            ],
+            "setupScript": "powershell -NoProfile -ExecutionPolicy Bypass -File cua_node/bin/setup.ps1",
+            "serviceCheck": "<node_modules>/@oai/sky/bin/windows/codex-computer-use(-arm64).exe presence (the Windows target in @oai/sky spawns this helper; no separate service app) → reported as unverified when present",
+            "chromeCheck": "reg query HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.openai.codexextension → unverified when present",
+            "gap": "Never executed on a Windows machine; only the simulated plugin-cache path was exercised from this Mac (see verification.simulated)."
+        },
+        "linux": {
+            "support": "unsupported",
+            "verification": "n/a",
+            "behavior": "platform-unsupported without touching the filesystem; Codex Desktop has no Linux Computer Use configuration (codex-rs/config/src/computer_use.rs)"
+        }
+    },
+    "runtimePlan": {
+        "shape": {
+            "kind": "plan",
+            "platform": "darwin | win32",
+            "source": "plugin-cache | app-bundle",
+            "command": "string",
+            "args": "string[]",
+            "env": "Record<string,string> — verbatim from .mcp.json (includes CUA_REPL_ENABLED_SURFACES and NODE_REPL_TRUSTED_SERVICES, which 03-mcp-bridge overrides) or composed from the app bundle (those two keys absent)",
+            "enabledTools": "string[] (default js, js_reset, turn_ended)",
+            "outputTokenLimit": "number (default 25000)",
+            "startupTimeoutSec": "number (default 120)",
+            "codexHome": "string",
+            "configPath?": "string",
+            "appPath?": "string",
+            "appVersion?": "string",
+            "runtimeRoot?": "string",
+            "nodeModules?": "string",
+            "isSimulated": "boolean"
+        },
+        "unavailableReasons": [
+            "platform-unsupported",
+            "plugin-cache-missing",
+            "app-not-found",
+            "runtime-invalid"
+        ],
+        "discoveryOrder": [
+            "detectPlatform (override aware)",
+            "resolveCodexHome",
+            "newest enabled .mcp.json whose command exists (existence skipped when simulated)",
+            "macOS: app bundle candidates → manifest.json → compose env with the same keys Codex Desktop writes"
+        ],
+        "overrideVariables": {
+            "PI_CODEX_COMPUTER_USE_PLATFORM": "simulate a platform",
+            "PI_CODEX_COMPUTER_USE_APP_PATH": "macOS app bundle path",
+            "CODEX_HOME": "Codex state directory (also Codex's own variable)"
+        },
+        "thisMac": {
+            "source": "plugin-cache",
+            "configPath": "~/.codex/plugins/cache/openai-bundled/unified-computer-use/26.930.31730/.mcp.json",
+            "command": "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node",
+            "args": [
+                "/Applications/ChatGPT.app/Contents/Resources/cua_node/lib/node_modules/@oai/cua-repl/bin/cua-repl.mjs"
+            ],
+            "appVersion": "26.930.31730",
+            "envKeys": [
+                "BROWSER_USE_AVAILABLE_BACKENDS",
+                "BROWSER_USE_CODEX_APP_BUILD_FLAVOR",
+                "BROWSER_USE_CODEX_APP_VERSION",
+                "BROWSER_USE_TINYSKY_ENABLED",
+                "CODEX_CLI_PATH",
+                "CODEX_HOME",
+                "CUA_REPL_ENABLED_SURFACES",
+                "CUA_REPL_NODE_REPL_PATH",
+                "NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER",
+                "NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME",
+                "NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE",
+                "NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS",
+                "NODE_REPL_NODE_MODULE_DIRS",
+                "NODE_REPL_NODE_PATH",
+                "NODE_REPL_TRUSTED_CODE_PATHS",
+                "NODE_REPL_TRUSTED_SERVICES",
+                "SKY_CUA_SERVICE_PATH"
+            ],
+            "fallbackComparison": "With an empty CODEX_HOME the app-bundle plan has the same command, args and env keys minus CUA_REPL_ENABLED_SURFACES and NODE_REPL_TRUSTED_SERVICES; values differ only where CODEX_HOME is embedded (CODEX_HOME, NODE_REPL_TRUSTED_CODE_PATHS) and SKY_CUA_SERVICE_PATH points at the copy inside @oai/sky."
+        }
+    },
+    "prerequisites": {
+        "checkIds": [
+            "platform",
+            "codex-subscription",
+            "codex-login",
+            "codex-desktop-app",
+            "runtime",
+            "setup-script",
+            "runtime-validation",
+            "mcp-config",
+            "service-app",
+            "os-permissions",
+            "chrome-native-host",
+            "chrome-extension",
+            "pi-version"
+        ],
+        "statuses": {
+            "ok": "verified here",
+            "missing": "verified absent, action given",
+            "unverified": "implemented from documentation or not exercisable on this host",
+            "user-owned": "only the user can satisfy it (subscription, login, OS permissions, Chrome extension)",
+            "skipped": "not applicable"
+        },
+        "thisMac": {
+            "platform": "ok — macOS (verified)",
+            "codex-subscription": "user-owned",
+            "codex-login": "user-owned",
+            "codex-desktop-app": "ok — /Applications/ChatGPT.app 26.930.31730",
+            "runtime": "ok — @oai/cua-repl 0.1.0, @oai/cua 0.2.5, @oai/sky 0.7.5, @oai/browser-desktop 0.1.1",
+            "setup-script": "unverified — bash setup.sh exit 1: `missing file path=.../cua_node/bin/npm`; cua_node/bin contains only corepack, node, node_repl, setup.ps1, setup.sh and lib/node_modules has no npm; classified via MISSING_LAUNCHER_PATTERN",
+            "runtime-validation": "ok — node v24.21.0 equals manifest node_binary_version, @oai/sky imports from a temp dir symlinked to lib/node_modules, node_repl --help exits 0",
+            "mcp-config": "ok — plugin cache .mcp.json",
+            "service-app": "ok — ~/.codex/computer-use/Codex Computer Use.app (Codex Desktop install)",
+            "os-permissions": "user-owned",
+            "chrome-native-host": "ok — manifest → ~/.codex/plugins/cache/openai-bundled/chrome/latest/extension-host/macos/arm64/ChatGPT for Chrome",
+            "chrome-extension": "user-owned — allowed IDs hehggadaopoacecdllhhajmbjkdcmajg, odlomjlbamekndcpllcnffbgeohgkmjh",
+            "pi-version": "ok — pi 0.99.1"
+        }
+    },
+    "commands": {
+        "/codex-computer-use": "with UI: select menu (Computer Use: turn on/off, Browser Use: turn on/off, Show status, Check prerequisites); without UI: prints status",
+        "/codex-computer-use status": "feature state, settings source and path, platform, runtime, server state; no setup script",
+        "/codex-computer-use check": "full prerequisite report (runs setup script and runtime validation); warning level when anything is missing",
+        "/codex-computer-use computer on|off": "waitForIdle, persist, update status line; refused when the settings file is invalid",
+        "/codex-computer-use browser on|off": "same",
+        "unknown arguments": "usage error",
+        "serverLine": "`not started in this version; the cua_repl bridge arrives in the next stage.` — 03-mcp-bridge replaces describeServer and hooks updateState for restarts"
+    },
+    "verification": {
+        "build": "npm run build → 2 tasks successful (auto-review and computer-use); npm run check → Checked 108 files, no errors",
+        "dependency": "npm ls @earendil-works/pi-mcp --workspace packages/pi-codex-computer-use → 0.99.1 (same as pi-coding-agent's nested copy)",
+        "discoveryScript": "/tmp/cua-02/discovery.mjs (embedded under scratchScripts): real plan, prerequisites, simulated linux/win32/app-not-found/app-bundle fallback all matched the brief's expectations",
+        "simulated": {
+            "linux": "detectPlatform → unsupported; discoverRuntime → platform-unsupported (no filesystem access path in code)",
+            "win32-with-cache": "temp CODEX_HOME with hand-written .mcp.json using C:\\ paths → RuntimePlan platform win32, source plugin-cache, isSimulated true; checks: platform/desktop-app/runtime/service/chrome unverified, setup script skipped, mcp-config ok",
+            "win32-empty": "plugin-cache-missing with guidance",
+            "darwin-app-not-found": "PI_CODEX_COMPUTER_USE_APP_PATH=/nonexistent + empty CODEX_HOME → app-not-found naming ChatGPT.app and the override variable",
+            "darwin-fallback": "empty CODEX_HOME → app-bundle plan; env keys equal to the .mcp.json plan except the two surface keys"
+        },
+        "livePi": {
+            "rpc": "node_modules/.bin/pi 0.99.1 --mode rpc --no-session -ne -e dist/index.js driven by /tmp/cua-02/rpc-driver.mjs: status, browser off (file written), status (from settings file), bare command → select dialog with the four options (cancelled), browser on, bogus → usage error, check → full report; every prompt responded disposition handled; setStatus requests carried `codex-cua: computer on · browser off/on`",
+            "print": "pi -p: notify is a no-op in pi's no-UI modes (runner.js default UI), so the command mirrors text to stderr; status printed, `computer off`/`computer on` toggles persisted",
+            "json": "pi --mode json: JSON stream on stdout untouched, command text on stderr",
+            "globalPi": "pi 1.0.2 (user's global install) -p status → identical status output, exit 0, no settings file created",
+            "tui": "not driven automatically; user to confirm the select menu and footer status in an interactive session"
+        },
+        "settingsBehavior": "no file → defaults true/true and nothing written; toggle → file with exactly the two keys; `\"computerUse\": \"yes\"` → reported, both off, toggle refused, file left unchanged; unknown key `extra` → reported invalid",
+        "sideEffects": {
+            "autoReview": "packages/pi-codex-auto-review, scripts/, .github/ unchanged (git status empty for those paths)",
+            "lockfile": "package-lock.json: adds packages/pi-codex-computer-use + node_modules/@buyong/pi-codex-computer-use link; @earendil-works/pi-mcp@0.99.1 and its dependencies (cross-spawn, which, isexe, path-key, shebang-command, shebang-regex) move from node_modules/@earendil-works/pi-coding-agent/node_modules/ to the top level with unchanged versions; no other version changes",
+            "audit": "npm audit --audit-level=high → 6 high (basic-ftp/get-uri/pac-proxy-agent/proxy-agent/release-it/undici), identical set on master; none introduced",
+            "codexHome": "find under ~/.codex/plugins/cache/openai-bundled/unified-computer-use and ~/.codex/computer-use newer than the test marker → none; other ~/.codex changes during the run were Codex Desktop's own caches (cache/codex_apps_*, plugins/cache/openai-curated-remote/*)",
+            "userAgentDir": "~/.pi/agent/codex-computer-use did not exist before; created by the toggle tests and removed afterwards",
+            "tempDirs": "all mkdtemp directories removed"
+        }
+    },
+    "findings": [
+        "Codex's cua_node/bin/setup.sh (and setup.ps1) assert npm/npx launchers that the 26.930.31730 macOS build does not ship, so the script fails on a working install. The package reports this as unverified and runs its own equivalent validation (node version vs manifest, @oai/sky import, node_repl --help).",
+        "pi 0.99.1 implements ExtensionUIContext.notify as a no-op in print/JSON modes; commands mirror their output to stderr when ctx.hasUI is false.",
+        "The Windows sky target has no separate service app: it spawns @oai/sky/bin/windows/codex-computer-use(-arm64).exe with --parent-pid; the Windows service check therefore looks for that helper.",
+        "Codex resolves CODEX_HOME as the env var when non-empty, else ~/.codex (codex-rs/utils/home-dir); the Windows helper transport additionally uses %USERPROFILE%\\.codex."
+    ],
+    "unresolved": [
+        "Windows: implemented but never executed on a Windows machine (discovery, setup.ps1 invocation, helper exe check, registry check).",
+        "App-bundle fallback sets SKY_CUA_SERVICE_PATH to the copy inside @oai/sky when ~/.codex/computer-use is absent; whether that copy launches from pi is for 01-feasibility to prove.",
+        "TUI rendering of the select menu and footer status was not driven automatically.",
+        "The global pi 1.0.2 was only smoke-tested in print mode; the package is built against 0.99.1 types."
+    ],
+    "scratchScripts": [
+        {
+            "path": "/tmp/cua-02/discovery.mjs",
+            "purpose": "Stage 3 verification: real discovery, prerequisites, simulated linux/win32/app-not-found/app-bundle fallback",
+            "note": "imports dist/runtime.js, dist/install.js, dist/platform.js; writes only under os.tmpdir() and removes it",
+            "content": "// Stage 3 verification for child 02: real discovery on this Mac plus simulated platforms.\nimport { mkdtemp, mkdir, writeFile, rm } from \"node:fs/promises\";\nimport { tmpdir } from \"node:os\";\nimport { join } from \"node:path\";\n\nconst dist = process.argv[2];\nconst runtime = await import(join(dist, \"runtime.js\"));\nconst install = await import(join(dist, \"install.js\"));\nconst platform = await import(join(dist, \"platform.js\"));\n\nconst summarize = (plan) =>\n    plan.kind === \"plan\"\n        ? {\n              kind: plan.kind,\n              platform: plan.platform,\n              source: plan.source,\n              command: plan.command,\n              args: plan.args,\n              configPath: plan.configPath,\n              appPath: plan.appPath,\n              appVersion: plan.appVersion,\n              runtimeRoot: plan.runtimeRoot,\n              nodeModules: plan.nodeModules,\n              enabledTools: plan.enabledTools,\n              outputTokenLimit: plan.outputTokenLimit,\n              startupTimeoutSec: plan.startupTimeoutSec,\n              isSimulated: plan.isSimulated,\n              envKeys: Object.keys(plan.env).sort(),\n          }\n        : plan;\n\nconst section = (title) => console.log(`\\n===== ${title}`);\n\n// 1. Real discovery on this Mac.\nsection(\"1. real discovery (darwin)\");\nconst real = await runtime.discoverRuntime();\nconsole.log(JSON.stringify(summarize(real), null, 2));\n\n// 2. Full prerequisite report on this Mac (runs setup.sh).\nsection(\"2. real prerequisites (runs setup.sh)\");\nconst report = await install.checkPrerequisites();\nconsole.log(install.formatPrerequisiteReport(report).join(\"\\n\"));\nconsole.log(\"setupScript:\", JSON.stringify({ ...report.setupScript, outputTail: report.setupScript?.outputTail?.slice(-200) }));\n\n// 3. Simulated Linux: platform-unsupported without touching the filesystem.\nsection(\"3. simulated linux\");\nconst linuxEnv = { ...process.env, PI_CODEX_COMPUTER_USE_PLATFORM: \"linux\" };\nconsole.log(JSON.stringify(platform.detectPlatform(linuxEnv)));\nconsole.log(JSON.stringify(await runtime.discoverRuntime({ env: linuxEnv })));\n\n// 4. Simulated Windows plugin cache with Windows-style absolute paths.\nsection(\"4. simulated win32 with hand-written plugin cache\");\nconst fakeHome = await mkdtemp(join(tmpdir(), \"cua-02-codex-home-\"));\nconst versionDir = join(fakeHome, \"plugins\", \"cache\", \"openai-bundled\", \"unified-computer-use\", \"26.930.31730\");\nawait mkdir(versionDir, { recursive: true });\nawait writeFile(\n    join(versionDir, \".mcp.json\"),\n    JSON.stringify(\n        {\n            mcpServers: {\n                cua_repl: {\n                    command: \"C:\\\\Users\\\\tester\\\\AppData\\\\Local\\\\Programs\\\\Codex\\\\resources\\\\cua_node\\\\bin\\\\node.exe\",\n                    args: [\"C:\\\\Users\\\\tester\\\\AppData\\\\Local\\\\Programs\\\\Codex\\\\resources\\\\cua_node\\\\lib\\\\node_modules\\\\@oai\\\\cua-repl\\\\bin\\\\cua-repl.mjs\"],\n                    enabled: true,\n                    enabled_tools: [\"js\", \"js_reset\", \"turn_ended\"],\n                    startup_timeout_sec: 120,\n                    tools: { js: { output_token_limit: 25000 } },\n                    env: {\n                        NODE_REPL_NODE_MODULE_DIRS: \"C:\\\\Users\\\\tester\\\\AppData\\\\Local\\\\Programs\\\\Codex\\\\resources\\\\cua_node\\\\lib\\\\node_modules\",\n                        CODEX_HOME: \"C:\\\\Users\\\\tester\\\\.codex\",\n                        CUA_REPL_ENABLED_SURFACES: \"browser,computer\",\n                        NODE_REPL_TRUSTED_SERVICES: '{\"browser\":\"@oai/browser-desktop/service\",\"sky\":\"@oai/sky/service\"}',\n                        BROWSER_USE_CODEX_APP_VERSION: \"26.930.31730\",\n                    },\n                },\n            },\n        },\n        null,\n        2,\n    ),\n);\nconst winEnv = { ...process.env, PI_CODEX_COMPUTER_USE_PLATFORM: \"win32\", CODEX_HOME: fakeHome };\nconsole.log(JSON.stringify(summarize(await runtime.discoverRuntime({ env: winEnv })), null, 2));\nconst winReport = await install.checkPrerequisites({ env: winEnv });\nconsole.log(install.formatPrerequisiteReport(winReport).join(\"\\n\"));\n\n// 5. Simulated Windows without a plugin cache.\nsection(\"5. simulated win32 with empty CODEX_HOME\");\nconst emptyHome = await mkdtemp(join(tmpdir(), \"cua-02-empty-home-\"));\nconsole.log(JSON.stringify(await runtime.discoverRuntime({ env: { ...process.env, PI_CODEX_COMPUTER_USE_PLATFORM: \"win32\", CODEX_HOME: emptyHome } }), null, 2));\n\n// 6. darwin, empty CODEX_HOME, missing app → app-not-found.\nsection(\"6. darwin, empty CODEX_HOME, PI_CODEX_COMPUTER_USE_APP_PATH=/nonexistent\");\nconsole.log(JSON.stringify(await runtime.discoverRuntime({ env: { ...process.env, CODEX_HOME: emptyHome, PI_CODEX_COMPUTER_USE_APP_PATH: \"/nonexistent\" } }), null, 2));\n\n// 7. darwin, empty CODEX_HOME → app-bundle fallback; compare env keys with the real plan.\nsection(\"7. darwin app-bundle fallback (empty CODEX_HOME)\");\nconst fallback = await runtime.discoverRuntime({ env: { ...process.env, CODEX_HOME: emptyHome } });\nconsole.log(JSON.stringify(summarize(fallback), null, 2));\nif (real.kind === \"plan\" && fallback.kind === \"plan\") {\n    const realKeys = new Set(Object.keys(real.env));\n    const fallbackKeys = new Set(Object.keys(fallback.env));\n    const onlyReal = [...realKeys].filter((k) => !fallbackKeys.has(k));\n    const onlyFallback = [...fallbackKeys].filter((k) => !realKeys.has(k));\n    console.log(\"keys only in real .mcp.json plan:\", onlyReal);\n    console.log(\"keys only in fallback plan:\", onlyFallback);\n    const differing = [...realKeys].filter((k) => fallbackKeys.has(k) && real.env[k] !== fallback.env[k]);\n    console.log(\"shared keys with different values:\", differing.map((k) => `${k}: ${real.env[k]} -> ${fallback.env[k]}`));\n    console.log(\"command equal:\", real.command === fallback.command, \"args equal:\", JSON.stringify(real.args) === JSON.stringify(fallback.args));\n}\n\nawait rm(fakeHome, { recursive: true, force: true });\nawait rm(emptyHome, { recursive: true, force: true });\n"
+        },
+        {
+            "path": "/tmp/cua-02/rpc-driver.mjs",
+            "purpose": "Drives pi --mode rpc: sends /codex-computer-use prompts, answers select with cancelled, prints notify/setStatus/response records",
+            "note": "spawns the given pi binary; kills it after the last response",
+            "content": "// Drives pi in RPC mode: sends /codex-computer-use prompts, answers select dialogs with cancel,\n// and prints every record. Usage: node rpc-driver.mjs <pi-binary> <pi args...>\nimport { spawn } from \"node:child_process\";\n\nconst [piBinary, ...piArgs] = process.argv.slice(2);\nconst steps = [\n    \"/codex-computer-use status\",\n    \"/codex-computer-use browser off\",\n    \"/codex-computer-use status\",\n    \"/codex-computer-use\",\n    \"/codex-computer-use browser on\",\n    \"/codex-computer-use bogus\",\n    \"/codex-computer-use check\",\n];\nlet stepIndex = 0;\nconst child = spawn(piBinary, piArgs, { stdio: [\"pipe\", \"pipe\", \"pipe\"] });\nchild.stderr.on(\"data\", (chunk) => process.stdout.write(`[stderr] ${chunk}`));\nconst send = (record) => {\n    console.log(`>>> ${JSON.stringify(record)}`);\n    child.stdin.write(`${JSON.stringify(record)}\\n`);\n};\nconst next = () => {\n    if (stepIndex >= steps.length) {\n        setTimeout(() => {\n            send({ type: \"abort\" });\n            child.kill(\"SIGTERM\");\n        }, 500);\n        return;\n    }\n    const id = `step-${stepIndex + 1}`;\n    const message = steps[stepIndex];\n    stepIndex += 1;\n    send({ id, type: \"prompt\", message });\n};\nlet buffer = \"\";\nchild.stdout.on(\"data\", (chunk) => {\n    buffer += chunk.toString();\n    let newline = buffer.indexOf(\"\\n\");\n    while (newline !== -1) {\n        const line = buffer.slice(0, newline).trim();\n        buffer = buffer.slice(newline + 1);\n        newline = buffer.indexOf(\"\\n\");\n        if (!line) continue;\n        let record;\n        try {\n            record = JSON.parse(line);\n        } catch {\n            console.log(`<<< (raw) ${line}`);\n            continue;\n        }\n        if (record.type === \"extension_ui_request\") {\n            if (record.method === \"notify\") {\n                console.log(`<<< notify[${record.notifyType ?? record.type}] ${JSON.stringify(record.message ?? record)}`);\n            } else if (record.method === \"select\") {\n                console.log(`<<< select title=${JSON.stringify(record.title)} options=${JSON.stringify(record.options)}`);\n                send({ type: \"extension_ui_response\", id: record.id, cancelled: true });\n            } else {\n                console.log(`<<< ui ${JSON.stringify(record)}`);\n            }\n            continue;\n        }\n        if (record.type === \"response\") {\n            console.log(`<<< response ${JSON.stringify(record)}`);\n            if (record.command === \"prompt\") next();\n            continue;\n        }\n        console.log(`<<< event ${record.type}${record.type === \"agent_end\" ? \"\" : \"\"}`);\n    }\n});\nchild.on(\"exit\", (code, signal) => {\n    console.log(`pi exited code=${code} signal=${signal}`);\n});\nsetTimeout(next, 1500);\nsetTimeout(() => {\n    console.log(\"timeout: killing pi\");\n    child.kill(\"SIGKILL\");\n}, 120_000).unref();\n"
+        }
+    ]
+}

@@ -1,0 +1,66 @@
+{
+    "name": "@buyong/pi-codex-fast-mode",
+    "version": "0.3.1",
+    "description": "OpenAI Fast and Ultrafast service tiers for Pi, with commands, model-aware activation, and persistent settings.",
+    "license": "Apache-2.0",
+    "keywords": [
+        "pi-package",
+        "pi-extension",
+        "codex",
+        "openai",
+        "fast-mode"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/buYoung/pi-packages.git",
+        "directory": "apps/pi-codex-fast-mode"
+    },
+    "homepage": "https://github.com/buYoung/pi-packages/tree/main/apps/pi-codex-fast-mode#readme",
+    "bugs": {
+        "url": "https://github.com/buYoung/pi-packages/issues"
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
+    },
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": "./dist/index.js"
+    },
+    "pi": {
+        "extensions": [
+            "./dist/index.js"
+        ]
+    },
+    "scripts": {
+        "build": "tsc",
+        "typecheck": "tsc --noEmit",
+        "lint": "biome check .",
+        "prepack": "tsc && node ../../scripts/codex/check-package.mjs ."
+    },
+    "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "catalog:",
+        "@earendil-works/pi-coding-agent": "catalog:",
+        "@earendil-works/pi-tui": "catalog:",
+        "@repo/typescript-config": "workspace:*",
+        "@types/node": "catalog:",
+        "typescript": "catalog:"
+    },
+    "engines": {
+        "node": ">=22.19.0"
+    },
+    "files": [
+        "dist/**/*.js",
+        "dist/**/*.d.ts",
+        "dist/**/*.js.map",
+        "README.md",
+        "README.ko.md",
+        "LICENSE"
+    ]
+}

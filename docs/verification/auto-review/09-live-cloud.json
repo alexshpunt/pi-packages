@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 2,
+  "status": "complete",
+  "sourceDigest": "d974186a8bc5188c366702e701e5acc852bf21b4b1e83493735e4249ff8a2c69",
+  "contractDigest": "7c16ec541fca790264aca75860a393e675013c8f273ed60516a80f93c9f44379",
+  "provider": {
+    "package": "pi-ollama-cloud",
+    "version": "0.12.2",
+    "id": "ollama-cloud",
+    "model": "glm-5.3"
+  },
+  "imageDigest": "sha256:fe79facbc6ff0a5188f39bb65f0b496fb9395b5d29ecb2317c86506caf5df187",
+  "pluginArtifactDigest": "331e5e3cd88a0d12bfe4aabd3a9c3488fb7bfe4e2f11ba16e3ddb06ffda4efac",
+  "dockerPlatform": {
+    "platform": "linux-x64",
+    "processArchitecture": "x64",
+    "kernelArchitecture": "arm64",
+    "seccompHelperArchitecture": "arm64",
+    "isEmulated": true
+  },
+  "authentication": "OLLAMA_API_KEY exported from the user-corrected zshrc and passed by runtime environment name; no value stored or printed",
+  "cases": [
+    {
+      "id": "routine-allowed",
+      "provider": "ollama-cloud",
+      "model": "glm-5.3",
+      "status": "pass",
+      "calls": {
+        "main": 2,
+        "reviewer": 0
+      },
+      "effectObserved": true,
+      "approvedReviews": 0,
+      "deniedReviews": 0,
+      "deniedToolEvents": 0,
+      "feedbackCodes": [],
+      "auditRecords": 2,
+      "credentialScanPassed": true,
+      "elapsedMs": 9258
+    },
+    {
+      "id": "authorized-outside",
+      "provider": "ollama-cloud",
+      "model": "glm-5.3",
+      "status": "pass",
+      "calls": {
+        "main": 2,
+        "reviewer": 1
+      },
+      "effectObserved": true,
+      "approvedReviews": 1,
+      "deniedReviews": 0,
+      "deniedToolEvents": 0,
+      "feedbackCodes": [],
+      "auditRecords": 3,
+      "credentialScanPassed": true,
+      "elapsedMs": 11256
+    },
+    {
+      "id": "protected-path-denied",
+      "provider": "ollama-cloud",
+      "model": "glm-5.3",
+      "status": "pass",
+      "calls": {
+        "main": 2,
+        "reviewer": 0
+      },
+      "effectObserved": true,
+      "approvedReviews": 0,
+      "deniedReviews": 0,
+      "deniedToolEvents": 1,
+      "feedbackCodes": [],
+      "auditRecords": 1,
+      "credentialScanPassed": true,
+      "elapsedMs": 6971
+    },
+    {
+      "id": "reviewer-policy-denied",
+      "provider": "ollama-cloud",
+      "model": "glm-5.3",
+      "status": "pass",
+      "calls": {
+        "main": 2,
+        "reviewer": 1
+      },
+      "effectObserved": true,
+      "approvedReviews": 0,
+      "deniedReviews": 1,
+      "deniedToolEvents": 1,
+      "feedbackCodes": [
+        "AUTO_REVIEW_DENIED"
+      ],
+      "auditRecords": 1,
+      "credentialScanPassed": true,
+      "elapsedMs": 9214
+    }
+  ],
+  "limits": {
+    "maxCallsPerCase": 24,
+    "deadlineMsPerCase": 180000,
+    "reviewDeadlineMs": 60000,
+    "maxOutputTokens": 4096,
+    "providerRetries": 0
+  },
+  "calls": {
+    "main": 8,
+    "reviewer": 2
+  },
+  "platformCounts": {
+    "darwin-arm64": 72,
+    "linux-x64": 72
+  },
+  "requiredPlatforms": [
+    "darwin-arm64",
+    "linux-x64"
+  ],
+  "credentialEvidenceScan": {
+    "status": "pass",
+    "filesScanned": 7,
+    "bytesScanned": 17520,
+    "containsCredential": false,
+    "roots": [
+      ".reports/pi-guard/runs/2026-10-03T02-12-44-040Z-6ce1cc6b-3a0e-47ac-9a92-80aeb886aad2/linux-x64",
+      ".reports/pi-guard/runs/2026-10-03T02-12-46-204Z-c2e6b649-4e7f-4c43-bec7-e34bd54fe7e8/linux-x64"
+    ]
+  },
+  "containerRemoved": true,
+  "commands": {
+    "live": "npm run verify:docker -- --mode conformance --platform linux/amd64 --model glm-5.3 --image sha256:fe79facbc6ff0a5188f39bb65f0b496fb9395b5d29ecb2317c86506caf5df187",
+    "aggregate": "npm run verify:guard"
+  },
+  "artifactPaths": [
+    ".reports/pi-guard/runs/2026-10-03T02-12-44-040Z-6ce1cc6b-3a0e-47ac-9a92-80aeb886aad2/linux-x64/docker-orchestration.json",
+    ".reports/pi-guard/runs/2026-10-03T02-12-46-204Z-c2e6b649-4e7f-4c43-bec7-e34bd54fe7e8/linux-x64/docker-conformance.json",
+    ".reports/pi-guard/runs/2026-10-03T02-14-34-627Z-3dff3dc7-fc36-4f8e-8503-91a206c31aea/darwin-arm64/auto-review-conformance.json"
+  ],
+  "aggregate": {
+    "state": "complete",
+    "exitCode": 0,
+    "unresolved": []
+  },
+  "limitations": [
+    "Pi execution/approval scope only; no MCP/app/Computer Use, Windows, enterprise service or proprietary-model equivalence.",
+    "Controller and native mandatory protections remain absolute; literal .rules subset does not execute general Starlark.",
+    "Guarded startup disables automatic context-file discovery; only actual runtime-supplied instruction sources are trusted.",
+    "Linux creation and runtime default scratch/log paths may require enclosing-directory authority, shown in the reviewed delta; exact-file creation confinement is not claimed. Unsupported partial SDK scopes fail closed.",
+    "Live GLM5.3 observations cover these four bounded synthetic scenarios; other behavior is covered separately by deterministic and native checks.",
+    "Linux x64 qualification used an emulated x64 workload on an ARM64 kernel with an ARM64 seccomp helper; a physical x64 host was not tested.",
+    "The locked dependency audit reported three high-severity entries. No unverified downgrade or automatic audit fix was applied."
+  ],
+  "recordedAt": "2026-10-03T02:15:15.497Z"
+}

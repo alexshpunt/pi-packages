@@ -1,0 +1,206 @@
+{
+    "status": "ready-for-manual-publish",
+    "brief": "docs/briefs/2026-10-05-build-codex-cua-06-publish-prep.md",
+    "date": "2026-10-05",
+    "version": "0.1.0",
+    "package": "@buyong/pi-codex-computer-use",
+    "branch": "feat/codex-computer-use",
+    "baseCommit": "d5aa4c2",
+    "latestSettingsUI": "09-guidance-and-settings.json supersedes 08-settings-ui.json: /computer-use is one two-feature list, with Codex-based model guidance. Verification entries below preserve the original run; archive metadata reflects the rebuilt package.",
+    "latestSetupCheck": "10-setup-check.json: standalone /computer-use-check with prerequisite report and first-use guidance; /computer-use check remains an alias.",
+    "consumed": [
+        "03-package-setup.json",
+        "04-mcp-bridge.json",
+        "05-confirmations.json",
+        "06-browser-use.json"
+    ],
+    "archive": {
+        "path": "tmp/cua-publish/buyong-pi-codex-computer-use-0.1.0.tgz",
+        "sizeBytes": 81790,
+        "unpackedSizeBytes": 318676,
+        "entryCount": 52,
+        "shasum": "cad08843fc9440e2282087456584b6aa53518660",
+        "bundledDependencies": [],
+        "note": "Contains bridge JavaScript, declarations, source maps and docs only; no OpenAI runtime, native binary, source code directory or host dependency. Install pi-mcp as a normal runtime dependency."
+    },
+    "packedFiles": [
+        "LICENSE",
+        "NOTICE",
+        "README.ko.md",
+        "README.md",
+        "dist/active-call.d.ts",
+        "dist/active-call.js",
+        "dist/active-call.js.map",
+        "dist/browser-checks.d.ts",
+        "dist/browser-checks.js",
+        "dist/browser-checks.js.map",
+        "dist/commands.d.ts",
+        "dist/commands.js",
+        "dist/commands.js.map",
+        "dist/connection.d.ts",
+        "dist/connection.js",
+        "dist/connection.js.map",
+        "dist/elicitation.d.ts",
+        "dist/elicitation.js",
+        "dist/elicitation.js.map",
+        "dist/index.d.ts",
+        "dist/index.js",
+        "dist/index.js.map",
+        "dist/install.d.ts",
+        "dist/install.js",
+        "dist/install.js.map",
+        "dist/log.d.ts",
+        "dist/log.js",
+        "dist/log.js.map",
+        "dist/platform.d.ts",
+        "dist/platform.js",
+        "dist/platform.js.map",
+        "dist/runtime.d.ts",
+        "dist/runtime.js",
+        "dist/runtime.js.map",
+        "dist/settings-ui.d.ts",
+        "dist/settings-ui.js",
+        "dist/settings-ui.js.map",
+        "dist/settings.d.ts",
+        "dist/settings.js",
+        "dist/settings.js.map",
+        "dist/tools.d.ts",
+        "dist/tools.js",
+        "dist/tools.js.map",
+        "dist/turn.d.ts",
+        "dist/turn.js",
+        "dist/turn.js.map",
+        "dist/typebox.d.ts",
+        "dist/typebox.js",
+        "dist/typebox.js.map",
+        "docs/computer-use/usage.ko.md",
+        "docs/computer-use/usage.md",
+        "package.json"
+    ],
+    "packaging": {
+        "manifest": "ESM, dist/index.js entry, tsc, Apache-2.0, Node >=22.19.0, pi.extensions [./dist/index.js], public npm access, pi host peers, direct pi-mcp 0.99.1 dependency",
+        "prepack": "tsc && node ../../scripts/package-shared-files.mjs copy && node ../../scripts/check-package.mjs .",
+        "postpack": "node ../../scripts/package-shared-files.mjs remove",
+        "sharedFiles": "Explicit manifest sharedFiles [LICENSE, docs/computer-use/usage.md, docs/computer-use/usage.ko.md]; these are the only copied/removed files. Package-local READMEs and NOTICE are retained. Existing package manifests retain the original files-derived behavior.",
+        "checker": "Argument selects one package; no argument in a package checks that package; root no-argument invocation checks both known workspaces. Original rule-worker verification remains auto-review-only. Required files and forbidden runtime/native/dependency paths are checked. Diagnostic output goes to stderr so npm pack --json stays parseable.",
+        "notice": "Package-local NOTICE describes the Codex host-contract reference and proprietary-runtime exclusion; the existing package's NOTICE is not relabeled or overwritten."
+    },
+    "documentation": {
+        "type": "Action guides (package README and detailed usage, English/Korean)",
+        "paths": [
+            "packages/pi-codex-computer-use/README.md",
+            "packages/pi-codex-computer-use/README.ko.md",
+            "docs/computer-use/usage.md",
+            "docs/computer-use/usage.ko.md"
+        ],
+        "coverage": "Prerequisites incl. subscription/login, platform verification status, pre-publication source loading and post-publication npm installation, default-on feature switches, approval UI/no-UI handling, Chrome-only policy, runtime boundary, telemetry, cancellation, logs, troubleshooting and unverified behaviors",
+        "validation": "Local links checked against canonical/pack-time sources; code examples identical across English/Korean; no user-specific local paths or credential values",
+        "rootReadme": "One paragraph linking the independent new workspace package; existing README content retained."
+    },
+    "verification": [
+        {
+            "command": "npm install --no-audit --no-fund",
+            "cwd": "repository root",
+            "result": "success; workspace lockfile updated without changing existing pi-mcp dependency versions"
+        },
+        {
+            "command": "npm run build",
+            "cwd": "repository root",
+            "result": "2 successful tasks"
+        },
+        {
+            "command": "npm run check",
+            "cwd": "repository root",
+            "result": "116 files checked, no errors"
+        },
+        {
+            "command": "node scripts/check-package.mjs",
+            "cwd": "repository root",
+            "result": "both packages verified: existing 136 files, new 49 files"
+        },
+        {
+            "command": "node ../../scripts/check-package.mjs",
+            "cwd": "packages/pi-codex-auto-review",
+            "result": "original invocation still succeeds; rule-worker evaluation preserved"
+        },
+        {
+            "command": "npm pack --workspace packages/pi-codex-auto-review --dry-run --json",
+            "cwd": "repository root",
+            "result": "prepack/postpack succeed; before/after archive file lists identical (136 files)"
+        },
+        {
+            "command": "npm pack --workspace packages/pi-codex-computer-use --pack-destination tmp/cua-publish --json",
+            "cwd": "repository root",
+            "result": "prepack/postpack succeed; exact 49-file archive created, JSON parseable"
+        },
+        {
+            "command": "npm install --omit=dev --ignore-scripts --legacy-peer-deps --no-audit --no-fund",
+            "cwd": "extracted archive package directory",
+            "result": "7 runtime dependencies installed; no source-workspace dependency leakage"
+        },
+        {
+            "command": "PI_CODING_AGENT_DIR=<isolated agent dir> pi install <extracted archive package directory>",
+            "cwd": "repository root",
+            "result": "installation listed by pi; no real user install settings changed"
+        },
+        {
+            "command": "pi -p --offline --no-session --no-context-files --no-skills '/codex-computer-use status'",
+            "cwd": "repository root with isolated agent dir",
+            "result": "packed extension discovered without explicit -e; defaults true/true, runtime plugin-cache, server running surfaces browser,computer with trusted browser,sky"
+        },
+        {
+            "command": "pi remove <extracted archive package directory>; pi list",
+            "cwd": "repository root with isolated agent dir",
+            "result": "No packages installed; isolated settings packages empty"
+        },
+        {
+            "command": "git diff --exit-code -- packages/pi-codex-auto-review .github/workflows; git diff --check",
+            "cwd": "repository root",
+            "result": "success; existing package source and workflows unchanged"
+        }
+    ],
+    "finalFixes": [
+        "Cancelled elicitation signals are checked before the auto-approval branch; cancelled empty js approval returns cancel with Codex's approvals_reviewer metadata.",
+        "Auto-approval requires a real empty object form rather than missing/malformed schema; inline check showed auto-approve for an ordinary form, tool-approval for missing schema, cancel for an aborted form.",
+        "Form numbers must be finite (reject Infinity/NaN).",
+        "If tools/list fails after connection, the MCP client closes before propagating the error, preventing an orphaned process.",
+        "Simulated/unsupported Browser Use diagnostic paths return unverified/skipped before reading plugin files."
+    ],
+    "platformStatus": {
+        "darwin": "live runtime, approvals and Chrome verified on this Mac; single-list settings TUI verified in regular/dark and narrow fullscreen/light (09-guidance-and-settings.json); cold fallback service launch not verified",
+        "win32": "implemented from Codex platform evidence; never exercised on a Windows machine",
+        "linux": "unsupported"
+    },
+    "firstPublishSteps": {
+        "authority": "docs/publishing.md, First publish of a new package",
+        "notExecuted": true,
+        "commandsFromRepositoryRoot": [
+            "npm login",
+            "npm publish --workspace packages/pi-codex-computer-use --access public"
+        ],
+        "prerequisites": "User separately approves publication and resolves desired release confidence (especially Windows verification). Include the worktree changes in the intended release branch before publication.",
+        "afterFirstPublish": "Configure npm Trusted Publishing for this package: owner buYoung, repository pi-codex-auto-review, workflow npm-package.yml, no environment, allow direct npm publish. Do not republish version 0.1.0 after it exists."
+    },
+    "ciFollowUp": {
+        "requiredWorkflowChange": false,
+        "evidence": "npm-package.yml already resolves a selected workspace generically, builds it, and packs it. The existing auto-review-only conditional runs policy tests and should remain specific to that package; no equivalent Computer Use automated suite was requested.",
+        "limitation": "Linux CI can build/pack the bridge but cannot establish macOS/Windows proprietary-runtime behavior; Windows live validation remains a separate environment task. No workflow was triggered."
+    },
+    "sideEffects": {
+        "published": false,
+        "committed": false,
+        "tagged": false,
+        "pushed": false,
+        "userInstallSettings": "Untouched by local install proof; an isolated PI_CODING_AGENT_DIR was used and the temporary package entry was removed.",
+        "codexRuntime": "No OpenAI files copied into the archive/repository, no credential files read, no native-host registration edited; runtime's own execution markers/permission state are distinct from host-bridge writes."
+    },
+    "unresolved": [
+        "Windows live verification remains unperformed. Settings TUI now verified; approval dialogs still have RPC evidence only.",
+        "User chose not to quit Codex Desktop, so Desktop-quit Chrome operation remains unverified.",
+        "Cold service launch from the app-bundle fallback remains unverified.",
+        "Persistent Always allow was not exercised to avoid a permanent permission grant; response construction is implemented.",
+        "Downloads/uploads/full CDP/WebMCP and Guardian-required safety prechecks were not exercised.",
+        "MCP cancellation does not guarantee immediate termination of JavaScript already running inside node_repl.",
+        "The monorepo's previously observed 6 high npm audit findings are unchanged; no unrelated dependency remediation was included."
+    ]
+}

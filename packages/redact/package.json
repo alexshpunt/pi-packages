@@ -1,0 +1,60 @@
+{
+    "name": "@buyong/redact",
+    "version": "0.1.2",
+    "description": "Host-independent masking of credentials, private keys, and opt-in PII in text and JSON before it reaches logs or language models.",
+    "license": "Apache-2.0",
+    "keywords": [
+        "redaction",
+        "secrets",
+        "credentials",
+        "pii",
+        "masking"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/buYoung/pi-packages.git",
+        "directory": "packages/redact"
+    },
+    "homepage": "https://github.com/buYoung/pi-packages/tree/main/packages/redact#readme",
+    "bugs": {
+        "url": "https://github.com/buYoung/pi-packages/issues"
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
+    },
+    "type": "module",
+    "sideEffects": false,
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": "./dist/index.js"
+    },
+    "scripts": {
+        "build": "tsc",
+        "typecheck": "tsc --noEmit",
+        "lint": "biome check .",
+        "test:unit": "node --test \"tests/**/*.test.mjs\"",
+        "generate:pii-data": "node scripts/generate-pii-data.mjs",
+        "verify:rust-differential": "node scripts/rust-differential/run.mjs",
+        "prepack": "tsc && node ../../scripts/codex/check-package.mjs ."
+    },
+    "devDependencies": {
+        "@biomejs/biome": "catalog:",
+        "@repo/typescript-config": "workspace:*",
+        "@types/node": "catalog:",
+        "typescript": "catalog:"
+    },
+    "engines": {
+        "node": ">=22.19.0"
+    },
+    "files": [
+        "dist/**/*.js",
+        "dist/**/*.d.ts",
+        "dist/**/*.js.map",
+        "README.md",
+        "README.ko.md",
+        "LICENSE",
+        "NOTICE"
+    ]
+}

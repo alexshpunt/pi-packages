@@ -1,0 +1,45 @@
+{
+    "status": "complete",
+    "supersededBy": "docs/handoffs/image-gen/11-openai-codex-image-auth.json — openai token image requests were rejected (401/401/400); image auth moved to openai-codex",
+    "scope": "최종 사용자 조건인 Pi 정식 openai 공급자 사용과 legacy 의존 제거의 구현·로컬 검증 완료. 실제 서비스 이미지 생성 성공을 뜻하지 않음.",
+    "verifiedOn": "2026-10-05",
+    "model2_5FollowUp": "docs/handoffs/image-gen/10-models-2-5.json — later user-approved requests for both 2.5 models each returned 401 with the same authentication policy error; this follow-up did not change the production default or establish model availability",
+    "worktree": "/Users/buyong/workspace/private-opensource/pi-codex-permission-codex-image-gen",
+    "branch": "feat/codex-image-gen",
+    "treeState": "미커밋. 사용자 인증 저장소·설정 변경, 토큰 이관, 공급자 등록/변경, 커밋·병합·게시 없음.",
+    "finalRequirement": "구독 인증 자체도 Pi의 정식 openai를 사용한다. deprecated openai-codex를 사용하거나 별도 구독 방식으로 분리하지 않는다. 별도 Responses 실행 방식 전환도 하지 않는다.",
+    "implementation": {
+        "provider": "openai",
+        "credentialLookup": "ctx.modelRegistry.getProviderAuth('openai')",
+        "exposurePredicate": "ctx.modelRegistry.getProviderAuthStatus('openai').configured",
+        "credentialHandling": "Pi가 관리·선택·갱신하는 인증 값을 그대로 사용. JWT 디코딩이나 계정 클레임 요구 없음. 다른 공급자 조회·대체·토큰 복사·이름 변경 없음.",
+        "baseUrl": "auth.baseUrl > openai provider.baseUrl > https://api.openai.com/v1. 끝의 슬래시만 정리하고 /codex 추가나 다른 백엔드로의 변환 없음.",
+        "headers": "Pi가 반환한 추가 헤더 보존. 전송자는 bearer Authorization과 본문 형식의 Content-Type만 적용. legacy 계정/originator/턴 헤더 생성 없음.",
+        "transport": "직접 Images API 유지: 생성 JSON, 편집은 설치된 OpenAI Images SDK와 같은 multipart image[]. MIME·바이트·파일 이름·순서와 고정값 유지. fetch가 실제 경계와 Content-Type을 함께 생성.",
+        "guidance": "/login openai와 Sign in with ChatGPT 안내. 기존 로그인 재사용, 별도 이미지 로그인 요구 없음.",
+        "preserved": "도구 스키마·설명 해시·인자 검사·이미지 수집·저장·결과 안내·재시도·취소 신호·사용자 비활성/분기 상태 보존.",
+        "errorSafety": "반사된 인증 값 및 auth/account-id/key/token/secret 헤더 값 제거. 일반 HTTP 오류 형식 유지."
+    },
+    "checks": {
+        "build": "npm run build: pass, 2/2 packages",
+        "check": "npm run check: pass, 112 files, warnings 0",
+        "existingScratch": { "arguments": "27/27", "backend": "27/27", "tool": "13/13", "referenceImages": "20/20", "exposure": "11/11" },
+        "declaration": "Codex model-facing schema deep-equal, promptSnippet/promptGuidelines 없음, 설명 sha256 fb3b4a41a31c4bbaf855f1286940f8c4216eb1c2d85591128f0e469d8643aa7e 유지",
+        "providerContract": "openai만 조회, 불투명한 인증 값/추가 헤더/기준 주소/원래 AbortSignal 보존, legacy 필드 생성 없음, 편집 경계·MIME·바이트·고정값 및 반사 비밀값 제거 확인 (mock)",
+        "nativePi": "로컬 Pi 1.0.2에서 정식 패키지 디렉터리 로드, 도구 등록/활성·스킬 목록·openai 인증 조회 정상. base URL https://api.openai.com/v1. 현재 모델 설정은 변경하지 않음. 모델/이미지 요청 0회.",
+        "pack": "npm pack --dry-run --json --ignore-scripts: 예상한 36개 파일과 정확히 일치",
+        "legacyInventory": "source, dist, shipped skill에서 deprecated 공급자 조회·legacy 주소/턴 헤더 생성·JWT 계정 클레임 helper 흔적 0건",
+        "documents": "FDD 부분 정책 정정 및 이력 보존, strict structural validation pass. 부모 브리프 구조 검증 pass. FDD 전체 커밋 적합성이나 서비스 성공으로 확대하지 않음.",
+        "outsideScope": "auto-review, scripts, .github, root package/format/build configuration 변경 없음. 새 의존성/영구 테스트/CI 파일 없음."
+    },
+    "evidence": {
+        "offline": "tmp/verify/09-offline-checks.log",
+        "backendFinal": "tmp/verify/09-backend-final.log",
+        "contract": "tmp/verify/09-provider-contract.log",
+        "nativeLoad": "tmp/verify/09-native-pi-load.log",
+        "pack": "tmp/verify/09-pack.json"
+    },
+    "additionalLiveImageRequests": 0,
+    "verificationLimit": "이전 legacy 생성 성공(07)은 최종 openai 구현의 성공 근거가 아님. 과거 openai 이미지 요청의 401은 역사적 결과로 보존. 이번 정정 뒤 실제 생성·편집·투명 배경은 추가 실행하지 않았으며 현재 이미지 요청이 서비스에서 성공한다고 보고하지 않음.",
+    "supersedes": "01~08의 구현/계약에 포함된 legacy 인증·주소·헤더 지시. 이전 실험 로그와 생성된 PNG 자체는 변경하거나 지우지 않음. 현재 FDD §9.1/9.5/9.9 및 이 기록을 최종 인증 계약으로 사용."
+}
