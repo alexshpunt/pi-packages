@@ -107,7 +107,7 @@ export class DevinResponseStream {
     this.closeContent();
     this.hasTerminated = true;
     this.message.rawStopReason = result.stopReason;
-    this.message.stopReason = result.stopReason === "STOP_REASON_FUNCTION_CALL" ? "toolUse" : result.stopReason === "STOP_REASON_MAX_TOKENS" ? "length" : "stop";
+    this.message.stopReason = result.message.toolCalls?.length ? "toolUse" : result.stopReason === "STOP_REASON_MAX_TOKENS" ? "length" : "stop";
     this.stream.push({ type: "done", reason: this.message.stopReason, message: this.message });
     this.stream.end(this.message);
   }

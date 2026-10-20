@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Gemini models such as `gemini-4-argon` no longer fail with "There is an issue with this request, please try a different model" when a tool's parameter schema allows `null`, as `image_gen` does. Such tools stay available and are declared with a single parameter type, like Devin's own tools.
+- Claude, Gemini and GPT models no longer fail complete responses with "stopReason cannot be treated as success" or "Tool calls and the stop reason do not match". Their tool calls now run in Pi, and their final answers are kept.
+
 ## [0.1.2] - 2026-10-20
 
 - Requests no longer fail with "Devin does not support this tool's forced sampling format" when a tool such as `codemode` declares a grammar. The grammar hint is ignored and the tool's JSON schema is sent, as Pi's built-in providers without grammar tools do. Tools that require strict sampling are still rejected.

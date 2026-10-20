@@ -40,6 +40,29 @@ export function attachReplayMetadata(output: AssistantMessage, message: ChatMess
   }
 }
 
+const SCHEMA_MAPS = new Set(["properties", "patternProperties", "$defs", "definitions", "dependentSchemas"]);
+const SCHEMA_DATA = new Set(["enum", "const", "default", "examples", "example"]);
+
+/** Devin's own tools give every schema a single `type`; its Gemini route rejects a list such as `["integer", "null"]`. */
+function toDevinToolSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(toDevinToolSchema);
+  if (!schema || typeof schema !== "object") return schema;
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (SCHEMA_DATA.has(key)) result[key] = value;
+    else if (SCHEMA_MAPS.has(key) && value && typeof value === "object" && !Array.isArray(value)) {
+      result[key] = Object.fromEntries(Object.entries(value).map(([name, child]) => [name, toDevinToolSchema(child)]));
+    } else if (key === "type" && Array.isArray(value)) {
+      // Omitting the field still covers null; several remaining types become one branch each.
+      const types = value.filter((type) => type !== "null");
+      if (types.length === 1) result.type = types[0];
+      else if (types.length > 1 && !("anyOf" in schema)) result.anyOf = types.map((type) => ({ type }));
+      else result.type = value;
+    } else result[key] = toDevinToolSchema(value);
+  }
+  return result;
+}
+
 export function toDevinTranscript(context: TranscriptContext, model: ModelInfo): { messages: ChatMessage[]; tools: ChatTool[]; systemPrompt: string } {
   const declarations = getCurrentTools(context.messages);
   if (declarations.length && !model.supportsToolCalls) throw new Error("This model does not support the current Pi tool declarations.");
@@ -48,7 +71,7 @@ export function toDevinTranscript(context: TranscriptContext, model: ModelInfo):
     if (tool.constrainedSampling && tool.constrainedSampling.type === "json_schema" && tool.constrainedSampling.strict === "require") {
       throw new Error(`Devin does not support this tool's forced sampling format: ${tool.name}`);
     }
-    return { name: tool.name, description: tool.description, jsonSchemaString: JSON.stringify(tool.parameters) };
+    return { name: tool.name, description: tool.description, jsonSchemaString: JSON.stringify(toDevinToolSchema(tool.parameters)) };
   });
   const failedCalls = new Set(context.messages.flatMap((message) => message.role === "assistant" && ["error", "aborted"].includes(message.stopReason)
     ? message.content.filter((block) => block.type === "toolCall").map((block) => block.id) : []));

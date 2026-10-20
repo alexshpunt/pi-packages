@@ -133,7 +133,6 @@ export async function runConversation(client: DevinClient, state: SessionState, 
       if (result.stopReason === "STOP_REASON_FUNCTION_CALL") throw new Error("No call matches the tool stop reason.");
       return result;
     }
-    if (result.stopReason !== "STOP_REASON_FUNCTION_CALL") throw new Error("Incomplete tool requests are not executed.");
     if (round + 1 >= maxRounds) throw new Error("The model round limit was reached; no more tools are executed.");
     const results = await executeTools(calls, tools, {
       signal: options.signal, allowParallel: model.supportsParallelToolCalls,

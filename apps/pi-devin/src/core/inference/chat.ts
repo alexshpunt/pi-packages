@@ -60,6 +60,10 @@ export function chatRequest(options: {
   };
 }
 
+// Backends mark a finished turn differently: Anthropic text ends with MIN_LOG_PROB, Gemini tool calls with STOP_PATTERN,
+// and OpenAI sends no stop reason (UNSPECIFIED is the proto3 default, so it is not on the wire).
+const COMPLETE_STOP_REASONS = new Set(["STOP_REASON_STOP_PATTERN", "STOP_REASON_FUNCTION_CALL", "STOP_REASON_MIN_LOG_PROB", "STOP_REASON_UNSPECIFIED", ""]);
+
 /** Attaches argument deltas without an ID to the call that started with the first ID. Ambiguous parallel deltas are rejected. */
 export class ChatAccumulator {
   readonly message: ChatMessage = { messageId: "", source: "CHAT_MESSAGE_SOURCE_SYSTEM", prompt: "" };
@@ -155,7 +159,7 @@ export class ChatAccumulator {
 
   finish(): ChatResult {
     if (!this.hasEnded) throw new Error("No successful EndStream.");
-    if (!["STOP_REASON_STOP_PATTERN", "STOP_REASON_FUNCTION_CALL", "STOP_REASON_MAX_TOKENS"].includes(this.stopReason)) {
+    if (!COMPLETE_STOP_REASONS.has(this.stopReason) && this.stopReason !== "STOP_REASON_MAX_TOKENS") {
       throw new Error(`stopReason cannot be treated as success: ${this.stopReason || "(none)"}`);
     }
     if (this.calls.size > 0) {
@@ -171,7 +175,8 @@ export class ChatAccumulator {
     if (this.stopReason === "STOP_REASON_FUNCTION_CALL" && !this.calls.size) {
       throw new Error("The response ended with FUNCTION_CALL but has no tool call.");
     }
-    if (this.calls.size && this.stopReason !== "STOP_REASON_FUNCTION_CALL") {
+    // Tool use is read from the calls themselves; only calls cut off at the output limit are rejected.
+    if (this.calls.size && !COMPLETE_STOP_REASONS.has(this.stopReason)) {
       throw new Error("Tool calls and the stop reason do not match.");
     }
     this.message.messageId ||= randomUUID();
