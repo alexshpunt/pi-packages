@@ -32,7 +32,7 @@ import { createSession, openSession, deleteSession } from "cc-session-io";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
 const CWD = process.cwd();
-const MODEL = "claude-haiku-4-5";
+const MODEL = "claude-haiku-5-5";
 
 async function drain(q) {
 	let out = "";

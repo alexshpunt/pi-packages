@@ -2,11 +2,36 @@
 
 ## UNRELEASED
 
-- **Fix: forward only completed tool calls and compatible MCP schemas** — Drop unfinished streamed blocks before dispatch (#146), flatten top-level schema combinators for Claude Code while retaining Pi-side validation (#180), and stop injecting an unrequested bash timeout (#204).
-- **Fix: recover interrupted and rewritten conversations** — Resume tool results after restart (#174), rebuild shortened session histories instead of starting without context (#191), and keep failed turns from advancing the synchronization cursor (#198, retry handling only). Rebind cancellation to the current run, detach the previous run's listener, and report cancellation consistently on normal and error completion (#200).
-- **Fix: preserve session cwd and reasoning options** — Run provider, AskClaude, and summary queries in the owning session's directory (#175). Forward isolated-call reasoning through model-specific effort mappings (#184), and explicitly disable SDK thinking when Pi requests off and the model supports it (#209). Existing pi-claude-compact delegation and branch-summary takeover remain in place.
-- **Add: expose subscription usage through response headers** — Translate SDK usage-limit events into `anthropic-ratelimit-unified-*` headers for `after_provider_response` consumers (#171), keeping deferred events query-local. Label exhausted subscription windows as quota exhaustion so Pi does not retry them as transient rate limits.
-- **Add: preserve explicit prompt and tool guidance** — Forward additional guidelines and snippets for selected, non-hidden tools, including SDK customTools, without classifying SDK registration as built-in-only behavior. Copy captured guidance, retain it through prompt inheritance, deduplicate rules, and validate raw instructions before formatting. Claude Code's prompt-snapshot policy is unchanged.
+- **Fix: forward only completed tool calls and compatible MCP schemas** — Drop unfinished streamed blocks before dispatch (elidickinson/pi-claude-bridge#146), flatten top-level schema combinators for Claude Code while retaining Pi-side validation (elidickinson/pi-claude-bridge#180), and stop injecting an unrequested bash timeout (elidickinson/pi-claude-bridge#204).
+- **Fix: recover interrupted and rewritten conversations** — Resume tool results after restart (elidickinson/pi-claude-bridge#174), rebuild shortened session histories instead of starting without context (elidickinson/pi-claude-bridge#191), and keep failed turns from advancing the synchronization cursor (elidickinson/pi-claude-bridge#198, retry handling only). Rebind cancellation to the current run, detach the previous run's listener, and report cancellation consistently on normal and error completion (elidickinson/pi-claude-bridge#200).
+- **Fix: preserve session cwd and reasoning options** — Run provider and isolated summary queries in the owning session's directory (elidickinson/pi-claude-bridge#175). Forward isolated-call reasoning through model-specific effort mappings (elidickinson/pi-claude-bridge#184), and explicitly disable SDK thinking when Pi requests off and the model supports it (elidickinson/pi-claude-bridge#209). 현대 Claude 모델의 추론 켜짐에는 타입 있는 adaptive·summarized 옵션을 provider와 요약에 공통 적용하며, 기존 4.5 모델과 항상 추론하는 모델의 예외는 유지한다.
+- **Add: expose subscription usage through response headers** — Translate SDK usage-limit events into `anthropic-ratelimit-unified-*` headers for `after_provider_response` consumers (elidickinson/pi-claude-bridge#171), keeping deferred events query-local. Label exhausted subscription windows as quota exhaustion so Pi does not retry them as transient rate limits.
+- **Add: preserve explicit prompt and tool guidance** — Forward additional guidelines and snippets for selected, non-hidden tools, including SDK customTools, without classifying SDK registration as built-in-only behavior. Copy captured guidance, retain it through prompt inheritance, deduplicate rules, and validate raw instructions before formatting.
+
+- **Bump: Agent SDK `^0.3.303`** — Claude Code 2.1.303을 사용한다. SDK와 플랫폼별 바이너리만 올리고 다른 의존성과 패키지 버전은 유지한다.
+- **Tests: Haiku 5.5로 통합 검증 전환** — 실행 대상 통합 테스트가 Haiku 5.5를 사용하고, 컴팩션 임계값은 브리지의 등록 창 크기에서 계산한다. 첨부파일 대조군은 임시 cwd와 무작위 토큰으로 격리하고 도구·hook·메모리를 차단한다. 길이 초과 오류와 추론 사용량 계약은 로컬 모의 API로 재현하며, Git 캐시 검사는 CC 프롬프트의 고정 문구 대신 테스트 고유 표식으로 요청을 찾는다. 도구 결과 기록 검사는 `api-request-blob` 메타데이터를 대화 레코드와 구분하고 호출 ID의 정확한 대응도 확인한다.
+
+- **Remove: provider 전용 확장으로 정리** — AskClaude 도구·설정·전용 UI와 native 도구 이름 변환, `change-case` 의존성을 제거한다. 기존 활성화 설정에는 TUI에서 프로세스당 한 번 제거 안내를 표시하며 설정 파일에는 기록하지 않는다. 컴팩션과 branch summary는 pi와 요약 확장에 맡기고, isolated 요약 요청·세션 cwd·기록 변경 알림은 유지한다.
+
+- **Refactor: 브리지 책임 모듈과 SDK 옵션 경계 분리** — 등록·env·실행 설정·요청 옵션·mirror·스트림·도구 연결·완료 처리·isolated 요약을 나누고 런타임별 쿼리 주입 지점을 통일한다. 비필수 트래픽 차단 값은 호스트 대신 자식 env에 적용한다. 기존 등록·스트림 계약과 SDK 전달값을 유지하며, 배포에 불필요한 이미지 파일은 묶음에서 제외한다.
+
+- **Tests: 공용 모듈 기반 검증 CLI** — 옵션·최종 SDK 인자·실제 MCP 왕복 검사를 자동 발견하고 버전·소스 해시·사용량을 기록한다. 실제 호출은 명시적 실행과 구독 OAuth·Haiku 5.5로 제한하며 임시 세션을 정리한다. 요청 원문 대신 해시를 남기고 기존 진단 프록시의 공통 처리부를 재사용한다.
+
+- **Fix: Claude Code 실행 경계 교정** — 부모 세션 표식을 자식 환경에서 제거하고 인증·서버 연결 값은 보존한다. provider와 요약의 사용자·프로젝트 hook을 끄고 요약은 기본 설정 소스를 읽는다. provider 권한은 브리지 MCP만 허용하는 `dontAsk`로 바꾸며 CC 자체 MCP 차단을 항상 적용한다. `provider.strictMcpConfig` 설정은 제거해 남아 있는 값도 무시한다. 브리지 도구 호출과 cwd 밖 `@file` 확장은 실제 실행에서 유지됐다.
+
+- **Fix: 요청 프롬프트 갱신과 모델 전달** — provider의 preset에 `snapshot: false`를 적용해 resume에도 현재 pi 지침을 전달하고, 모델은 중복 없는 타입 옵션으로 넘긴다. Haiku 5.5를 명시적 `[1m]`·1M 창으로 등록해 실제 제공 값과 맞춘다. 캐시 회귀는 기존 snapshot 대조군과 격리된 동일 조건으로 비교한다.
+
+- **Fix: rebuild 내용·저장 파일과 재시작 연결 보존** — 예외 뒤에도 mirror ID와 cursor를 유지하고, 문맥 attachment와 도구 결과의 실제 MCP 표현·키 순서를 복원한다. 이미지·큰 결과는 현재 Pi 내용과 일치할 때만 재사용하며 같은 UUID의 `tool-results/`를 보존한다. 읽기는 같은 프로젝트의 일반 파일·비심볼릭 링크·32MiB 이내로 제한한다. 현재 Pi 브랜치의 비공개 연결 기록으로 재시작 시 자료를 찾아 새 CC 세션을 만들고, 세션별 쓰기 핸들로 기록 대상을 분리한다. CC 2.1.303의 일반 resume에서도 남는 마지막 system 메시지 캐시 차이는 해결했다고 주장하지 않는다.
+
+- **Fix: Pi 세션별 쿼리 상태와 재진입 판정** — 프로세스 단일 최상위 쿼리 상태를 런타임의 Pi 세션별 상태로 나눈다. 다른 세션이 도구 결과를 기다리는 동안에도 짧아진 이력은 자기 세션 기록으로 rebuild하고, 중단 뒤 고아 도구 결과는 자기 세션에 진행 중인 쿼리가 없으면 그 세션의 cursor만 갱신한다. 같은 세션의 재진입과 세션 ID 없는 호출의 `(none)` 동작은 유지한다. `session_shutdown`은 실제로 그 세션을 제공하는 모듈 인스턴스까지 해당 세션 상태만 정리하며, 실행 중인 쿼리와 다른 세션의 쿼리는 종료하지 않는다.
+
+- **Tests: 컴팩션 통합 테스트 제거와 캐시 검사 분리** — Pi가 담당하는 컴팩션을 실제 모델로 구동하던 `int-compact-*`·`int-session-compact` 통합 테스트 6개와 전용 fixture를 없앤다. 이력 변경 뒤 폐기·rebuild를 검사하는 unit 테스트는 유지한다. 캐시 측정 검사와 `int-cache.sh`는 선택 사항으로 돌려 `verify --all`·`test`에서 빼고 `verify --cache`·`test:cache`로만 실행한다. 재시작 연속성 검사는 연결 계약과 내용 보존만 판정한다.
+
+- **Fix: 다시 불러오기와 세션 교체 뒤 전역 훅 누적 방지** — `/reload`·`/new`·`/resume`·`/fork`마다 새 모듈 인스턴스가 rebuild·세션 정리 훅을 추가하고 이전 인스턴스의 훅은 남던 문제를 고친다. 자기 `session_shutdown` 뒤 쿼리 상태가 없는 인스턴스는 두 훅 레지스트리에서 빠지고, 이전 레지스트리를 통해 다시 호출되면 stream 진입 때 재등록한다. 레지스트리 키와 `Set` 구조는 그대로라 `pi-claude-compact`의 호출은 바뀌지 않는다.
+
+- **Fix: Pi 1.x 기준으로 패키지 요구사항 정리** — Node 엔진 요구를 Pi와 같은 22.19.0 이상으로 올리고, `src/`에서 쓰지 않는 `pi-tui`·`typebox` peer 선언을 제거한다. 모델 목록이 비었을 때의 안내도 Pi 1.0.0 이상 기준으로 바꾼다.
+
+- **Add: Claude Code 로그인으로 요금제 자동 판별** — `provider.plan`이 없으면 첫 provider 쿼리에서 `accountInfo().subscriptionType`을 읽어 Max·Enterprise는 `max`, Pro는 `pro`로 적용한다. 추가 모델 요청은 없다. 값이 바뀌면 provider를 다시 등록해 현재 세션의 Opus 4.6 문맥 크기에 바로 반영하고, 전역 설정의 `detectedPlan`에 기록해 다음 시작부터 사용한다. 명시적 `provider.plan`이 항상 우선하며, Team처럼 판별할 수 없을 때만 Opus 4.6 기준으로 고친 요금제 안내를 한 번 표시한다.
 
 ## 0.11.0 — 2026-10-18
 

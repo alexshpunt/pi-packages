@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": {
+    "head": "79be126e25e972b9dce1450f74063c3e17527862",
+    "isDirty": true,
+    "contentHash": "6186077a608e353d3a12ed60db2ea9ec6423e0c85a6202728856cf50d272b9d9"
+  },
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0",
+    "sdk": "0.3.303",
+    "claudeCode": "2.1.303"
+  },
+  "checks": [
+    {
+      "name": "04-env-leak",
+      "mode": "offline",
+      "inputs": {
+        "hostTrafficFlag": "absent"
+      },
+      "expected": {
+        "hostFlagAbsent": true,
+        "ordinaryChildFlagAbsent": true,
+        "bridgeChildFlag": "1"
+      },
+      "observed": {
+        "hostFlagAbsent": true,
+        "ordinaryChildFlagAbsent": true,
+        "bridgeChildFlag": "1",
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 0
+    },
+    {
+      "name": "04-parent-markers",
+      "mode": "spawn",
+      "inputs": {
+        "parentMarkers": [
+          "CLAUDECODE",
+          "CLAUDE_CODE_ENTRYPOINT",
+          "CLAUDE_CODE_SSE_PORT",
+          "CLAUDE_CODE_CHILD_SESSION",
+          "CLAUDE_CODE_EXECPATH",
+          "CLAUDE_CODE_MESSAGING_SOCKET",
+          "CLAUDE_CODE_MESSAGING_TOKEN",
+          "CLAUDE_CODE_SESSION_ATTENDED",
+          "CLAUDE_CODE_SESSION_ID",
+          "CLAUDE_EFFORT",
+          "CLAUDE_PID"
+        ],
+        "syntheticAuth": true
+      },
+      "expected": {
+        "inheritedMarkers": [],
+        "entrypoint": "sdk-ts",
+        "callerAuthPreserved": true
+      },
+      "observed": {
+        "inheritedMarkers": [
+          "CLAUDECODE",
+          "CLAUDE_CODE_SSE_PORT",
+          "CLAUDE_CODE_CHILD_SESSION",
+          "CLAUDE_CODE_EXECPATH",
+          "CLAUDE_CODE_MESSAGING_SOCKET",
+          "CLAUDE_CODE_MESSAGING_TOKEN",
+          "CLAUDE_CODE_SESSION_ATTENDED",
+          "CLAUDE_CODE_SESSION_ID",
+          "CLAUDE_EFFORT",
+          "CLAUDE_PID"
+        ],
+        "entrypoint": "cli",
+        "callerAuthPreserved": true,
+        "trafficDisabled": true,
+        "autoCompactDisabled": true,
+        "cloudMcpDisabled": true,
+        "hostMarkersUnchanged": true,
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        },
+        "errorCode": "04-parent-markers-inherited"
+      },
+      "status": "fail",
+      "apiCalls": 0
+    },
+    {
+      "name": "04-repo-hooks",
+      "mode": "spawn",
+      "inputs": {
+        "hookEvents": [
+          "SessionStart",
+          "UserPromptSubmit"
+        ],
+        "modelEndpoint": "owned-rejecting-fixture"
+      },
+      "expected": {
+        "providerHookCount": 0,
+        "summaryHookCount": 0,
+        "disableAllHooks": true
+      },
+      "observed": {
+        "cases": [
+          {
+            "kind": "provider",
+            "disableAllHooks": false,
+            "events": [
+              "SessionStart",
+              "UserPromptSubmit"
+            ],
+            "hasInit": true,
+            "hookEvents": [
+              "SessionStart"
+            ],
+            "resultSubtype": "success",
+            "blockedRequestCount": 2,
+            "modelRequestsForwarded": 0,
+            "endpoint": "owned-loopback-rejector"
+          },
+          {
+            "kind": "summary",
+            "disableAllHooks": false,
+            "events": [],
+            "hasInit": true,
+            "hookEvents": [],
+            "resultSubtype": "success",
+            "blockedRequestCount": 2,
+            "modelRequestsForwarded": 0,
+            "endpoint": "owned-loopback-rejector"
+          }
+        ],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        },
+        "errorCode": "04-repository-hooks-executed"
+      },
+      "status": "fail",
+      "apiCalls": 0
+    },
+    {
+      "name": "04-permission-mode",
+      "mode": "offline",
+      "inputs": {
+        "model": "claude-haiku-5-5"
+      },
+      "expected": {
+        "permissionMode": "dontAsk",
+        "allowedTools": [
+          "mcp__custom-tools"
+        ],
+        "tools": []
+      },
+      "observed": {
+        "permissionMode": "bypassPermissions",
+        "allowedTools": [],
+        "tools": [],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        },
+        "errorCode": "04-permission-policy-mismatch"
+      },
+      "status": "fail",
+      "apiCalls": 0
+    },
+    {
+      "name": "04-summary-settings",
+      "mode": "spawn",
+      "inputs": {
+        "projectEnvCanary": "fixture-loaded",
+        "apiKeyHelper": "temporary-test-command"
+      },
+      "expected": {
+        "defaultSettingSources": true,
+        "disableAllHooks": true,
+        "claudeMdExcludes": true,
+        "envAndHelperApplied": true,
+        "strictMcpConfig": true
+      },
+      "observed": {
+        "defaultSettingSources": false,
+        "settingSources": [],
+        "disableAllHooks": false,
+        "claudeMdExcludes": [],
+        "strictMcpConfig": true,
+        "toolsEmpty": true,
+        "envAndHelperApplied": false,
+        "probe": {
+          "hasInit": true,
+          "hookEvents": [],
+          "resultSubtype": "success",
+          "blockedRequestCount": 0,
+          "modelRequestsForwarded": 0,
+          "endpoint": "owned-loopback-rejector"
+        },
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        },
+        "errorCode": "04-summary-settings-isolated"
+      },
+      "status": "fail",
+      "apiCalls": 0
+    },
+    {
+      "name": "04-cc-mcp-off",
+      "mode": "spawn",
+      "inputs": {
+        "legacyStrictMcpConfig": false
+      },
+      "expected": {
+        "strictMcpConfig": true,
+        "strictFlagCount": 1,
+        "cloudMcpDisabled": true,
+        "configUnchanged": true
+      },
+      "observed": {
+        "strictMcpConfig": false,
+        "strictFlagCount": 0,
+        "cloudMcpDisabled": true,
+        "configUnchanged": true,
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        },
+        "errorCode": "04-cc-mcp-not-disabled"
+      },
+      "status": "fail",
+      "apiCalls": 0
+    }
+  ],
+  "apiCalls": 0
+}

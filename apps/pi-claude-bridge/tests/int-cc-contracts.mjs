@@ -11,8 +11,8 @@
 // as soon as the message they care about arrives. Run the whole file on every
 // @anthropic-ai/claude-agent-sdk or Claude Code bump.
 //
-// Verified against: SDK 0.3.293 / Claude Code 2.1.293. package.json declares
-// ^0.3.293 and package-lock.json resolves 0.3.293.
+// Verified against: SDK 0.3.302 / Claude Code 2.1.302. package.json declares
+// ^0.3.302 and the workspace pnpm-lock.yaml resolves 0.3.302.
 //
 // Assumptions that are NOT covered here, and why:
 //   - DISABLE_AUTO_COMPACT=1 stops CC-side autocompaction. Provoking it needs a
@@ -39,7 +39,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import { createSession, openSession, repairToolPairing } from "cc-session-io";
 
 const CWD = process.cwd();
-const MODEL = "claude-haiku-4-5";
+const MODEL = "claude-haiku-5-5";
 // Claude Code's own extension to the MCP tools/call params, not part of the MCP
 // spec. src/mcp-server.ts
 // throws when it is absent, so this key is load-bearing for every tool call.
@@ -188,17 +188,22 @@ test("a tool_use naming an unserved tool is answered by CC, never dispatched to 
 // --- Result shapes ---
 
 test("is_error can be true on a result whose subtype is still success", { timeout: 120_000 }, async () => {
-	// What src/index.ts resultErrorText branches on. CC reports API-level failures
-	// (prompt-too-long here; 429 and overload take the same shape) this way, while
-	// the dedicated error subtypes carry `errors` instead.
+	// Pin the error translation, not an assumed model context window. A local API
+	// returns the same prompt-too-long response without a large billable request.
+	const requests = [];
+	const api = await stubApi(requests, { error: "prompt is too long: 220001 tokens > 200000 maximum" });
+	const cwd = mkdtempSync(join(tmpdir(), "cc-result-error-"));
 	let result = null;
 	let threw = null;
 	const assistantMessages = [];
 	const streamEventTypes = [];
 	try {
 		for await (const message of query({
-			prompt: `Summarize this in one word:\n${"banana ".repeat(220_000)}`,
-			options: providerOptions({ maxTurns: 1, persistSession: false, includePartialMessages: true }),
+			prompt: "Reply OK.",
+			options: providerOptions({
+				cwd, maxTurns: 1, persistSession: false, includePartialMessages: true,
+				env: { ...process.env, ANTHROPIC_BASE_URL: api.url, ENABLE_CLAUDEAI_MCP_SERVERS: "0", DISABLE_AUTO_COMPACT: "1" },
+			}),
 		})) {
 			if (message.type === "stream_event") streamEventTypes.push(message.event?.type);
 			if (message.type === "assistant") assistantMessages.push(message);
@@ -206,8 +211,13 @@ test("is_error can be true on a result whose subtype is still success", { timeou
 		}
 	} catch (error) {
 		threw = error;
+	} finally {
+		api.close();
+		rmSync(cwd, { recursive: true, force: true });
 	}
 
+	assert.ok(requests.length > 0, "CC sent no request to the local error fixture");
+	assert.ok(requests.every((request) => request.model === MODEL), "error fixture received an unexpected model");
 	assert.ok(result, "no result message arrived");
 	assert.equal(result.subtype, "success", `expected a success-shaped failure, got subtype=${result.subtype}`);
 	assert.equal(result.is_error, true);
@@ -271,27 +281,40 @@ test("includePartialMessages yields the stream_event shapes processStreamEvent d
 	}
 });
 
-test("message_delta usage carries thinking tokens nested under output_tokens_details", { timeout: 120_000 }, async () => {
+test("message_delta usage carries thinking tokens nested under output_tokens_details", { timeout: 120_000 }, async (t) => {
 	// The bridge maps this onto pi's `usage.reasoning`. The nesting is the whole
 	// contract: updateUsage previously read a flat `usage.thinking_tokens` plus a
 	// `usage.reasoning_tokens` that exists in no SDK version, so it silently reported
 	// nothing on every thinking turn. If CC ever flattens or renames the field, this
 	// fails here instead of going quiet again.
+	// Adaptive thinking may legitimately spend zero tokens on simple arithmetic.
+	// Control the upstream usage while exercising the real CC/SDK wire path.
+	const thinkingTokens = 8;
+	const requests = [];
+	const api = await stubApi(requests, { thinkingTokens });
+	const cwd = mkdtempSync(join(tmpdir(), "cc-thinking-usage-"));
+	t.after(() => { api.close(); rmSync(cwd, { recursive: true, force: true }); });
 	const deltaUsages = [];
 	for await (const message of query({
-		prompt: "Think briefly about what 17 * 23 is, then state just the number.",
-		options: providerOptions({ includePartialMessages: true, effort: "medium", maxTurns: 1, persistSession: false }),
+		prompt: "Reply OK.",
+		options: providerOptions({
+			cwd, includePartialMessages: true, effort: "medium", maxTurns: 1, persistSession: false,
+			env: { ...process.env, ANTHROPIC_BASE_URL: api.url, ENABLE_CLAUDEAI_MCP_SERVERS: "0", DISABLE_AUTO_COMPACT: "1" },
+		}),
 	})) {
 		if (message.type === "stream_event" && message.event?.type === "message_delta" && message.event.usage) {
 			deltaUsages.push(message.event.usage);
 		}
 	}
 
+	assert.ok(requests.length > 0, "CC sent no request to the thinking fixture");
+	assert.ok(requests.every((request) => request.model === MODEL), "thinking fixture received an unexpected model");
 	assert.ok(deltaUsages.length > 0, "no message_delta carried usage");
 	const withThinking = deltaUsages.filter((u) => typeof u.output_tokens_details?.thinking_tokens === "number");
 	assert.ok(withThinking.length > 0,
 		`no message_delta reported output_tokens_details.thinking_tokens — got ${JSON.stringify(deltaUsages)}`);
 	for (const usage of withThinking) {
+		assert.equal(usage.output_tokens_details.thinking_tokens, thinkingTokens, "CC changed the upstream thinking count");
 		assert.ok(usage.output_tokens_details.thinking_tokens > 0, "a thinking turn must report a positive count");
 		assert.ok(usage.output_tokens_details.thinking_tokens <= usage.output_tokens,
 			`thinking_tokens must stay a subset of output_tokens: ${JSON.stringify(usage)}`);
@@ -454,12 +477,19 @@ test("CC writes each tool result of a parallel turn as its own transcript record
 
 	const jsonlPath = openSession({ sessionId: init.session_id, projectPath: CWD, claudeDir: process.env.CLAUDE_CONFIG_DIR }).jsonlPath;
 	const records = readFileSync(jsonlPath, "utf8").trim().split("\n").map((line) => JSON.parse(line));
-	const perRecord = records
-		.map((record) => (Array.isArray(record.message?.content) ? record.message.content.filter((b) => b.type === "tool_result").length : 0))
-		.filter((count) => count > 0);
+	// CC 2.1.302 can also persist an api-request-blob containing both results.
+	// That request metadata is not a conversation record and has no promptId/uuid.
+	const resultRecords = records.filter((record) => record.type === "user" &&
+		Array.isArray(record.message?.content) && record.message.content.some((block) => block.type === "tool_result"));
+	const resultBlocks = resultRecords.map((record) => record.message.content.filter((block) => block.type === "tool_result"));
+	const perRecord = resultBlocks.map((blocks) => blocks.length);
 
 	assert.deepEqual(perRecord, [1, 1],
 		`CC's transcript layout for parallel results changed: ${JSON.stringify(perRecord)}`);
+	assert.ok(resultRecords.every((record) => record.promptId && record.uuid && record.sourceToolAssistantUUID),
+		"tool results must be live CC conversation records, not imported or request metadata");
+	assert.deepEqual(resultBlocks.flat().map((block) => block.tool_use_id).sort(),
+		calls.map((call) => call.meta[TOOL_USE_ID_META]).sort(), "tool results are missing, duplicated, or mispaired");
 });
 
 test("repairToolPairing keeps every result only when they share one user message", { timeout: 30_000 }, () => {
@@ -531,9 +561,9 @@ test("--thinking-display summarized is still an accepted flag value", { timeout:
 
 // --- Captured request contracts ---
 
-/** One-turn stub API: records every /v1/messages body, answers a canned "OK" SSE.
+/** One-turn stub API: records every /v1/messages body, returns an error or "OK" SSE.
  *  Lets a contract assert on the exact request CC builds, at zero API cost. */
-function stubApi(requests) {
+function stubApi(requests, { error, thinkingTokens = 0 } = {}) {
 	const server = createServer((req, res) => {
 		const chunks = [];
 		req.on("data", (c) => chunks.push(c));
@@ -541,15 +571,28 @@ function stubApi(requests) {
 			if (req.method === "POST" && req.url.startsWith("/v1/messages")) {
 				const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
 				requests.push(body);
+				if (error) {
+					res.writeHead(400, { "content-type": "application/json" });
+					res.end(JSON.stringify({ type: "error", error: { type: "invalid_request_error", message: error } }));
+					return;
+				}
 				const event = (name, obj) => `event: ${name}\ndata: ${JSON.stringify(obj)}\n\n`;
+				const textIndex = thinkingTokens > 0 ? 1 : 0;
+				const thinkingEvents = thinkingTokens > 0
+					? event("content_block_start", { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "", signature: "" } })
+						+ event("content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "This fixture reports a known thinking count." } })
+						+ event("content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "signature_delta", signature: "fixture-signature" } })
+						+ event("content_block_stop", { type: "content_block_stop", index: 0 })
+					: "";
 				res.writeHead(200, { "content-type": "text/event-stream" });
 				res.end(
 					event("message_start", { type: "message_start", message: { id: `msg_stub_${requests.length}`, type: "message", role: "assistant", content: [], model: body.model, stop_reason: null, stop_sequence: null, usage: { input_tokens: 10, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } })
-					+ event("content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } })
+					+ thinkingEvents
+					+ event("content_block_start", { type: "content_block_start", index: textIndex, content_block: { type: "text", text: "" } })
 					+ event("ping", { type: "ping" })
-					+ event("content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "OK" } })
-					+ event("content_block_stop", { type: "content_block_stop", index: 0 })
-					+ event("message_delta", { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 1 } })
+					+ event("content_block_delta", { type: "content_block_delta", index: textIndex, delta: { type: "text_delta", text: "OK" } })
+					+ event("content_block_stop", { type: "content_block_stop", index: textIndex })
+					+ event("message_delta", { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: thinkingTokens + 1, ...(thinkingTokens > 0 ? { output_tokens_details: { thinking_tokens: thinkingTokens } } : {}) } })
 					+ event("message_stop", { type: "message_stop" }));
 			} else {
 				res.writeHead(404).end();
@@ -617,6 +660,7 @@ test("includeGitInstructions:false strips gitStatus and keeps the preset static 
 	const requests = [];
 	const api = await stubApi(requests);
 	const repo = mkdtempSync(join(tmpdir(), "cc-gitpin-"));
+	const marker = `git-contract-${randomUUID()}`;
 	const gitIn = (...args) => execFileSync("git", args, { cwd: repo, env: { ...process.env, GIT_AUTHOR_NAME: "probe", GIT_AUTHOR_EMAIL: "p@x", GIT_COMMITTER_NAME: "probe", GIT_COMMITTER_EMAIL: "p@x" } });
 	const env = { ...process.env, ANTHROPIC_BASE_URL: api.url, ENABLE_CLAUDEAI_MCP_SERVERS: "0", DISABLE_AUTO_COMPACT: "1" };
 
@@ -625,14 +669,13 @@ test("includeGitInstructions:false strips gitStatus and keeps the preset static 
 		gitIn("commit", "--allow-empty", "-qm", "init");
 		const opts = (settings, resume) => providerOptions({
 			cwd: repo, maxTurns: 1, settings, env,
-			systemPrompt: { type: "preset", preset: "claude_code" },
+			systemPrompt: { type: "preset", preset: "claude_code", append: marker },
 			...(resume ? { resume } : {}),
 		});
 		const sysText = (body) => (body.system ?? []).map((b) => b.text ?? "").join("\n");
-		// Filter to our own requests by a preset anchor: if CC ever adds
-		// background side requests, slicing the last two off the raw log could
-		// compare those and pass for the wrong reason.
-		const presetReqs = () => requests.filter((b) => sysText(b).includes("You are an interactive agent"));
+		// Identify our requests without depending on the SDK's preset wording.
+		// Background requests must not displace either measured turn.
+		const presetReqs = () => requests.filter((b) => sysText(b).includes(marker));
 
 		// Control: default preset carries the git snapshot, and a git transition
 		// moves it — the very break this test's positive side pins away. Grep the
@@ -648,6 +691,7 @@ test("includeGitInstructions:false strips gitStatus and keeps the preset static 
 			"the preset no longer carries a gitStatus block — this test's negative side is obsolete");
 		writeFileSync(join(repo, "ctrl-new.txt"), "x\n");
 		await collect(query({ prompt: "Reply OK.", options: opts({}) }));
+		assert.ok(presetReqs().length >= 2, "missing control requests with the test's preset marker");
 		const [c1, c2] = [presetReqs().at(-2), presetReqs().at(-1)];
 		assert.ok(JSON.stringify(c1.messages[0]).includes("gitStatus") && JSON.stringify(c2.messages[0]).includes("gitStatus"),
 			"git snapshot no longer rides in the leading user message — re-point this control");

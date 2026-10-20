@@ -1,0 +1,62 @@
+{
+  "resources": {
+    "extensions": [
+      "src/index.ts"
+    ],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
+  "names": {
+    "tools": [],
+    "commands": [],
+    "flags": [],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
+  "requiredFiles": [
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "src/agents-md.ts",
+    "src/attachments.ts",
+    "src/cc/env.ts",
+    "src/cc/launch-settings.ts",
+    "src/cc/query-options.ts",
+    "src/cc/query.ts",
+    "src/cc/request-options.ts",
+    "src/config.ts",
+    "src/convert.ts",
+    "src/extract-tool-results.ts",
+    "src/index.ts",
+    "src/log-paths.ts",
+    "src/logging.ts",
+    "src/mcp-server.ts",
+    "src/models.ts",
+    "src/prompt-capture.ts",
+    "src/prompt-stream.ts",
+    "src/provider/completion.ts",
+    "src/provider/configuration.ts",
+    "src/provider/errors.ts",
+    "src/provider/plan-detection.ts",
+    "src/provider/prompts.ts",
+    "src/provider/query-context.ts",
+    "src/provider/registration.ts",
+    "src/provider/stream-events.ts",
+    "src/provider/stream.ts",
+    "src/provider/tool-bridge.ts",
+    "src/rate-limit.ts",
+    "src/runtime.ts",
+    "src/session-cwd.ts",
+    "src/session-verify.ts",
+    "src/session/continuity.ts",
+    "src/session/mirror-store.ts",
+    "src/session/sync.ts",
+    "src/session/tool-result-carry.ts",
+    "src/skills.ts",
+    "src/summary/isolated.ts",
+    "src/transcript.ts",
+    "src/usage.ts"
+  ]
+}

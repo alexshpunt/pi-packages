@@ -14,14 +14,17 @@ import { fileURLToPath } from "node:url";
 import { createRpcHarness } from "./lib/rpc-harness.mjs";
 
 const DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const BRIDGE_MODEL = "claude-bridge/claude-haiku-4-5";
+const BRIDGE_MODEL = "claude-bridge/claude-haiku-5-5";
 const TEST_TIMEOUT = 240_000;
 // Load pi-subagents straight from npm via pi's `-e npm:` source, pinned to a
 // version that passes modelRuntime to createAgentSession (pi 0.80.8 dropped the
 // modelRegistry option); older versions fail "No API key found for claude-bridge".
 const SUBAGENTS_SOURCE = "npm:@tintinweb/pi-subagents@0.14.3";
 const RPIV_LOCATOR_FIXTURE = resolve(DIR, "tests/fixtures/rpiv-pi-v0.6.0-agents/codebase-locator.md");
-const REENTRANT_MARKER = /provider: active query user-only call treated as reentrant fresh query/g;
+// A subagent runs its own pi session: its fresh query starts while the parent's
+// query is still in flight, and is not reentrant — reentrancy is judged within
+// the calling session, never from another session's live query.
+const CONCURRENT_SESSION_QUERY_MARKER = /provider: fresh query setup, isReentrant=false, activeContexts=[1-9]\d*/g;
 const STUCK_MARKER = /MCP handlers still waiting after delivering 0 results|tool handler\(s\) still waiting|currentPiStream overwritten/;
 assert.ok(existsSync(RPIV_LOCATOR_FIXTURE), `missing rpiv codebase-locator fixture: ${RPIV_LOCATOR_FIXTURE}`);
 
@@ -47,22 +50,22 @@ function debugLog() {
 	try { return readFileSync(DEBUG_LOG, "utf8"); } catch { return ""; }
 }
 
-function reentrantCount() {
-	return [...debugLog().matchAll(REENTRANT_MARKER)].length;
+function concurrentSessionQueryCount() {
+	return [...debugLog().matchAll(CONCURRENT_SESSION_QUERY_MARKER)].length;
 }
 
-async function waitForReentrantCountAbove(count, label) {
+async function waitForConcurrentSessionQueryAbove(count, label) {
 	const deadline = Date.now() + TEST_TIMEOUT;
 	while (Date.now() < deadline) {
-		const current = reentrantCount();
+		const current = concurrentSessionQueryCount();
 		if (current > count) return current;
 		await new Promise((r) => setTimeout(r, 250));
 	}
-	throw new Error(`${label}: timed out waiting for reentrant subagent query (count stayed ${count})`);
+	throw new Error(`${label}: timed out waiting for a subagent query alongside the parent's (count stayed ${count})`);
 }
 
 async function runAgentPrompt({ background, expectedMarker }) {
-	const beforeReentrant = reentrantCount();
+	const beforeConcurrent = concurrentSessionQueryCount();
 	const collector = collectText();
 	await send({
 		type: "prompt",
@@ -91,7 +94,7 @@ After the Agent tool returns, do not use more tools. ${background ? "Write 80 sh
 		new RegExp(expectedMarker),
 		`parent did not report ${background ? "background" : "foreground"} Agent completion. Text: ${text.slice(0, 500)}`,
 	);
-	await waitForReentrantCountAbove(beforeReentrant, background ? "background Agent" : "foreground Agent");
+	await waitForConcurrentSessionQueryAbove(beforeConcurrent, background ? "background Agent" : "foreground Agent");
 }
 
 await startAndWait();

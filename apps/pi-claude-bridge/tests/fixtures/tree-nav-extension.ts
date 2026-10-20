@@ -2,7 +2,7 @@
 // otherwise only reachable through the interactive UI.
 //
 // `ctx.navigateTree(id, { summarize: true })` is what makes pi summarize the
-// abandoned branch — the path the bridge takes over via `session_before_tree`.
+// abandoned branch through Pi, with the bridge providing only the isolated model call.
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 export default function (pi: ExtensionAPI) {

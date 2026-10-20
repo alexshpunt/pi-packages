@@ -1,0 +1,3439 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": {
+    "head": "b9fdd1cc182ca468e2f489e1a0fa70261ed90cdc",
+    "isDirty": true,
+    "contentHash": "aba37c94f118975aa28036039ab9d599d732b4be54fbbb508ce12a98ccefcfb0"
+  },
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0",
+    "sdk": "0.3.303",
+    "claudeCode": "2.1.303"
+  },
+  "checks": [
+    {
+      "name": "06-rebuild-cache",
+      "mode": "live",
+      "inputs": {
+        "model": "claude-haiku-5-5[1m]",
+        "scenarios": [
+          "abort",
+          "error-result",
+          "exception",
+          "process-restart",
+          "image-result",
+          "large-result",
+          "other-provider-turn"
+        ],
+        "repetitions": 2,
+        "largeResultBytes": 92160,
+        "faults": "controlled SDK error-result/exception after real responses; exception only after native process exit",
+        "restart": "two real Pi processes, same persisted Pi session"
+      },
+      "expected": {
+        "shortfallTokens": 0,
+        "faithfulRequestPrefix": true,
+        "baselineAndCurrentPaired": true
+      },
+      "observed": {
+        "metric": "max(0, previous(input + cacheRead + cacheWrite) - current.cacheRead)",
+        "diagnosticMetric": "max(0, previous(cacheRead + cacheWrite) - current.cacheRead)",
+        "comparisonNormalizations": [
+          "billing-header",
+          "cache_control",
+          "single-plain-text-block"
+        ],
+        "baselineAvailable": false,
+        "measurements": [
+          {
+            "scenario": "abort",
+            "repetition": 1,
+            "before": {
+              "input": 2,
+              "cacheRead": 13693,
+              "cacheWrite": 86
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 2241,
+              "cacheWrite": 11575
+            },
+            "previousInput": 13781,
+            "previousCacheableInput": 13779,
+            "signedShortfall": 11540,
+            "shortfall": 11540,
+            "diagnosticShortfall": 11538,
+            "newInputTokens": 37,
+            "cacheWriteAboveNewInput": 11538,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 4,
+                "user": 4,
+                "attachment": 7,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 2,
+                "last-prompt": 3,
+                "assistant": 3,
+                "cost-state": 2,
+                "mode": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 2,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "type",
+                    "content",
+                    "is_error",
+                    "tool_use_id"
+                  ],
+                  "contentKind": "string",
+                  "blockTypes": [
+                    "text"
+                  ],
+                  "hasImageMarker": false,
+                  "hasPersistedOutput": false,
+                  "persistedFormat": null
+                }
+              ],
+              "liveAssistantRecords": 3,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 4,
+                "assistant": 4,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "type",
+                    "tool_use_id",
+                    "content",
+                    "is_error"
+                  ],
+                  "contentKind": "string",
+                  "blockTypes": [
+                    "text"
+                  ],
+                  "hasImageMarker": false,
+                  "hasPersistedOutput": false,
+                  "persistedFormat": null
+                }
+              ],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 2,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 8,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "88602b4aaaee42275361c3b85d8a9b4d1c37953af10b4a5d79cb3e49adcca1a7",
+                  "byteLength": 35373
+                },
+                "after": {
+                  "sha256": "e532c08265c825461dac9af57feea4f14e39fc2d3d53aa30c2436a355eb8845a",
+                  "byteLength": 34755
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "725b0704-3adf-436c-bd30-960df51a6733",
+            "currentSessionId": "07a7cfd2-b0e1-4e4b-9a9c-492da2f37b6a",
+            "failureState": {
+              "mirror": {
+                "sessionId": "725b0704-3adf-436c-bd30-960df51a6733",
+                "cursor": 2,
+                "cwd": "<tmp>/.ctx-mode-eFmQyi/cc-bridge-verify-APdWcm/work",
+                "piSessionId": "3c2eff4b-59b4-42bb-9a34-9957d74caed8",
+                "needsRebuild": true,
+                "forceRotate": true
+              }
+            },
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "ca18ea6d909c0481840a853497ead50e7c3c3e3626b4688975e1a272a89f0885",
+                  "byteLength": 43783
+                },
+                "messageCount": 2,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 11452
+                }
+              },
+              {
+                "sequence": 2,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "8f7ce4ec836772f47f74cc5431d749756e5e5a30a8fd491d16012346c98add8d",
+                  "byteLength": 45051
+                },
+                "messageCount": 5,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 13693,
+                  "cacheWrite": 86
+                }
+              },
+              {
+                "sequence": 3,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "396b502037dc05b7bc4f7225ecb305aac5ae73b863bc21be7e49a94131d906ae",
+                  "byteLength": 45457
+                },
+                "messageCount": 9,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 11575
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 37,
+                    "cacheReadInputTokens": 2241,
+                    "cacheCreationInputTokens": 11452
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 2241,
+                    "cacheCreationInputTokens": 11575
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 3,
+            "baseline": null
+          },
+          {
+            "scenario": "abort",
+            "repetition": 2,
+            "before": {
+              "input": 2,
+              "cacheRead": 13694,
+              "cacheWrite": 120
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 2241,
+              "cacheWrite": 11576
+            },
+            "previousInput": 13816,
+            "previousCacheableInput": 13814,
+            "signedShortfall": 11575,
+            "shortfall": 11575,
+            "diagnosticShortfall": 11573,
+            "newInputTokens": 3,
+            "cacheWriteAboveNewInput": 11573,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 4,
+                "user": 4,
+                "attachment": 7,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 2,
+                "last-prompt": 3,
+                "assistant": 3,
+                "cost-state": 2,
+                "mode": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 2,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "type",
+                    "content",
+                    "is_error",
+                    "tool_use_id"
+                  ],
+                  "contentKind": "string",
+                  "blockTypes": [
+                    "text"
+                  ],
+                  "hasImageMarker": false,
+                  "hasPersistedOutput": false,
+                  "persistedFormat": null
+                }
+              ],
+              "liveAssistantRecords": 3,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 4,
+                "assistant": 5,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "type",
+                    "tool_use_id",
+                    "content",
+                    "is_error"
+                  ],
+                  "contentKind": "string",
+                  "blockTypes": [
+                    "text"
+                  ],
+                  "hasImageMarker": false,
+                  "hasPersistedOutput": false,
+                  "persistedFormat": null
+                }
+              ],
+              "liveAssistantRecords": 2,
+              "syntheticAssistantRecords": 2,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 8,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "75d21fc7cf5236cc7bb09fc5a22d3da092d623039d47c958672a5e5f0d648bb7",
+                  "byteLength": 35373
+                },
+                "after": {
+                  "sha256": "7f4aa2040ac04d157fc41fa41a9f6cea25beb16b797108ad14728eea785dc884",
+                  "byteLength": 34755
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "d0a4c79e-b185-4654-9d78-f3260b3fd421",
+            "currentSessionId": "9f640bd9-d0b9-4ad2-8ced-d70476df4aa4",
+            "failureState": {
+              "mirror": {
+                "sessionId": "d0a4c79e-b185-4654-9d78-f3260b3fd421",
+                "cursor": 2,
+                "cwd": "<tmp>/.ctx-mode-eFmQyi/cc-bridge-verify-8CHvLY/work",
+                "piSessionId": "b3f4142e-b72a-4635-aa7b-456d0a8b9314",
+                "needsRebuild": true,
+                "forceRotate": true
+              }
+            },
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "6b59f6a0550fa0ca5939827022fb1330f1cd980834ac341e84ebf883c63d3309",
+                  "byteLength": 43783
+                },
+                "messageCount": 2,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 11453
+                }
+              },
+              {
+                "sequence": 2,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "e17d032fe3aba82da730b4ed199878c4f1fc17a1aa37ae092309dac530e0d279",
+                  "byteLength": 45195
+                },
+                "messageCount": 5,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 13694,
+                  "cacheWrite": 120
+                }
+              },
+              {
+                "sequence": 3,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "4a5b87524a7aaf474d55c153841f255e0b15a4c270b84fd2e6f4fa06169e2d61",
+                  "byteLength": 45601
+                },
+                "messageCount": 9,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 11576
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 71,
+                    "cacheReadInputTokens": 2241,
+                    "cacheCreationInputTokens": 11453
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 123,
+                    "cacheReadInputTokens": 2241,
+                    "cacheCreationInputTokens": 11576
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 3,
+            "baseline": null
+          },
+          {
+            "scenario": "error-result",
+            "repetition": 1,
+            "before": {
+              "input": 2,
+              "cacheRead": 12935,
+              "cacheWrite": 434
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11403
+            },
+            "previousInput": 13371,
+            "previousCacheableInput": 13369,
+            "signedShortfall": 11429,
+            "shortfall": 11429,
+            "diagnosticShortfall": 11427,
+            "newInputTokens": -24,
+            "cacheWriteAboveNewInput": 11403,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 4,
+                "user": 2,
+                "attachment": 7,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 2,
+                "last-prompt": 3,
+                "assistant": 2,
+                "cost-state": 2,
+                "mode": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 2,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 2,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 2,
+                "assistant": 2,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 1,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 8,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "52f86cb6d8b011742c5d6567fe021a6d27dd16b022bf552dfe17ea4a442078a7",
+                  "byteLength": 35373
+                },
+                "after": {
+                  "sha256": "ec66610bfa7bbd7f165244bbea555b29cfdd39360eaecb2c5ce7218e4f93a6b5",
+                  "byteLength": 34755
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "b16d1a66-9f15-4eec-be1c-1b069830504c",
+            "currentSessionId": "b16d1a66-9f15-4eec-be1c-1b069830504c",
+            "failureState": {
+              "mirror": {
+                "sessionId": "b16d1a66-9f15-4eec-be1c-1b069830504c",
+                "cursor": 2,
+                "cwd": "<tmp>/.ctx-mode-eFmQyi/cc-bridge-verify-7Qwhyc/work",
+                "piSessionId": "4504095b-59fa-4ab0-9507-dc053a2b912f",
+                "needsRebuild": true
+              }
+            },
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "6ab04fd24ee31d2fb6cc273526e0bca79fba6ce3e1579cc23db7e11361428b28",
+                  "byteLength": 43574
+                },
+                "messageCount": 2,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11381
+                }
+              },
+              {
+                "sequence": 2,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "7dc3b32796ec4fe7ae8ab9bd5e26b937b64575cf95239ae4704dcf4fe1bb82ae",
+                  "byteLength": 43818
+                },
+                "messageCount": 5,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 12935,
+                  "cacheWrite": 434
+                }
+              },
+              {
+                "sequence": 3,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "993ab1ef48c77a77bd3b9844d15c43d80ced1dc744d340a8cb724b843228c79e",
+                  "byteLength": 43744
+                },
+                "messageCount": 5,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11403
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11381
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 4,
+                    "outputTokens": 8,
+                    "cacheReadInputTokens": 14877,
+                    "cacheCreationInputTokens": 11815
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11403
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [
+              {
+                "kind": "error-result",
+                "originalResult": "success"
+              }
+            ],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 3,
+            "baseline": null
+          },
+          {
+            "scenario": "error-result",
+            "repetition": 2,
+            "before": {
+              "input": 2,
+              "cacheRead": 12934,
+              "cacheWrite": 433
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11401
+            },
+            "previousInput": 13369,
+            "previousCacheableInput": 13367,
+            "signedShortfall": 11427,
+            "shortfall": 11427,
+            "diagnosticShortfall": 11425,
+            "newInputTokens": -24,
+            "cacheWriteAboveNewInput": 11401,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 4,
+                "user": 2,
+                "attachment": 7,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 2,
+                "last-prompt": 3,
+                "assistant": 2,
+                "cost-state": 2,
+                "mode": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 2,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 2,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 2,
+                "assistant": 2,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 1,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 8,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "7a92fdaa7eae83cf2752ec82189634a4455abe7a50df63fa4f51661552acab56",
+                  "byteLength": 35373
+                },
+                "after": {
+                  "sha256": "302493a8ca1720623ecdf775f87edab124eff1f49951bd858d1d4aef9bf8f055",
+                  "byteLength": 34755
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "c91641e7-aac7-4af3-93e0-9e1446215ff0",
+            "currentSessionId": "c91641e7-aac7-4af3-93e0-9e1446215ff0",
+            "failureState": {
+              "mirror": {
+                "sessionId": "c91641e7-aac7-4af3-93e0-9e1446215ff0",
+                "cursor": 2,
+                "cwd": "<tmp>/.ctx-mode-eFmQyi/cc-bridge-verify-GgDUzk/work",
+                "piSessionId": "edbe412f-9c4a-4270-80ae-25c019e7b592",
+                "needsRebuild": true
+              }
+            },
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "5c4ddae92c53b127773bff6a45d67387155fec2467e573f3bec16a26304c65d6",
+                  "byteLength": 43574
+                },
+                "messageCount": 2,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11379
+                }
+              },
+              {
+                "sequence": 2,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "cb75caa1640e70c480860e55510aa24bb25afcc547346701580e7d64bd3c2a79",
+                  "byteLength": 43818
+                },
+                "messageCount": 5,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 12934,
+                  "cacheWrite": 433
+                }
+              },
+              {
+                "sequence": 3,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "488f26e3431ece852c8eb73638fce048c36ef4a06950e509ec20eb98fe3dc549",
+                  "byteLength": 43744
+                },
+                "messageCount": 5,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11401
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11379
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 4,
+                    "outputTokens": 8,
+                    "cacheReadInputTokens": 14876,
+                    "cacheCreationInputTokens": 11812
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11401
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [
+              {
+                "kind": "error-result",
+                "originalResult": "success"
+              }
+            ],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 3,
+            "baseline": null
+          },
+          {
+            "scenario": "exception",
+            "repetition": 1,
+            "before": {
+              "input": 2,
+              "cacheRead": 12938,
+              "cacheWrite": 432
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11404
+            },
+            "previousInput": 13372,
+            "previousCacheableInput": 13370,
+            "signedShortfall": 11430,
+            "shortfall": 11430,
+            "diagnosticShortfall": 11428,
+            "newInputTokens": -24,
+            "cacheWriteAboveNewInput": 11404,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 4,
+                "user": 2,
+                "attachment": 7,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 2,
+                "last-prompt": 3,
+                "assistant": 2,
+                "cost-state": 2,
+                "mode": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 2,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 2,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 2,
+                "assistant": 2,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 1,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 8,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "6394e1bba43c2d0f83992351927356752f388c035847b11b652f9d4f12155d22",
+                  "byteLength": 35373
+                },
+                "after": {
+                  "sha256": "ab0e5b870d25a4095851044de2843d79486750b4ce3262a4cb65a3002daafc54",
+                  "byteLength": 34755
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "fa4c4825-858a-4c44-8510-b8fc9a756055",
+            "currentSessionId": "bf9bc235-9e8e-44ae-8d3b-5e121a02705a",
+            "failureState": {
+              "mirror": null
+            },
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "95937b2ebf7ec322ece67a0a4c6b36cb79c609a04d2168d4514fcc18b21c6647",
+                  "byteLength": 43574
+                },
+                "messageCount": 2,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11382
+                }
+              },
+              {
+                "sequence": 2,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "f4ddec41da1e6e9d4c65d11e3387d67210cfdc67adf86709eeb487adca1e331a",
+                  "byteLength": 43818
+                },
+                "messageCount": 5,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 12938,
+                  "cacheWrite": 432
+                }
+              },
+              {
+                "sequence": 3,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "b9d9ecc52c60eecda0f36b063e786d9052c206c12dccdcd4ccb8f575974356e6",
+                  "byteLength": 43744
+                },
+                "messageCount": 5,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11404
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11382
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 4,
+                    "outputTokens": 8,
+                    "cacheReadInputTokens": 14880,
+                    "cacheCreationInputTokens": 11814
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11404
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [
+              {
+                "kind": "exception",
+                "nativeProcessExited": true,
+                "code": 0,
+                "signal": null
+              }
+            ],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 3,
+            "baseline": null
+          },
+          {
+            "scenario": "exception",
+            "repetition": 2,
+            "before": {
+              "input": 2,
+              "cacheRead": 12940,
+              "cacheWrite": 432
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11406
+            },
+            "previousInput": 13374,
+            "previousCacheableInput": 13372,
+            "signedShortfall": 11432,
+            "shortfall": 11432,
+            "diagnosticShortfall": 11430,
+            "newInputTokens": -24,
+            "cacheWriteAboveNewInput": 11406,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 4,
+                "user": 2,
+                "attachment": 7,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 2,
+                "last-prompt": 3,
+                "assistant": 2,
+                "cost-state": 2,
+                "mode": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 2,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 2,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 2,
+                "assistant": 2,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 1,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 8,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "bbbb3732b70096ca6bac111e5053bc1351aedcc56a3d43a99661386fefd64e5b",
+                  "byteLength": 35373
+                },
+                "after": {
+                  "sha256": "f4a37f5c0abf3cf689a6c644a256ed279fa51934a35415068fe0d2ea44371322",
+                  "byteLength": 34755
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "ac14cd3e-f4b5-4b61-bf85-7bd8cf1d9289",
+            "currentSessionId": "2a6479d0-8bf8-450b-841f-66d2a3cd4d78",
+            "failureState": {
+              "mirror": null
+            },
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "86153f1224b1ac8b83e63e1b91a53f2d042b4937458af181d26e40202073120c",
+                  "byteLength": 43574
+                },
+                "messageCount": 2,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11384
+                }
+              },
+              {
+                "sequence": 2,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "6b79374b19284b0be986586e31531afaf1ea9744a36dee61481b07e9033c528a",
+                  "byteLength": 43818
+                },
+                "messageCount": 5,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 12940,
+                  "cacheWrite": 432
+                }
+              },
+              {
+                "sequence": 3,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "63edfe1b0d4aa4899e6b55b95740819104798d51e040be4259d1be3ff60ad956",
+                  "byteLength": 43744
+                },
+                "messageCount": 5,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11406
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11384
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 4,
+                    "outputTokens": 8,
+                    "cacheReadInputTokens": 14882,
+                    "cacheCreationInputTokens": 11816
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11406
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [
+              {
+                "kind": "exception",
+                "nativeProcessExited": true,
+                "code": 0,
+                "signal": null
+              }
+            ],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 3,
+            "baseline": null
+          },
+          {
+            "scenario": "process-restart",
+            "repetition": 1,
+            "before": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11383
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11407
+            },
+            "previousInput": 13327,
+            "previousCacheableInput": 13325,
+            "signedShortfall": 11385,
+            "shortfall": 11385,
+            "diagnosticShortfall": 11383,
+            "newInputTokens": 24,
+            "cacheWriteAboveNewInput": 11383,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 2,
+                "user": 1,
+                "attachment": 6,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 2,
+                "api-request": 1,
+                "last-prompt": 2,
+                "assistant": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 2,
+                "assistant": 2,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 1,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 5,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0]",
+                "kind": "value",
+                "before": {
+                  "sha256": "e136e9f8e8949146d0797a2c2db01854306dfdf878c258f2f12eaccf38e181a8",
+                  "byteLength": 35394
+                },
+                "after": {
+                  "sha256": "27cf8a16d15d3a7609797d7443968e29609f78f4d5dd97e573e8d8b2d4ffdc3b",
+                  "byteLength": 34776
+                }
+              }
+            },
+            "previousSessionUnchanged": true,
+            "previousSessionId": "927f8085-44c5-484c-a917-b2f25e7ab4f3",
+            "currentSessionId": "de964c25-41f8-4fc5-8dcd-31de441a45be",
+            "processes": [
+              {
+                "piSessionId": "03780679-a861-44f1-a6e4-40207ab3f922",
+                "startingBranchLinkCount": 0,
+                "finishingBranchLinkCount": 0,
+                "queries": [
+                  {
+                    "resume": null
+                  }
+                ],
+                "apiKeySource": "none",
+                "inits": [
+                  {
+                    "apiKeySource": "none",
+                    "model": "claude-haiku-5-5[1m]",
+                    "claudeCode": "2.1.303",
+                    "permissionMode": "dontAsk",
+                    "tools": []
+                  }
+                ],
+                "processExited": true,
+                "modelContextContainsLinkEntry": false
+              },
+              {
+                "piSessionId": "03780679-a861-44f1-a6e4-40207ab3f922",
+                "startingBranchLinkCount": 0,
+                "finishingBranchLinkCount": 0,
+                "queries": [
+                  {
+                    "resume": "de964c25-41f8-4fc5-8dcd-31de441a45be"
+                  }
+                ],
+                "apiKeySource": "none",
+                "inits": [
+                  {
+                    "apiKeySource": "none",
+                    "model": "claude-haiku-5-5[1m]",
+                    "claudeCode": "2.1.303",
+                    "permissionMode": "dontAsk",
+                    "tools": []
+                  }
+                ],
+                "processExited": true,
+                "modelContextContainsLinkEntry": false
+              }
+            ],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 2,
+            "baseline": null
+          },
+          {
+            "scenario": "process-restart",
+            "repetition": 2,
+            "before": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11376
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11400
+            },
+            "previousInput": 13320,
+            "previousCacheableInput": 13318,
+            "signedShortfall": 11378,
+            "shortfall": 11378,
+            "diagnosticShortfall": 11376,
+            "newInputTokens": 24,
+            "cacheWriteAboveNewInput": 11376,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 2,
+                "user": 1,
+                "attachment": 6,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 2,
+                "api-request": 1,
+                "last-prompt": 2,
+                "assistant": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 2,
+                "assistant": 2,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 1,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 5,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0]",
+                "kind": "value",
+                "before": {
+                  "sha256": "066ee19f48fb4c6f9b6cfdf78b5632366a9e4211d39a2eac43b21e31512416ca",
+                  "byteLength": 35394
+                },
+                "after": {
+                  "sha256": "bb3b42681d96cca730086dbf3c05afec2f31e9f83f9824115ae565dc7604efbf",
+                  "byteLength": 34776
+                }
+              }
+            },
+            "previousSessionUnchanged": true,
+            "previousSessionId": "d64da5c7-9c91-4ea9-91a8-10f8befdb3b4",
+            "currentSessionId": "754c0019-a4e6-4b70-89ff-1d11d8a5651c",
+            "processes": [
+              {
+                "piSessionId": "cd60e642-8157-4dda-844a-1bb89eb485ac",
+                "startingBranchLinkCount": 0,
+                "finishingBranchLinkCount": 0,
+                "queries": [
+                  {
+                    "resume": null
+                  }
+                ],
+                "apiKeySource": "none",
+                "inits": [
+                  {
+                    "apiKeySource": "none",
+                    "model": "claude-haiku-5-5[1m]",
+                    "claudeCode": "2.1.303",
+                    "permissionMode": "dontAsk",
+                    "tools": []
+                  }
+                ],
+                "processExited": true,
+                "modelContextContainsLinkEntry": false
+              },
+              {
+                "piSessionId": "cd60e642-8157-4dda-844a-1bb89eb485ac",
+                "startingBranchLinkCount": 0,
+                "finishingBranchLinkCount": 0,
+                "queries": [
+                  {
+                    "resume": "754c0019-a4e6-4b70-89ff-1d11d8a5651c"
+                  }
+                ],
+                "apiKeySource": "none",
+                "inits": [
+                  {
+                    "apiKeySource": "none",
+                    "model": "claude-haiku-5-5[1m]",
+                    "claudeCode": "2.1.303",
+                    "permissionMode": "dontAsk",
+                    "tools": []
+                  }
+                ],
+                "processExited": true,
+                "modelContextContainsLinkEntry": false
+              }
+            ],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 2,
+            "baseline": null
+          },
+          {
+            "scenario": "image-result",
+            "repetition": 1,
+            "before": {
+              "input": 2,
+              "cacheRead": 13712,
+              "cacheWrite": 267
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 2241,
+              "cacheWrite": 11589
+            },
+            "previousInput": 13981,
+            "previousCacheableInput": 13979,
+            "signedShortfall": 11740,
+            "shortfall": 11740,
+            "diagnosticShortfall": 11738,
+            "newInputTokens": -149,
+            "cacheWriteAboveNewInput": 11589,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 2,
+                "user": 2,
+                "attachment": 7,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 4,
+                "api-request": 2,
+                "last-prompt": 2,
+                "assistant": 2,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 2,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "tool_use_id",
+                    "type",
+                    "content"
+                  ],
+                  "contentKind": "blocks",
+                  "blockTypes": [
+                    "text",
+                    "image",
+                    "text"
+                  ],
+                  "hasImageMarker": true,
+                  "hasPersistedOutput": false,
+                  "persistedFormat": null
+                }
+              ],
+              "liveAssistantRecords": 2,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 1,
+                "bytes": 107,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 3,
+                "assistant": 4,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "type",
+                    "tool_use_id",
+                    "content"
+                  ],
+                  "contentKind": "blocks",
+                  "blockTypes": [
+                    "text",
+                    "image"
+                  ],
+                  "hasImageMarker": false,
+                  "hasPersistedOutput": false,
+                  "persistedFormat": null
+                }
+              ],
+              "liveAssistantRecords": 2,
+              "syntheticAssistantRecords": 2,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 8,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "4a7caf26d4607c877566e8a0bb7ab6c5f8b236f848ebfe05c981f18fc9101139",
+                  "byteLength": 35444
+                },
+                "after": {
+                  "sha256": "a7ea60e0f8e2524b802b7eebad870e2418813bc6671aa81140cac7db48f3d779",
+                  "byteLength": 34826
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "a76f2303-ce1a-4fd5-a5eb-78718c6478fe",
+            "currentSessionId": "a76f2303-ce1a-4fd5-a5eb-78718c6478fe",
+            "failureState": {},
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "9aed45307b2262f63e96cb7181537012cd8a03cad7fccbe1b1b8b5f44213c20b",
+                  "byteLength": 43854
+                },
+                "messageCount": 2,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 11471
+                }
+              },
+              {
+                "sequence": 2,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "31f5fe37f4aaa5859d0309a43b870e2d1f103a8f8332386f0cb3bf18fd834825",
+                  "byteLength": 44757
+                },
+                "messageCount": 5,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 13712,
+                  "cacheWrite": 267
+                }
+              },
+              {
+                "sequence": 3,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "f7bfcfd133897704e3b2265314be917f6e8d15b8af02d0f33f52f22271aa6449",
+                  "byteLength": 44601
+                },
+                "messageCount": 7,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 11589
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 4,
+                    "outputTokens": 42,
+                    "cacheReadInputTokens": 15953,
+                    "cacheCreationInputTokens": 11738
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 61,
+                    "cacheReadInputTokens": 2241,
+                    "cacheCreationInputTokens": 11589
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 3,
+            "baseline": null
+          },
+          {
+            "scenario": "image-result",
+            "repetition": 2,
+            "before": {
+              "input": 2,
+              "cacheRead": 13715,
+              "cacheWrite": 264
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 2241,
+              "cacheWrite": 11592
+            },
+            "previousInput": 13981,
+            "previousCacheableInput": 13979,
+            "signedShortfall": 11740,
+            "shortfall": 11740,
+            "diagnosticShortfall": 11738,
+            "newInputTokens": -146,
+            "cacheWriteAboveNewInput": 11592,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 2,
+                "user": 2,
+                "attachment": 7,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 4,
+                "api-request": 2,
+                "last-prompt": 2,
+                "assistant": 2,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 2,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "tool_use_id",
+                    "type",
+                    "content"
+                  ],
+                  "contentKind": "blocks",
+                  "blockTypes": [
+                    "text",
+                    "image",
+                    "text"
+                  ],
+                  "hasImageMarker": true,
+                  "hasPersistedOutput": false,
+                  "persistedFormat": null
+                }
+              ],
+              "liveAssistantRecords": 2,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 1,
+                "bytes": 107,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 3,
+                "assistant": 3,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "type",
+                    "tool_use_id",
+                    "content"
+                  ],
+                  "contentKind": "blocks",
+                  "blockTypes": [
+                    "text",
+                    "image"
+                  ],
+                  "hasImageMarker": false,
+                  "hasPersistedOutput": false,
+                  "persistedFormat": null
+                }
+              ],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 2,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 8,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "0d3325c6a65394b8ba8edc6d4e06de51b01d176ded026bf91c6e63622150f942",
+                  "byteLength": 35444
+                },
+                "after": {
+                  "sha256": "b78fe183d7f8aaa391c07d367a358fe7e44a09cc92b21e630cba79c50150e230",
+                  "byteLength": 34826
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "b96810d4-6a8e-4efb-ac45-506f28354d32",
+            "currentSessionId": "b96810d4-6a8e-4efb-ac45-506f28354d32",
+            "failureState": {},
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "66febffec61b688efa0b4f275ebea3eaa66542722d9dd3f541fcf1415f1d6f2b",
+                  "byteLength": 43854
+                },
+                "messageCount": 2,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 11474
+                }
+              },
+              {
+                "sequence": 2,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "768e1ff13e710cb853c41a1fa21d9e857c104efae54a47a1aaa266c6088501d8",
+                  "byteLength": 44757
+                },
+                "messageCount": 5,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 13715,
+                  "cacheWrite": 264
+                }
+              },
+              {
+                "sequence": 3,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "557a49f21662e21a2b1ece75e556de3f0d96aaaab2d8ca114a3ed2def3810456",
+                  "byteLength": 44601
+                },
+                "messageCount": 7,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 11592
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 4,
+                    "outputTokens": 42,
+                    "cacheReadInputTokens": 15956,
+                    "cacheCreationInputTokens": 11738
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 2241,
+                    "cacheCreationInputTokens": 11592
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 3,
+            "baseline": null
+          },
+          {
+            "scenario": "large-result",
+            "repetition": 1,
+            "before": {
+              "input": 2,
+              "cacheRead": 13716,
+              "cacheWrite": 730
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 2241,
+              "cacheWrite": 76164
+            },
+            "previousInput": 14448,
+            "previousCacheableInput": 14446,
+            "signedShortfall": 12207,
+            "shortfall": 12207,
+            "diagnosticShortfall": 12205,
+            "newInputTokens": 63959,
+            "cacheWriteAboveNewInput": 12205,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 2,
+                "user": 2,
+                "attachment": 7,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 4,
+                "api-request": 2,
+                "last-prompt": 2,
+                "assistant": 3,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 2,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "tool_use_id",
+                    "type",
+                    "content"
+                  ],
+                  "contentKind": "string",
+                  "blockTypes": [
+                    "text"
+                  ],
+                  "hasImageMarker": false,
+                  "hasPersistedOutput": true,
+                  "persistedFormat": "mcp-token-limit"
+                }
+              ],
+              "liveAssistantRecords": 3,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 1,
+                "bytes": 92160,
+                "verifiedFixtureFiles": 1
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 3,
+                "assistant": 4,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "type",
+                    "tool_use_id",
+                    "content"
+                  ],
+                  "contentKind": "string",
+                  "blockTypes": [
+                    "text"
+                  ],
+                  "hasImageMarker": false,
+                  "hasPersistedOutput": false,
+                  "persistedFormat": null
+                }
+              ],
+              "liveAssistantRecords": 2,
+              "syntheticAssistantRecords": 2,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 8,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "a210b3374fa07984edfc0cb222af6f012909f274a116420097626f0a5f1549f0",
+                  "byteLength": 35444
+                },
+                "after": {
+                  "sha256": "b70b815ac33f72a8879fd8a6abf006365596f5e45de3b895e8340e6394fb3c30",
+                  "byteLength": 34826
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "02388922-bd0a-4442-a84e-ec6f66a4f469",
+            "currentSessionId": "02388922-bd0a-4442-a84e-ec6f66a4f469",
+            "failureState": {},
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "73cba7bcbde6803dad223ff596e7da5555116fbc037441b46cc9f07b2dc5b9e9",
+                  "byteLength": 43854
+                },
+                "messageCount": 2,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 11475
+                }
+              },
+              {
+                "sequence": 3,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "67f29ca7e4e05030bdce52a8c9a1bb52d70eec450f4a30fd2b9dbe164bad49fb",
+                  "byteLength": 45792
+                },
+                "messageCount": 5,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 13716,
+                  "cacheWrite": 730
+                }
+              },
+              {
+                "sequence": 4,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "be0a52ad9f8481ed8709d639ece54cb158e2aa3401611cbfd4a8b7914fb16a61",
+                  "byteLength": 138892
+                },
+                "messageCount": 7,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 76164
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 4,
+                    "outputTokens": 394,
+                    "cacheReadInputTokens": 15957,
+                    "cacheCreationInputTokens": 12205
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 53,
+                    "cacheReadInputTokens": 2241,
+                    "cacheCreationInputTokens": 76164
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 3,
+            "baseline": null
+          },
+          {
+            "scenario": "large-result",
+            "repetition": 2,
+            "before": {
+              "input": 2,
+              "cacheRead": 13717,
+              "cacheWrite": 734
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 2241,
+              "cacheWrite": 76220
+            },
+            "previousInput": 14453,
+            "previousCacheableInput": 14451,
+            "signedShortfall": 12212,
+            "shortfall": 12212,
+            "diagnosticShortfall": 12210,
+            "newInputTokens": 64010,
+            "cacheWriteAboveNewInput": 12210,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 2,
+                "user": 2,
+                "attachment": 7,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 4,
+                "api-request": 2,
+                "last-prompt": 2,
+                "assistant": 3,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 2,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "tool_use_id",
+                    "type",
+                    "content"
+                  ],
+                  "contentKind": "string",
+                  "blockTypes": [
+                    "text"
+                  ],
+                  "hasImageMarker": false,
+                  "hasPersistedOutput": true,
+                  "persistedFormat": "mcp-token-limit"
+                }
+              ],
+              "liveAssistantRecords": 3,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 1,
+                "bytes": 92160,
+                "verifiedFixtureFiles": 1
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 3,
+                "assistant": 4,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [
+                {
+                  "keys": [
+                    "type",
+                    "tool_use_id",
+                    "content"
+                  ],
+                  "contentKind": "string",
+                  "blockTypes": [
+                    "text"
+                  ],
+                  "hasImageMarker": false,
+                  "hasPersistedOutput": false,
+                  "persistedFormat": null
+                }
+              ],
+              "liveAssistantRecords": 2,
+              "syntheticAssistantRecords": 2,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 8,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "a6648c6da5a7060a5203a748ab5fa959f97d987cdfa443bdfd45cc9056e8b2d3",
+                  "byteLength": 35444
+                },
+                "after": {
+                  "sha256": "fabcbac3f55089cd895b5ee71d3de9e33f70331285538e1ee1afc9661730ed81",
+                  "byteLength": 34826
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "da0d4fe0-d5a6-4057-b45e-46d837832cbc",
+            "currentSessionId": "da0d4fe0-d5a6-4057-b45e-46d837832cbc",
+            "failureState": {},
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": [
+                  "mcp__custom-tools__verify_payload"
+                ]
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "4ef1b7bf590a06014838b55ace658f2e661e1308aa0d69263af91a3d876e4f4f",
+                  "byteLength": 43854
+                },
+                "messageCount": 2,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 11476
+                }
+              },
+              {
+                "sequence": 3,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "3dbc13ec588e94b5e92a24af1f4809cbf53b9f6294501068f585a88e6b7a14eb",
+                  "byteLength": 45792
+                },
+                "messageCount": 5,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 13717,
+                  "cacheWrite": 734
+                }
+              },
+              {
+                "sequence": 4,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "20bcafc54993cde01d440737e7b30957159602da573cb28698a365f649e9f5da",
+                  "byteLength": 139051
+                },
+                "messageCount": 7,
+                "toolCount": 1,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 2241,
+                  "cacheWrite": 76220
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 4,
+                    "outputTokens": 423,
+                    "cacheReadInputTokens": 15958,
+                    "cacheCreationInputTokens": 12210
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 335,
+                    "cacheReadInputTokens": 2241,
+                    "cacheCreationInputTokens": 76220
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 3,
+            "baseline": null
+          },
+          {
+            "scenario": "other-provider-turn",
+            "repetition": 1,
+            "before": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11383
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11444
+            },
+            "previousInput": 13327,
+            "previousCacheableInput": 13325,
+            "signedShortfall": 11385,
+            "shortfall": 11385,
+            "diagnosticShortfall": 11383,
+            "newInputTokens": 61,
+            "cacheWriteAboveNewInput": 11383,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 2,
+                "user": 1,
+                "attachment": 6,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 2,
+                "api-request": 1,
+                "last-prompt": 2,
+                "assistant": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 3,
+                "assistant": 3,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 2,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 5,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "f2d7959a17a51b995cc95d2a5e8362bfa3c78546832a95e552e8ed1a8eac0317",
+                  "byteLength": 35373
+                },
+                "after": {
+                  "sha256": "89ba66a553c6bb94cf06c1b75a9ded69fdb57b31653a7d1a13459b2fae447811",
+                  "byteLength": 34755
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "d0623726-f079-4b8a-b968-edcf2e1b6e78",
+            "currentSessionId": "d0623726-f079-4b8a-b968-edcf2e1b6e78",
+            "failureState": {},
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "578f75ef9014c5962ded70dd32ea966a9eaba682664e43cab89c2e3a30fc5c12",
+                  "byteLength": 43574
+                },
+                "messageCount": 2,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11383
+                }
+              },
+              {
+                "sequence": 2,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "97311461301235156b8e4e0cb15b5298cf6be384affbfab8cbe5d953fe83aa62",
+                  "byteLength": 43935
+                },
+                "messageCount": 7,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11444
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11383
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11444
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 2,
+            "baseline": null
+          },
+          {
+            "scenario": "other-provider-turn",
+            "repetition": 2,
+            "before": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11382
+            },
+            "after": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 11443
+            },
+            "previousInput": 13326,
+            "previousCacheableInput": 13324,
+            "signedShortfall": 11384,
+            "shortfall": 11384,
+            "diagnosticShortfall": 11382,
+            "newInputTokens": 61,
+            "cacheWriteAboveNewInput": 11382,
+            "beforeShapes": {
+              "recordCounts": {
+                "queue-operation": 2,
+                "user": 1,
+                "attachment": 6,
+                "atis-latch": 2,
+                "api-request-shape": 1,
+                "api-request-blob": 2,
+                "api-request": 1,
+                "last-prompt": 2,
+                "assistant": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 0,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "afterShapes": {
+              "recordCounts": {
+                "user": 3,
+                "assistant": 3,
+                "atis-latch": 1,
+                "queue-operation": 2,
+                "attachment": 6,
+                "api-request-shape": 1,
+                "api-request-blob": 3,
+                "api-request": 1,
+                "last-prompt": 1,
+                "mode": 1,
+                "cost-state": 1
+              },
+              "attachmentCounts": {
+                "environment": 1,
+                "model": 1,
+                "total_tokens_reminder": 1,
+                "session_context": 1,
+                "date": 1,
+                "credential_org": 1
+              },
+              "toolResults": [],
+              "liveAssistantRecords": 1,
+              "syntheticAssistantRecords": 2,
+              "storedResults": {
+                "regularFiles": 0,
+                "bytes": 0,
+                "verifiedFixtureFiles": null
+              }
+            },
+            "fidelity": {
+              "previousElements": 5,
+              "matchedElements": 3,
+              "firstDifference": {
+                "path": "messages[0].content",
+                "kind": "value",
+                "before": {
+                  "sha256": "3290acaf707c143397339998430062995b3c1b3ed7e1c8a4f05014629bff2b3b",
+                  "byteLength": 35373
+                },
+                "after": {
+                  "sha256": "10fde642a120c730d23ee8b88326dc2c029fd7e6ce0e460507c7ab99a1d1b1c9",
+                  "byteLength": 34755
+                },
+                "firstCharacter": null
+              }
+            },
+            "previousSessionId": "bd49cc23-cf40-4d1d-900e-1dfb2357628f",
+            "currentSessionId": "bd49cc23-cf40-4d1d-900e-1dfb2357628f",
+            "failureState": {},
+            "previousSessionStillExists": true,
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "nativeModel": "claude-haiku-5-5[1m]",
+            "authChecks": [
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              },
+              {
+                "apiKeySource": "unreported",
+                "apiProvider": "firstParty"
+              }
+            ],
+            "inits": [
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              },
+              {
+                "apiKeySource": "none",
+                "model": "claude-haiku-5-5[1m]",
+                "claudeCode": "2.1.303",
+                "permissionMode": "dontAsk",
+                "tools": []
+              }
+            ],
+            "requests": [
+              {
+                "sequence": 1,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "f11e633285736236276860ee18f99b9b3bddb3ce696663b2a7f47a3c2dd39ee2",
+                  "byteLength": 43574
+                },
+                "messageCount": 2,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11382
+                }
+              },
+              {
+                "sequence": 2,
+                "model": "claude-haiku-5-5",
+                "input": {
+                  "sha256": "a8465b4b94f6900d6b09247a8f5d25fd5e8872c0d92e550dc0fe43c205ba150f",
+                  "byteLength": 43935
+                },
+                "messageCount": 7,
+                "toolCount": 0,
+                "status": 200,
+                "usage": {
+                  "input": 2,
+                  "cacheRead": 1942,
+                  "cacheWrite": 11443
+                }
+              }
+            ],
+            "sdkResults": [
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11382
+                  }
+                ]
+              },
+              {
+                "subtype": "success",
+                "isError": false,
+                "modelUsage": [
+                  {
+                    "model": "claude-haiku-5-5[1m]",
+                    "contextWindow": 1000000,
+                    "maxOutputTokens": 128000,
+                    "inputTokens": 2,
+                    "outputTokens": 4,
+                    "cacheReadInputTokens": 1942,
+                    "cacheCreationInputTokens": 11443
+                  }
+                ]
+              }
+            ],
+            "injectedFaults": [],
+            "cleanup": {
+              "temporaryCwdRemoved": true,
+              "ccSessionDirectoryRemoved": true,
+              "userSettingsUnchanged": true
+            },
+            "apiCalls": 2,
+            "baseline": null
+          }
+        ],
+        "repeatDifferences": [
+          {
+            "scenario": "abort",
+            "shortfallDifference": 35
+          },
+          {
+            "scenario": "error-result",
+            "shortfallDifference": 2
+          },
+          {
+            "scenario": "exception",
+            "shortfallDifference": 2
+          },
+          {
+            "scenario": "process-restart",
+            "shortfallDifference": 7
+          },
+          {
+            "scenario": "image-result",
+            "shortfallDifference": 0
+          },
+          {
+            "scenario": "large-result",
+            "shortfallDifference": 5
+          },
+          {
+            "scenario": "other-provider-turn",
+            "shortfallDifference": 1
+          }
+        ],
+        "errorCode": "rebuild-cache-target-not-met"
+      },
+      "status": "fail",
+      "apiCalls": 38
+    }
+  ],
+  "apiCalls": 38
+}

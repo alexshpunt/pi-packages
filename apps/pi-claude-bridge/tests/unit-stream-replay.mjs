@@ -15,7 +15,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { QueryContext } from "../src/query-state.js";
+import { QueryContext } from "../src/provider/query-context.js";
 
 const { __test } = await import("../src/index.js");
 

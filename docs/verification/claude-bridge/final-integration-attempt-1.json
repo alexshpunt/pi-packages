@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": {
+    "head": "ebf1437c168da1f5b3cc575f6208a05e800692c2",
+    "isDirty": true,
+    "contentHash": "0d623d06322dda22f7e1e6c580829e132e4a6fb75362a73b6e0e86f549908eb2"
+  },
+  "sourceRevisionAfter": {
+    "head": "ebf1437c168da1f5b3cc575f6208a05e800692c2",
+    "isDirty": true,
+    "contentHash": "0d623d06322dda22f7e1e6c580829e132e4a6fb75362a73b6e0e86f549908eb2"
+  },
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0",
+    "sdk": "0.3.303",
+    "claudeCode": "2.1.303",
+    "piCli": "1.3.0"
+  },
+  "model": "claude-bridge/claude-haiku-5-5",
+  "approved": {
+    "shell": [
+      "int-multi-turn.sh",
+      "int-cache.sh"
+    ],
+    "node": [
+      "int-attachment-rebuild.mjs",
+      "int-branch-summary.mjs",
+      "int-cc-contracts.mjs",
+      "int-compact-auto-threshold.mjs",
+      "int-compact-baseline.mjs",
+      "int-compact-midturn-rebuild.mjs",
+      "int-compact-second-compact.mjs",
+      "int-compact-splitturn.mjs",
+      "int-cursor-after-tools.mjs",
+      "int-parallel-tool-results.mjs",
+      "int-served-window.mjs",
+      "int-session-compact.mjs",
+      "int-session-new.mjs",
+      "int-session-rebuild.mjs",
+      "int-shutdown-kills-cc.mjs",
+      "int-subagent-rpiv-codebase-locator.mjs",
+      "int-tool-message.mjs"
+    ]
+  },
+  "excluded": {
+    "int-session-resume.mjs": "requires-other-provider",
+    "int-image-session.mjs": "requires-other-provider"
+  },
+  "logDir": "<repo>/apps/pi-claude-bridge/.test-output/final-validation/2026-10-19T10-15-55-906Z",
+  "integration": {
+    "fixtureMode": "tests-copied; actual-src-and-node_modules-symlinked; no-env-test",
+    "debugLogCount": 15,
+    "debugLogBytes": 161041,
+    "cleanup": {
+      "temporaryCwdRemoved": true,
+      "ccSessionDirectoryRemoved": true,
+      "userSettingsUnchanged": true
+    },
+    "steps": [
+      {
+        "label": "int-multi-turn",
+        "command": "bash tests/int-multi-turn.sh",
+        "exitCode": 1,
+        "signal": null,
+        "executionError": null,
+        "durationMs": 6661,
+        "summary": [],
+        "outputFile": "<repo>/apps/pi-claude-bridge/.test-output/final-validation/2026-10-19T10-15-55-906Z/final-step-int-multi-turn.out"
+      },
+      {
+        "label": "int-cache",
+        "command": "bash tests/int-cache.sh",
+        "exitCode": 1,
+        "signal": null,
+        "executionError": null,
+        "durationMs": 1337,
+        "summary": [
+          "FAIL: pi exited with code 127"
+        ],
+        "outputFile": "<repo>/apps/pi-claude-bridge/.test-output/final-validation/2026-10-19T10-15-55-906Z/final-step-int-cache.out"
+      },
+      {
+        "label": "node-integrations",
+        "command": "<home>/.nvm/versions/node/v24.14.0/bin/node --import tsx --test --test-concurrency=1 tests/int-attachment-rebuild.mjs tests/int-branch-summary.mjs tests/int-cc-contracts.mjs tests/int-compact-auto-threshold.mjs tests/int-compact-baseline.mjs tests/int-compact-midturn-rebuild.mjs tests/int-compact-second-compact.mjs tests/int-compact-splitturn.mjs tests/int-cursor-after-tools.mjs tests/int-parallel-tool-results.mjs tests/int-served-window.mjs tests/int-session-compact.mjs tests/int-session-new.mjs tests/int-session-rebuild.mjs tests/int-shutdown-kills-cc.mjs tests/int-subagent-rpiv-codebase-locator.mjs tests/int-tool-message.mjs",
+        "exitCode": 1,
+        "signal": null,
+        "executionError": null,
+        "durationMs": 330273,
+        "summary": [
+          "PASS",
+          "✔ tests/int-compact-auto-threshold.mjs (31092.626042ms)",
+          "FAIL: compact: Nothing to compact (session too small)",
+          "✖ tests/int-compact-baseline.mjs (7038.119708ms)",
+          "PASS",
+          "✔ tests/int-compact-midturn-rebuild.mjs (31625.939208ms)",
+          "PASS",
+          "✔ tests/int-compact-second-compact.mjs (20447.726ms)",
+          "PASS",
+          "✔ tests/int-compact-splitturn.mjs (13629.980917ms)",
+          "PASS",
+          "✔ tests/int-served-window.mjs (3979.752458ms)",
+          "FAIL: compact: Nothing to compact (session too small)",
+          "✖ tests/int-session-compact.mjs (7728.320708ms)",
+          "PASS",
+          "✔ tests/int-session-new.mjs (5413.50475ms)",
+          "PASS",
+          "✔ tests/int-subagent-rpiv-codebase-locator.mjs (24989.523042ms)",
+          "ℹ tests 50",
+          "ℹ suites 2",
+          "ℹ pass 48",
+          "ℹ fail 2",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 330211.827916",
+          "✖ failing tests:",
+          "✖ tests/int-compact-baseline.mjs (7038.119708ms)",
+          "✖ tests/int-session-compact.mjs (7728.320708ms)"
+        ],
+        "outputFile": "<repo>/apps/pi-claude-bridge/.test-output/final-validation/2026-10-19T10-15-55-906Z/final-step-node-integrations.out"
+      },
+      {
+        "label": "deadlock-logs",
+        "command": "<home>/.nvm/versions/node/v24.14.0/bin/node tests/lib/check-deadlock-logs.mjs <repo>/apps/pi-claude-bridge/.test-output/final-validation/2026-10-19T10-15-55-906Z",
+        "exitCode": 0,
+        "signal": null,
+        "executionError": null,
+        "durationMs": 35,
+        "summary": [
+          "No bridge deadlock warnings in <repo>/apps/pi-claude-bridge/.test-output/final-validation/2026-10-19T10-15-55-906Z"
+        ],
+        "outputFile": "<repo>/apps/pi-claude-bridge/.test-output/final-validation/2026-10-19T10-15-55-906Z/final-step-deadlock-logs.out"
+      }
+    ]
+  },
+  "failure": null,
+  "userPiSettingsUnchanged": true,
+  "newCcProjectDirs": [
+    "-Users-buyong-tmp-cc-attachment-project-Ahq681",
+    "-Users-buyong-tmp-cc-gitpin-v9PoNH",
+    "-Users-buyong-tmp-subagent-rpiv-locator-project-XgVunT"
+  ],
+  "apiCalls": "not-instrumented",
+  "status": "fail"
+}

@@ -14,6 +14,11 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
+import { summarySessionFor } from "../src/session-cwd.js";
 
 const PROVIDER_ID = "claude-bridge";
 
@@ -31,7 +36,7 @@ function activateWithMockPi(activateFn, options = {}) {
 			handlers.set(event, list);
 		},
 		registerProvider: (name, config) => registered.push({ name, config }),
-		registerTool: () => {},
+		registerTool: () => { throw new Error("bridge must not register tools"); },
 	});
 	const emit = (event, ...args) => {
 		for (const handler of handlers.get(event) ?? []) handler(...args);
@@ -84,4 +89,70 @@ describe("provider registration across module instances", () => {
 		emit("session_start", {}, context);
 		assert.equal(registered.length, 0, "still no registration on a later session_start");
 	});
+});
+
+async function withLegacyNoticeConfig(config, run) {
+	const cwd = mkdtempSync(join(tmpdir(), "bridge-notice-"));
+	const path = join(cwd, CONFIG_DIR_NAME, "claude-bridge.json");
+	mkdirSync(join(cwd, CONFIG_DIR_NAME), { recursive: true });
+	const contents = JSON.stringify(config);
+	writeFileSync(path, contents);
+	const key = Symbol.for("claude-bridge:removedToolNoticeShown");
+	const previous = globalThis[key];
+	delete globalThis[key];
+	const notices = [];
+	const context = (mode) => ({
+		cwd, mode, ui: { notify: (...args) => notices.push(args) },
+		sessionManager: { getSessionId: () => "notice-session" },
+		modelRegistry: registryWith(PROVIDER_ID),
+	});
+	try {
+		await run({ context, notices });
+		assert.equal(readFileSync(path, "utf8"), contents, "notice must not persist state in config");
+	} finally {
+		if (previous === undefined) delete globalThis[key];
+		else globalThis[key] = previous;
+		rmSync(cwd, { recursive: true, force: true });
+	}
+}
+
+describe("native summary hooks", () => {
+	it("records the owning session without taking over compaction or navigation", () => {
+		const { handlers } = activateWithMockPi();
+		for (const event of ["session_before_compact", "session_before_tree"]) {
+			const signal = new AbortController().signal;
+			const registered = handlers.get(event);
+			assert.equal(registered.length, 1, "only the ownership observer may remain");
+			assert.equal(registered[0]({ signal }, { sessionManager: { getSessionId: () => "summary-owner" } }), undefined);
+			assert.equal(summarySessionFor(signal), "summary-owner");
+		}
+	});
+});
+
+describe("removed tool notice", () => {
+	it("notifies once per process across sessions and module reloads", () =>
+		withLegacyNoticeConfig({ askClaude: { enabled: true } }, async ({ context, notices }) => {
+			const first = activateWithMockPi();
+			first.emit("session_start", {}, context("tui"));
+			first.emit("session_start", {}, context("tui"));
+			const { default: reloaded } = await import("../src/index.js?removed-tool-notice");
+			activateWithMockPi(reloaded).emit("session_start", {}, context("tui"));
+			assert.equal(notices.length, 1);
+			assert.match(notices[0][0], /AskClaude has been removed/);
+		}));
+
+	it("does not consume the notice in RPC, JSON or print mode", () =>
+		withLegacyNoticeConfig({ askClaude: { enabled: true } }, ({ context, notices }) => {
+			const extension = activateWithMockPi();
+			for (const mode of ["rpc", "json", "print"]) extension.emit("session_start", {}, context(mode));
+			assert.equal(notices.length, 0);
+			extension.emit("session_start", {}, context("tui"));
+			assert.equal(notices.length, 1);
+		}));
+
+	it("stays silent without the removed setting", () =>
+		withLegacyNoticeConfig({}, ({ context, notices }) => {
+			activateWithMockPi().emit("session_start", {}, context("tui"));
+			assert.equal(notices.length, 0);
+		}));
 });

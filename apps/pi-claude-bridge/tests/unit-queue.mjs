@@ -15,7 +15,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { QueryContext } from "../src/query-state.js";
+import { QueryContext } from "../src/provider/query-context.js";
 import { extractAllToolResults } from "../src/extract-tool-results.js";
 import { makePromptStream } from "../src/prompt-stream.js";
 
