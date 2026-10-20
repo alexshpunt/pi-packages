@@ -37,7 +37,7 @@ npm audit --json
 
 Docker와 CI도 같은 잠금 파일로 `npm ci`를 실행했다. SDK 아카이브 생성이나 설치 중 패치는 필요하지 않았다.
 
-pi-packages에서는 루트 `pnpm-lock.yaml`의 Pi 1.2.0으로 개발한다. 이 버전의 `minimatch`는 보정 없이 `brace-expansion 5.0.12`를 사용하며, `tests/unit/dependency-security.test.mjs`의 의존성 보안 검사 2개가 2026-10-20에 통과했다. 의존성을 갱신하면 실제 설치 버전을 확인하고 보안 회귀 검사를 다시 수행한다. 이전 아카이브의 출처 기록은 [0.1.4 소스](https://github.com/buYoung/pi-codex-auto-review/blob/v0.1.4/vendor/pi-sdk-security.json)에 보존돼 있다.
+pi-packages에서는 루트 `pnpm-lock.yaml`의 Pi 1.3.0으로 개발한다. 이 버전의 `minimatch`는 보정 없이 `brace-expansion 5.0.12`를 사용하며, `tests/unit/dependency-security.test.mjs`의 의존성 보안 검사 2개가 2026-10-21에 통과했다. 의존성을 갱신하면 실제 설치 버전을 확인하고 보안 회귀 검사를 다시 수행한다. 이전 아카이브의 출처 기록은 [0.1.4 소스](https://github.com/buYoung/pi-codex-auto-review/blob/v0.1.4/vendor/pi-sdk-security.json)에 보존돼 있다.
 
 ## 확인한 결과
 

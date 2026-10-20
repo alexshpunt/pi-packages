@@ -2,6 +2,10 @@
 
 ## UNRELEASED
 
+### Improved
+
+- The bridge now uses Claude Code 2.1.304 (Agent SDK `^0.3.304`).
+
 ### Fixed
 
 - On Pi 1.3.0, Haiku 5.5 no longer offers turning reasoning off. Claude Code keeps thinking on for this model, so choosing off had no effect.

@@ -37,7 +37,7 @@ npm audit --json
 
 Docker and CI used the same committed lockfile with `npm ci`; no generated SDK archive or install-time patch was needed.
 
-In pi-packages, development uses Pi 1.2.0 from the root `pnpm-lock.yaml`. Its `minimatch` resolves `brace-expansion 5.0.12` without an override, and both dependency security checks in `tests/unit/dependency-security.test.mjs` passed on 2026-10-20. When updating dependencies, check the installed version and run the security regression checks again. The earlier archive's provenance remains available in the [0.1.4 source](https://github.com/buYoung/pi-codex-auto-review/blob/v0.1.4/vendor/pi-sdk-security.json).
+In pi-packages, development uses Pi 1.3.0 from the root `pnpm-lock.yaml`. Its `minimatch` resolves `brace-expansion 5.0.12` without an override, and both dependency security checks in `tests/unit/dependency-security.test.mjs` passed on 2026-10-21. When updating dependencies, check the installed version and run the security regression checks again. The earlier archive's provenance remains available in the [0.1.4 source](https://github.com/buYoung/pi-codex-auto-review/blob/v0.1.4/vendor/pi-sdk-security.json).
 
 ## Recorded results
 

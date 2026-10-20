@@ -3,6 +3,7 @@ import {
     type JsonRpcMessage,
     McpClient,
     type McpTransport,
+    type McpTransportSendOptions,
     StdioTransport,
     type Tool,
 } from "@earendil-works/pi-mcp";
@@ -166,9 +167,12 @@ class LoggingTransport implements McpTransport {
     start(): Promise<void> {
         return this.inner.start();
     }
-    send(message: JsonRpcMessage): Promise<void> {
+    send(
+        message: JsonRpcMessage,
+        options?: McpTransportSendOptions,
+    ): Promise<void> {
         this.log.write("->", message);
-        return this.inner.send(message);
+        return this.inner.send(message, options);
     }
     close(): Promise<void> {
         return this.inner.close();
