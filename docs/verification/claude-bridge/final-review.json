@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-10-19",
+  "appContentHash": "42613c6a8966eff543ea35b7f7bd5355f91ef3bb02ec4b7d39f4fd77066d8900",
+  "head": "ebf1437c168da1f5b3cc575f6208a05e800692c2",
+  "isDirty": true,
+  "committedContentHash": "6c31776adf32ee95c36345054181da3cdf777a5606d759178facae201fbdd502",
+  "committedHashEquivalence": "The verified hash was taken before the removed compaction tests were committed, so it carries 'deleted' entries for those 8 index paths. Recomputing the committed tree with exactly those 8 deletion entries reproduces 42613c6a...; no file content changed after the final runs.",
+  "versions": {
+    "node": "v24.14.0",
+    "piPackage": "1.2.0",
+    "piCli": "1.3.0",
+    "sdk": "0.3.303",
+    "claudeCode": "2.1.303",
+    "npmLatestSdk": "0.3.303",
+    "note": "CLI reports record versions.pi from node_modules (1.2.0). Integration tests and the real-Pi-process live checks spawn the global pi CLI, 1.3.0."
+  },
+  "scope": "full",
+  "status": "pass-with-accepted-cache-limit",
+  "statusNote": "All three children ran. 02 did not reach its zero-shortfall target; on 2026-10-19 the user closed it as a limit outside the bridge (Claude Code request structure and API cache handling). The brief vocabulary anticipated only a met target (pass) or a deferral (pass-with-deferred-cache), so this status names the accepted limit explicitly.",
+  "decisions": [
+    "2026-10-19: remove the compaction integration tests (int-compact-auto-threshold, int-compact-baseline, int-compact-midturn-rebuild, int-compact-second-compact, int-compact-splitturn, int-session-compact) and their fixtures; unit tests for rewrite/discard handling stay.",
+    "2026-10-19: run 02 with Haiku 5.5, then re-run 03 once.",
+    "2026-10-19: close 02 as an external limit; the residual cache shortfall is not a bridge defect and is not claimed as fixed."
+  ],
+  "predecessors": {
+    "01": {
+      "report": "docs/verification/claude-bridge/07-reentrancy.json",
+      "contentHash": "0d623d06322dda22f7e1e6c580829e132e4a6fb75362a73b6e0e86f549908eb2",
+      "srcChangedAfterReport": false,
+      "finalEvidence": "final.json re-ran 07-cross-session-shrink, 07-orphan-cursor and live-smoke on the final hash: pass"
+    },
+    "02": {
+      "executed": true,
+      "state": "closed-external-limit",
+      "report": "docs/verification/claude-bridge/cache-tail-origin.json",
+      "reportContentHash": "88e23e4d5831 (before the README Known issues update; final.json re-ran 08 on the final hash)",
+      "productionChange": false,
+      "findings": {
+        "shapeHypothesis": "refuted: re-sending the string system message as a text block left the shortfall unchanged",
+        "bridgeAddedShortfallVsNativeResume": "-2 to +2 tokens in both runs",
+        "locus": "the second request of a CC session reads the cache only up to the environment system message that ended the first request and writes it again (about 347 tokens); the same happens on a plain CC resume without any rebuild",
+        "notEstablished": "why the API does not reuse that identical prefix"
+      }
+    }
+  },
+  "reports": {
+    "cli": "docs/verification/claude-bridge/final.json",
+    "offline": "docs/verification/claude-bridge/final-offline.json",
+    "package": "docs/verification/claude-bridge/final-package.json",
+    "integration": "docs/verification/claude-bridge/final-integration.json",
+    "cacheTail": "docs/verification/claude-bridge/cache-tail-origin.json",
+    "earlierAttempts": {
+      "docs/verification/claude-bridge/final-attempt-1.json": "hash 0d623d06...: 22 pass / 2 fail, apiCalls 74",
+      "docs/verification/claude-bridge/final-integration-attempt-1.json": "hash 0d623d06...: shell tests exit 127 (no GNU timeout), node 48/50 (two compaction fixtures)",
+      "docs/verification/claude-bridge/final-attempt-2.json": "hash 0734cd67...: 22 pass / 2 fail, apiCalls 74 (with-deferred-cache review)",
+      "docs/verification/claude-bridge/final-integration-attempt-2.json": "hash 0734cd67...: pass, node 50/50 including the since-removed compaction tests"
+    }
+  },
+  "results": {
+    "typecheck": { "command": "pnpm --filter @buyong/pi-claude-bridge typecheck", "cwd": "repository root", "exitCode": 0 },
+    "unit": { "command": "pnpm --filter @buyong/pi-claude-bridge test:unit", "cwd": "repository root", "exitCode": 0, "tests": 359, "pass": 359, "fail": 0 },
+    "offline": { "command": "pnpm --filter @buyong/pi-claude-bridge verify --all --report ../../docs/verification/claude-bridge/final-offline.json", "exitCode": 0, "pass": 13, "fail": 0, "skipped": 12, "skippedReason": "live checks without --live", "apiCalls": 0 },
+    "package": {
+      "command": "node .agents/skills/pi-package-creator/scripts/validate-package.mjs apps/pi-claude-bridge --expect apps/pi-claude-bridge/tests/fixtures/package-inventory.json --runtime --pack --report docs/verification/claude-bridge/final-package.json",
+      "exitCode": 0, "status": "pass", "failedChecks": 0, "extensions": 1, "tools": 0,
+      "artifactFiles": 41, "artifactNonSrc": ["LICENSE", "README.md", "package.json"], "verificationFilesInArtifact": 0,
+      "skippedByValidator": ["semantic import and bundle inspection", "extracted artifact runtime and behavior"]
+    },
+    "cliLive": {
+      "command": "pnpm --filter @buyong/pi-claude-bridge verify --all --live --report ../../docs/verification/claude-bridge/final.json",
+      "exitCode": 1, "pass": 22, "fail": 3, "skipped": 0, "apiCalls": 106,
+      "failedChecks": ["06-rebuild-cache", "06-restart-continuity", "08-cache-tail-origin"],
+      "authInitApiKeySource": ["none"],
+      "authAccountApiKeySource": ["unreported"],
+      "liveModels": ["claude-haiku-5-5", "claude-haiku-5-5[1m]"],
+      "cleanupRecords": { "total": 52, "failed": 0 }
+    },
+    "integration": {
+      "command": "node --import tsx tools/verify/run-final-validation.ts --report ../../docs/verification/claude-bridge/final-integration.json",
+      "cwd": "apps/pi-claude-bridge",
+      "status": "pass",
+      "shell": { "int-multi-turn.sh": "exit 0, 5/5 cases", "int-cache.sh": "exit 0" },
+      "node": { "files": 11, "tests": 44, "pass": 44, "fail": 0, "excluded": { "int-session-resume.mjs": "requires another provider", "int-image-session.mjs": "requires another provider" } },
+      "deadlockGate": { "exitCode": 0, "debugLogs": 10, "debugLogBytes": 159211, "logSet": "fresh directory created for this run" },
+      "envTestLoaded": false,
+      "timeoutCommand": "shim",
+      "apiCalls": "not-instrumented"
+    }
+  },
+  "acceptedLimitFailures": [
+    {
+      "check": "06-rebuild-cache",
+      "errorCode": "rebuild-cache-target-not-met",
+      "measurements": 14,
+      "normalizedContentPreserved": true,
+      "completedScenariosShortfall": { "abort": [0, 0], "error-result": [0, 0], "exception": [0, 0], "image-result": [0, 0], "large-result": [0, 0] },
+      "limitScenariosShortfall": { "process-restart": [347, 346], "other-provider-turn": [344, 347] },
+      "limitCacheWriteVsNewInput": { "process-restart": ["395/48", "394/48"], "other-provider-turn": ["429/85", "432/85"] },
+      "apiCalls": 38
+    },
+    {
+      "check": "06-restart-continuity",
+      "errorCode": "restart-cache-target-not-met",
+      "linkContract": "branch links 0->1 and 1->2, both processes exited, link excluded from model context",
+      "previousSessionUnchanged": true,
+      "newCcSession": true,
+      "normalizedContentPreserved": true,
+      "shortfall": 347,
+      "originalMetricShortfall": 349,
+      "apiCalls": 2
+    },
+    {
+      "check": "08-cache-tail-origin",
+      "errorCode": "cache-tail-target-not-met",
+      "rows": 16,
+      "normalizedContentPreserved": true,
+      "restartContract": true,
+      "observedShortfall": { "native-resume": [347, 347], "forced-rebuild": [345, 347], "pi-only-turn": [347, 349], "process-restart": [347, 346] },
+      "interventionShortfall": { "native-resume": [347, 346], "forced-rebuild": [347, 346], "pi-only-turn": [347, 347], "process-restart": [347, 345] },
+      "bridgeAddedVsNativeResume": { "forced-rebuild": [-2, 0], "pi-only-turn": [0, 2], "process-restart": [0, -1] },
+      "apiCalls": 32
+    }
+  ],
+  "blockingFailures": [],
+  "verificationAdjustments": [
+    {
+      "owner": "01 follow-up",
+      "file": "tests/int-subagent-rpiv-codebase-locator.mjs",
+      "change": "Waits for 'fresh query setup, isReentrant=false, activeContexts>=1' instead of the cross-session 'treated as reentrant' marker that 01 removed by design; completion, Agent handler and stuck-marker assertions unchanged.",
+      "result": "pass"
+    },
+    {
+      "owner": "user decision",
+      "change": "Six compaction integration tests and their two fixtures removed; a unit-test comment that pointed at one of them now describes the measurement without the file path.",
+      "result": "approved integration set is 2 shell + 11 node files"
+    },
+    {
+      "owner": "03 host compatibility",
+      "file": "tools/verify/run-final-validation.ts",
+      "evidence": "GNU timeout is absent on this macOS host; the shell tests exited 127.",
+      "change": "Only when the host lacks timeout, the shell steps get a PATH shim that runs the command in its own process group, sends TERM after the duration and exits 124.",
+      "result": "both shell tests pass"
+    },
+    {
+      "owner": "02 diagnostics",
+      "files": ["diag/lib/capture-http.mjs", "tools/verify/live.ts", "tools/verify/fidelity.ts", "tools/verify/pi-process.ts", "tools/verify/fixtures/pi-process-extension.ts", "tools/verify/rebuild-cases.ts", "tools/verify/checks/06-native-resume-control.ts", "tools/verify/checks/08-cache-tail-origin.ts"],
+      "change": "The capture proxy forwards a body replaced by beforeForward; an optional transformPayload drives the diagnostic arm; message shapes are shared and also recorded for real Pi processes. Production src unchanged.",
+      "result": "unit 359/359; 08 runs 32 Haiku 5.5 requests per execution"
+    }
+  ],
+  "deviations": [
+    "First 03 round: control A (pre-01 code in a temporary git worktree) loaded the tracked apps/pi-claude-bridge/.env.test, which holds only CLAUDE_BRIDGE_TESTING_ALT_PROVIDER and CLAUDE_BRIDGE_TESTING_ALT_MODEL; the test called only claude-bridge/claude-haiku-5-5. The integration runner refuses a temporary app containing .env.test."
+  ],
+  "modelRequests": {
+    "instrumented": { "07-reentrancy runs": 6, "final-attempt-1 CLI": 74, "final-attempt-2 CLI": 74, "cache-tail-origin (02)": 32, "final CLI": 106 },
+    "notInstrumented": ["three integration runs", "two compaction control runs in the first 03 round"]
+  },
+  "cleanup": {
+    "cliChecks": "52 cleanup records: temporary cwd removed, CC session directory removed, user settings unchanged",
+    "integrationWorkspace": { "temporaryCwdRemoved": true, "ccSessionDirectoryRemoved": true, "userSettingsUnchanged": true, "userPiSettingsUnchanged": true },
+    "ccProjectDirsFromTestTempProjects": "3 per integration run for temporary project paths already removed by the tests; deleted after review",
+    "packageValidatorWorkspaces": "3 per validation run under the temporary directory; deleted",
+    "integrationDebugLogs": "kept under apps/pi-claude-bridge/.test-output/final-validation/ (git-ignored, outside reports)"
+  },
+  "consistency": {
+    "reportHashesMatchApp": { "final.json": true, "final-offline.json": true, "final-integration.json": true, "final-integration.json after": true },
+    "srcSearch": "rg -n -i \"askclaude|bypassPermissions|strictMcpConfig !== false\" apps/pi-claude-bridge/src: only src/config.ts:76 (removed-tool settings check) and src/provider/registration.ts:75 (removal notice)",
+    "srcTypeScriptFiles": { "nonEmpty": 38, "total": 38 },
+    "readme": "Known issues now state the measured environment-system-message re-cache (about 350 tokens, then about 25 per turn) as a Claude Code behavior the bridge cannot remove; no AskClaude or strictMcpConfig setting described",
+    "changelog": "UNRELEASED has the 01 Fix entry and the compaction-test removal; the docs-only README update and verification tooling have none"
+  },
+  "verificationLimits": [
+    "Integration model requests are not instrumented.",
+    "The package validator skipped semantic import/bundle analysis and running the extracted artifact.",
+    "Evidence covers this macOS host with Pi CLI 1.3.0; the CLI reports' versions.pi field shows the 1.2.0 dev dependency.",
+    "The API-side reason the identical environment-message prefix is not reused was not established.",
+    "Orphan Claude Code processes were not checked beyond int-shutdown-kills-cc."
+  ],
+  "handoff": "All three children are closed. 02's zero-shortfall target is not met and is recorded as an accepted external limit by user decision; a Claude Code or SDK change should re-run 08-cache-tail-origin and this review.",
+  "addendum": {
+    "date": "2026-10-19",
+    "decision": "Cache checks are optional. They leave the full run (verify --all, test) and run only as a separate cache test (verify --cache, test:cache).",
+    "appContentHash": "06104a72e21e9c8dd4f3c2be07571282ae139b96798dbb35da7f337dd65ba617",
+    "changes": [
+      "06-rebuild-cache, 06-native-resume-control and 08-cache-tail-origin carry group cache; verify --all skips them, verify --cache selects only them, an explicit name still runs one; --cache cannot be combined with --all, --list or names.",
+      "06-restart-continuity judges the branch-link contract, new CC UUID, unchanged source and preserved content; the cache shortfall stays in its observation only.",
+      "int-cache.sh left the test script and the final integration runner's default set; test:cache and the runner's --cache mode run it.",
+      "App AGENTS.md, README and CHANGELOG document the optional cache test, its cost and the meaning of its expected failures."
+    ],
+    "reverification": {
+      "choice": "user: re-run only the changed live check plus offline verification",
+      "typecheck": { "exitCode": 0 },
+      "unit": { "tests": 359, "pass": 359, "fail": 0 },
+      "list": "three checks show group cache; 06-restart-continuity does not",
+      "offlineAll": { "report": "docs/verification/claude-bridge/final-offline.json", "checks": 22, "pass": 13, "skipped": 9, "apiCalls": 0, "cacheGroupIncluded": false },
+      "offlineCache": { "selected": ["06-native-resume-control", "06-rebuild-cache", "08-cache-tail-origin"], "skipped": 3, "apiCalls": 0 },
+      "invalidCombinations": { "--cache --all": "exit 2", "--cache <name>": "exit 2", "--list --cache": "exit 2" },
+      "restartContinuityLive": { "report": "docs/verification/claude-bridge/final-cache-split.json", "status": "pass", "apiCalls": 2, "recordedShortfall": 347, "contentDifference": null, "branchLinks": [[0, 1], [1, 2]], "apiKeySource": ["none", "none"] }
+    },
+    "carriedOver": "Unchanged live checks keep their results from final.json (hash 42613c6a...), and the integration tests from final-integration.json, by the user's choice.",
+    "notRerun": ["verify --all --live with the cache group removed", "run-final-validation.ts with its new default set and --cache mode", "test:cache"]
+  }
+}

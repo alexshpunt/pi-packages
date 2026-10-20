@@ -3,13 +3,18 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { repairToolPairing } from "cc-session-io";
-import { sanitizeToolId, convertPiMessages } from "../src/convert.js";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createSession, repairToolPairing } from "cc-session-io";
+import { sanitizeToolId, convertPiMessages, matchLiveToolResultKeyOrder } from "../src/convert.js";
 
 /** Shorthand: convert pi messages and return just the anthropic messages. */
 function convert(messages, customToolNameToSdk) {
 	return convertPiMessages(messages, customToolNameToSdk).anthropicMessages;
 }
+
+const textBlocks = (text) => [{ type: "text", text }];
 
 // --- Tests ---
 
@@ -180,8 +185,8 @@ describe("message structure", () => {
 		assert.equal(result[0].role, "user");
 		assert.equal(result[0].content[0].type, "tool_result");
 		assert.equal(result[0].content[0].tool_use_id, "id1");
-		assert.equal(result[0].content[0].content, "result text");
-		assert.equal(result[0].content[0].is_error, false);
+		assert.deepEqual(result[0].content[0].content, textBlocks("result text"));
+		assert.equal(Object.hasOwn(result[0].content[0], "is_error"), false);
 	});
 
 	it("toolResult with isError=true", () => {
@@ -207,7 +212,7 @@ describe("message structure", () => {
 		assert.equal(result[0].content.length, 2);
 		assert.equal(result[1].role, "user");
 		assert.deepEqual(result[1].content.map((b) => [b.tool_use_id, b.content]),
-			[["t1", "content a"], ["t2", "content b"]]);
+			[["t1", textBlocks("content a")], ["t2", textBlocks("content b")]]);
 	});
 
 	it("does not merge results across an intervening user message", () => {
@@ -237,7 +242,7 @@ describe("message structure", () => {
 		assert.equal(result[0].content, "read file.txt");
 		assert.equal(result[1].role, "assistant");
 		assert.equal(result[1].content[0].type, "tool_use");
-		assert.equal(result[1].content[0].name, "Read");
+		assert.equal(result[1].content[0].name, "mcp__custom-tools__read");
 		assert.equal(result[2].role, "user");
 		assert.equal(result[2].content[0].type, "tool_result");
 		assert.equal(result[3].role, "assistant");
@@ -264,18 +269,18 @@ describe("message structure", () => {
 	// With a tool map the query runs `tools: []`, so no name in the transcript may
 	// look like a Claude Code builtin — that is what makes the model call one it
 	// cannot call. A tool missing from the map is one pi ran and we no longer
-	// serve (AskClaude is excluded on purpose), not a builtin.
+	// serve (for example a disabled extension), not a builtin.
 	it("tool name mapping: unserved pi tools keep the MCP namespace", () => {
 		const served = new Map([["read", "mcp__custom-tools__read"]]);
 		const msgs = [
 			{ role: "assistant", content: [
 				{ type: "toolCall", id: "a", name: "read", arguments: {} },
 				{ type: "toolCall", id: "b", name: "bash", arguments: {} },
-				{ type: "toolCall", id: "c", name: "AskClaude", arguments: {} },
+				{ type: "toolCall", id: "c", name: "LegacyTool", arguments: {} },
 			]},
 		];
 		assert.deepEqual(convert(msgs, served)[0].content.map((b) => b.name),
-			["mcp__custom-tools__read", "mcp__custom-tools__bash", "mcp__custom-tools__AskClaude"]);
+			["mcp__custom-tools__read", "mcp__custom-tools__bash", "mcp__custom-tools__LegacyTool"]);
 	});
 
 	it("tool name mapping: an SDK name in pi history is a double mapping, not a tool", () => {
@@ -286,7 +291,7 @@ describe("message structure", () => {
 		assert.throws(() => convert(msgs, new Map()), /already an SDK tool name/);
 	});
 
-	it("tool name mapping: pi names → SDK names", () => {
+	it("tool name mapping: pi names use MCP even without a served-tool map", () => {
 		const msgs = [
 			{ role: "assistant", content: [
 				{ type: "toolCall", id: "a", name: "read", arguments: {} },
@@ -294,18 +299,18 @@ describe("message structure", () => {
 			]},
 		];
 		const result = convert(msgs);
-		assert.equal(result[0].content[0].name, "Read");
-		assert.equal(result[0].content[1].name, "Bash");
+		assert.equal(result[0].content[0].name, "mcp__custom-tools__read");
+		assert.equal(result[0].content[1].name, "mcp__custom-tools__bash");
 	});
 
-	it("toolResult with array content extracts text", () => {
+	it("toolResult with array content preserves separate text blocks", () => {
 		const msgs = [
 			{ role: "toolResult", toolCallId: "x", content: [
 				{ type: "text", text: "line 1" },
 				{ type: "text", text: "line 2" },
 			]},
 		];
-		assert.equal(convert(msgs)[0].content[0].content, "line 1\nline 2");
+		assert.deepEqual(convert(msgs)[0].content[0].content, [...textBlocks("line 1"), ...textBlocks("line 2")]);
 	});
 
 	// Claude Code stores screenshots as image blocks inside tool_result.content;
@@ -324,16 +329,15 @@ describe("message structure", () => {
 		]);
 	});
 
-	// The string shape is what CC writes for text-only results; switching to
-	// blocks unconditionally would diverge from it and perturb the cache key.
-	it("toolResult without an image stays a flat string", () => {
+	// Pi results reach CC through MCP, which retains successful text as blocks.
+	it("toolResult without an image keeps the live MCP block shape", () => {
 		const msgs = [
 			{ role: "toolResult", toolCallId: "x", content: [{ type: "text", text: "just text" }] },
 		];
-		assert.equal(convert(msgs)[0].content[0].content, "just text");
+		assert.deepEqual(convert(msgs)[0].content[0].content, textBlocks("just text"));
 	});
 
-	it("toolResult keeps markers for blocks that are neither text nor image", () => {
+	it("toolResult drops unsupported blocks exactly as the live MCP path does", () => {
 		const msgs = [
 			{ role: "toolResult", toolCallId: "x", content: [
 				{ type: "document" },
@@ -342,7 +346,6 @@ describe("message structure", () => {
 		];
 		const result = convert(msgs)[0].content[0].content;
 		assert.deepEqual(result, [
-			{ type: "text", text: "[document]" },
 			{ type: "image", source: { type: "base64", media_type: "image/png", data: "BASE64DATA" } },
 		]);
 	});
@@ -357,6 +360,48 @@ describe("message structure", () => {
 		assert.deepEqual(result, [
 			{ type: "image", source: { type: "base64", media_type: "image/png", data: "BASE64DATA" } },
 		]);
+	});
+});
+
+describe("live MCP result contracts", () => {
+	it("uses CC's empty-result note with the exact served name", () => {
+		for (const content of ["", [], [{ type: "text", text: "" }]]) {
+			const converted = convert([
+				{ role: "assistant", content: [{ type: "toolCall", id: "t1", name: "Probe", arguments: {} }] },
+				{ role: "toolResult", toolCallId: "t1", content },
+			], new Map([["Probe", "mcp__custom-tools__Probe"]]));
+			assert.equal(converted[1].content[0].content, "(mcp__custom-tools__Probe completed with no output)");
+			assert.equal(Object.hasOwn(converted[1].content[0], "is_error"), false);
+		}
+	});
+	it("keeps failed MCP results as text without unsupported-block markers", () => {
+		const converted = convert([{ role: "toolResult", toolCallId: "t1", isError: true,
+			content: [{ type: "text", text: "failed" }, { type: "resource" }, { type: "text", text: "again" }] }]);
+		assert.equal(converted[0].content[0].content, "failed\nagain");
+		assert.equal(converted[0].content[0].is_error, true);
+	});
+	it("writes CC's success/error key order through cc-session-io to the final JSONL", () => {
+		const root = mkdtempSync(join(tmpdir(), "bridge-result-order-"));
+		try {
+			const session = createSession({ projectPath: root, claudeDir: join(root, "claude") });
+			session.importMessages(convert([
+				{ role: "assistant", content: [{ type: "toolCall", id: "ok", name: "read", arguments: {} }, { type: "toolCall", id: "bad", name: "read", arguments: {} }] },
+				{ role: "toolResult", toolCallId: "ok", content: "value" },
+				{ role: "toolResult", toolCallId: "bad", content: "failure", isError: true },
+			]));
+			matchLiveToolResultKeyOrder(session.records);
+			const once = JSON.stringify(session.records);
+			matchLiveToolResultKeyOrder(session.records);
+			assert.equal(JSON.stringify(session.records), once);
+			session.save();
+			const records = readFileSync(session.jsonlPath, "utf8").trim().split("\n").map(JSON.parse);
+			const results = records.find(record => record.type === "user").message.content;
+			assert.deepEqual(Object.keys(results[0]), ["tool_use_id", "type", "content"]);
+			assert.deepEqual(Object.keys(results[1]), ["type", "content", "is_error", "tool_use_id"]);
+			assert.deepEqual(results[0].content, textBlocks("value"));
+			assert.equal(results[1].content, "failure");
+			assert.equal(results[1].is_error, true);
+		} finally { rmSync(root, { recursive: true, force: true }); }
 	});
 });
 
@@ -382,7 +427,7 @@ describe("conversion survives repairToolPairing", () => {
 
 		assert.deepEqual(repaired, converted);
 		const results = repaired.flatMap((m) => (Array.isArray(m.content) ? m.content : [])).filter((b) => b.type === "tool_result");
-		assert.deepEqual(results.map((b) => b.content), ["body of t0", "body of t1", "body of t2"]);
+		assert.deepEqual(results.map((b) => b.content), ["body of t0", "body of t1", "body of t2"].map(textBlocks));
 	});
 
 	// Mid-turn steering puts a user message between the results (which is why
@@ -398,7 +443,7 @@ describe("conversion survives repairToolPairing", () => {
 		const repaired = repairToolPairing(convert(msgs));
 
 		assert.deepEqual(repaired.map((m) => m.role), ["assistant", "user", "user"]);
-		assert.deepEqual(repaired[1].content.map((b) => b.content), ["first", "second"]);
+		assert.deepEqual(repaired[1].content.map((b) => b.content), ["first", "second"].map(textBlocks));
 		assert.equal(repaired[2].content, "actually, also check X");
 	});
 
@@ -415,7 +460,7 @@ describe("conversion survives repairToolPairing", () => {
 		const repaired = repairToolPairing(convert(msgs));
 
 		assert.deepEqual(repaired.map((m) => m.role), ["assistant", "user", "user"]);
-		assert.deepEqual(repaired[1].content.map((b) => b.content), ["first", "second"]);
+		assert.deepEqual(repaired[1].content.map((b) => b.content), ["first", "second"].map(textBlocks));
 		assert.equal(repaired[2].content, "actually stop and check X");
 	});
 

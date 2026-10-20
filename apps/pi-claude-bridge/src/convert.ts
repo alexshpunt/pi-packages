@@ -3,16 +3,10 @@
 
 import type { Message as PiMessage } from "@earendil-works/pi-ai";
 import type { Message as SessionMessage } from "cc-session-io";
-import { pascalCase } from "change-case";
 import { MCP_TOOL_PREFIX } from "./skills.js";
+import { toolResultToMcpContent } from "./extract-tool-results.js";
 
 export const PROVIDER_ID = "claude-bridge";
-
-// Pi tool names under Claude Code's builtin names. Only ever correct on the
-// AskClaude path, where CC runs its own tools — see mapPiToolNameToSdk.
-export const PI_TO_SDK_TOOL_NAME: Record<string, string> = {
-	read: "Read", write: "Write", edit: "Edit", bash: "Bash",
-};
 
 export function sanitizeToolId(id: string, cache: Map<string, string>): string {
 	const existing = cache.get(id);
@@ -22,23 +16,9 @@ export function sanitizeToolId(id: string, cache: Map<string, string>): string {
 	return clean;
 }
 
-/** A pi tool name as the name a rebuilt transcript has to call it by.
- *
- *  Whether a map is passed is what distinguishes the two query shapes, because
- *  they need opposite answers:
- *
- *  - **With a map — the provider path.** The query runs `tools: []`, so every
- *    tool Claude can call is a pi tool served over MCP, and its name is
- *    `mcp__custom-tools__<pi name>` by construction (resolveMcpTools). The map
- *    is consulted first only because it carries the served tool's exact casing.
- *    A name it lacks is a tool pi ran that we do not serve now — AskClaude,
- *    excluded on purpose, or an extension since disabled — and naming that after
- *    a Claude Code builtin would tell the model a builtin it cannot call is
- *    available and was already used. That is the prompt condition behind the
- *    phantom-call deadlock fixed in 122914dd, and the read direction refuses the
- *    same names for the same reason (piToolNameFor in index.ts).
- *  - **Without a map — the AskClaude path.** CC runs its own tools there, so
- *    builtin names are real, matching mapToolName in the other direction.
+/** Rebuilt transcripts name every Pi tool in the custom-tools MCP namespace.
+ *  The served-tool map preserves exact casing. Historical tools no longer
+ *  served keep their namespace rather than suggesting a native CC tool exists.
  */
 export function mapPiToolNameToSdk(name: string, customToolNameToSdk?: Map<string, string>): string {
 	if (!name) return "";
@@ -49,8 +29,7 @@ export function mapPiToolNameToSdk(name: string, customToolNameToSdk?: Map<strin
 	if (normalized.startsWith(MCP_TOOL_PREFIX)) {
 		throw new Error(`mapPiToolNameToSdk: "${name}" is already an SDK tool name — pi history holds pi tool names`);
 	}
-	if (!customToolNameToSdk) return PI_TO_SDK_TOOL_NAME[normalized] ?? pascalCase(name);
-	return customToolNameToSdk.get(name) ?? customToolNameToSdk.get(normalized) ?? `${MCP_TOOL_PREFIX}${name}`;
+	return customToolNameToSdk?.get(name) ?? customToolNameToSdk?.get(normalized) ?? `${MCP_TOOL_PREFIX}${name}`;
 }
 
 export function messageContentToText(
@@ -67,27 +46,41 @@ export function messageContentToText(
 	return hasText ? parts.join("\n") : "";
 }
 
-// Tool results are flattened to text, which is how Claude Code stores most of
-// them. Images are the exception: they have no text form, so a result carrying
-// one keeps the block array shape instead (also what CC writes for screenshots).
-function toolResultContent(
+// Rebuild the same content the live MCP bridge sent. CC keeps successful text
+// and image results as blocks, but records failures and empty-result notes as
+// strings. Share MCP filtering instead of inventing blocks the live path drops.
+function toolResultBlock(
+	toolUseId: string,
 	content: string | Array<{ type: string; text?: string; data?: string; mimeType?: string }>,
-): string | Array<Record<string, unknown>> {
-	if (typeof content === "string" || !Array.isArray(content)) return messageContentToText(content) || "";
-	const images = content.filter((b) => b.type === "image" && b.data && b.mimeType);
-	if (!images.length) return messageContentToText(content) || "";
+	isError: boolean | undefined,
+	toolName: string,
+): Record<string, unknown> {
+	const mcpContent = toolResultToMcpContent(content);
+	if (isError) {
+		return { type: "tool_result", tool_use_id: toolUseId,
+			content: mcpContent.filter(block => block.type === "text").map(block => block.text).join("\n"), is_error: true };
+	}
 	const blocks: Array<Record<string, unknown>> = [];
-	for (const block of content) {
+	for (const block of mcpContent) {
 		if (block.type === "text" && block.text) blocks.push({ type: "text", text: block.text });
-		else if (block.type === "image" && block.data && block.mimeType) {
-			blocks.push({ type: "image", source: { type: "base64", media_type: block.mimeType, data: block.data } });
-		} else if (block.type !== "text" && block.type !== "image") {
-			// Same marker messageContentToText leaves for unrecognized blocks, so the
-			// text and image paths describe an extension's output the same way.
-			blocks.push({ type: "text", text: `[${block.type}]` });
+		else if (block.type === "image") blocks.push({ type: "image", source: { type: "base64", media_type: block.mimeType, data: block.data } });
+	}
+	return { type: "tool_result", tool_use_id: toolUseId, content: blocks.length ? blocks : `(${toolName} completed with no output)` };
+}
+
+/** cc-session-io 0.4.0 reorders tool results while importing. Restore the live
+ *  CC order after import and before save, including the separate error order. */
+export function matchLiveToolResultKeyOrder(records: readonly unknown[]): void {
+	for (const record of records as Array<{ type?: string; message?: { content?: unknown } }>) {
+		const content = record.type === "user" ? record.message?.content : undefined;
+		if (!Array.isArray(content)) continue;
+		for (const [index, block] of content.entries()) {
+			if (block?.type !== "tool_result") continue;
+			const { type, tool_use_id, content: body, is_error, ...rest } = block;
+			content[index] = is_error ? { type, content: body, is_error, tool_use_id, ...rest }
+				: { tool_use_id, type, content: body, ...rest };
 		}
 	}
-	return blocks;
 }
 
 /** What convertPiMessages discarded, for the debug line in index.ts. */
@@ -112,6 +105,8 @@ export function convertPiMessages(
 	// The user message collecting this assistant turn's tool results, if one has
 	// been emitted yet, and the index of the assistant message it belongs to. Both
 	// are cleared at every assistant message — see the toolResult branch.
+	// Empty-result notes use the exact served MCP name, including its casing.
+	const toolUseNames = new Map<string, string>();
 	let turnResults: { role: "user"; content: Array<Record<string, unknown>> } | null = null;
 	let turnAssistantIdx: number | null = null;
 
@@ -150,7 +145,9 @@ export function convertPiMessages(
 					}
 				} else if (block.type === "toolCall") {
 					const toolName = mapPiToolNameToSdk(block.name, customToolNameToSdk);
-					blocks.push({ type: "tool_use", id: sanitizeToolId(block.id, sanitizedIds), name: toolName, input: block.arguments ?? {} });
+					const id = sanitizeToolId(block.id, sanitizedIds);
+					toolUseNames.set(id, toolName);
+					blocks.push({ type: "tool_use", id, name: toolName, input: block.arguments ?? {} });
 				} else {
 					dropped.other.set(block.type, (dropped.other.get(block.type) ?? 0) + 1);
 				}
@@ -205,7 +202,9 @@ export function convertPiMessages(
 			// to the same order — it records a mid-turn steer as an `attachment`, and
 			// bubbles attachments up to the nearest assistant or tool_result message
 			// and re-inserts them after it. The on-disk form differs, the order does not.
-			const block = { type: "tool_result", tool_use_id: sanitizeToolId(msg.toolCallId, sanitizedIds), content: toolResultContent(msg.content), is_error: msg.isError };
+			const toolUseId = sanitizeToolId(msg.toolCallId, sanitizedIds);
+			const toolName = toolUseNames.get(toolUseId) ?? mapPiToolNameToSdk(String(msg.toolName ?? ""), customToolNameToSdk);
+			const block = toolResultBlock(toolUseId, msg.content, msg.isError, toolName);
 			if (turnResults) {
 				turnResults.content.push(block);
 			} else {

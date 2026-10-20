@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": {
+    "head": "ebf1437c168da1f5b3cc575f6208a05e800692c2",
+    "isDirty": true,
+    "contentHash": "0d623d06322dda22f7e1e6c580829e132e4a6fb75362a73b6e0e86f549908eb2"
+  },
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0",
+    "sdk": "0.3.303",
+    "claudeCode": "2.1.303"
+  },
+  "checks": [
+    {
+      "name": "07-cross-session-shrink",
+      "mode": "offline",
+      "inputs": {
+        "driver": "production-runtime-scripted-query",
+        "parked": "session-A-at-tool-call",
+        "cursorBeforeShrink": 4,
+        "priorsAfterShrink": 2,
+        "control": "same-session-reentrant-user-call"
+      },
+      "expected": {
+        "shrinkPath": "rebuild",
+        "shrinkResumesOwnSession": true,
+        "rebuiltFileExists": true,
+        "reentrantPath": "clean-start preserve-shared",
+        "reentrantResumes": false,
+        "parkedSessionUnchanged": true
+      },
+      "observed": {
+        "cursorBeforeShrink": 4,
+        "shrink": {
+          "path": "rebuild",
+          "isResumed": true,
+          "resumesOwnSession": true,
+          "rebuiltFileExists": true,
+          "mirrorKeepsOwnSession": true,
+          "mirrorCursor": 3
+        },
+        "reentrant": {
+          "path": "clean-start preserve-shared",
+          "isResumed": false,
+          "isMirrorUnchanged": true
+        },
+        "parkedCompletion": "stop",
+        "parkedA": {
+          "isParkedQueryUnchanged": true,
+          "cursorWhileParked": 2,
+          "completedStopReason": "stop",
+          "finalSessionId": "own",
+          "finalCursor": 5
+        },
+        "syncPaths": [
+          "clean-start",
+          "reuse",
+          "clean-start",
+          "reuse",
+          "rebuild",
+          "reuse",
+          "clean-start preserve-shared"
+        ],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 0
+    },
+    {
+      "name": "07-orphan-cursor",
+      "mode": "offline",
+      "inputs": {
+        "driver": "production-runtime-scripted-query",
+        "parked": "session-A-at-tool-call",
+        "orphan": "session-B-result-after-abort"
+      },
+      "expected": {
+        "orphanStopReason": "stop",
+        "cursorAfterOrphan": "orphan-history-length",
+        "queriesStarted": 0,
+        "parkedSessionUnchanged": true
+      },
+      "observed": {
+        "orphanStopReason": "stop",
+        "orphanBlockCount": 0,
+        "cursorBeforeOrphan": 2,
+        "cursorAfterOrphan": 5,
+        "orphanHistoryLength": 5,
+        "mirrorKeepsOwnSession": true,
+        "queriesStarted": 0,
+        "otherSessionInFlight": true,
+        "parkedA": {
+          "isParkedQueryUnchanged": true,
+          "cursorWhileParked": 2,
+          "completedStopReason": "stop",
+          "finalSessionId": "own",
+          "finalCursor": 5
+        },
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 0
+    },
+    {
+      "name": "live-smoke",
+      "mode": "live",
+      "inputs": {
+        "model": "claude-haiku-5-5",
+        "driver": "shared-provider-runtime",
+        "reasoning": "off",
+        "reasoningOption": "omitted",
+        "tool": "verify_echo"
+      },
+      "expected": {
+        "plainTurn": true,
+        "toolCalls": 1,
+        "returnedValueInFinalAnswer": true,
+        "apiKeySource": "none"
+      },
+      "observed": {
+        "plainAnswer": {
+          "sha256": "c2e3ac47f4a325469c1a2d5f117e463ec943c721986d5d9f09ac4540b7d80526",
+          "byteLength": 5
+        },
+        "finalAnswer": {
+          "sha256": "f04b16660b4a755787bc05af8b7322986923d3bb378abfdc8a0e814fce058d62",
+          "byteLength": 49
+        },
+        "returnedValueInFinalAnswer": true,
+        "toolCalls": [
+          {
+            "name": "verify_echo",
+            "argumentsFingerprint": {
+              "sha256": "22c79eeb50b000fb1fa867321c86564a18a24a2976117c0edd09f2161c62c071",
+              "byteLength": 61
+            },
+            "resultFingerprint": {
+              "sha256": "f04b16660b4a755787bc05af8b7322986923d3bb378abfdc8a0e814fce058d62",
+              "byteLength": 49
+            }
+          }
+        ],
+        "usage": {
+          "input": 6,
+          "output": 120,
+          "cacheRead": 7965,
+          "cacheWrite": 935,
+          "totalTokens": 9026
+        },
+        "apiKeySource": "none",
+        "model": "claude-haiku-5-5",
+        "nativeModel": "claude-haiku-5-5[1m]",
+        "authChecks": [
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          },
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          }
+        ],
+        "inits": [
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5[1m]",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": [
+              "mcp__custom-tools__verify_echo"
+            ]
+          },
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5[1m]",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": [
+              "mcp__custom-tools__verify_echo"
+            ]
+          }
+        ],
+        "requests": [
+          {
+            "sequence": 1,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "c7d57fefb3ac7a69d9893993cc0cb88715542a7bc514fd7d72301bb03c452b97",
+              "byteLength": 9024
+            },
+            "messageCount": 2,
+            "toolCount": 1,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 2507,
+              "cacheWrite": 348
+            }
+          },
+          {
+            "sequence": 2,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "8f0afb33b3c9f44a58d80e86d4e61e3587f4601c607db49557b0658b4adf3c5a",
+              "byteLength": 9395
+            },
+            "messageCount": 5,
+            "toolCount": 1,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 2507,
+              "cacheWrite": 444
+            }
+          },
+          {
+            "sequence": 3,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "afaf92228bd9af05cafadf7ee71b33456409fb9deab4e7cd458d9a90f3e071eb",
+              "byteLength": 9861
+            },
+            "messageCount": 8,
+            "toolCount": 1,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 2951,
+              "cacheWrite": 143
+            }
+          }
+        ],
+        "sdkResults": [
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5[1m]",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 2,
+                "outputTokens": 4,
+                "cacheReadInputTokens": 2507,
+                "cacheCreationInputTokens": 348
+              }
+            ]
+          },
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5[1m]",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 6,
+                "outputTokens": 120,
+                "cacheReadInputTokens": 7965,
+                "cacheCreationInputTokens": 935
+              }
+            ]
+          }
+        ],
+        "injectedFaults": [],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 3
+    }
+  ],
+  "apiCalls": 3
+}

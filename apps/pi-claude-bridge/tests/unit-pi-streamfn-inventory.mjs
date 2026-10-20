@@ -16,9 +16,8 @@
  * behind it.
  *
  * If this fails: a pi upgrade added or moved a streamFn consumer. Work out
- * whether it can reach a bridge model, and either handle it (the way
- * `session_before_compact` and `session_before_tree` are taken over) or add it
- * below with a note on why it is harmless.
+ * whether it can reach a bridge model, and either route its cacheRetention:none
+ * call to the isolated summary path or add it below with a note on why it is harmless.
  */
 
 import { describe, it } from "node:test";
@@ -37,11 +36,11 @@ const PI_DIST = fileURLToPath(new URL("../node_modules/@earendil-works/pi-coding
  *  branch-summarization miss, and a filename-only inventory would wave it through.
  *  A changed count is not automatically a bug; it means read the diff and re-decide. */
 const HANDLED = {
-	"agent-session.js": { mentions: 2, why: "hand-offs: branch summary into generateBranchSummary, /bug into generateBugReportSummary — both via agent.streamFunction" },
+	"agent-session.js": { mentions: 2, why: "hand-offs: native branch and bug-report summaries via agent.streamFunction" },
 	"sdk.js": { mentions: 2, why: "constructs the agent, does not summarize" },
-	"bug-report.js": { mentions: 1, why: "/bug summarization via completeSummarization (cacheRetention: none) — routed to the isolated path from streamClaudeAgentSdk (no takeover hook, unlike compaction)" },
-	"compaction/compaction.js": { mentions: 13, why: "taken over via session_before_compact -> isolatedStreamFn" },
-	"compaction/branch-summarization.js": { mentions: 2, why: "taken over via session_before_tree -> isolatedStreamFn" },
+	"bug-report.js": { mentions: 1, why: "/bug summarization via completeSummarization (cacheRetention: none) — routed to the isolated path from streamClaudeAgentSdk without taking over Pi events" },
+	"compaction/compaction.js": { mentions: 13, why: "native compaction -> completeSummarization (cacheRetention: none) -> isolatedStreamFn" },
+	"compaction/branch-summarization.js": { mentions: 2, why: "native branch summary -> completeSummarization (cacheRetention: none) -> isolatedStreamFn" },
 };
 
 const mentionsOf = (text) => (text.match(/streamFn/g) ?? []).length;
@@ -74,9 +73,9 @@ describe("pi streamFn consumers", () => {
 			+ `Each can route an LLM call through our provider with a system prompt no before_agent_start recorded.`,
 		);
 
-		// If one of these disappears, the takeover it justifies is now dead code.
+		// A missing consumer means its routing explanation must be reviewed.
 		const missing = Object.keys(HANDLED).filter((rel) => !found.has(rel));
-		assert.deepEqual(missing, [], `these no longer consume streamFn — is the takeover still needed? ${missing.join(", ")}`);
+		assert.deepEqual(missing, [], `these no longer consume streamFn — is the routing description still correct? ${missing.join(", ")}`);
 
 		const drifted = [...found].filter(([rel, n]) => HANDLED[rel].mentions !== n)
 			.map(([rel, n]) => `${rel}: ${HANDLED[rel].mentions} -> ${n}`);

@@ -99,7 +99,7 @@ describe("resolveModel", () => {
 
 describe("Claude Code runtime policy", () => {
 	it("measured-1M ids send [1m] on every plan", () => {
-		for (const id of ["claude-opus-5", "claude-opus-4-8", "claude-opus-4-7", "claude-fable-5", "claude-fable-5-1", "claude-sonnet-5-5", "claude-sonnet-5"]) {
+		for (const id of ["claude-opus-5", "claude-opus-4-8", "claude-opus-4-7", "claude-fable-5", "claude-fable-5-1", "claude-sonnet-5-5", "claude-sonnet-5", "claude-haiku-5-5"]) {
 			assert.deepEqual(resolveClaudeCodeRuntimeModel(oneM(id), PRO), { cliModelId: `${id}[1m]`, contextWindow: 1000000 });
 		}
 	});
@@ -151,6 +151,24 @@ describe("applyLongContext", () => {
 		assert.equal(find(registered, "claude-opus-5").contextWindow, 1000000);
 		assert.equal(find(registered, "claude-opus-4-7").contextWindow, 1000000);
 		assert.equal(find(registered, "claude-fable-5-1").contextWindow, 1000000);
+	});
+
+	it("registers Haiku 5.5 at 1M on every plan without changing its shortcut", () => {
+		for (const settings of [PRO, MAX, EXTRA]) {
+			const registered = applyLongContext(models, settings);
+			const haiku = find(registered, "claude-haiku-5-5");
+			assert.equal(haiku.contextWindow, 1000000);
+			assert.match(haiku.name, /\b1M\b/);
+			assert.equal(claudeCodeModelId(haiku, settings), "claude-haiku-5-5[1m]");
+			assert.equal(resolveModel(registered, "haiku")?.id, "claude-haiku-5-5");
+		}
+	});
+	it("allows forceTwoHundredK to override the measured Haiku 5.5 policy", () => {
+		const settings = { ...PRO, forceTwoHundredK: ["claude-haiku-5-5"] };
+		const haiku = find(applyLongContext(models, settings), "claude-haiku-5-5");
+		assert.equal(haiku.contextWindow, 200000);
+		assert.doesNotMatch(haiku.name, /\b1M\b/);
+		assert.equal(claudeCodeModelId(haiku, settings), "claude-haiku-5-5");
 	});
 
 	it("leaves unmeasured sonnet-4-5 at 200K", () => {

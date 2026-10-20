@@ -1,0 +1,521 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": {
+    "head": "79be126e25e972b9dce1450f74063c3e17527862",
+    "isDirty": true,
+    "contentHash": "57a363382fea2b59269893f81af3bce77ac21e56ca6a907b5a5a9b99d24e1928"
+  },
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0",
+    "sdk": "0.3.303",
+    "claudeCode": "2.1.303"
+  },
+  "checks": [
+    {
+      "name": "04-env-leak",
+      "mode": "offline",
+      "inputs": {
+        "hostTrafficFlag": "absent"
+      },
+      "expected": {
+        "hostFlagAbsent": true,
+        "ordinaryChildFlagAbsent": true,
+        "bridgeChildFlag": "1"
+      },
+      "observed": {
+        "hostFlagAbsent": true,
+        "ordinaryChildFlagAbsent": true,
+        "bridgeChildFlag": "1",
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 0
+    },
+    {
+      "name": "04-parent-markers",
+      "mode": "spawn",
+      "inputs": {
+        "parentMarkers": [
+          "CLAUDECODE",
+          "CLAUDE_CODE_ENTRYPOINT",
+          "CLAUDE_CODE_SSE_PORT",
+          "CLAUDE_CODE_CHILD_SESSION",
+          "CLAUDE_CODE_EXECPATH",
+          "CLAUDE_CODE_MESSAGING_SOCKET",
+          "CLAUDE_CODE_MESSAGING_TOKEN",
+          "CLAUDE_CODE_SESSION_ATTENDED",
+          "CLAUDE_CODE_SESSION_ID",
+          "CLAUDE_EFFORT",
+          "CLAUDE_PID"
+        ],
+        "syntheticAuth": true
+      },
+      "expected": {
+        "inheritedMarkers": [],
+        "entrypoint": "sdk-ts",
+        "callerAuthPreserved": true
+      },
+      "observed": {
+        "inheritedMarkers": [],
+        "entrypoint": "sdk-ts",
+        "callerAuthPreserved": true,
+        "trafficDisabled": true,
+        "autoCompactDisabled": true,
+        "cloudMcpDisabled": true,
+        "hostMarkersUnchanged": true,
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 0
+    },
+    {
+      "name": "04-repo-hooks",
+      "mode": "spawn",
+      "inputs": {
+        "hookEvents": [
+          "SessionStart",
+          "UserPromptSubmit"
+        ],
+        "modelEndpoint": "owned-rejecting-fixture"
+      },
+      "expected": {
+        "providerHookCount": 0,
+        "summaryHookCount": 0,
+        "disableAllHooks": true
+      },
+      "observed": {
+        "cases": [
+          {
+            "kind": "provider",
+            "disableAllHooks": true,
+            "events": [],
+            "hasInit": true,
+            "hookEvents": [],
+            "resultSubtype": "success",
+            "resultIsError": true,
+            "blockedRequestCount": 2,
+            "modelRequestsForwarded": 0,
+            "endpoint": "owned-loopback-rejector"
+          },
+          {
+            "kind": "summary",
+            "disableAllHooks": true,
+            "events": [],
+            "hasInit": true,
+            "hookEvents": [],
+            "resultSubtype": "success",
+            "resultIsError": true,
+            "blockedRequestCount": 2,
+            "modelRequestsForwarded": 0,
+            "endpoint": "owned-loopback-rejector"
+          }
+        ],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 0
+    },
+    {
+      "name": "04-permission-mode",
+      "mode": "offline",
+      "inputs": {
+        "model": "claude-haiku-5-5"
+      },
+      "expected": {
+        "permissionMode": "dontAsk",
+        "allowedTools": [
+          "mcp__custom-tools"
+        ],
+        "tools": []
+      },
+      "observed": {
+        "permissionMode": "dontAsk",
+        "allowedTools": [
+          "mcp__custom-tools"
+        ],
+        "tools": [],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 0
+    },
+    {
+      "name": "04-summary-settings",
+      "mode": "spawn",
+      "inputs": {
+        "userEnvCanary": "fixture-user-loaded",
+        "apiKeyHelperSource": "temporary-project-settings",
+        "negativeControl": "settingSources-empty"
+      },
+      "expected": {
+        "defaultSettingSources": true,
+        "disableAllHooks": true,
+        "claudeMdExcludes": true,
+        "envAndHelperApplied": true,
+        "strictMcpConfig": true
+      },
+      "observed": {
+        "cases": [
+          {
+            "kind": "provider",
+            "defaultSettingSources": true,
+            "disableAllHooks": true,
+            "claudeMdExcludes": [
+              "**/CLAUDE.md",
+              "**/AGENTS.md",
+              "**/.claude/rules/**"
+            ],
+            "strictMcpConfig": true,
+            "toolsEmpty": true,
+            "helperExecuted": true,
+            "envAndHelperApplied": true,
+            "projectCanaryInHelper": false,
+            "probe": {
+              "hasInit": true,
+              "hookEvents": [],
+              "resultSubtype": "success",
+              "resultIsError": true,
+              "blockedRequestCount": 2,
+              "modelRequestsForwarded": 0,
+              "endpoint": "owned-loopback-rejector"
+            }
+          },
+          {
+            "kind": "summary",
+            "defaultSettingSources": true,
+            "disableAllHooks": true,
+            "claudeMdExcludes": [
+              "**/CLAUDE.md",
+              "**/AGENTS.md",
+              "**/.claude/rules/**"
+            ],
+            "strictMcpConfig": true,
+            "toolsEmpty": true,
+            "helperExecuted": true,
+            "envAndHelperApplied": true,
+            "projectCanaryInHelper": false,
+            "probe": {
+              "hasInit": true,
+              "hookEvents": [],
+              "resultSubtype": "success",
+              "resultIsError": true,
+              "blockedRequestCount": 2,
+              "modelRequestsForwarded": 0,
+              "endpoint": "owned-loopback-rejector"
+            }
+          }
+        ],
+        "isolatedControl": {
+          "helperExecuted": false,
+          "probe": {
+            "hasInit": true,
+            "hookEvents": [],
+            "resultSubtype": "success",
+            "resultIsError": true,
+            "blockedRequestCount": 0,
+            "modelRequestsForwarded": 0,
+            "endpoint": "owned-loopback-rejector"
+          }
+        },
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 0
+    },
+    {
+      "name": "04-cc-mcp-off",
+      "mode": "spawn",
+      "inputs": {
+        "legacyStrictMcpConfig": false
+      },
+      "expected": {
+        "strictMcpConfig": true,
+        "strictFlagCount": 1,
+        "cloudMcpDisabled": true,
+        "configUnchanged": true
+      },
+      "observed": {
+        "strictMcpConfig": true,
+        "strictFlagCount": 1,
+        "cloudMcpDisabled": true,
+        "configUnchanged": true,
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 0
+    },
+    {
+      "name": "04-dontask-mcp-call",
+      "mode": "live",
+      "inputs": {
+        "model": "claude-haiku-5-5",
+        "tool": "verify_echo"
+      },
+      "expected": {
+        "permissionMode": "dontAsk",
+        "toolCalls": 1,
+        "returnedValueInFinalAnswer": true
+      },
+      "observed": {
+        "plainAnswer": {
+          "sha256": "c2e3ac47f4a325469c1a2d5f117e463ec943c721986d5d9f09ac4540b7d80526",
+          "byteLength": 5
+        },
+        "finalAnswer": {
+          "sha256": "b0880b5b212828cc9d9aaa465310008bdf8cd29b9f5b04cc0f6333bbb5dcbcf9",
+          "byteLength": 49
+        },
+        "returnedValueInFinalAnswer": true,
+        "toolCalls": [
+          {
+            "name": "verify_echo",
+            "argumentsFingerprint": {
+              "sha256": "c05756329e1661fb71ae1cdb120a5f14f4daab133b1a223ceb8e5086351b286f",
+              "byteLength": 61
+            },
+            "resultFingerprint": {
+              "sha256": "b0880b5b212828cc9d9aaa465310008bdf8cd29b9f5b04cc0f6333bbb5dcbcf9",
+              "byteLength": 49
+            }
+          }
+        ],
+        "usage": {
+          "input": 6,
+          "output": 126,
+          "cacheRead": 8003,
+          "cacheWrite": 1014,
+          "totalTokens": 9149
+        },
+        "apiKeySource": "none",
+        "model": "claude-haiku-5-5",
+        "nativeModel": "claude-haiku-5-5",
+        "authChecks": [
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          },
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          }
+        ],
+        "inits": [
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": [
+              "mcp__custom-tools__verify_echo"
+            ]
+          },
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": [
+              "mcp__custom-tools__verify_echo"
+            ]
+          }
+        ],
+        "requests": [
+          {
+            "sequence": 1,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "eaaec9d907dee5be7f59ae1913f761db9968e9ef52bad20aa89befc88e65cc2e",
+              "byteLength": 9076
+            },
+            "messageCount": 2,
+            "toolCount": 1,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 2507,
+              "cacheWrite": 383
+            }
+          },
+          {
+            "sequence": 2,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "730d7d03943a9dc97e0acef735f0a6061c5d764554eb97606a26a55dedea1b00",
+              "byteLength": 9447
+            },
+            "messageCount": 5,
+            "toolCount": 1,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 2507,
+              "cacheWrite": 482
+            }
+          },
+          {
+            "sequence": 3,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "1ba9f97ef73b8125cbd47fbbe123df0b470df4e00ec5e37bd0cd993cbcdd938e",
+              "byteLength": 9913
+            },
+            "messageCount": 8,
+            "toolCount": 1,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 2989,
+              "cacheWrite": 149
+            }
+          }
+        ],
+        "sdkResults": [
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 2,
+                "outputTokens": 4,
+                "cacheReadInputTokens": 2507,
+                "cacheCreationInputTokens": 383
+              }
+            ]
+          },
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 6,
+                "outputTokens": 126,
+                "cacheReadInputTokens": 8003,
+                "cacheCreationInputTokens": 1014
+              }
+            ]
+          }
+        ],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 3
+    },
+    {
+      "name": "04-at-file-outside-cwd",
+      "mode": "live",
+      "inputs": {
+        "outsideFile": "owned temporary sibling of cwd",
+        "nativeTools": []
+      },
+      "expected": {
+        "fileExpandedInModelRequest": true,
+        "markerReturned": true
+      },
+      "observed": {
+        "permissionMode": "dontAsk",
+        "fileExpandedInModelRequest": true,
+        "markerReturned": true,
+        "finalAnswer": {
+          "sha256": "e60a1d582cc1074259346a1e902a2037b9a1b40de77a5d2eec7baeacd35388e3",
+          "byteLength": 44
+        },
+        "apiKeySource": "none",
+        "model": "claude-haiku-5-5",
+        "nativeModel": "claude-haiku-5-5",
+        "authChecks": [
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          }
+        ],
+        "inits": [
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": []
+          }
+        ],
+        "requests": [
+          {
+            "sequence": 1,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "86ce01880524fa4bb5fe39b3b2d02d2ff4ecd55a0311f47336229853b1bb177e",
+              "byteLength": 9264
+            },
+            "messageCount": 2,
+            "toolCount": 0,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 790
+            }
+          }
+        ],
+        "sdkResults": [
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 2,
+                "outputTokens": 35,
+                "cacheReadInputTokens": 1942,
+                "cacheCreationInputTokens": 790
+              }
+            ]
+          }
+        ],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 1
+    }
+  ],
+  "apiCalls": 4
+}

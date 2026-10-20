@@ -7,11 +7,10 @@
  * syncSharedSession, so `needsRebuild` alone does not stop it: the result goes
  * into the parked query, CC answers over the pre-compaction conversation and
  * reports its full usage, and pi crosses the same threshold at the next
- * boundary. Measured in tests/int-compact-midturn-rebuild.mjs as five
- * compactions in one turn with the reported context going *up*, 76,333 → 77,289.
+ * boundary. Measured in a since-removed mid-turn compaction integration test as
+ * five compactions in one turn with the reported context going *up*, 76,333 → 77,289.
  *
- * The integration test is the one that proves the turn survives; these pin the
- * three things that make it possible: the rewrite is recorded, attributed to
+ * These pin the three things that let the turn survive: the rewrite is recorded, attributed to
  * the pi session that rewrote (a subagent's own AgentSession compacts while the
  * parent sits parked on the Agent tool result — cross-session marks would kill
  * the parent's healthy query), the parked query stops being a routing target,
@@ -23,7 +22,7 @@
  */
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { QueryContext } from "../src/query-state.js";
+import { QueryContext } from "../src/provider/query-context.js";
 
 const { __test } = await import("../src/index.js");
 const {

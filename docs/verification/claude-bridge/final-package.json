@@ -1,0 +1,860 @@
+{
+  "status": "pass",
+  "scope": "Requested resource inventory and applicable structure/loading/filtering checks. Theme checks apply only to provided themes; --pack selects npm artifact checks. This is not a complete behavioral test.",
+  "packageDir": "<repo>/apps/pi-claude-bridge",
+  "checks": [
+    {
+      "name": "package.json object",
+      "status": "pass"
+    },
+    {
+      "name": "npm package identity",
+      "status": "pass",
+      "detail": "An npm artifact needs a name and version; npm checks publishability separately."
+    },
+    {
+      "name": "gallery discovery keyword",
+      "status": "pass",
+      "detail": "The pi-package keyword enables gallery discovery; it is not required for package loading or npm packing."
+    },
+    {
+      "name": "ES module authoring convention",
+      "status": "pass",
+      "detail": "type: module is an authoring recommendation. A different or omitted value is not by itself a Pi load error."
+    },
+    {
+      "name": "pi manifest object",
+      "status": "pass"
+    },
+    {
+      "name": "pi.extensions string array",
+      "status": "pass"
+    },
+    {
+      "name": "extensions portable path: ./src/index.ts",
+      "status": "pass"
+    },
+    {
+      "name": "extensions existing candidate: ./src/index.ts",
+      "status": "pass",
+      "detail": "Candidate existence only; the Pi runtime decides discovery and filtering."
+    },
+    {
+      "name": "extensions contained resource: ./src/index.ts",
+      "status": "pass",
+      "detail": "Published resources must not depend on an outside symlink target."
+    },
+    {
+      "name": "pi.skills",
+      "status": "not_applicable",
+      "detail": "No field or conventional directory for this resource type; providing it is optional."
+    },
+    {
+      "name": "pi.prompts",
+      "status": "not_applicable",
+      "detail": "No field or conventional directory for this resource type; providing it is optional."
+    },
+    {
+      "name": "pi.themes",
+      "status": "not_applicable",
+      "detail": "No field or conventional directory for this resource type; providing it is optional."
+    },
+    {
+      "name": "host not bundled as runtime dependency: @earendil-works/pi-ai",
+      "status": "pass"
+    },
+    {
+      "name": "wildcard host peer: @earendil-works/pi-ai",
+      "status": "pass"
+    },
+    {
+      "name": "host not bundled as runtime dependency: @earendil-works/pi-agent-core",
+      "status": "pass"
+    },
+    {
+      "name": "host not bundled as runtime dependency: @earendil-works/pi-coding-agent",
+      "status": "pass"
+    },
+    {
+      "name": "wildcard host peer: @earendil-works/pi-coding-agent",
+      "status": "pass"
+    },
+    {
+      "name": "host not bundled as runtime dependency: @earendil-works/pi-tui",
+      "status": "pass"
+    },
+    {
+      "name": "wildcard host peer: @earendil-works/pi-tui",
+      "status": "pass"
+    },
+    {
+      "name": "host not bundled as runtime dependency: typebox",
+      "status": "pass"
+    },
+    {
+      "name": "wildcard host peer: typebox",
+      "status": "pass"
+    },
+    {
+      "name": "semantic import and bundle inspection",
+      "status": "skipped",
+      "detail": "Review imports for undeclared runtime dependencies, unsupported host subpaths, and bundled host copies. Static checks do not parse TypeScript or compiled bundles."
+    },
+    {
+      "name": "required source file: package.json",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: README.md",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: LICENSE",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/agents-md.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/attachments.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cc/env.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cc/launch-settings.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cc/query-options.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cc/query.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/cc/request-options.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/config.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/convert.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/extract-tool-results.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/index.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/log-paths.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/logging.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/mcp-server.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/models.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/prompt-capture.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/prompt-stream.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/provider/completion.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/provider/configuration.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/provider/errors.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/provider/prompts.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/provider/query-context.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/provider/registration.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/provider/stream-events.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/provider/stream.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/provider/tool-bridge.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/rate-limit.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/runtime.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/session-cwd.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/session-verify.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/session/continuity.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/session/mirror-store.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/session/sync.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/session/tool-result-carry.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/skills.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/summary/isolated.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/transcript.ts",
+      "status": "pass"
+    },
+    {
+      "name": "required source file: src/usage.ts",
+      "status": "pass"
+    },
+    {
+      "name": "Pi resource worker completed",
+      "status": "pass"
+    },
+    {
+      "name": "Pi resource diagnostics",
+      "status": "pass",
+      "detail": []
+    },
+    {
+      "name": "string/object resource parity",
+      "status": "pass"
+    },
+    {
+      "name": "wildcard filters expose no extra resources",
+      "status": "pass"
+    },
+    {
+      "name": "disable only extensions",
+      "status": "pass"
+    },
+    {
+      "name": "disable only skills",
+      "status": "not_applicable",
+      "detail": "No resources of this type to disable."
+    },
+    {
+      "name": "disable only prompts",
+      "status": "not_applicable",
+      "detail": "No resources of this type to disable."
+    },
+    {
+      "name": "disable only themes",
+      "status": "not_applicable",
+      "detail": "No resources of this type to disable."
+    },
+    {
+      "name": "exact resources.extensions inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [
+          "src/index.ts"
+        ],
+        "actual": [
+          "src/index.ts"
+        ]
+      }
+    },
+    {
+      "name": "exact resources.skills inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact resources.prompts inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact resources.themes inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact names.tools inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact names.commands inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact names.flags inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact names.skills inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact names.prompts inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "exact names.themes inventory",
+      "status": "pass",
+      "detail": {
+        "expected": [],
+        "actual": []
+      }
+    },
+    {
+      "name": "theme contract",
+      "status": "not_applicable",
+      "detail": "This package provides no themes; a theme is not required."
+    },
+    {
+      "name": "npm pack",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: package.json",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: README.md",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: LICENSE",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/agents-md.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/attachments.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/cc/env.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/cc/launch-settings.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/cc/query-options.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/cc/query.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/cc/request-options.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/config.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/convert.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/extract-tool-results.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/index.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/log-paths.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/logging.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/mcp-server.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/models.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/prompt-capture.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/prompt-stream.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/provider/completion.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/provider/configuration.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/provider/errors.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/provider/prompts.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/provider/query-context.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/provider/registration.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/provider/stream-events.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/provider/stream.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/provider/tool-bridge.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/rate-limit.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/runtime.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/session-cwd.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/session-verify.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/session/continuity.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/session/mirror-store.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/session/sync.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/session/tool-result-carry.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/skills.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/summary/isolated.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/transcript.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed file: src/usage.ts",
+      "status": "pass"
+    },
+    {
+      "name": "archive extraction (system tar)",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: package.json",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: README.md",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: LICENSE",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/agents-md.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/attachments.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/cc/env.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/cc/launch-settings.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/cc/query-options.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/cc/query.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/cc/request-options.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/config.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/convert.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/extract-tool-results.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/index.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/log-paths.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/logging.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/mcp-server.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/models.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/prompt-capture.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/prompt-stream.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/provider/completion.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/provider/configuration.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/provider/errors.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/provider/prompts.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/provider/query-context.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/provider/registration.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/provider/stream-events.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/provider/stream.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/provider/tool-bridge.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/rate-limit.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/runtime.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/session-cwd.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/session-verify.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/session/continuity.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/session/mirror-store.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/session/sync.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/session/tool-result-carry.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/skills.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/summary/isolated.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/transcript.ts",
+      "status": "pass"
+    },
+    {
+      "name": "packed contents unchanged: src/usage.ts",
+      "status": "pass"
+    },
+    {
+      "name": "extracted artifact runtime and behavior",
+      "status": "skipped",
+      "detail": "Repeat validation and tool tests with packageDir=<home>/tmp/pi-package-pack-lZrDqD/extracted/package. Install declared production dependencies there first when needed; this command never installs dependencies."
+    }
+  ],
+  "runtime": {
+    "version": "1.2.0",
+    "node": "v24.14.0",
+    "workspace": "<home>/tmp/pi-package-check-AgOW1p",
+    "diagnostics": [],
+    "names": {
+      "tools": [],
+      "commands": [],
+      "flags": [],
+      "skills": [],
+      "prompts": [],
+      "themes": []
+    },
+    "resources": {
+      "extensions": [
+        "src/index.ts"
+      ],
+      "skills": [],
+      "prompts": [],
+      "themes": []
+    },
+    "filterChecks": [
+      {
+        "name": "string/object resource parity",
+        "ok": true,
+        "actual": {
+          "extensions": [
+            "src/index.ts"
+          ],
+          "skills": [],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      {
+        "name": "wildcard filters expose no extra resources",
+        "ok": true,
+        "actual": {
+          "extensions": [
+            "src/index.ts"
+          ],
+          "skills": [],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      {
+        "name": "disable only extensions",
+        "ok": true,
+        "actual": {
+          "extensions": [],
+          "skills": [],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      {
+        "name": "disable only skills",
+        "status": "not_applicable",
+        "detail": "No resources of this type to disable."
+      },
+      {
+        "name": "disable only prompts",
+        "status": "not_applicable",
+        "detail": "No resources of this type to disable."
+      },
+      {
+        "name": "disable only themes",
+        "status": "not_applicable",
+        "detail": "No resources of this type to disable."
+      }
+    ]
+  },
+  "artifact": {
+    "archive": "<home>/tmp/pi-package-pack-lZrDqD/archive/buyong-pi-claude-bridge-0.11.0.tgz",
+    "packageDir": "<home>/tmp/pi-package-pack-lZrDqD/extracted/package",
+    "files": [
+      "LICENSE",
+      "README.md",
+      "package.json",
+      "src/agents-md.ts",
+      "src/attachments.ts",
+      "src/cc/env.ts",
+      "src/cc/launch-settings.ts",
+      "src/cc/query-options.ts",
+      "src/cc/query.ts",
+      "src/cc/request-options.ts",
+      "src/config.ts",
+      "src/convert.ts",
+      "src/extract-tool-results.ts",
+      "src/index.ts",
+      "src/log-paths.ts",
+      "src/logging.ts",
+      "src/mcp-server.ts",
+      "src/models.ts",
+      "src/prompt-capture.ts",
+      "src/prompt-stream.ts",
+      "src/provider/completion.ts",
+      "src/provider/configuration.ts",
+      "src/provider/errors.ts",
+      "src/provider/prompts.ts",
+      "src/provider/query-context.ts",
+      "src/provider/registration.ts",
+      "src/provider/stream-events.ts",
+      "src/provider/stream.ts",
+      "src/provider/tool-bridge.ts",
+      "src/rate-limit.ts",
+      "src/runtime.ts",
+      "src/session-cwd.ts",
+      "src/session-verify.ts",
+      "src/session/continuity.ts",
+      "src/session/mirror-store.ts",
+      "src/session/sync.ts",
+      "src/session/tool-result-carry.ts",
+      "src/skills.ts",
+      "src/summary/isolated.ts",
+      "src/transcript.ts",
+      "src/usage.ts"
+    ]
+  },
+  "limits": [
+    "Factories execute with process access. Environment filtering and resource isolation are not a security sandbox.",
+    "No live model, provider, MCP, command/UI, prompt expansion, live session reload, project trust, registry, or git-update check.",
+    "The theme authoring check rejects invalid unused variables, export colors, and reserved built-in names even when Pi may defer or tolerate them.",
+    "No TypeScript compiler, full import analysis, arbitrary custom integration checks, or proof of dependency freshness."
+  ]
+}

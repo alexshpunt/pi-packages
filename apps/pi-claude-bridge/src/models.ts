@@ -5,6 +5,8 @@
 // `resolveModel` resolves family shortcuts (opus/sonnet/fable) to the newest
 // matching id regardless of sort order; sort order only drives picker display.
 
+import { getModels } from "@earendil-works/pi-ai/compat";
+
 const TWO_HUNDRED_K_CONTEXT = 200_000;
 const ONE_M_CONTEXT = 1_000_000;
 
@@ -55,6 +57,11 @@ export function buildModels<T extends { id: string; [key: string]: any }>(piAiMo
 		}));
 }
 
+/** Read the host catalog for each bridge runtime, keeping compat in one module. */
+export function getBridgeModels() {
+	return buildModels(getModels("anthropic"));
+}
+
 export type LongContextSettings = {
 	plan: "pro" | "max";
 	longContextExtraUsage: boolean;
@@ -69,16 +76,17 @@ export type ClaudeCodeRuntimeModel = {
 };
 
 // Measured Claude Agent SDK behavior - see diag/CONTEXT-SIZE.md:
-// - The `[1m]` suffix is the only reliable way to request 1M context through
-//   the SDK; bare ids serve 200K.
+// - Use `[1m]` explicitly for measured 1M models. Native bare-id defaults can
+//   differ: CC 2.1.303 already serves Haiku 5.5 at 1M without the suffix.
 // - An unentitled `[1m]` id is rejected outright (400/429), failing every turn
 //   — worse than serving 200K, so the default is bare id at 200K and only
 //   measured-good ids get `[1m]`.
 // - The registered contextWindow must match the window the bridge actually
 //   requests, or pi's status bar and compaction threshold misreport.
 // [1m] ids verified to serve 1M on every plan (sonnet-5-5 measured on Pro with
-// and without Extra Usage; opus-5-5 on Max per its run notes). A new model
-// serves 200K until someone measures it (diag/context-size.mjs) and adds it
+// and without Extra Usage; opus-5-5 on Max per its run notes; Haiku 5.5 also
+// verified by 05-haiku55-window). New models are registered conservatively at
+// 200K until someone measures one (diag/context-size.mjs) and adds it
 // here. Known exception unrelated to long context: fable-5 is not included
 // with Pro account without Extra Usage.
 const MEASURED_ONE_M = new Set([
@@ -90,6 +98,7 @@ const MEASURED_ONE_M = new Set([
 	"claude-opus-4-7",
   "claude-sonnet-5",
 	"claude-sonnet-5-5",
+	"claude-haiku-5-5",
 ]);
 
 // Measured exceptions: pi-ai declares 1M and the [1m] id works, but only when

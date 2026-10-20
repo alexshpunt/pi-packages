@@ -4,16 +4,13 @@
 // preserves conversation context (all messages are flattened into
 // each query, so "missed" messages are automatically included).
 //
-// Also tests AskClaude shared mode (sees conversation history) vs
-// isolated mode (clean slate).
-//
 // Requires: pi CLI, Claude Code (for Agent SDK subprocess).
 // Requires: CLAUDE_BRIDGE_TESTING_ALT_PROVIDER (e.g. "minimax")
 // Requires: CLAUDE_BRIDGE_TESTING_ALT_MODEL (e.g. "MiniMax-M2.7-highspeed")
 
 console.log("=== session-resume-test.mjs ===");
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createRpcHarness, requireEnv } from "./lib/rpc-harness.mjs";
@@ -28,18 +25,8 @@ const BRIDGE_MODEL = "claude-bridge/claude-haiku-4-5";
 const WORD_A = `alpha${Math.random().toString(36).slice(2, 6)}`;
 const WORD_B = `beta${Math.random().toString(36).slice(2, 6)}`;
 const WORD_C = `gamma${Math.random().toString(36).slice(2, 6)}`;
-// The AskClaude turns run after the first provider exchange only: once the
-// transcript holds a second "recall the words" exchange, the API refuses the
-// request ("safeguards flagged this message" / "[reasoning_extraction]")
-// regardless of how the question is phrased. This code is stated only by the
-// user, so it tests shared context without the assistant reproducing its own
-// prior output.
-const CODE = `code${Math.random().toString(36).slice(2, 6)}`;
-
 const TEST_CWD_PREFIX = join(tmpdir(), "pi-claude-bridge-session-resume-");
 const TEST_CWD = mkdtempSync(TEST_CWD_PREFIX);
-mkdirSync(join(TEST_CWD, ".pi"));
-writeFileSync(join(TEST_CWD, ".pi", "claude-bridge.json"), '{"askClaude":{"enabled":true}}\n');
 
 // Use harness but with custom args - start on non-provider model
 const harness = createRpcHarness({
@@ -49,43 +36,10 @@ const harness = createRpcHarness({
 	defaultTimeout: TIMEOUT,
 });
 
-const { startAndWait, stop, send, addListener, collectText, DEBUG_LOG, RPC_LOG } = harness;
+const { startAndWait, stop, send, collectText, DEBUG_LOG, RPC_LOG } = harness;
 
-let lastToolResult = null;
-let lastToolArgs = null;
-
-// The AskClaude turns below depend on what the *calling* model chose to put in
-// the tool's prompt, which we do not control. Both assertions are only meaningful
-// when the prompt does not already contain the word being asked about: with the
-// answer embedded, isolated mode echoes it (false failure) and shared mode returns
-// it without consulting history (false pass). Capturing the args is what lets each
-// turn tell those apart instead of guessing from the response alone.
-const promptContains = (word) => JSON.stringify(lastToolArgs ?? {}).toLowerCase().includes(word);
-
-// Custom waitForIdle that captures the last tool result and its call args
-// (harness doesn't do this)
 function waitForIdle(timeout = TIMEOUT) {
-	return new Promise((resolve, reject) => {
-		const timer = setTimeout(() => reject(new Error("Timeout waiting for idle")), timeout);
-		const remove = addListener((msg) => {
-			if (msg.type === "agent_end") {
-				clearTimeout(timer);
-				remove();
-				const calls = (msg.messages ?? [])
-					.filter((m) => m.role === "assistant")
-					.flatMap((m) => (Array.isArray(m.content) ? m.content : []))
-					.filter((b) => b?.type === "toolCall");
-				lastToolArgs = calls.length ? calls[calls.length - 1].arguments : null;
-				// Extract last tool result text for assertion
-				const toolResults = msg.messages?.filter((m) => m.role === "toolResult") ?? [];
-				if (toolResults.length > 0) {
-					const last = toolResults[toolResults.length - 1];
-					lastToolResult = last.content?.map((c) => c.text ?? "").join("") ?? "";
-				}
-				resolve(msg);
-			}
-		});
-	});
+	return harness.waitForEvent("agent_end", timeout);
 }
 
 async function promptAndWait(message) {
@@ -101,7 +55,7 @@ await startAndWait();
 try {
   // Turn 1: Non-provider prompt — establishes context before our provider is used
   console.log("Turn 1: Non-provider prompt (establish context)...");
-  const text1 = await promptAndWait(`The first word is '${WORD_A}'. The access code is '${CODE}'. Acknowledge and be very brief.`);
+  const text1 = await promptAndWait(`The first word is '${WORD_A}'. Acknowledge and be very brief.`);
   if (!text1) throw new Error("Turn 1 produced no text");
   console.log(`  Response: ${text1.slice(0, 80)}`);
 
@@ -121,37 +75,8 @@ try {
   if (!lower2.includes(WORD_A)) throw new Error(`Turn 2 response missing '${WORD_A}': ${text2}`);
   if (!lower2.includes(WORD_B)) throw new Error(`Turn 2 response missing '${WORD_B}': ${text2}`);
 
-  // Turn 3: AskClaude shared mode — should see CODE, which the non-provider model was told
   console.log(`Switching to ${OTHER_PROVIDER}/${OTHER_MODEL}...`);
   await send({ type: "set_model", provider: OTHER_PROVIDER, modelId: OTHER_MODEL });
-
-  console.log("Turn 3: AskClaude shared mode (should see non-provider context)...");
-  const text3 = await promptAndWait(
-    'Use the AskClaude tool with prompt="What is the access code? Reply with just the code."'
-  );
-  console.log(`  AskClaude args: ${JSON.stringify(lastToolArgs)}`);
-  console.log(`  AskClaude result: ${(lastToolResult || "").slice(0, 120)}`);
-  if (promptContains(CODE)) {
-    console.log(`  INCONCLUSIVE: ${OTHER_MODEL} put '${CODE}' in the prompt, so a correct answer proves nothing about shared context`);
-  } else if (!lastToolResult?.toLowerCase().includes(CODE)) {
-    throw new Error(`Turn 3 AskClaude tool result missing '${CODE}': ${lastToolResult}`);
-  }
-
-  // Turn 4: AskClaude isolated mode — should NOT see conversation history
-  console.log("Turn 4: AskClaude isolated mode (should not see context)...");
-  lastToolResult = null;
-  const text4 = await promptAndWait(
-    'Use the AskClaude tool with prompt="What is the access code? If you don\'t know, say UNKNOWN." and isolated=true'
-  );
-  console.log(`  AskClaude args: ${JSON.stringify(lastToolArgs)}`);
-  console.log(`  AskClaude result: ${(lastToolResult || "").slice(0, 120)}`);
-  if (promptContains(CODE)) {
-    // The ~1-in-5 flake: isolated CC is echoing a code it was handed, not one it
-    // recovered from a session it should not have seen.
-    console.log(`  INCONCLUSIVE: ${OTHER_MODEL} put '${CODE}' in the prompt, so isolation cannot be judged from the response`);
-  } else if (lastToolResult?.toLowerCase().includes(CODE)) {
-    throw new Error(`Turn 4 isolated AskClaude should not know '${CODE}' (not in its prompt, so this is a real context leak): ${lastToolResult}`);
-  }
 
   // Turn 5: Non-provider prompt — adds context that provider must see on switch-back
   console.log("Turn 5: Non-provider prompt (creates missed messages)...");
@@ -223,7 +148,7 @@ try {
   console.log(`FAIL: ${e.message}\n${e.stack}`);
   console.log(`  RPC log:    ${RPC_LOG}`);
   console.log(`  Debug log:  ${DEBUG_LOG}`);
-  console.log(`  CC CLI:     ${join(dirname(DEBUG_LOG), "cc-cli-logs")} (look for *-askclaude-*.log near the failing turn)`);
+  console.log(`  CC CLI:     ${join(dirname(DEBUG_LOG), "cc-cli-logs")} (look for *-provider-*.log near the failing turn)`);
 } finally {
   await stop();
   if (TEST_CWD.startsWith(TEST_CWD_PREFIX) && TEST_CWD.length > TEST_CWD_PREFIX.length) {

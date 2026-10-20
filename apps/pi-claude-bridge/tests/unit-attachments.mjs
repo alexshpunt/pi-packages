@@ -24,8 +24,8 @@ describe("collectCarriedAttachments", () => {
 			attach("a4", "u1", "edited_text_file", "/b.js"),
 		]);
 		// edited_text_file is deliberately not carried: the edit is already in pi's
-		// history as a tool call, and it usually hangs off a tool-result record that
-		// has no prompt ordinal. See diag/attachment-coverage.mjs.
+		// history as a tool call; supporting tool-result anchors does not add this
+		// duplicate snapshot kind to the carry policy.
 		assert.deepEqual(carried.map((c) => c.attachment.filename), ["/a.js"]);
 	});
 
@@ -40,7 +40,7 @@ describe("collectCarriedAttachments", () => {
 		assert.equal(carried[0].parentText, "review @a.js");
 	});
 
-	it("ignores an attachment whose parent is not a prompt", () => {
+	it("ignores an attachment whose parent cannot be resolved", () => {
 		const carried = collectCarriedAttachments([
 			user("u1", "first"),
 			attach("a1", "missing-uuid", "file", "/a.js"),
@@ -100,5 +100,38 @@ describe("attachments chained to other attachments", () => {
 		]);
 		assert.deepEqual(carried.map((c) => c.attachment.filename), ["/a.js"]);
 		assert.equal(carried[0].userOrdinal, 0);
+	});
+});
+
+describe("session context anchors", () => {
+	it("keeps every declared session-context kind at its original prompt", () => {
+		const kinds = ["environment", "model", "output_style_instructions", "total_tokens_reminder", "output_style", "session_context", "date", "credential_org", "instructions"];
+		const records = [user("u1", "original prompt"), ...kinds.map((kind, i) => attach(`a${i}`, i ? `a${i - 1}` : "u1", kind))];
+		const carried = collectCarriedAttachments(records);
+		assert.deepEqual(carried.map(item => item.attachment.type), kinds);
+		const placed = placeCarriedAttachments(carried, [{ role: "user", content: "original prompt" }, { role: "assistant", content: "answer" }, { role: "user", content: "next prompt" }]);
+		assert.equal(placed.skipped.length, 0);
+		assert.deepEqual(placed.attachments.map(item => item.afterIndex), kinds.map(() => 0));
+	});
+	it("anchors chained reminders by tool-use id even inside a parallel result group", () => {
+		const carried = collectCarriedAttachments([
+			user("u1", "prompt"), toolResultUser("r1"), attach("a1", "r1", "total_tokens_reminder"), attach("a2", "a1", "session_context"),
+		]);
+		assert.deepEqual(carried.map(item => item.toolUseId), ["t1", "t1"]);
+		const placed = placeCarriedAttachments(carried, [
+			{ role: "assistant", content: [] },
+			{ role: "user", content: [{ type: "tool_result", tool_use_id: "other", content: "other" }, { type: "tool_result", tool_use_id: "t1", content: "ok" }] },
+		]);
+		assert.equal(placed.skipped.length, 0);
+		assert.deepEqual(placed.attachments.map(item => item.afterIndex), [1, 1]);
+		const missing = placeCarriedAttachments(carried, [{ role: "user", content: "not the old tool result" }]);
+		assert.equal(missing.attachments.length, 0);
+		assert.equal(missing.skipped.length, 2);
+	});
+	it("does not attach old session context to a changed prompt", () => {
+		const carried = collectCarriedAttachments([user("u1", "old prompt"), attach("a1", "u1", "instructions")]);
+		const placed = placeCarriedAttachments(carried, [{ role: "user", content: "new prompt" }]);
+		assert.deepEqual(placed.attachments, []);
+		assert.match(placed.skipped[0], /changed/);
 	});
 });

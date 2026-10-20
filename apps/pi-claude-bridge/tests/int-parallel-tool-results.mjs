@@ -23,7 +23,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { convertPiMessages } from "../src/convert.js";
 
 const CWD = process.cwd();
-const MODEL = "claude-haiku-4-5";
+const MODEL = "claude-haiku-5-5";
 const TOKENS = ["ZEPHYR", "QUARTZ", "MARLIN"];
 
 /** Pi-shaped history: one assistant turn calling read three times, one pi
@@ -59,9 +59,10 @@ test("a rebuilt parallel tool call keeps every result on disk", { timeout: 30_00
 	const results = toolResultBlocks(session.jsonlPath);
 
 	assert.equal(results.length, TOKENS.length, `expected ${TOKENS.length} tool_result blocks, got ${results.length}`);
-	for (const token of TOKENS) {
-		assert.ok(results.some((b) => typeof b.content === "string" && b.content.includes(token)),
-			`${token} missing from the rebuilt session — results: ${JSON.stringify(results.map((b) => b.content))}`);
+	for (const [index, token] of TOKENS.entries()) {
+		assert.equal(results[index].tool_use_id, `toolu_par${index}`, "each result must retain its matching call id");
+		assert.deepEqual(results[index].content, [{ type: "text", text: `The token in this file is ${token}.` }],
+			`${token} must retain the live MCP block shape in its own result`);
 	}
 });
 

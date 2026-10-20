@@ -1,0 +1,622 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": {
+    "head": "f0df597cb8f584bfdd17d39c382e33ed5f390bfe",
+    "isDirty": true,
+    "contentHash": "d95bcd9c5e6d5bace4fcefbe151776d375bcc49ae02c1c013416f926673f2912"
+  },
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0",
+    "sdk": "0.3.303",
+    "claudeCode": "2.1.303"
+  },
+  "checks": [
+    {
+      "name": "05-thinking-override",
+      "mode": "live",
+      "inputs": {
+        "model": "claude-haiku-5-5",
+        "cases": [
+          "settings-false-high",
+          "env-zero-high",
+          "settings-true-off"
+        ]
+      },
+      "expected": {
+        "highThinkingBlocks": true,
+        "offThinkingBlocks": 0,
+        "explicitAdaptive": true
+      },
+      "observed": {
+        "cases": [
+          {
+            "case": "settings-false-high",
+            "thinkingBlocks": 1,
+            "thinking": null,
+            "effort": "high",
+            "requestThinkingType": "adaptive",
+            "requestDisplay": "updates",
+            "hasExtraDisplay": true
+          },
+          {
+            "case": "env-zero-high",
+            "thinkingBlocks": 0,
+            "thinking": null,
+            "effort": "high",
+            "requestThinkingType": "adaptive",
+            "requestDisplay": "updates",
+            "hasExtraDisplay": true
+          },
+          {
+            "case": "settings-true-off",
+            "thinkingBlocks": 0,
+            "thinking": null,
+            "effort": null,
+            "requestThinkingType": "adaptive",
+            "requestDisplay": "updates",
+            "hasExtraDisplay": false
+          }
+        ],
+        "apiKeySource": "none",
+        "model": "claude-haiku-5-5",
+        "nativeModel": "claude-haiku-5-5",
+        "authChecks": [
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          },
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          },
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          }
+        ],
+        "inits": [
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": []
+          },
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": []
+          },
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": []
+          }
+        ],
+        "requests": [
+          {
+            "sequence": 1,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "35d21eb72e1ec90212f48ccef508c5afb56dbe243b32781deb42cded0b365f95",
+              "byteLength": 8901
+            },
+            "messageCount": 2,
+            "toolCount": 0,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 590
+            }
+          },
+          {
+            "sequence": 2,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "4b0323b10ce5edb23a08c00b3399e6b10c5e18c7d34f2ac23d6c510027d190b8",
+              "byteLength": 11053
+            },
+            "messageCount": 5,
+            "toolCount": 0,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 2532,
+              "cacheWrite": 477
+            }
+          },
+          {
+            "sequence": 3,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "2ec2a1ed7201f6fbcc8292e032f37ccb0a75338a2bd62a35ffcbc3dcbe779285",
+              "byteLength": 11382
+            },
+            "messageCount": 8,
+            "toolCount": 0,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 3009,
+              "cacheWrite": 66
+            }
+          }
+        ],
+        "sdkResults": [
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 2,
+                "outputTokens": 417,
+                "cacheReadInputTokens": 1942,
+                "cacheCreationInputTokens": 590
+              }
+            ]
+          },
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 4,
+                "outputTokens": 423,
+                "cacheReadInputTokens": 4474,
+                "cacheCreationInputTokens": 1067
+              }
+            ]
+          },
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 6,
+                "outputTokens": 429,
+                "cacheReadInputTokens": 7483,
+                "cacheCreationInputTokens": 1133
+              }
+            ]
+          }
+        ],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        },
+        "errorCode": "thinking-selection-not-applied"
+      },
+      "status": "fail",
+      "apiCalls": 3
+    },
+    {
+      "name": "05-prompt-refresh",
+      "mode": "live",
+      "inputs": {
+        "turns": [
+          "append-A",
+          "append-A",
+          "append-B"
+        ],
+        "model": "claude-haiku-5-5",
+        "reasoning": "off"
+      },
+      "expected": {
+        "unchangedAppendCachePreserved": true,
+        "currentAppendOnResume": true,
+        "previousAppendAbsent": true
+      },
+      "observed": {
+        "turns": [
+          {
+            "turn": 1,
+            "system": {
+              "sha256": "0b1ac3a2f0a3abda75a6e3b3c8d3011104b8728d2b21de0726d535e1a02df880",
+              "byteLength": 16302
+            },
+            "hasAlpha": true,
+            "hasBravo": false,
+            "resume": null,
+            "snapshot": "default",
+            "usage": {
+              "input": 2,
+              "cacheRead": 0,
+              "cacheWrite": 5441
+            }
+          },
+          {
+            "turn": 2,
+            "system": {
+              "sha256": "0b1ac3a2f0a3abda75a6e3b3c8d3011104b8728d2b21de0726d535e1a02df880",
+              "byteLength": 16302
+            },
+            "hasAlpha": true,
+            "hasBravo": false,
+            "resume": "d8a8cc6a-c2f3-4d53-bc2f-216ab0d54fe1",
+            "snapshot": "default",
+            "usage": {
+              "input": 2,
+              "cacheRead": 5056,
+              "cacheWrite": 441
+            }
+          },
+          {
+            "turn": 3,
+            "system": {
+              "sha256": "0b1ac3a2f0a3abda75a6e3b3c8d3011104b8728d2b21de0726d535e1a02df880",
+              "byteLength": 16302
+            },
+            "hasAlpha": true,
+            "hasBravo": false,
+            "resume": "d8a8cc6a-c2f3-4d53-bc2f-216ab0d54fe1",
+            "snapshot": "default",
+            "usage": {
+              "input": 2,
+              "cacheRead": 5472,
+              "cacheWrite": 81
+            }
+          }
+        ],
+        "previousInputTokens": 5443,
+        "unchangedAppendCachePreserved": false,
+        "currentAppendOnResume": false,
+        "apiKeySource": "none",
+        "model": "claude-haiku-5-5",
+        "nativeModel": "claude-haiku-5-5",
+        "authChecks": [
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          },
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          },
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          }
+        ],
+        "inits": [
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": []
+          },
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": []
+          },
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": []
+          }
+        ],
+        "requests": [
+          {
+            "sequence": 1,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "d8b1eba4fed64bca5fff20bfaaa0846c76b88d3c18243a5a9c366ce055054239",
+              "byteLength": 18640
+            },
+            "messageCount": 2,
+            "toolCount": 0,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 0,
+              "cacheWrite": 5441
+            }
+          },
+          {
+            "sequence": 2,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "dfde35690897e104e01da547899c7242868e0a8861fea331bf507a430d9cb66c",
+              "byteLength": 18912
+            },
+            "messageCount": 5,
+            "toolCount": 0,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 5056,
+              "cacheWrite": 441
+            }
+          },
+          {
+            "sequence": 3,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "68ac4dd4b503007707b65a985c712a79932a5f6d9248a45d267860be8a5c42fc",
+              "byteLength": 19184
+            },
+            "messageCount": 8,
+            "toolCount": 0,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 5472,
+              "cacheWrite": 81
+            }
+          }
+        ],
+        "sdkResults": [
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 2,
+                "outputTokens": 4,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 5441
+              }
+            ]
+          },
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 4,
+                "outputTokens": 8,
+                "cacheReadInputTokens": 5056,
+                "cacheCreationInputTokens": 5882
+              }
+            ]
+          },
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 6,
+                "outputTokens": 12,
+                "cacheReadInputTokens": 10528,
+                "cacheCreationInputTokens": 5963
+              }
+            ]
+          }
+        ],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        },
+        "errorCode": "resumed-prompt-stale"
+      },
+      "status": "fail",
+      "apiCalls": 3
+    },
+    {
+      "name": "05-model-typed",
+      "mode": "spawn",
+      "inputs": {
+        "paths": [
+          "provider",
+          "summary"
+        ],
+        "reasoning": "high"
+      },
+      "expected": {
+        "typedModel": true,
+        "extraModel": false,
+        "modelArgumentCount": 1
+      },
+      "observed": {
+        "queries": [
+          {
+            "path": "provider",
+            "options": {
+              "model": "claude-haiku-5-5",
+              "effort": "high",
+              "permissionMode": "dontAsk",
+              "strictMcpConfig": true,
+              "tools": [],
+              "mcpServers": [],
+              "extraArgs": {
+                "model": "claude-haiku-5-5",
+                "thinking-display": "summarized"
+              },
+              "settings": {
+                "autoMemoryEnabled": false,
+                "includeGitInstructions": false,
+                "disableAllHooks": true,
+                "claudeMdExcludes": [
+                  "**/CLAUDE.md",
+                  "**/AGENTS.md",
+                  "**/.claude/rules/**"
+                ]
+              },
+              "env": {
+                "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+                "DISABLE_AUTO_COMPACT": "1",
+                "ENABLE_CLAUDEAI_MCP_SERVERS": "0"
+              },
+              "systemPrompt": {
+                "type": "preset",
+                "preset": "claude_code",
+                "append": {
+                  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                  "byteLength": 0
+                }
+              }
+            },
+            "typedModel": null,
+            "hasExtraModel": true,
+            "modelArguments": [
+              "claude-haiku-5-5"
+            ],
+            "thinkingArguments": [],
+            "displayArguments": [
+              "summarized"
+            ]
+          },
+          {
+            "path": "summary",
+            "options": {
+              "model": "claude-haiku-5-5",
+              "effort": "high",
+              "strictMcpConfig": true,
+              "persistSession": false,
+              "maxTurns": 1,
+              "tools": [],
+              "mcpServers": [],
+              "extraArgs": {},
+              "settings": {
+                "autoMemoryEnabled": false,
+                "disableAllHooks": true,
+                "claudeMdExcludes": [
+                  "**/CLAUDE.md",
+                  "**/AGENTS.md",
+                  "**/.claude/rules/**"
+                ]
+              },
+              "env": {
+                "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+                "DISABLE_AUTO_COMPACT": "1",
+                "ENABLE_CLAUDEAI_MCP_SERVERS": "0"
+              },
+              "systemPrompt": {
+                "sha256": "38ccd5fbd50efd9a6eec37e1a4679b8375320c1a9fba1c3792136441b5bfccf5",
+                "byteLength": 16
+              }
+            },
+            "typedModel": "claude-haiku-5-5",
+            "hasExtraModel": false,
+            "modelArguments": [
+              "claude-haiku-5-5"
+            ],
+            "thinkingArguments": [],
+            "displayArguments": []
+          }
+        ],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        },
+        "errorCode": "model-not-typed-once"
+      },
+      "status": "fail",
+      "apiCalls": 0
+    },
+    {
+      "name": "05-haiku55-window",
+      "mode": "live",
+      "inputs": {
+        "model": "claude-haiku-5-5",
+        "reasoning": "off"
+      },
+      "expected": {
+        "contextWindow": 1000000,
+        "nativeModel": "claude-haiku-5-5[1m]",
+        "pickerHasOneM": true
+      },
+      "observed": {
+        "registeredContextWindow": 200000,
+        "nativeModel": "claude-haiku-5-5",
+        "pickerHasOneM": false,
+        "servedContextWindows": [
+          1000000
+        ],
+        "apiKeySource": "none",
+        "model": "claude-haiku-5-5",
+        "authChecks": [
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          }
+        ],
+        "inits": [
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "claudeCode": "2.1.303",
+            "permissionMode": "dontAsk",
+            "tools": []
+          }
+        ],
+        "requests": [
+          {
+            "sequence": 1,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "21ba03486a755c4048d65e8afcb1dfbab9e4ac6b85c833ce1b3a675e398b52af",
+              "byteLength": 8849
+            },
+            "messageCount": 2,
+            "toolCount": 0,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 1942,
+              "cacheWrite": 567
+            }
+          }
+        ],
+        "sdkResults": [
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 2,
+                "outputTokens": 4,
+                "cacheReadInputTokens": 1942,
+                "cacheCreationInputTokens": 567
+              }
+            ]
+          }
+        ],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        },
+        "errorCode": "haiku-window-mismatch"
+      },
+      "status": "fail",
+      "apiCalls": 1
+    }
+  ],
+  "apiCalls": 7
+}

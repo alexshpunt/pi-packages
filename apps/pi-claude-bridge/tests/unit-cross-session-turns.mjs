@@ -22,6 +22,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { getSessionPath } from "cc-session-io";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Type } from "typebox";
 
 // Before importing the module: the bridge resolves config and CC paths at import
 // time, and the fake model below exercises claudeCodeModelId's pricing lookup —
@@ -77,6 +78,14 @@ const say = (text) => asst([{ type: "text", text }]);
 
 const call = (sessionId, messages) => streamSimple(model, { messages, tools: [] }, { sessionId });
 const settle = () => new Promise((r) => setTimeout(r, 20));
+// A served tool: only then does a scripted tool_use end pi's stream at the tool
+// boundary, leaving the query parked until pi delivers the result.
+const tools = [{ name: "read", description: "Read a fixture file.", parameters: Type.Object({ path: Type.String() }) }];
+const callWithTool = (sessionId, messages, signal) => streamSimple(model, { messages, tools }, { sessionId, signal });
+const settled = async (sessionId) => {
+	for (let i = 0; i < 400 && [...__test.activeQueryContexts].some((c) => c.piSessionId === sessionId); i++) await new Promise((r) => setTimeout(r, 5));
+	assert.ok(![...__test.activeQueryContexts].some((c) => c.piSessionId === sessionId), `${sessionId} settled`);
+};
 
 beforeEach(() => {
 	resetSharedSession();
@@ -86,14 +95,17 @@ beforeEach(() => {
 		const script = scripts.shift();
 		if (!script) throw new Error("no fake script queued");
 		calls.push({ label: script.label, resume: options.resume });
+		// close() ends a query parked on a gate, as killing the CLI would.
+		let closed = false, markClosed;
+		const closing = new Promise((r) => { markClosed = r; });
 		const gen = (async function* () {
 			for (const step of script.steps) {
-				if (typeof step === "function") { await step(); continue; }
+				if (typeof step === "function") { await Promise.race([step(), closing]); if (closed) return; continue; }
 				yield options.resume && step.type === "system" ? { ...step, session_id: options.resume } : step;
 			}
 		})();
 		gen.interrupt = async () => {};
-		gen.close = () => {};
+		gen.close = () => { closed = true; markClosed(); };
 		return gen;
 	});
 });
@@ -236,5 +248,104 @@ describe("cross-session conversation isolation", () => {
 
 		assert.equal(calls.at(-1).resume, "cc-P",
 			"the parent resumes its own conversation after a child ran while it backed off");
+	});
+});
+
+describe("reentrancy is judged within the calling session", () => {
+	/** P's first turn parks on a served tool call; finish() delivers the result. */
+	async function parkP(P) {
+		const g = gate();
+		scripts.push({ label: "P parks", steps: [init("cc-P"), ...toolUse("toolu_P1"), g.wait, result("parent answer")] });
+		const history = [user("parent task")];
+		const parked = await callWithTool(P, history).result();
+		assert.equal(parked.stopReason, "toolUse", "P sits at its tool call");
+		return {
+			async finish() {
+				const finishing = callWithTool(P, [...history, parked, toolResult("toolu_P1")]).result();
+				g.open();
+				assert.equal((await finishing).stopReason, "stop");
+				await settled(P);
+				assert.equal(getSharedSession(P).sessionId, "cc-P", "P completes on its own conversation");
+				assert.equal(getSharedSession(P).cursor, 3);
+			},
+		};
+	}
+
+	it("another session parked at a tool call does not turn a shortened history into a clean start", async () => {
+		const P = "pi-parked", B = "pi-folded";
+		const p = await parkP(P);
+
+		const setup = user("setup"), first = user("first");
+		scripts.push({ label: "B 1", steps: [init("cc-B"), result("b1")] });
+		const a1 = await callWithTool(B, [setup, first]).result();
+		await settled(B);
+		scripts.push({ label: "B 2", steps: [init("cc-B2"), result("b2")] });
+		await callWithTool(B, [setup, first, a1, user("second")]).result();
+		await settled(B);
+		assert.equal(getSharedSession(B).cursor, 4);
+
+		// An extension folds B's history without any pi event: two priors replace four.
+		scripts.push({ label: "B folded", steps: [init("cc-B3"), result("b3")] });
+		await callWithTool(B, [user("summary of B so far"), say("noted"), user("after fold")]).result();
+		await settled(B);
+		assert.equal(calls.at(-1).resume, "cc-B", "B rebuilds its own conversation from the folded history and resumes it");
+		assert.match(readFileSync(getSessionPath("cc-B", process.cwd(), claudeDir), "utf8"), /summary of B so far/);
+		assert.equal(getSharedSession(B).sessionId, "cc-B");
+		assert.equal(getSharedSession(B).cursor, 3);
+
+		await p.finish();
+	});
+
+	it("an aborted session's orphaned tool result advances its own cursor while another session runs", async () => {
+		const P = "pi-running", B = "pi-aborted";
+		const p = await parkP(P);
+
+		const first = user("first");
+		scripts.push({ label: "B 1", steps: [init("cc-B"), result("b1")] });
+		const a1 = await callWithTool(B, [first]).result();
+		await settled(B);
+		const abort = new AbortController();
+		scripts.push({ label: "B aborted", steps: [init("cc-B2"), ...toolUse("toolu_B2"), gate().wait, result("unreachable")] });
+		const history = [first, a1, user("second")];
+		const parked = await callWithTool(B, history, abort.signal).result();
+		assert.equal(parked.stopReason, "toolUse");
+		abort.abort();
+		await settled(B);
+
+		const queued = calls.length;
+		const orphan = await callWithTool(B, [...history, parked, toolResult("toolu_B2")], abort.signal).result();
+		assert.equal(orphan.stopReason, "stop");
+		assert.equal(orphan.content.length, 0);
+		assert.equal(calls.length, queued, "no query starts for the orphaned result");
+		assert.equal(getSharedSession(B).cursor, 5, "B's cursor counts the orphaned result");
+		assert.equal(getSharedSession(B).sessionId, "cc-B");
+		assert.equal(getSharedSession(P), null, "P's mirror is untouched until its own turn completes");
+
+		await p.finish();
+	});
+
+	it("a user-only call while the same session's query is parked stays reentrant and preserves that session", async () => {
+		const B = "pi-reentrant";
+		const first = user("first");
+		scripts.push({ label: "B 1", steps: [init("cc-B"), result("b1")] });
+		const a1 = await callWithTool(B, [first]).result();
+		await settled(B);
+		const g = gate();
+		scripts.push({ label: "B parks", steps: [init("cc-B2"), ...toolUse("toolu_B2"), g.wait, result("b2")] });
+		const history = [first, a1, user("second")];
+		const parked = await callWithTool(B, history).result();
+		assert.equal(parked.stopReason, "toolUse");
+
+		scripts.push({ label: "B reentrant", steps: [init("cc-B-side"), result("side answer")] });
+		await callWithTool(B, [user("side question")]).result();
+		assert.equal(calls.at(-1).resume, undefined, "the reentrant query starts clean");
+		assert.equal(getSharedSession(B).sessionId, "cc-B", "and leaves the session's conversation in place");
+
+		const finishing = callWithTool(B, [...history, parked, toolResult("toolu_B2")]).result();
+		g.open();
+		assert.equal((await finishing).stopReason, "stop");
+		await settled(B);
+		assert.equal(getSharedSession(B).sessionId, "cc-B");
+		assert.equal(getSharedSession(B).cursor, 5);
 	});
 });

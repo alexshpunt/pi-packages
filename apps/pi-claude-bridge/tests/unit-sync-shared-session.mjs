@@ -8,6 +8,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSession, deleteSession, openSession } from "cc-session-io";
+import { withCapturedQueries } from "../tools/verify/capture.js";
+import { fixtureUser } from "../tools/verify/harness.js";
 
 const { __test } = await import("../src/index.js");
 
@@ -99,7 +101,7 @@ describe("syncSharedSession", () => {
 			assert.equal(
 				result.sessionId,
 				null,
-				"a context shorter than the cursor — a subagent, or AskClaude — must start a fresh Claude Code session instead of resuming the parent's",
+				"a reentrant context shorter than the cursor must start a fresh Claude Code session instead of resuming the parent's",
 			);
 			assert.equal(
 				result.preserveSharedSession,
@@ -159,5 +161,29 @@ describe("syncSharedSession", () => {
 			deleteSession(sessionId, cwd);
 			rmSync(cwd, { recursive: true, force: true });
 		}
+	});
+
+	it("rebuilds history when the bridge model changes without invoking a real model", async () => {
+		const observed = await withCapturedQueries({ appDir: process.cwd(), modelId: "claude-haiku-5-5", isLive: false, apiCalls: 0 }, async (harness, captures, workspace) => {
+			const first = fixtureUser("Before changing models");
+			const answer = await harness.turn({ messages: [first], tools: [] });
+			await harness.waitForIdle();
+			const id = captures[0].sessionId;
+			const seeded = createSession({ sessionId: id, projectPath: workspace.cwd, claudeDir: process.env.CLAUDE_CONFIG_DIR });
+			seeded.importMessages([{ role: "user", content: first.content }, { role: "assistant", content: [{ type: "text", text: "fixture answer" }] }]);
+			seeded.save();
+			harness.runtime.markRebuildForSession(workspace.sessionId, "unit:model-change");
+			const model = { ...harness.model, ...harness.runtime.MODELS.find(item => item.id === "claude-opus-4-5") };
+			const result = await harness.runtime.streamClaudeAgentSdk(model, { messages: [first, answer, fixtureUser("After changing models")], tools: [] }, { sessionId: workspace.sessionId }).result();
+			await harness.waitForIdle();
+			const imported = openSession({ sessionId: id, projectPath: workspace.cwd, claudeDir: process.env.CLAUDE_CONFIG_DIR });
+			return { stopReason: result.stopReason, queryCount: captures.length, model: captures[1].options.model, sameId: captures[1].options.resume === id,
+				importedModel: imported.messages.find(record => record.type === "assistant").message.model };
+		});
+		assert.equal(observed.stopReason, "stop");
+		assert.equal(observed.queryCount, 2);
+		assert.equal(observed.sameId, true);
+		assert.equal(observed.model, "claude-opus-4-5");
+		assert.equal(observed.importedModel, "claude-opus-4-5");
 	});
 });

@@ -56,7 +56,7 @@ const { messages, skipped } = loadPiMessages(path);
 const roles = {};
 for (const m of messages) roles[m.role] = (roles[m.role] ?? 0) + 1;
 
-const { anthropicMessages, sanitizedIds } = convertPiMessages(messages);
+const { anthropicMessages, sanitizedIds } = convertPiMessages(messages, new Map());
 const repaired = repairToolPairing(anthropicMessages);
 const records = transcript(messages);
 const renamed = [...sanitizedIds.entries()].filter(([from, to]) => from !== to);

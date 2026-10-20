@@ -8,26 +8,21 @@ import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 
+export type ClaudePlan = "pro" | "max";
+
 export interface Config {
 	/** Date (YYYY-MM-DD) the one-time startup notice was shown. Written by the extension, not the user. */
 	startupNoticeShown?: string;
-	askClaude?: {
-		enabled?: boolean;
-		name?: string;
-		label?: string;
-		description?: string;
-		defaultMode?: "full" | "read" | "none";
-		defaultIsolated?: boolean;
-		allowFullMode?: boolean;
-		appendSkills?: boolean;
-	};
+	/** Plan detected from the Claude Code login. Written by the extension, not the user;
+	 *  provider.plan overrides it. Read from the global config only. */
+	detectedPlan?: ClaudePlan;
 	/** Low-level Claude Agent SDK plumbing. Most users won't need these. */
 	provider?: {
-		strictMcpConfig?: boolean;
 		autoMemoryEnabled?: boolean;
 		pathToClaudeCodeExecutable?: string;
-		// Subscription plan tier. Setting to "max" enables Opus 4.6 at 1M context
-		plan?: "pro" | "max";
+		// Subscription plan tier. Setting to "max" enables Opus 4.6 at 1M context.
+		// When unset, the plan detected from the Claude Code login applies.
+		plan?: ClaudePlan;
 		// Set to true to opt into metered 1M context usage ("extra usage" in
 		// Anthropic billing). Enables Sonnet 4.6 [1m] on every plan and Opus 4.6
 		// [1m] on Pro.
@@ -56,14 +51,15 @@ export function globalConfigPath(): string {
 	return join(getAgentDir(), "claude-bridge.json");
 }
 
-/** Record today's date in the global config so the startup notice shows once, preserving every
- *  other field. Returns the config path for display either way.
+/** Merge extension-written fields into the global config, preserving every other field.
+ *  Returns the config path for display either way.
  *
  *  Parses directly rather than through tryParseJson, which reports an unparseable file as `{}`:
- *  spreading that would replace a user's whole config with just this marker the first time they
- *  leave a trailing comma in it. Losing the notice is the cheaper failure, so the write is
- *  skipped and the notice simply shows again next session. */
-export function markStartupNoticeShown(): string {
+ *  spreading that would replace a user's whole config with just these fields the first time they
+ *  leave a trailing comma in it. Losing the marker is the cheaper failure, so the write is
+ *  skipped and the extension simply writes again next session. `fields` receives the existing
+ *  config and returns null when nothing needs writing. */
+function updateGlobalConfig(fields: (existing: Partial<Config>) => Partial<Config> | null): string {
 	const path = globalConfigPath();
 	let existing: Partial<Config> = {};
 	if (existsSync(path)) {
@@ -74,11 +70,47 @@ export function markStartupNoticeShown(): string {
 			return path;
 		}
 	}
-	// en-CA renders YYYY-MM-DD in local time; toISOString() would report UTC.
-	const next = { ...existing, startupNoticeShown: new Date().toLocaleDateString("en-CA") };
+	const update = fields(existing);
+	if (update === null) return path;
 	mkdirSync(dirname(path), { recursive: true });
-	writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
+	writeFileSync(path, `${JSON.stringify({ ...existing, ...update }, null, 2)}\n`);
 	return path;
+}
+
+/** Record today's date in the global config so the startup notice shows once. */
+export function markStartupNoticeShown(): string {
+	// en-CA renders YYYY-MM-DD in local time; toISOString() would report UTC.
+	return updateGlobalConfig(() => ({ startupNoticeShown: new Date().toLocaleDateString("en-CA") }));
+}
+
+/** Map Claude Code's account subscription label ("Claude Max" from CC 2.1.303) to a plan tier,
+ *  or undefined when the label cannot decide it. Team plans stay undecided: only Team Premium
+ *  includes Max-tier long context, and the label does not tell the two apart. */
+export function planFromSubscriptionType(subscriptionType: string | undefined): ClaudePlan | undefined {
+	const words = subscriptionType?.toLowerCase().split(/[^a-z]+/) ?? [];
+	if (words.includes("team")) return undefined;
+	if (words.includes("max") || words.includes("enterprise")) return "max";
+	if (words.includes("pro")) return "pro";
+	return undefined;
+}
+
+/** The plan an earlier detection recorded, when the global config holds a valid one. */
+export function readDetectedPlan(): ClaudePlan | undefined {
+	const plan = tryParseJson(globalConfigPath()).detectedPlan;
+	return plan === "pro" || plan === "max" ? plan : undefined;
+}
+
+/** Record the detected plan in the global config, skipping an unchanged value. */
+export function recordDetectedPlan(plan: ClaudePlan): void {
+	updateGlobalConfig((existing) => (existing.detectedPlan === plan ? null : { detectedPlan: plan }));
+}
+
+/** Detect an obsolete enabled tool only for its process-local removal notice. */
+export function hasRemovedToolEnabled(cwd: string): boolean {
+	const enabled = (config: Config): unknown =>
+		(config as Config & { askClaude?: { enabled?: unknown } }).askClaude?.enabled;
+	const project = enabled(tryParseJson(join(cwd, CONFIG_DIR_NAME, "claude-bridge.json")));
+	return (project === undefined ? enabled(tryParseJson(globalConfigPath())) : project) === true;
 }
 
 export function loadConfig(cwd: string): Config {
@@ -86,7 +118,6 @@ export function loadConfig(cwd: string): Config {
 	const project = tryParseJson(join(cwd, CONFIG_DIR_NAME, "claude-bridge.json"));
 	return {
 		startupNoticeShown: project.startupNoticeShown ?? global.startupNoticeShown,
-		askClaude: { ...global.askClaude, ...project.askClaude },
 		provider: { ...global.provider, ...project.provider },
 	};
 }

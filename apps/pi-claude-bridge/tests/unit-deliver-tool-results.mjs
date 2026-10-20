@@ -8,7 +8,7 @@
  */
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { QueryContext } from "../src/query-state.js";
+import { QueryContext } from "../src/provider/query-context.js";
 
 const { __test } = await import("../src/index.js");
 

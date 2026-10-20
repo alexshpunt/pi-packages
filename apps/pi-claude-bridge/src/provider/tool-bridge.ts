@@ -1,0 +1,233 @@
+import { extractAllToolResults as _extractAllToolResults } from "../extract-tool-results.js";
+import type { McpResult } from "../extract-tool-results.js";
+import { createToolServer } from "../mcp-server.js";
+import type { PromptStream } from "../prompt-stream.js";
+import { userMessage } from "../prompt-stream.js";
+import { QueryContext } from "./query-context.js";
+import { MCP_SERVER_NAME } from "../skills.js";
+import { MCP_TOOL_PREFIX } from "../skills.js";
+import type { ContentBlockParam } from "@anthropic-ai/sdk/resources";
+import type { Context } from "@earendil-works/pi-ai";
+import type { Tool } from "@earendil-works/pi-ai";
+import type { BridgeRuntime } from "../runtime.js";
+
+
+
+export interface ToolBridgeServices {
+	readonly buildMcpServers: (tools: Tool[], queryCtx: QueryContext) => Record<string, ReturnType<typeof createToolServer>> | undefined;
+	readonly deliverToolResults: (c: QueryContext, results: McpResult[], steer: ContentBlockParam[] | null, contextLength: number) => Promise<void>;
+	readonly drainForAbort: (c: QueryContext, promptStream: PromptStream) => void;
+	readonly extractAllToolResults: (context: Context) => McpResult[];
+	readonly mapToolArgs: (toolName: string, args: Record<string, unknown> | undefined) => Record<string, unknown>;
+	readonly piToolNameFor: (name: string, customToolNameToPi: Map<string, string>) => string | undefined;
+	readonly resolveMcpTools: (context: Context) => {
+		mcpTools: Tool[];
+		customToolNameToSdk: Map<string, string>;
+		customToolNameToPi: Map<string, string>;
+	};
+}
+
+export function createToolBridge(runtime: Pick<BridgeRuntime, "debug" | "piUI" | "sessionStateFor" | "setSessionStateFor">): ToolBridgeServices {
+	// Pi doesn't pass tool results directly — it appends them to the context and calls
+	// the provider again. Thin wrapper over extract-tool-results.js that adds per-turn
+	// debug logging at the extraction boundary.
+	function extractAllToolResults(context: Context): McpResult[] {
+		const { results, stopIdx } = _extractAllToolResults(context.messages as unknown as Array<{ role: string; [key: string]: unknown }>);
+		runtime.debug(`extractAllToolResults: ${results.length} results from ${context.messages.length} msgs, stopped at index ${stopIdx}`);
+		runtime.debug(`extractAllToolResults: all msg roles:`, context.messages.map((m, i) => `[${i}]${m.role}`).join(" "));
+		for (let r = 0; r < results.length; r++) {
+			runtime.debug(`extractAllToolResults: result[${r}] id=${results[r].toolCallId}${results[r].isError ? " ERROR" : ""} preview:`, JSON.stringify(results[r].content).slice(0, 150));
+		}
+		return results;
+	}
+
+	// --- Provider helpers: tool name mapping ---
+
+
+	// Provider path: the query runs with `tools: []`, so the only tools CC can
+	// legitimately call are the pi tools we serve over MCP. Any other name is the
+	// model hallucinating a builtin (`bash`, `Bash`, `Edit`, an MCP server we don't
+	// serve). CC answers those itself with "No such tool available" and retries
+	// inside the same query, never dispatching them to our MCP server — so a tool
+	// call under such a name must not reach pi. Forwarding one ran a tool CC never
+	// dispatched (real side effects) and, because the retry carries a fresh
+	// tool_use id, left the handler for the retry with no result to release it:
+	// pi's result arrived keyed to the dead id, and both sides deadlocked.
+	function piToolNameFor(name: string, customToolNameToPi: Map<string, string>): string | undefined {
+		return customToolNameToPi.get(name) ?? customToolNameToPi.get(name.toLowerCase());
+	}
+
+	// Renames for Claude Code SDK param names that differ from pi's native names.
+	// Keys not listed here pass through unchanged, so new pi params work automatically.
+	const SDK_KEY_RENAMES: Record<string, Record<string, string>> = {
+		read:  { file_path: "path" },
+		write: { file_path: "path" },
+		edit:  { file_path: "path", old_string: "oldText", new_string: "newText", old_text: "oldText", new_text: "newText" },
+	};
+
+	// Maps SDK tool args to pi tool args via key renaming + pass-through.
+	// Pi's own prepareArguments hooks handle any structural transforms (e.g. edit oldText/newText → edits[]).
+	function mapToolArgs(
+		toolName: string, args: Record<string, unknown> | undefined,
+	): Record<string, unknown> {
+		const input = args ?? {};
+		const renames = SDK_KEY_RENAMES[toolName.toLowerCase()];
+		const result: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(input)) {
+			const piKey = renames?.[key] ?? key;
+			if (!(piKey in result)) result[piKey] = value; // first alias wins
+		}
+		// No default bash timeout: an argument the model did not send would reach
+		// pi's history but not Claude Code's, and every rebuild would then miss the
+		// prompt cache from the first such call. A default belongs in pi's bash tool
+		// itself (e.g. an extension that applies one at execution time).
+		return result;
+	}
+
+	function resolveMcpTools(context: Context): {
+		mcpTools: Tool[];
+		customToolNameToSdk: Map<string, string>;
+		customToolNameToPi: Map<string, string>;
+	} {
+		const mcpTools: Tool[] = [];
+		const customToolNameToSdk = new Map<string, string>();
+		const customToolNameToPi = new Map<string, string>();
+
+		if (!context.tools) return { mcpTools, customToolNameToSdk, customToolNameToPi };
+
+		for (const tool of context.tools) {
+			const sdkName = `${MCP_TOOL_PREFIX}${tool.name}`;
+			mcpTools.push(tool);
+			customToolNameToSdk.set(tool.name, sdkName);
+			customToolNameToSdk.set(tool.name.toLowerCase(), sdkName);
+			customToolNameToPi.set(sdkName, tool.name);
+			customToolNameToPi.set(sdkName.toLowerCase(), tool.name);
+		}
+
+		return { mcpTools, customToolNameToSdk, customToolNameToPi };
+	}
+
+	// Creates an MCP server that bridges pi tools to the SDK. Each tool handler
+	// blocks on a Promise until pi delivers the tool result via streamSimple.
+	// Handlers receive their toolCallId from Claude's tools/call _meta, so results
+	// are matched by ID end to end.
+	//
+	// The handler and pi's result can arrive in either order, hence the two maps:
+	// a result that lands first waits in `pendingResults` for the handler to claim
+	// it, and a handler that runs first parks its resolver in `pendingToolCalls`.
+	// Handlers close over the captured `queryCtx`, ensuring they operate on the
+	// correct query's state while multiple queries run concurrently.
+	function buildMcpServers(tools: Tool[], queryCtx: QueryContext): Record<string, ReturnType<typeof createToolServer>> | undefined {
+		if (!tools.length) return undefined;
+		const mcpTools = tools.map((tool) => ({
+			name: tool.name,
+			description: tool.description,
+			inputSchema: tool.parameters,
+			handler: async (toolCallId: string) => {
+				if (queryCtx.pendingResults.has(toolCallId)) {
+					const result = queryCtx.pendingResults.get(toolCallId)!;
+					queryCtx.pendingResults.delete(toolCallId);
+					runtime.debug(`mcp handler: ${tool.name} [${toolCallId}] → resolved from queue (${queryCtx.pendingResults.size} remaining)`);
+					return result;
+				}
+				runtime.debug(`mcp handler: ${tool.name} [${toolCallId}] → waiting`);
+				return new Promise<McpResult>((resolve) => {
+					queryCtx.pendingToolCalls.set(toolCallId, { toolName: tool.name, resolve });
+				});
+			},
+		}));
+		return { [MCP_SERVER_NAME]: createToolServer(MCP_SERVER_NAME, mcpTools) };
+	}
+
+	/** A steer that never made it into CC's session. The cursor has already counted
+	 *  it, so count-based sync would skip it forever — rebuild instead, which
+	 *  re-imports the message from pi's context. */
+	function steerMissedSession(c: QueryContext, text: string): void {
+		c.missedSteer = true;
+		const state = runtime.sessionStateFor(c.piSessionId);
+		if (state) runtime.setSessionStateFor(c.piSessionId, { ...state, needsRebuild: true });
+		runtime.debug(`provider: steer never reached CC, marked query for rebuild: ${text.slice(0, 60)}`);
+	}
+
+	/** Releases this turn's tool results to their MCP handlers, after first pushing
+	 *  any steer to CC.
+	 *
+	 *  The ordering is mandatory, not an optimization. The steer and the MCP tool
+	 *  result travel back to CC over the same stdin FIFO. Awaiting the push ack
+	 *  (which resolves only once the SDK's write to stdin completed) before
+	 *  resolving any handler guarantees CC enqueues the steer *before* it reads the
+	 *  tool result, so its post-tool-call drain sees it and acts on it this turn.
+	 *  Resolve first and the steer misses the drain, silently degrading to
+	 *  follow-up semantics.
+	 *
+	 *  Both the post-tool-call drain and the FIFO ordering are CC CLI internals,
+	 *  not SDK contract — tests/int-tool-message.mjs is the tripwire if they move. */
+	async function deliverToolResults(
+		c: QueryContext,
+		results: McpResult[],
+		steer: ContentBlockParam[] | null,
+		contextLength: number,
+	): Promise<void> {
+		if (steer) {
+			const text = steer.map((b) => (b.type === "text" ? b.text : "[image]")).join("\n");
+			if (!c.promptStream) {
+				runtime.debug(`WARNING: steer with no prompt stream, dropping: ${text.slice(0, 60)}`);
+				steerMissedSession(c, text);
+			} else {
+				try {
+					await c.promptStream.push(userMessage(steer, "next"));
+					runtime.debug(`provider: steer written to CC stdin before tool result: ${text.slice(0, 60)}`);
+				} catch (error) {
+					// The query is ending — pushing further input would wedge tool-result
+					// delivery, so the steer doesn't reach this query. It is still in
+					// pi's context, and the caller has already advanced the session
+					// cursor past it, so force a rebuild or CC would never see it.
+					runtime.debug(`provider: steer push rejected, delivering tool result anyway:`, error);
+					steerMissedSession(c, text);
+				}
+			}
+		}
+
+		runtime.debug(`provider: tool results, ${results.length} results, ${c.pendingToolCalls.size} waiting handlers, ctx.msgs=${contextLength}`);
+		for (const result of results) {
+			const id = result.toolCallId;
+			if (id && c.pendingToolCalls.has(id)) {
+				const pending = c.pendingToolCalls.get(id)!;
+				c.pendingToolCalls.delete(id);
+				runtime.debug(`provider: resolving ${pending.toolName} [${id}]${result.isError ? " (error)" : ""}`, JSON.stringify(result.content).slice(0, 200));
+				pending.resolve(result);
+			} else if (id) {
+				c.pendingResults.set(id, result);
+				runtime.debug(`provider: queued result [${id}] (${c.pendingResults.size} pending)`);
+			} else {
+				runtime.debug(`WARNING: tool result without toolCallId, cannot match`);
+			}
+			if (c.pendingToolCalls.size > 0 && c.pendingResults.size > 0) {
+				runtime.debug(`BUG: both maps non-empty! handlers=${c.pendingToolCalls.size} results=${c.pendingResults.size}`);
+			}
+		}
+		if (c.pendingToolCalls.size > 0) {
+			runtime.debug(`WARNING: ${c.pendingToolCalls.size} MCP handlers still waiting after delivering ${results.length} results`);
+			runtime.piUI?.notify(`Claude bridge: ${c.pendingToolCalls.size} tool handler(s) still waiting — provider may be stuck`, "warning");
+		}
+	}
+
+	/** Abort teardown for one query: settle everything that would otherwise be left
+	 *  awaiting a subprocess we are about to kill. The pump abandons iteration on
+	 *  abort, so an in-flight prompt-stream push would hang forever and take
+	 *  tool-result delivery with it. */
+	function drainForAbort(c: QueryContext, promptStream: PromptStream): void {
+		promptStream.fail(new Error("Operation aborted"));
+		c.releasePendingToolCalls("Operation aborted");
+	}
+
+	return {
+		buildMcpServers,
+		deliverToolResults,
+		drainForAbort,
+		extractAllToolResults,
+		mapToolArgs,
+		piToolNameFor,
+		resolveMcpTools,
+	};
+}

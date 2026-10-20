@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": {
+    "head": "79be126e25e972b9dce1450f74063c3e17527862",
+    "isDirty": true,
+    "contentHash": "6186077a608e353d3a12ed60db2ea9ec6423e0c85a6202728856cf50d272b9d9"
+  },
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0",
+    "sdk": "0.3.303",
+    "claudeCode": "2.1.303"
+  },
+  "checks": [
+    {
+      "name": "04-at-file-outside-cwd",
+      "mode": "live",
+      "inputs": {
+        "outsideFile": "owned temporary sibling of cwd",
+        "nativeTools": []
+      },
+      "expected": {
+        "fileExpandedInModelRequest": true,
+        "markerReturned": true
+      },
+      "observed": {
+        "permissionMode": "bypassPermissions",
+        "fileExpandedInModelRequest": true,
+        "markerReturned": true,
+        "finalAnswer": {
+          "sha256": "e93ef1306c5c4c195082b05a94831dd2f87b381dc780a7d94c403585004f4418",
+          "byteLength": 44
+        },
+        "apiKeySource": "none",
+        "model": "claude-haiku-5-5",
+        "nativeModel": "claude-haiku-5-5",
+        "authChecks": [
+          {
+            "apiKeySource": "unreported",
+            "apiProvider": "firstParty"
+          }
+        ],
+        "inits": [
+          {
+            "apiKeySource": "none",
+            "model": "claude-haiku-5-5",
+            "claudeCode": "2.1.303",
+            "permissionMode": "bypassPermissions",
+            "tools": []
+          }
+        ],
+        "requests": [
+          {
+            "sequence": 1,
+            "model": "claude-haiku-5-5",
+            "input": {
+              "sha256": "3ef59b71be98101f107cdc3ca1e086cd483d8d1fe444f30fa247949d2b1712df",
+              "byteLength": 14028
+            },
+            "messageCount": 2,
+            "toolCount": 0,
+            "status": 200,
+            "usage": {
+              "input": 2,
+              "cacheRead": 0,
+              "cacheWrite": 4508
+            }
+          }
+        ],
+        "sdkResults": [
+          {
+            "subtype": "success",
+            "isError": false,
+            "modelUsage": [
+              {
+                "model": "claude-haiku-5-5",
+                "contextWindow": 1000000,
+                "maxOutputTokens": 128000,
+                "inputTokens": 2,
+                "outputTokens": 214,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 4508
+              }
+            ]
+          }
+        ],
+        "cleanup": {
+          "temporaryCwdRemoved": true,
+          "ccSessionDirectoryRemoved": true,
+          "userSettingsUnchanged": true
+        }
+      },
+      "status": "pass",
+      "apiCalls": 1
+    }
+  ],
+  "apiCalls": 1
+}

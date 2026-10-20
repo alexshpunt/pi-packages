@@ -16,23 +16,24 @@
 // would pass for the wrong reason (CC reading the file off disk, guessing from
 // the prompt, or the token leaking through some other path).
 //
-// Requires: ANTHROPIC_API_KEY or CC logged in.
+// Requires: Claude Code subscription login.
 
-import { test } from "node:test";
+import { after, test } from "node:test";
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSession, openSession, deleteSession } from "cc-session-io";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { collectCarriedAttachments, placeCarriedAttachments } from "../src/attachments.js";
 
-const CWD = process.cwd();
-const MODEL = "claude-haiku-4-5";
+const CWD = mkdtempSync(join(tmpdir(), "cc-attachment-project-"));
+after(() => rmSync(CWD, { recursive: true, force: true }));
+const MODEL = "claude-haiku-5-5";
 // Nothing can infer this from the filename, the prompt, or the file on disk —
 // it exists only in the attachment payload the rebuild has to carry.
-const TOKEN = "ZORBLAT-4417-QUUX";
+const TOKEN = randomUUID();
 
 const PROMPT = "Review @fixture.txt and remember it.";
 const ASK = `What is the build token recorded in the file I attached? Reply with just the token.`;
@@ -40,7 +41,7 @@ const ASK = `What is the build token recorded in the file I attached? Reply with
 function attachmentFor(dir) {
 	const filePath = join(dir, "fixture.txt");
 	const content = `# fixture\nbuild-token: ${TOKEN}\n`;
-	writeFileSync(filePath, content);
+	// Never put the token on disk outside the session: only the attachment may supply it.
 	return {
 		type: "file",
 		filename: filePath,
@@ -86,18 +87,30 @@ async function ask(sid) {
 	let out = "";
 	for await (const m of query({
 		prompt: ASK,
-		options: { resume: sid, model: MODEL, cwd: CWD, permissionMode: "bypassPermissions" },
+		options: {
+			resume: sid, model: MODEL, cwd: CWD,
+			tools: [], strictMcpConfig: true, settingSources: [],
+			settings: { disableAllHooks: true, autoMemoryEnabled: false },
+			env: { ...process.env, ENABLE_CLAUDEAI_MCP_SERVERS: "0" },
+		},
 	})) {
+		if (m.type === "system" && m.subtype === "init") {
+			assert.equal(m.apiKeySource, "none", "attachment checks require subscription authentication");
+			assert.deepEqual(m.tools, [], "attachment checks must not expose tools");
+		}
 		if (m.type === "assistant") {
-			for (const block of m.message?.content ?? []) if (block.type === "text") out += block.text;
+			for (const block of m.message?.content ?? []) {
+				assert.notEqual(block.type, "tool_use", "the model must answer from the resumed transcript alone");
+				if (block.type === "text") out += block.text;
+			}
 		}
 	}
 	return out.trim();
 }
 
 test("an @file attachment survives a rebuild and reaches Claude", { timeout: 180_000 }, async () => {
-	// The fixture lives outside the repo so CC cannot read it off disk and answer
-	// without the attachment — the file path in the prompt is a temp dir.
+	// The attachment points outside the repo to a nonexistent file. Native tools,
+	// hooks and memory are disabled, so only the carried payload can reveal the token.
 	const dir = mkdtempSync(join(tmpdir(), "cc-attachment-"));
 	const sid = randomUUID();
 	try {

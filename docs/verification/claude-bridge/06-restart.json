@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": {
+    "head": "6057040b3d5b7d1fffe72b475b0cfe01801ab181",
+    "isDirty": true,
+    "contentHash": "c7e7fc894c0a66fab7a70dc5032fce06ba7c4e1e64e12393a2d02f38385865f3"
+  },
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0",
+    "sdk": "0.3.303",
+    "claudeCode": "2.1.303"
+  },
+  "checks": [
+    {
+      "name": "06-restart-continuity",
+      "mode": "live",
+      "inputs": {
+        "processes": 2,
+        "samePersistedPiSession": true
+      },
+      "expected": {
+        "newCCSession": true,
+        "sourceUnchanged": true,
+        "currentBranchLinkRestored": true,
+        "linkExcludedFromModel": true,
+        "shortfallTokens": 0
+      },
+      "observed": {
+        "measurement": {
+          "before": {
+            "input": 2,
+            "cacheRead": 0,
+            "cacheWrite": 13317
+          },
+          "after": {
+            "input": 2,
+            "cacheRead": 12931,
+            "cacheWrite": 434
+          },
+          "previousInput": 13319,
+          "previousCacheableInput": 13317,
+          "signedShortfall": 386,
+          "shortfall": 386,
+          "diagnosticShortfall": 386,
+          "originalMetricShortfall": 388,
+          "newInputTokens": 48,
+          "cacheWriteAboveNewInput": 386,
+          "beforeShapes": {
+            "recordCounts": {
+              "queue-operation": 2,
+              "user": 1,
+              "attachment": 6,
+              "atis-latch": 2,
+              "api-request-shape": 1,
+              "api-request-blob": 2,
+              "api-request": 1,
+              "last-prompt": 2,
+              "assistant": 1,
+              "cost-state": 1
+            },
+            "attachmentCounts": {
+              "environment": 1,
+              "model": 1,
+              "total_tokens_reminder": 1,
+              "session_context": 1,
+              "date": 1,
+              "credential_org": 1
+            },
+            "toolResults": [],
+            "liveAssistantRecords": 1,
+            "syntheticAssistantRecords": 0,
+            "storedResults": {
+              "regularFiles": 0,
+              "bytes": 0,
+              "verifiedFixtureFiles": null,
+              "referencedFiles": []
+            }
+          },
+          "afterShapes": {
+            "recordCounts": {
+              "user": 2,
+              "attachment": 7,
+              "assistant": 2,
+              "atis-latch": 2,
+              "queue-operation": 2,
+              "api-request-shape": 1,
+              "api-request-blob": 3,
+              "api-request": 1,
+              "last-prompt": 2,
+              "mode": 1,
+              "cost-state": 1
+            },
+            "attachmentCounts": {
+              "environment": 1,
+              "model": 1,
+              "total_tokens_reminder": 2,
+              "session_context": 1,
+              "date": 1,
+              "credential_org": 1
+            },
+            "toolResults": [],
+            "liveAssistantRecords": 1,
+            "syntheticAssistantRecords": 1,
+            "storedResults": {
+              "regularFiles": 0,
+              "bytes": 0,
+              "verifiedFixtureFiles": null,
+              "referencedFiles": []
+            }
+          },
+          "fidelity": {
+            "previousElements": 5,
+            "matchedElements": 5,
+            "firstDifference": null
+          },
+          "previousSessionUnchanged": true,
+          "previousSessionId": "18feff11-8ffb-467a-9fdf-7b149f2ddd64",
+          "currentSessionId": "8d8df732-d6bf-48a5-8a7e-1e55107cde93",
+          "processes": [
+            {
+              "piSessionId": "1d4450e2-e60a-40c2-b54b-5a0057eca85c",
+              "startingBranchLinkCount": 0,
+              "finishingBranchLinkCount": 1,
+              "queries": [
+                {
+                  "resume": null
+                }
+              ],
+              "apiKeySource": "none",
+              "inits": [
+                {
+                  "apiKeySource": "none",
+                  "model": "claude-haiku-5-5[1m]",
+                  "claudeCode": "2.1.303",
+                  "permissionMode": "dontAsk",
+                  "tools": []
+                }
+              ],
+              "processExited": true,
+              "modelContextContainsLinkEntry": false
+            },
+            {
+              "piSessionId": "1d4450e2-e60a-40c2-b54b-5a0057eca85c",
+              "startingBranchLinkCount": 1,
+              "finishingBranchLinkCount": 2,
+              "queries": [
+                {
+                  "resume": "8d8df732-d6bf-48a5-8a7e-1e55107cde93"
+                }
+              ],
+              "apiKeySource": "none",
+              "inits": [
+                {
+                  "apiKeySource": "none",
+                  "model": "claude-haiku-5-5[1m]",
+                  "claudeCode": "2.1.303",
+                  "permissionMode": "dontAsk",
+                  "tools": []
+                }
+              ],
+              "processExited": true,
+              "modelContextContainsLinkEntry": false
+            }
+          ],
+          "cleanup": {
+            "temporaryCwdRemoved": true,
+            "ccSessionDirectoryRemoved": true,
+            "userSettingsUnchanged": true
+          }
+        },
+        "errorCode": "restart-cache-target-not-met"
+      },
+      "status": "fail",
+      "apiCalls": 2
+    }
+  ],
+  "apiCalls": 2
+}
