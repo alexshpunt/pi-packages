@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## 0.12.0 — 2026-10-20
 
 - **Fix: forward only completed tool calls and compatible MCP schemas** — Drop unfinished streamed blocks before dispatch (elidickinson/pi-claude-bridge#146), flatten top-level schema combinators for Claude Code while retaining Pi-side validation (elidickinson/pi-claude-bridge#180), and stop injecting an unrequested bash timeout (elidickinson/pi-claude-bridge#204).
 - **Fix: recover interrupted and rewritten conversations** — Resume tool results after restart (elidickinson/pi-claude-bridge#174), rebuild shortened session histories instead of starting without context (elidickinson/pi-claude-bridge#191), and keep failed turns from advancing the synchronization cursor (elidickinson/pi-claude-bridge#198, retry handling only). Rebind cancellation to the current run, detach the previous run's listener, and report cancellation consistently on normal and error completion (elidickinson/pi-claude-bridge#200).
