@@ -38,6 +38,8 @@ Use image_gen to create a watercolor illustration of a small cafe on a rainy str
 
 A successful result contains a PNG image. Saving a local copy is separate and best-effort; see [output and storage](#output-and-storage). No image means the request failed or returned no image data—inspect the tool error rather than assuming that a file was created.
 
+For several independent images, the bundled skill asks the model to request them in one response, and Pi runs those calls in parallel. The model may still request them one at a time, and each image is a separate request to the subscription backend.
+
 ## Edit a local or conversation image
 
 Choose the source before requesting an edit:
@@ -97,6 +99,13 @@ Session/tool-call names are sanitized for filenames. A save failure does not dis
 
 An error is returned when authentication cannot be resolved, a reference cannot be loaded, settings are invalid, the backend fails, or no image data is returned. The caller's cancellation signal is passed to image requests; cancellation does not establish whether a remote service already performed work.
 
+## View generated images
+
+In the interactive terminal, each `image_gen` call shows the request (operation, background, and the prompt on one line until you expand the row). After a successful call it shows the image size, the saved path, and how to view it. The model still receives the path hint, but it is not shown on screen. Pi draws the image below the summary when your terminal supports inline images (Kitty graphics or iTerm2 protocol).
+
+- **Zoom an image:** click the image. It grows to the widest size that fits the terminal height; click it again to return to Pi's image width (`terminal.imageWidthCells`). Each image zooms separately. This works in Pi's default `fullscreen` mode, where Pi receives mouse clicks; in `regular` mode the terminal keeps the clicks and images do not zoom.
+- **Open the saved file:** click the path. The path is an OSC 8 link: in `fullscreen` mode Pi opens it with the platform default app, and in `regular` mode your terminal opens it (some terminals need Cmd or Ctrl). If your terminal is not detected as link-capable, the extension opens the file itself with `open` (macOS), `xdg-open` (Linux), or `rundll32 url.dll,FileProtocolHandler` (Windows). It does not do so over SSH (`SSH_CONNECTION`, `SSH_CLIENT`, or `SSH_TTY` is set), where the app would open on the remote machine, or on Linux and other Unix systems without `DISPLAY` or `WAYLAND_DISPLAY`.
+
 ## Troubleshooting
 
 | Symptom | Action |
@@ -106,6 +115,9 @@ An error is returned when authentication cannot be resolved, a reference cannot 
 | Local reference cannot be read/decoded | Check the absolute path, file permissions, and supported image decoding. |
 | Requested recent images are unavailable | Attach them again or use their saved local paths; images outside the current model-visible context are not recovered automatically. |
 | Backend rejects the model or account | Check your account access and the returned error. The extension does not substitute another model or use an API key as a subscription fallback. |
+| Only a text placeholder appears instead of the image | Pi turns off inline images in tmux and does not detect Windows Terminal, VS Code, Alacritty, or JetBrains terminals as image-capable. Open the saved path, or set Pi's `terminal.images` if your terminal supports Kitty or iTerm2 images. |
+| Clicking the image does not zoom | Use Pi's default `fullscreen` mode (`tuiMode`); in `regular` mode Pi does not receive mouse clicks. If the terminal is too short for a larger image, the image keeps its size. |
+| Clicking the path opens nothing | Read the status line below the path, if one appears. Over SSH or without a graphical session the extension does not start an app. On Linux, install `xdg-open` (xdg-utils). |
 
 ## Build and load from source
 
@@ -118,6 +130,16 @@ pnpm --filter @buyong/pi-codex-image-gen exec pi -ne -e ./dist/index.js --skill 
 ```
 
 The explicit skill path loads the bundled guidance for this temporary invocation. `-ne` disables automatic extension discovery. Rebuild after source changes. Source runs still need Pi's subscription login; building does not generate an image or verify live account access.
+
+Image-click zoom stays inactive in this source run. Loaded from the package directory, the extension imports the development copies of Pi's packages in `node_modules` instead of the running Pi, so its click handler attaches to the wrong class. To try zoom from source, load a packed copy without `node_modules`:
+
+```sh
+cd apps/pi-codex-image-gen
+mkdir -p /tmp/pi-codex-image-gen-try
+npm pack --ignore-scripts --pack-destination /tmp/pi-codex-image-gen-try
+tar xzf /tmp/pi-codex-image-gen-try/*.tgz -C /tmp/pi-codex-image-gen-try
+pi -ne -e /tmp/pi-codex-image-gen-try/package/dist/index.js --skill /tmp/pi-codex-image-gen-try/package/skills
+```
 
 See the [repository release process](https://github.com/buYoung/pi-packages#공통-ci와-패키지별-배포) for package preparation.
 
