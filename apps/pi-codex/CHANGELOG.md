@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-10-20
+
 ### Improved
 
 - Automatic review's guarded CLI and SDK start on Pi 1.0.0 and later (included `@buyong/pi-codex-auto-review` 0.6.0). Pi versions other than 1.0.0 and 1.1.0 no longer fail with `UNSUPPORTED_PI`; versions before 1.0.0 still do.
