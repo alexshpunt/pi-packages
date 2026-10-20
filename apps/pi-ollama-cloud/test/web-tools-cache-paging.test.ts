@@ -2,8 +2,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createCache } from "../cache.ts";
-import { registerWebFetchTool, registerWebSearchTool } from "../web-tools.ts";
+import { createCache } from "../src/cache/storage.ts";
+import { registerWebFetchTool, registerWebSearchTool } from "../src/pi/web-tools.ts";
 
 type RegisteredTool = {
   name: string;
@@ -48,6 +48,36 @@ afterEach(() => {
 });
 
 describe("web tool cache and paging", () => {
+  it.each([500, 401, 403, 429, "transport", "shape", "abort"] as const)(
+    "invalidates both previous failure and success snapshots after forced %s failures",
+    async (failure) => {
+      for (const hadSuccess of [false, true]) {
+        let calls = 0;
+        const fetchMock = vi.fn(async () => {
+          calls += 1;
+          if (calls === 1 && !hadSuccess) return new Response("missing fixture", { status: 404 });
+          if (calls === 2) {
+            if (failure === "transport") throw new Error("fixture network error");
+            if (failure === "abort") throw new DOMException("fixture cancelled", "AbortError");
+            if (failure === "shape") return Response.json({ title: "invalid" });
+            return new Response("transient fixture", { status: failure });
+          }
+          return Response.json({ title: "Recovered", content: `body-${calls}`, links: [] });
+        });
+        vi.stubGlobal("fetch", fetchMock);
+        const { execute, executeFromFreshStore, path } = await setupTools();
+        const params = { url: "https://example.test/recovery" };
+        if (hadSuccess) await execute("ollama_web_fetch", params);
+        else await expect(execute("ollama_web_fetch", params)).rejects.toThrow("failure cached");
+        await expect(execute("ollama_web_fetch", { ...params, refresh: true })).rejects.toThrow("not cached");
+        expect(createCache({ path }).loadCache().pages[params.url]).toBeUndefined();
+        expect(output(await execute("ollama_web_fetch", params))).toContain("body-3");
+        expect(output(await executeFromFreshStore()("ollama_web_fetch", params))).toContain("# from cache");
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+      }
+    },
+  );
+
   it("reports a transport error clearly in search instead of status 0", async () => {
     const fetchMock = vi.fn(async (): Promise<Response> => {
       throw new Error("The operation was aborted due to timeout");

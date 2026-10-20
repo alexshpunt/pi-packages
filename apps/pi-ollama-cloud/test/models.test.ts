@@ -1,11 +1,11 @@
 import type { OpenAICompletionsCompat } from "@earendil-works/pi-ai";
 import { afterEach, describe, expect, it } from "vitest";
-import { MODEL_MAX_OUTPUT_TOKENS } from "../limits.generated.ts";
-import { GENERATED_MODELS } from "../models.generated.ts";
-import { assembleModels, fetchModelDetails, fetchModelIds } from "../models.ts";
-import { MODEL_PRICING } from "../pricing.generated.ts";
-import { resolve } from "../thinking-levels.ts";
-import { getContextLength } from "../utils.ts";
+import { GENERATED_MODELS, MODEL_PRICING } from "../src/generated/catalog.generated.ts";
+import { MODEL_MAX_OUTPUT_TOKENS } from "../src/generated/limits.generated.ts";
+import { fetchModelDetails, fetchModelIds } from "../src/models/api.ts";
+import { getContextLength } from "../src/models/context-length.ts";
+import { assembleModels } from "../src/models/metadata.ts";
+import { resolve } from "../src/models/thinking-levels.ts";
 
 // --- Helpers ---
 

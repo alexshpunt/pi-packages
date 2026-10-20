@@ -1,0 +1,306 @@
+{
+  "schemaVersion": 1,
+  "feature": "07-cache-budgets",
+  "baselineHead": "827c4e57e21d59215a6b032a6ab1843328a51869",
+  "branch": "main",
+  "versions": {
+    "node": "v24.14.0",
+    "pi": "1.2.0"
+  },
+  "verifiedFiles": [
+    {
+      "path": "apps/pi-ollama-cloud/cache.ts",
+      "hash": "7789e7465c9e2e550e8c587a66fb807c9a38fad62ff99ece506c4cd26072d8c5"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/budgets.ts",
+      "hash": "4d5723a7b9a98b62f181bacaddc1f779c8dd35aeec448fe43b7a591819fd6c56"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/direct.ts",
+      "hash": "7bb5c3612a3e6dbce80f9778f46296f89665ad5c684c658077f429bb643330bc"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/mock-transport.ts",
+      "hash": "4eac82507b73dbfb62ed5f3fb3aa6844fbc8895cc33c104f7dd6949f57969ff3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/scripts/cli/verification.ts",
+      "hash": "e5cfc2f6ca06d77bdda45fcb1a7b24d1f185dc015b50a10195cddc86edc1c891"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/bounded-storage.ts",
+      "hash": "e7395e0eacd666f687678bd13cf14db4c4b67ad5ed70092b59ea1c20e41ca980"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/budget.ts",
+      "hash": "aef2f33d07bd5517b0fcb13ea0c5dac2120f5c8b3b5d3cf6562698c9f59400ac"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/constants.ts",
+      "hash": "a54371447c759280e74b784c03a4a6b5bf607388e2b72fa56c4f04152bc9d762"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/data.ts",
+      "hash": "eb22de925fd3cc4b267a94370babae33d923c04f5d23a9684ea65eb49822d0ad"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/disk.ts",
+      "hash": "600e38653970343e60267fa56247599b73db1602556cf85df47d84ba441b3d67"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/storage.ts",
+      "hash": "ac3860d9cc7d85f7c7ced0cd3e1edb888e0ddfcf9bb6459113e6da173dfab36d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/cache/types.ts",
+      "hash": "fb89fdf94939150e24a62dfda88407f3a504484e4ee60d8cdfe6596497d110a4"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/models/base.ts",
+      "hash": "927f034418488b3661e003dbeebc7d1f77574796685b954d1d8c33074338ab4d"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/pi/web-tools.ts",
+      "hash": "f7f6baf965f2ff9263f4e3c391f767aaefef60b66723e1e991be6c1d394e4209"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/shared/http.ts",
+      "hash": "3118c4ad3dee9dd30d7dd64658e9813fc92237754cc44fb6589080872b637bd3"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/constants.ts",
+      "hash": "dd50cf779321a32e64331bf355a43e1f6641cfa77b8dace37ed56443deac4bd2"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/errors.ts",
+      "hash": "7dba787c6b6d2cb0f3b6adbcc8109b955f08e6259b8fb9f57ac76bb914806d4f"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/fetch.ts",
+      "hash": "74d1bef1900aef213a81fdfbbc3b9e1a6b4a2c1a8bc2837c1be3c0e792119acf"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/paging.ts",
+      "hash": "9473c0955e5818e777cd3dd69995e51dd518157161c9a38570e2990c74a0da49"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/search.ts",
+      "hash": "95707fd08528bb63e08a2d43e2b4914d838814020eee7c99c79e1e31466355c2"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/src/web/types.ts",
+      "hash": "44624124e988c0ece2a7ea1279ddc8e11a1522bb549f695fe5e1d6ac346231b1"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/cache.test.ts",
+      "hash": "56d7fd2724f58e7f51b10c531822f3b7cc72119236f2d8eef3803f0b0c2c8481"
+    },
+    {
+      "path": "apps/pi-ollama-cloud/test/web-budgets.test.ts",
+      "hash": "3a0110e37394ac67701bb76a3954746b37334c840cf8b9388b1eb94e6c57a9a5"
+    }
+  ],
+  "moduleReferences": {
+    "cli": "scripts/cli/budgets.ts",
+    "shared": [
+      "src/cache/bounded-storage.ts",
+      "src/cache/budget.ts",
+      "src/cache/disk.ts",
+      "src/web/paging.ts",
+      "src/web/search.ts",
+      "src/web/fetch.ts"
+    ],
+    "consumers": [
+      "src/cache/storage.ts",
+      "src/pi/web-tools.ts"
+    ]
+  },
+  "checks": [
+    {
+      "phase": "baseline",
+      "command": "cd /tmp/ollama-budget-baseline.GL9Vqo/apps/pi-ollama-cloud && PI_OFFLINE=1 PI_CODING_AGENT_DIR=/tmp/ollama-budget-baseline.GL9Vqo/agent OLLAMA_API_BASE= OLLAMA_API_KEY= node --import tsx baseline.ts",
+      "inputs": "9MiB 캐시 항목 및 한글🙂\\n 20000회 본문, 모의 fetch/full=true",
+      "expected": "기존 메모리 보관과 full 반환 상한 초과 측정",
+      "observed": "retained JSON 9677355 bytes; disk 240111 bytes; content 220075 bytes; result JSON 240178 bytes; Pi DEFAULT_MAX_BYTES=51200, DEFAULT_MAX_LINES=2000",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/budgets.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "메모리 8MiB·디스크 8MiB·항목 256KiB와 전체 항목 eviction",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/budgets.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "정확한 JSON 바이트 경계와 과대 파일의 parse 전 거부",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/budgets.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "UTF-8·줄 수·JSON escaping 상한 안에서 fetch full과 search expand 원문 이어 읽기",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/budgets.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "긴 제목·URL·query·링크·오류·details도 최종 반환 예산에 포함",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "cli",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/budgets.ts --offline",
+      "inputs": "임시 데이터와 모의 전송",
+      "expected": "메모리 eviction 뒤 offset 재접근의 추가 API 호출 안내",
+      "observed": "검증 조건 충족",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud check && pnpm --filter @buyong/pi-ollama-cloud test:unit && git diff --check",
+      "inputs": "등록된 두 execute의 offset/full/expand, 매 페이지 fresh CacheStore로 재로딩, 과대 파일 및 eviction",
+      "expected": "원문 이어 붙이기 동일, 추가 API 0인 캐시 적중, 최종 content+details 직렬화 51200 bytes/문자열 2000줄 이내",
+      "observed": "14개 파일/207개 테스트 통과; 정상 디스크 재로딩 페이지는 API 1회만 사용",
+      "result": "pass"
+    },
+    {
+      "phase": "consumer",
+      "command": "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report /tmp/ollama-final.YEZPe6/final-offline.json && pnpm --filter @buyong/pi-ollama-cloud check && pnpm --filter @buyong/pi-ollama-cloud test:unit && python3 apps/pi-ollama-cloud/test/fixtures/run-render-tui.py --report /tmp/ollama-final.YEZPe6/tui.json",
+      "inputs": "선행 기능이 연결된 최종 checkout과 격리된 mock SDK/script/PTY 소비자",
+      "expected": "후속 변경 이후에도 공용 구현과 최종 소비자 계약 유지",
+      "observed": "54개 통합 check와 237개 테스트 및 PTY 통과. 이 재검증의 실API 호출 0.",
+      "result": "pass"
+    }
+  ],
+  "apiCallCounts": {
+    "chat": 0,
+    "web_search": 0,
+    "web_fetch": 0,
+    "usage": 0,
+    "limitsProbe": 0
+  },
+  "limits": [
+    "메모리 8388608 bytes는 retained-cache 직렬화 예산이며 heap/RSS 또는 응답을 읽는 순간 메모리 상한이 아님",
+    "디스크 확정 파일 8388608 bytes/항목 262144 bytes/map별 500개; atomic write 중의 임시 파일과 메모리는 별개",
+    "full/expand는 무제한 반환이 아님; offset은 기존 문자열 계약을 유지하는 UTF-16 인덱스이며 nextOffset 사용 권장",
+    "제목/URL/링크 및 details의 content는 제한된 미리보기; 원문은 cache에 자르지 않고 보관하거나 전체 항목을 제거",
+    "eviction/만료 후 이어 읽기는 추가 API 호출 및 원격 원문 변경 가능성이 있음",
+    "다중 프로세스 병합과 동시 요청 공유는 08에서 연결; 최종 문서·메뉴는 11에 인계",
+    "baseline.ts는 git archive 임시 복사본에서만 실행한 측정 fixture이며 삭제됨; 현재 재현 가능한 검증 명령은 scripts/cli/budgets.ts --offline"
+  ],
+  "revalidation": {
+    "checkedAt": "2026-10-18T18:34:01.044Z",
+    "commands": [
+      "pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report /tmp/ollama-final.YEZPe6/final-offline.json",
+      "pnpm --filter @buyong/pi-ollama-cloud check",
+      "pnpm --filter @buyong/pi-ollama-cloud test:unit",
+      "python3 apps/pi-ollama-cloud/test/fixtures/run-render-tui.py --report /tmp/ollama-final.YEZPe6/tui.json"
+    ],
+    "result": "pass",
+    "observed": "현재 소스로 54개 통합 check, 18개 파일/237개 테스트, 실제 PTY 4개 동작 검증 통과. 기존 API 관찰·baseline·consumer 기록은 역사적 증거로 보존.",
+    "historicalVerifiedFiles": [
+      {
+        "path": "apps/pi-ollama-cloud/cache.ts",
+        "hash": "7789e7465c9e2e550e8c587a66fb807c9a38fad62ff99ece506c4cd26072d8c5"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/budgets.ts",
+        "hash": "4d5723a7b9a98b62f181bacaddc1f779c8dd35aeec448fe43b7a591819fd6c56"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/direct.ts",
+        "hash": "7bb5c3612a3e6dbce80f9778f46296f89665ad5c684c658077f429bb643330bc"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/mock-transport.ts",
+        "hash": "4eac82507b73dbfb62ed5f3fb3aa6844fbc8895cc33c104f7dd6949f57969ff3"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/scripts/cli/verification.ts",
+        "hash": "07c20d1995d5a374efd3564ab8f231a1ed6f82d0d345086c3e8b2f8626d477af"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/bounded-storage.ts",
+        "hash": "75b8aa5eecc61c6d0d6f825714c1d78f285b12e385896a8f6ded6901c04027fa"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/budget.ts",
+        "hash": "aef2f33d07bd5517b0fcb13ea0c5dac2120f5c8b3b5d3cf6562698c9f59400ac"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/constants.ts",
+        "hash": "a54371447c759280e74b784c03a4a6b5bf607388e2b72fa56c4f04152bc9d762"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/data.ts",
+        "hash": "eb22de925fd3cc4b267a94370babae33d923c04f5d23a9684ea65eb49822d0ad"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/disk.ts",
+        "hash": "fba658804c8a3a390bcafa27b2bbc04a3a70de3378e202106872e2ff42167710"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/storage.ts",
+        "hash": "ac3860d9cc7d85f7c7ced0cd3e1edb888e0ddfcf9bb6459113e6da173dfab36d"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/cache/types.ts",
+        "hash": "dfc11f2cd63c13e88cec6f55cf0e03abc4af718c2d3a68084eb1025046304983"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/models/base.ts",
+        "hash": "927f034418488b3661e003dbeebc7d1f77574796685b954d1d8c33074338ab4d"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/pi/web-tools.ts",
+        "hash": "d199e197969118083a5892cee4c1af396a58f925ec9576498278326b4703ec0f"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/shared/http.ts",
+        "hash": "3118c4ad3dee9dd30d7dd64658e9813fc92237754cc44fb6589080872b637bd3"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/constants.ts",
+        "hash": "dd50cf779321a32e64331bf355a43e1f6641cfa77b8dace37ed56443deac4bd2"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/errors.ts",
+        "hash": "7dba787c6b6d2cb0f3b6adbcc8109b955f08e6259b8fb9f57ac76bb914806d4f"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/fetch.ts",
+        "hash": "0556e891ffda3cb33c050e01d7a8888f72e687d49d169e8a3d682728aa67c4e7"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/paging.ts",
+        "hash": "9473c0955e5818e777cd3dd69995e51dd518157161c9a38570e2990c74a0da49"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/search.ts",
+        "hash": "41a80f86c17435e0be93c805a4c330ed6db851b7320370dd6063c34b3521395c"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/src/web/types.ts",
+        "hash": "44624124e988c0ece2a7ea1279ddc8e11a1522bb549f695fe5e1d6ac346231b1"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/cache.test.ts",
+        "hash": "56d7fd2724f58e7f51b10c531822f3b7cc72119236f2d8eef3803f0b0c2c8481"
+      },
+      {
+        "path": "apps/pi-ollama-cloud/test/web-budgets.test.ts",
+        "hash": "3a0110e37394ac67701bb76a3954746b37334c840cf8b9388b1eb94e6c57a9a5"
+      }
+    ]
+  }
+}

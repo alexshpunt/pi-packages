@@ -11,18 +11,7 @@
     "pi-package"
   ],
   "files": [
-    "index.ts",
-    "config.ts",
-    "cache.ts",
-    "limits.generated.ts",
-    "models.ts",
-    "models.generated.ts",
-    "pricing.generated.ts",
-    "reasoning.generated.ts",
-    "thinking-levels.ts",
-    "usage.ts",
-    "utils.ts",
-    "web-tools.ts",
+    "src/",
     "CHANGELOG.md",
     "README.md",
     "LICENSE"
@@ -47,14 +36,15 @@
     "format": "biome format --write .",
     "test": "pnpm run test:unit",
     "test:unit": "vitest run",
+    "cli": "tsx scripts/cli.ts",
     "smoke:web-tools": "tsx scripts/smoke-web-tools.ts",
-    "generate-models": "tsx scripts/generate-pricing.ts && tsx scripts/generate-reasoning.ts && tsx scripts/generate-models.ts && biome format --write models.generated.ts pricing.generated.ts reasoning.generated.ts",
+    "generate-models": "tsx scripts/generate-models.ts",
     "generate-limits": "tsx scripts/generate-limits.ts",
-    "generate-reasoning": "tsx scripts/generate-reasoning.ts && biome format --write reasoning.generated.ts"
+    "generate-reasoning": "tsx scripts/generate-reasoning.ts"
   },
   "pi": {
     "extensions": [
-      "./index.ts"
+      "./src/index.ts"
     ]
   },
   "peerDependencies": {
@@ -68,11 +58,16 @@
     "@earendil-works/pi-ai": "catalog:",
     "@earendil-works/pi-coding-agent": "catalog:",
     "@earendil-works/pi-tui": "catalog:",
+    "@inquirer/prompts": "8.5.2",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
+    "@types/proper-lockfile": "^4.1.4",
     "@typescript/native-preview": "catalog:",
     "tsx": "^4.22.4",
     "typebox": "catalog:",
     "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "proper-lockfile": "^4.1.2"
   }
 }

@@ -1,0 +1,77 @@
+{
+  "observedAt": "2026-10-18",
+  "source": "https://ollama.com/api/show",
+  "authentication": "none",
+  "requests": 6,
+  "identityNote": "응답에 digest나 canonical ID가 없어 :cloud와 bare ID의 가격/출력 한도 동일성은 확인하지 않음.",
+  "models": {
+    "glm-5.3-flash": {
+      "capabilities": ["completion", "thinking", "tools", "vision"],
+      "thinking": {
+        "values": ["low", "high", "max"],
+        "default": "max"
+      },
+      "model_info": {
+        "general.architecture": "glm5_next",
+        "general.parameter_count": 321323031390,
+        "glm5_next.context_length": 1048576
+      }
+    },
+    "glm-5.3-flash:cloud": {
+      "capabilities": ["completion", "thinking", "tools", "vision"],
+      "thinking": {
+        "values": ["low", "high", "max"],
+        "default": "max"
+      },
+      "model_info": {
+        "general.architecture": "glm5_next",
+        "general.parameter_count": 321323031390,
+        "glm5_next.context_length": 1048576
+      }
+    },
+    "beam": {
+      "capabilities": ["completion", "thinking", "tools"],
+      "thinking": {
+        "values": ["low", "medium", "high", "xhigh", "max"],
+        "default": "max"
+      },
+      "model_info": {
+        "general.architecture": "beam",
+        "general.parameter_count": 501000000000,
+        "beam.context_length": 1048576
+      }
+    },
+    "muse-spark-open": {
+      "capabilities": ["completion", "thinking", "tools", "vision"],
+      "thinking": {
+        "values": [false, "low", "medium", "high", "max"],
+        "default": "high"
+      },
+      "model_info": {
+        "general.architecture": "muse-spark",
+        "general.parameter_count": 822000000000,
+        "muse-spark.context_length": 1048576
+      }
+    },
+    "clef:27b": {
+      "capabilities": ["decision", "vision"],
+      "model_info": {
+        "general.architecture": "qwen35",
+        "general.parameter_count": 27356728560,
+        "qwen35.context_length": 65536
+      }
+    },
+    "deepseek-v4.1-flash:1017": {
+      "capabilities": ["completion", "thinking", "tools", "vision"],
+      "thinking": {
+        "values": [false, "low", "high", "max"],
+        "default": "high"
+      },
+      "model_info": {
+        "general.architecture": "deepseek_v41",
+        "general.parameter_count": 763205315794,
+        "deepseek_v41.context_length": 1048576
+      }
+    }
+  }
+}

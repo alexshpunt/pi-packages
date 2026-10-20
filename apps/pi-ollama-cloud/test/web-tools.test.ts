@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isFetchResponse, isSearchResponse } from "../web-tools.ts";
+import { isFetchResponse, isSearchResponse } from "../src/web/types.ts";
 
 // ============================================================================
 // isFetchResponse

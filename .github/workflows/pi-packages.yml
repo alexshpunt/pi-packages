@@ -57,6 +57,9 @@ jobs:
       - run: pnpm --filter "$PACKAGE_NAME" run --if-present test:unit
       - name: Check the distributable package
         run: pnpm --dir "$PACKAGE_DIR" pack --pack-destination "$RUNNER_TEMP/package"
+      - name: Verify Ollama source and packed runtime contracts
+        if: matrix.slug == 'pi-ollama-cloud'
+        run: pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report "$RUNNER_TEMP/ollama-offline.json"
 
   ollama-latest:
     needs: select
@@ -82,6 +85,7 @@ jobs:
           @earendil-works/pi-tui@latest typebox@latest
       - run: pnpm --filter @buyong/pi-ollama-cloud typecheck
       - run: pnpm --filter @buyong/pi-ollama-cloud test:unit
+      - run: pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report "$RUNNER_TEMP/ollama-latest-offline.json"
 
   ollama-smoke:
     needs: [select, checks]
@@ -124,19 +128,23 @@ jobs:
           pnpm pack --pack-destination "$RUNNER_TEMP/ollama-package"
           mkdir -p "$RUNNER_TEMP/ollama-extracted"
           tar -xzf "$RUNNER_TEMP/ollama-package/"*.tgz -C "$RUNNER_TEMP/ollama-extracted"
+          mkdir -p "$RUNNER_TEMP/ollama-runtime"
+          printf '{"private":true}\n' > "$RUNNER_TEMP/ollama-runtime/package.json"
+          npm install --prefix "$RUNNER_TEMP/ollama-runtime" --omit=dev --ignore-scripts --legacy-peer-deps --no-audit --no-fund "$RUNNER_TEMP/ollama-package/"*.tgz
+          echo "OLLAMA_PACKED_DIR=$RUNNER_TEMP/ollama-runtime/node_modules/@buyong/pi-ollama-cloud" >> "$GITHUB_ENV"
       - name: Basic provider smoke from the packed extension
         if: env.OLLAMA_API_KEY != ''
         run: >-
           pnpm exec pi --no-extensions --no-skills --no-prompt-templates --no-themes
           --no-context-files --no-mcp --no-session
-          -e "$RUNNER_TEMP/ollama-extracted/package/index.ts"
+          -e "$OLLAMA_PACKED_DIR"
           --model "ollama-cloud/gemma4:31b" --no-tools -p "Say hi in one word"
       - name: Thinking off from the packed extension
         if: env.OLLAMA_API_KEY != ''
         run: |
           pnpm exec pi --no-extensions --no-skills --no-prompt-templates --no-themes \
             --no-context-files --no-mcp --no-session \
-            -e "$RUNNER_TEMP/ollama-extracted/package/index.ts" \
+            -e "$OLLAMA_PACKED_DIR" \
             --thinking off --model "ollama-cloud/glm-5.2" --no-tools --mode json -p 'hi' \
             > "$RUNNER_TEMP/ollama-thinking.jsonl"
           node --input-type=module <<'NODE'
@@ -158,7 +166,7 @@ jobs:
           NODE
       - name: Web tools smoke
         if: env.OLLAMA_API_KEY != ''
-        run: pnpm run smoke:web-tools
+        run: pnpm run smoke:web-tools --package-dir "$OLLAMA_PACKED_DIR"
 
   publish:
     needs: [select, checks, ollama-latest, ollama-smoke]
