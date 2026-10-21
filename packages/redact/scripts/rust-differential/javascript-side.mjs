@@ -113,6 +113,7 @@ export async function loadEngine() {
     ]);
     return {
         translateRustRegex: regex.translateRustRegex,
+        accelerateLabelledPattern: accelerators.accelerateLabelledPattern,
         createCandidateSearch: accelerators.createCandidateSearch,
         builtInRules: rules.BUILT_IN_RULES,
         detectPrivateKeys: rules.detectPrivateKeys,
@@ -164,7 +165,10 @@ function createVariant(engine, isNaive) {
             };
         // Mirrors compilePiiRule in src/pii/patterns.ts.
         const translate = (pattern) =>
-            engine.translateRustRegex(pattern, isCaseInsensitive);
+            engine.translateRustRegex(
+                engine.accelerateLabelledPattern(pattern),
+                isCaseInsensitive,
+            );
         return {
             entity,
             search:

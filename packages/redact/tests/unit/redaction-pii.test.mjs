@@ -9,7 +9,10 @@ import {
     normalizeRedactionConfig,
     REDACTION_MARKER,
 } from "../../dist/index.js";
-import { createCandidateSearch } from "../../dist/pii/accelerators.js";
+import {
+    accelerateLabelledPattern,
+    createCandidateSearch,
+} from "../../dist/pii/accelerators.js";
 import { CATALOG_JSON } from "../../dist/pii/data/catalog.js";
 import { IBAN_FORMATS_JSON } from "../../dist/pii/data/iban-formats.js";
 import { VALIDATION_DATA_JSON } from "../../dist/pii/data/validation-data.js";
@@ -599,6 +602,94 @@ test("[linear-time] the e-mail candidate search matches its reference translatio
     }
     expect(matched > 1_000, `only ${matched} matching cursors`).toBeTruthy();
 });
+
+const labelledCases = [
+    ["US_PRIOR_AUTHORIZATION_NUMBER", "prior authorization", "PA-12345678"],
+    ["US_CLAIM_NUMBER", "claim", "CLM-12345678"],
+    ["US_PRESCRIPTION_NUMBER", "rx", "RX-12345678"],
+    ["US_PRESCRIPTION_NUMBER", "prescription", "RX-12345678"],
+    ["US_REFERRAL_NUMBER", "referral", "REF-12345678"],
+    ["US_PROVIDER_TAX_ID", "provider tax id", "12-3456789"],
+];
+
+test("[linear-time] labelled separators preserve catalog matches and capture ranges", () => {
+    const patterns = JSON.parse(CATALOG_JSON).flatMap((definition) =>
+        definition.patterns
+            .filter((pattern) => pattern.regex.includes("\\s*:?\\s*"))
+            .map((pattern) => ({ ...definition, expression: pattern.regex })),
+    );
+    expect(patterns.length).toBe(6);
+    for (const { entity, expression, is_case_insensitive } of patterns) {
+        expect(accelerateLabelledPattern(expression)).not.toBe(expression);
+        for (const source of [expression, expression.replaceAll("\\b", "")]) {
+            const compile = (pattern) =>
+                new RegExp(
+                    translateRustRegex(pattern, is_case_insensitive),
+                    `usdg${is_case_insensitive ? "i" : ""}`,
+                );
+            const reference = compile(source);
+            const accelerated = compile(accelerateLabelledPattern(source));
+            const ranges = (regex, text) =>
+                [...text.matchAll(regex)].map((match) => match.indices);
+            for (const [, label, value] of labelledCases.filter(
+                ([candidate]) => candidate === entity,
+            ))
+                for (const whitespace of [
+                    "",
+                    " ",
+                    "\t",
+                    "\r\n",
+                    "\u0085",
+                    "\u2003",
+                    "\uFEFF",
+                ])
+                    for (const marker of ["", "#", "no", "no.", "number", "id"])
+                        for (const colon of ["", ":", "::"]) {
+                            const prefix = `${label}${whitespace}${marker}${whitespace}${colon}${whitespace}`;
+                            const text = `🌍 ${prefix}${value}; ${prefix}X; 한${prefix}${value}; ${prefix}${value}X; ${prefix.toUpperCase()}12345678`;
+                            expect(
+                                ranges(accelerated, text),
+                                `${entity}: ${JSON.stringify(text)}`,
+                            ).toStrictEqual(ranges(reference, text));
+                        }
+        }
+    }
+});
+
+for (const [entity, label, value] of labelledCases)
+    test(`[linear-time] ${label} with failing whitespace grows less than 8x from 4 KiB to 16 KiB`, () => {
+        const redactor = createRedactor({ piiEntities: [entity] });
+        const build = (size, suffix) =>
+            `${label} number${" ".repeat(size)}${suffix}`;
+        const measure = (text) => {
+            let best = Number.POSITIVE_INFINITY;
+            for (let run = 0; run < 3; run++) {
+                const started = process.hrtime.bigint();
+                redactor.redactText(text);
+                best = Math.min(
+                    best,
+                    Number(process.hrtime.bigint() - started) / 1e6,
+                );
+            }
+            return best;
+        };
+        // X fails candidate search; a value ending in X also reaches the
+        // sticky verifier, whose original word boundary rejects it.
+        for (const suffix of ["X", `${value}X`]) {
+            const smallInput = build(4 * 1024, suffix);
+            const largeInput = build(16 * 1024, suffix);
+            expect(redactor.redactText(largeInput)).toBe(largeInput);
+            const small = Math.max(measure(smallInput), 0.5);
+            const large = measure(largeInput);
+            expect(
+                large / small < 8,
+                `${entity} (${label}, ${suffix}): ${small.toFixed(2)} ms -> ${large.toFixed(2)} ms`,
+            ).toBeTruthy();
+        }
+        expect(redactor.redactText(build(16 * 1024, value))).toBe(
+            build(16 * 1024, REDACTION_MARKER),
+        );
+    });
 
 test("[linear-time] PII patterns grow less than 8x from 256 KiB to 1 MiB", () => {
     const build = (fragment, size) =>

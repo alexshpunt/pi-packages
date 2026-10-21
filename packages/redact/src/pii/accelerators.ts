@@ -1,8 +1,17 @@
-// Linear candidate searches for catalog patterns whose direct JavaScript
-// translation backtracks quadratically where Rust `regex` stays linear. Each
-// search returns the start the translated superset search would return, and is
-// used only while the catalog pattern text is exactly the one it was written for.
+// Linear rewrites and candidate searches for catalog patterns whose direct
+// JavaScript translation backtracks quadratically where Rust `regex` stays linear.
+// Optimizations apply only to the exact pattern or separator they were written for.
 import { WORD_CLASS } from "../unicode.js";
+
+const LABELLED_SEPARATOR = String.raw`(?:\s*(?:#|no\.?|number|id)\s*:?\s*|\s*:\s*|\s+)`;
+
+/** Keep whitespace runs disjoint even when the healthcare label's colon is absent. */
+export function accelerateLabelledPattern(pattern: string): string {
+    return pattern.replaceAll(
+        LABELLED_SEPARATOR,
+        String.raw`(?:\s*(?:#|no\.?|number|id)\s*(?::\s*)?|\s*:\s*|\s+)`,
+    );
+}
 
 /** Start of the leftmost superset-search match at or after `cursor`, if any. */
 export type CandidateSearch = (cursor: number) => number | undefined;
