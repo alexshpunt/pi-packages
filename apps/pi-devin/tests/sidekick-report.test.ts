@@ -28,7 +28,11 @@ test("boundReport: a short report is unchanged, a long one keeps its beginning a
     expect(bounded.fullReportPath).toBeTruthy(); if (!bounded.fullReportPath) throw new Error("unreachable");
     expect(await readFile(bounded.fullReportPath, "utf8")).toBe(original);
     expect((await stat(bounded.fullReportPath)).mode & 0o777).toBe(0o600);
-    expect(bounded.text.startsWith(original.slice(0, SIDEKICK_REPORT_CHAR_LIMIT))).toBeTruthy();
+    expect(bounded.text.startsWith("HEAD-MARKER")).toBe(true);
+    expect(bounded.text.length).toBeLessThanOrEqual(SIDEKICK_REPORT_CHAR_LIMIT);
+    const body = bounded.text.slice(0, bounded.text.indexOf("\n\n[The sidekick report"));
+    expect(body).toBe(original.slice(0, body.length));
+    expect(/[\ud800-\udbff]$/.test(body)).toBe(false);
     expect(bounded.text.includes("TAIL-MARKER")).toBe(false);
     expect(bounded.text.endsWith(`[The sidekick report exceeded about 131072 tokens and was cut. Full report: ${bounded.fullReportPath}]`)).toBe(true);
   } finally {
@@ -42,6 +46,8 @@ test("boundReport: a failed save still returns the bounded text and never reject
   try {
     const bounded = await boundReport(longReport());
     expect(bounded.fullReportPath).toBe(undefined);
+    expect(bounded.text.length).toBeLessThanOrEqual(SIDEKICK_REPORT_CHAR_LIMIT);
+    expect(bounded.text.startsWith("HEAD-MARKER")).toBe(true);
     expect(bounded.text.includes("TAIL-MARKER")).toBe(false);
     expect(bounded.text).toMatch(/exceeded about 131072 tokens and was cut\. The full report could not be saved: /);
   } finally {

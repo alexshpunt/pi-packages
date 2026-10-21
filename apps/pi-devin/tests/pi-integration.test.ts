@@ -340,7 +340,7 @@ test("Pi-style Fusion: block:false, steer and user input while waiting move work
 test("Pi-style Fusion: an oversized sidekick report reaches the lead bounded as a tool result, a failure and a background message, with the complete text saved", { timeout: 30_000 }, async () => {
   const reportLine = "보고서 줄 ✅ verified\n";
   const original = `HEAD-MARKER\n${reportLine.repeat(Math.ceil(SIDEKICK_REPORT_CHAR_LIMIT / reportLine.length) + 100)}TAIL-MARKER`;
-  const boundedLength = SIDEKICK_REPORT_CHAR_LIMIT + 1000;
+  const boundedLength = SIDEKICK_REPORT_CHAR_LIMIT;
   let prompts = 0;
   const fake = fakeSidekick((command, child) => {
     if (command.type !== "prompt") return;
@@ -374,7 +374,7 @@ test("Pi-style Fusion: an oversized sidekick report reaches the lead bounded as 
     const completedText = resultText(completed), fullReportPath = (completed.details as JsonObject).fullReportPath as string;
     savedReports.push(fullReportPath);
     expect(completed.isError).toBe(false);
-    expect(completedText.startsWith("HEAD-MARKER") && !completedText.includes("TAIL-MARKER") && completedText.length < boundedLength, `${completedText.length}`).toBeTruthy();
+    expect(completedText.startsWith("HEAD-MARKER") && !completedText.includes("TAIL-MARKER") && completedText.length <= boundedLength, `${completedText.length}`).toBeTruthy();
     expect(await readFile(fullReportPath, "utf8")).toBe(original);
     // The next lead request carries the bounded text, not the original.
     const leadSaw = JSON.stringify(f.chats()[1].body.chatMessagePrompts);
@@ -387,7 +387,9 @@ test("Pi-style Fusion: an oversized sidekick report reaches the lead bounded as 
     savedReports.push(/Full report: (\S+)\]$/.exec(failedText)?.[1] ?? "");
     expect(failed.isError).toBe(true);
     expect(failedText).toMatch(/^The sidekick task failed: boom\n\nHEAD-MARKER/);
-    expect(!failedText.includes("TAIL-MARKER") && failedText.length < boundedLength, `${failedText.length}`).toBeTruthy();
+    expect(!failedText.includes("TAIL-MARKER") && failedText.length <= boundedLength, `${failedText.length}`).toBeTruthy();
+
+    expect(await readFile(savedReports[1], "utf8")).toBe(`The sidekick task failed: boom\n\n${original}`);
 
     await session.prompt("Start the background report.");
     const before = f.chats().length;
@@ -396,8 +398,8 @@ test("Pi-style Fusion: an oversized sidekick report reaches the lead bounded as 
     const report = session.messages.filter((message) => message.role === "custom" && message.customType === SIDEKICK_REPORT_MESSAGE).at(-1);
     expect(report && report.role === "custom" && typeof report.content === "string").toBeTruthy(); if (!report || report.role !== "custom" || typeof report.content !== "string") throw new Error("unreachable");
     savedReports.push((report.details as JsonObject).fullReportPath as string);
-    expect(report.content.includes("HEAD-MARKER") && !report.content.includes("TAIL-MARKER") && report.content.length < boundedLength, `${report.content.length}`).toBeTruthy();
-    expect(await readFile(savedReports[2], "utf8")).toBe(original);
+    expect(report.content.includes("HEAD-MARKER") && !report.content.includes("TAIL-MARKER") && report.content.length <= boundedLength, `${report.content.length}`).toBeTruthy();
+    expect(await readFile(savedReports[2], "utf8")).toBe(`Sidekick report for background handoff ${String((report.details as JsonObject).handoffId).slice(0, 8)}:\n\n${original}`);
     expect(JSON.stringify(f.chats().at(-1)!.body.chatMessagePrompts).includes("TAIL-MARKER")).toBe(false);
     expect(f.errors).toStrictEqual([]);
   } finally {

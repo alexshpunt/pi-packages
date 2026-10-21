@@ -51,12 +51,18 @@ export function fusionOf(provider: Pick<DevinProvider, "getModels">, model: Mode
 const launchKey = (launch: SidekickLaunch) => JSON.stringify([launch.cwd, launch.modelID, launch.thinking, launch.sessionFile, launch.tools]);
 const shortID = (id: string) => id.slice(0, 8);
 
-/** Report text for the lead. The sidekick's own text is bounded on every path: tool result, failure and background message. */
-async function reportText(report: HandoffReport): Promise<BoundedReport> {
-  const body = await boundReport(report.text.trim());
-  if (report.status === "completed") return { ...body, text: body.text || "(The sidekick finished without a report.)" };
+/** Bound and preserve the complete report, including status, errors and any background delivery heading. */
+async function reportText(report: HandoffReport, heading = ""): Promise<BoundedReport> {
+  const body = report.text.trim();
   const reason = report.error ?? (report.status === "aborted" ? "cancelled." : "failed.");
-  return { ...body, text: [`The sidekick task ${report.status === "aborted" ? "stopped" : "failed"}: ${reason}`, body.text].filter(Boolean).join("\n\n") };
+  const text = report.status === "completed" ? body || "(The sidekick finished without a report.)"
+    : [`The sidekick task ${report.status === "aborted" ? "stopped" : "failed"}: ${reason}`, body].filter(Boolean).join("\n\n");
+  return boundReport(heading + text);
+}
+
+interface ReportDelivery {
+  owner: "background" | "blocking" | "delivered";
+  scheduled: boolean;
 }
 
 const reportPath = (fullReportPath: string | undefined) => fullReportPath ? { fullReportPath } : {};
@@ -67,25 +73,28 @@ const reportPath = (fullReportPath: string | undefined) => fullReportPath ? { fu
  */
 export function createSidekickTool(pi: ExtensionAPI, provider: DevinProvider, options: SidekickToolOptions) {
   const runtimes = new Map<string, SidekickRuntime>();
-  const scheduled = new Set<string>();
+  // Steers share the same done promise; completed handoffs must not be retained by delivery bookkeeping.
+  const deliveries = new WeakMap<Promise<HandoffReport>, ReportDelivery>();
   const waits = new Set<() => void>();
   let progressListener: (() => void) | undefined;
 
-  const deliverLater = (handoff: Handoff, runtime: SidekickRuntime) => {
-    if (scheduled.has(handoff.id)) return;
-    scheduled.add(handoff.id);
+  const deliverLater = (handoff: Handoff, runtime: SidekickRuntime, delivery: ReportDelivery) => {
+    if (delivery.scheduled || delivery.owner === "delivered") return;
+    delivery.scheduled = true;
     void handoff.done.then(async (report) => {
-      // Handoffs cleaned up by a session switch or shutdown, or cancelled by the lead, are not reported.
-      const isCurrent = () => [...runtimes.values()].includes(runtime);
-      if (report.status === "aborted" || !isCurrent()) return;
-      const { text, fullReportPath } = await reportText(report);
-      if (!isCurrent()) return;
-      pi.sendMessage({
-        customType: SIDEKICK_REPORT_MESSAGE, display: true,
-        content: `Sidekick report for background handoff ${shortID(report.id)}:\n\n${text}`,
-        details: { sidekickModel: runtime.launch.modelID, handoffId: report.id, status: report.status, toolCalls: report.toolCalls, durationMs: report.durationMs, isSteer: false,
-          ...reportPath(fullReportPath) } satisfies SidekickDetails,
-      }, { deliverAs: "followUp", triggerTurn: true });
+      try {
+        // A blocking call owns the report unless user input moves it back to the background.
+        const canDeliver = () => delivery.owner === "background" && [...runtimes.values()].includes(runtime);
+        if (report.status === "aborted" || !canDeliver()) return;
+        const { text, fullReportPath } = await reportText(report, `Sidekick report for background handoff ${shortID(report.id)}:\n\n`);
+        if (!canDeliver()) return;
+        delivery.owner = "delivered";
+        pi.sendMessage({
+          customType: SIDEKICK_REPORT_MESSAGE, display: true, content: text,
+          details: { sidekickModel: runtime.launch.modelID, handoffId: report.id, status: report.status, toolCalls: report.toolCalls, durationMs: report.durationMs, isSteer: false,
+            ...reportPath(fullReportPath) } satisfies SidekickDetails,
+        }, { deliverAs: "followUp", triggerTurn: true });
+      } finally { delivery.scheduled = false; }
     });
   };
 
@@ -109,6 +118,7 @@ export function createSidekickTool(pi: ExtensionAPI, provider: DevinProvider, op
     defaultActive: false,
     executionMode: "sequential",
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
+      signal?.throwIfAborted();
       const fusion = fusionOf(provider, ctx.model);
       if (!fusion) throw new Error("The sidekick is only available with the Devin Fusion model.");
       const input = params as { message?: unknown; block?: unknown } | undefined;
@@ -131,18 +141,25 @@ export function createSidekickTool(pi: ExtensionAPI, provider: DevinProvider, op
         runtime = new SidekickRuntime(launch, { ...options.runtime, childEnv: { [FUSION_CHILD_ENV]: "1" }, onProgress: () => progressListener?.() });
         runtimes.set(sessionId, runtime);
       }
+      signal?.throwIfAborted();
       const handoff = runtime.handoff(message);
+      let delivery = deliveries.get(handoff.done);
+      if (!delivery) {
+        delivery = { owner: "background", scheduled: false };
+        deliveries.set(handoff.done, delivery);
+      }
       const details = (status: SidekickDetails["status"], report?: HandoffReport): SidekickDetails => ({
         sidekickModel: launch.modelID, handoffId: handoff.id, status, toolCalls: report?.toolCalls ?? runtime!.progress()?.toolCalls ?? 0,
         ...(report ? { durationMs: report.durationMs } : {}), isSteer: handoff.isSteer,
       });
       const backgroundResult = (reason: string) => {
-        deliverLater(handoff, runtime!);
+        deliverLater(handoff, runtime!, delivery);
         return { content: [{ type: "text" as const, text: `${reason} The report will arrive as a message. (handoff ${shortID(handoff.id)})` }], details: details("background") };
       };
       if (input?.block === false) {
         return backgroundResult(handoff.isSteer ? "Added instructions to the running sidekick task." : "The sidekick started working in the background.");
       }
+      delivery.owner = "blocking";
       let settle!: (outcome: "done" | "aborted" | "interrupted") => void;
       const waiting = new Promise<"done" | "aborted" | "interrupted">((resolve) => { settle = resolve; });
       const interrupt = () => settle("interrupted"), abort = () => settle("aborted");
@@ -159,11 +176,15 @@ export function createSidekickTool(pi: ExtensionAPI, provider: DevinProvider, op
         waits.delete(interrupt);
         signal?.removeEventListener("abort", abort);
       });
+      if (outcome === "interrupted") {
+        delivery.owner = "background";
+        return backgroundResult("A user message arrived, so the sidekick task moved to the background.");
+      }
+      delivery.owner = "delivered";
       if (outcome === "aborted") {
         runtime.abort();
         throw new Error("Cancelled the sidekick task.");
       }
-      if (outcome === "interrupted") return backgroundResult("A user message arrived, so the sidekick task moved to the background.");
       const report = await handoff.done;
       const { text, fullReportPath } = await reportText(report);
       if (report.status !== "completed") throw new Error(text);
@@ -184,7 +205,7 @@ export function createSidekickTool(pi: ExtensionAPI, provider: DevinProvider, op
     },
     reset(): void {
       for (const runtime of runtimes.values()) runtime.close();
-      runtimes.clear(); scheduled.clear();
+      runtimes.clear();
     },
   };
 }

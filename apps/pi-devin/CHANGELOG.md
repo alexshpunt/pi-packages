@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- A broken sidekick connection now fails its task without terminating the lead Pi. Calls cancelled before handoff no longer start sidekick work, including background calls.
+- Waiting on an already-running background sidekick task no longer delivers the same report twice. Completed background tasks no longer accumulate delivery bookkeeping in long sessions.
+- Sidekick report limits now include error reasons and notices on every delivery path. Saved full reports include the same status, error and report text as the delivered report.
+
 ## [0.1.3] - 2026-10-20
 
 ### Fixed
