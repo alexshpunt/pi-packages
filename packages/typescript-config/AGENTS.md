@@ -10,13 +10,13 @@ This private package provides separate TypeScript baselines for source-loaded Pi
 
 ### Stable Ownership Boundaries
 
-- **Source loading.** `base.json` combines bundler module resolution, `.ts` import support, and `noEmit`. Compact, Ollama, and Devin inherit it. Check each consumer's input selection and Devin's additional `erasableSyntaxOnly` constraint when changing this preset.
+- **Source loading.** `base.json` combines bundler module resolution, `.ts` import support, and `noEmit`. Ollama and Devin inherit it. Check each consumer's input selection and Devin's additional `erasableSyntaxOnly` constraint when changing this preset.
 - **Compiled Node ESM.** `node-library.json` combines NodeNext modules/resolution, the ES2023 target, declaration output, and source maps. Individual Codex extensions and Redact supply `rootDir: src` and `outDir: dist`. Verify consumer type checks together with their emitted entry points and archive paths.
 
 ## 3. Core Behaviors & Patterns
 
 - The two presets are independent; neither extends the other. Do not copy source-only `noEmit`/`allowImportingTsExtensions` into the emitting preset or impose NodeNext on every source-loaded app.
-- Consumers own `include`, root directories, and output locations. Compact's `include: ["*.ts"]` does not cover new nested directories, while Ollama explicitly selects `src`, `scripts`, and `test`. Adding a folder does not make it part of type checking automatically.
+- Consumers own `include`, root directories, and output locations. Ollama explicitly selects `src`, `scripts`, and `test`. Adding a folder does not make it part of type checking automatically.
 - Not every workspace package consumes these presets. Bridge uses its own `tsconfig.json`; the Codex aggregate delegates type checks to components. Do not describe a preset change as affecting every app.
 
 ## 4. Conventions
