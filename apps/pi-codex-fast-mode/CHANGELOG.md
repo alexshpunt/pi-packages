@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-21
+
 ### New
 
 - Override speed for the current session with `/codex-fast session` or the first settings row, without changing saved preferences.
