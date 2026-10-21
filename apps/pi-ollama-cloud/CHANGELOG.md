@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-21
+
 ### Improved
 
 - Wait for a free slot when an account is at its concurrent request limit (`429 "too many concurrent requests"`), which parallel sessions and subagents on one account hit in bursts. The request is resent on the same account after about 1, 2, 4, 8 and 16 seconds before Pi's own retries take over.
