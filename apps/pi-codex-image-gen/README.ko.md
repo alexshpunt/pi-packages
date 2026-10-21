@@ -64,7 +64,7 @@ Use image_gen to edit /absolute/path/to/product.png. Remove the background and k
 
 모델이 요청에 맞춰 참조 인자를 선택합니다. 로컬 파일은 `referenced_image_paths`, 대화 이미지는 `num_last_images_to_include`를 사용하며 둘을 함께 쓰지 않습니다. 새 이미지에는 둘 다 생략합니다. 알 수 없는 필드, 잘못된 타입·개수와 참조 선택 충돌은 요청 전에 거부합니다.
 
-로컬 PNG·JPEG·WebP는 디코딩 검증 후 원래 바이트를 유지합니다. 다른 형식은 Pi가 디코딩할 수 있으면 PNG로 변환합니다. 최근 대화 이미지는 기록된 그대로 시간순으로 전송합니다. 요청한 개수보다 문맥에 남은 이미지가 적으면 무관한 파일을 고르지 않고 오류를 반환합니다.
+로컬 참조는 일반 파일이어야 하며 디렉터리·파이프·장치 경로는 거부합니다. PNG·JPEG·WebP는 디코딩 검증 후 원래 바이트를 유지합니다. 다른 형식은 Pi가 디코딩할 수 있으면 PNG로 변환합니다. 취소 신호는 파일 읽기에 전달하고 각 변환 전후에 확인하지만, 이미 실행 중인 변환 자체는 중단할 수 없습니다. 최근 대화 이미지는 기록된 그대로 시간순으로 전송합니다. 요청한 개수보다 문맥에 남은 이미지가 적으면 무관한 파일을 고르지 않고 오류를 반환합니다.
 
 ## 이미지 모델 선택
 
@@ -97,7 +97,15 @@ Use image_gen to edit /absolute/path/to/product.png. Remove the background and k
 
 세션·도구 호출 이름은 파일명에 맞게 정리합니다. 저장에 실패해도 반환 이미지는 버리지 않습니다. SDK·도구 호출자는 `details.savedPath`로 저장 성공을 확인할 수 있습니다. 경로가 매우 길면 텍스트 안내는 생략할 수 있습니다. 대화 문맥에서 빠진 뒤에도 편집할 수 있도록 로컬 복사본을 유지하세요.
 
-인증을 확인할 수 없거나 참조 이미지를 로드할 수 없는 경우, 잘못된 설정, 백엔드 실패와 이미지 데이터 부재에는 오류를 반환합니다. 호출자의 취소 신호를 이미지 요청에 전달하지만, 취소만으로 원격 서비스가 이미 작업했는지 알 수는 없습니다.
+저장 이미지는 자동 삭제하지 않습니다. 기본 에이전트 디렉터리에서는 `~/.pi/agent/generated_images/`에 계속 남으며, `PI_CODING_AGENT_DIR`을 설정하면 그 아래에 저장합니다. macOS·Linux에서는 다음 명령으로 디스크 사용량을 확인합니다.
+
+```sh
+du -sh "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/generated_images"
+```
+
+정리하려면 필요한 이미지를 먼저 복사한 뒤 파일 관리자에서 해당 디렉터리의 불필요한 PNG 파일이나 세션 하위 디렉터리를 직접 삭제하세요. 이 작업은 Pi 세션 기록에 이미 남은 이미지 데이터까지 지우지는 않습니다.
+
+인증을 확인할 수 없거나 참조 이미지를 로드할 수 없는 경우, 잘못된 설정, 백엔드 실패, 이미지 데이터 부재·빈 데이터·잘못된 base64에는 오류를 반환합니다. 성공 응답 본문은 base64와 JSON을 합쳐 128 MiB까지 허용하며, 초과하면 수신을 중단하고 재시도 없이 오류를 반환합니다. HTTP 오류 본문이 16 KiB를 넘으면 상태 코드는 유지하고 본문은 생략합니다. 백엔드 오류 텍스트는 비밀값을 치환한 뒤 4 KiB로 제한하며 줄였다는 안내를 붙입니다. 호출자의 취소 신호를 이미지 요청과 응답 읽기에 전달하지만, 취소만으로 원격 서비스가 이미 작업했는지 알 수는 없습니다.
 
 ## 생성 이미지 보기
 
@@ -125,6 +133,8 @@ Use image_gen to edit /absolute/path/to/product.png. Remove the background and k
 
 ```sh
 pnpm install
+pnpm --filter @buyong/pi-codex-image-gen typecheck
+pnpm --filter @buyong/pi-codex-image-gen lint
 pnpm --filter @buyong/pi-codex-image-gen build
 pnpm --filter @buyong/pi-codex-image-gen exec pi -ne -e ./dist/index.js --skill ./skills
 ```

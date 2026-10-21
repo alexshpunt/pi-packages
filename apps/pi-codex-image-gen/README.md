@@ -64,7 +64,7 @@ Replace the example path with your file. Ask explicitly for transparency when ne
 
 The model chooses the reference arguments from your request. Use `referenced_image_paths` for local files or `num_last_images_to_include` for conversation images, not both. Omit both for a new image. Unknown fields, invalid types/counts, and conflicting reference choices are rejected before a request is sent.
 
-Local PNG/JPEG/WebP references retain their source bytes after decode validation. Other formats are converted to PNG if Pi can decode them. Recent conversation images are sent in chronological order as recorded. If fewer requested images remain in context, the call reports an error rather than selecting unrelated files.
+Local references must be regular files; directories, pipes, and devices are rejected. PNG/JPEG/WebP references retain their source bytes after decode validation. Other formats are converted to PNG if Pi can decode them. Cancellation is passed to file reads and checked before and after each conversion; a conversion already running cannot be interrupted. Recent conversation images are sent in chronological order as recorded. If fewer requested images remain in context, the call reports an error rather than selecting unrelated files.
 
 ## Select an image model
 
@@ -97,7 +97,15 @@ The tool returns the first image from the backend response as PNG image content 
 
 Session/tool-call names are sanitized for filenames. A save failure does not discard the returned image. For SDK/tool consumers, `details.savedPath` identifies a successful save; the text hint can be omitted for an unusually long path. Keep a local copy if you need to edit the result after it leaves conversation context.
 
-An error is returned when authentication cannot be resolved, a reference cannot be loaded, settings are invalid, the backend fails, or no image data is returned. The caller's cancellation signal is passed to image requests; cancellation does not establish whether a remote service already performed work.
+Saved images are not automatically deleted. With the default agent directory, they remain under `~/.pi/agent/generated_images/`; `PI_CODING_AGENT_DIR` changes that root. To check disk usage on macOS/Linux:
+
+```sh
+du -sh "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/generated_images"
+```
+
+To clean up, open that directory in your file manager and manually delete unneeded PNG files or session subdirectories after copying any images you want to keep. This does not remove image data already recorded in Pi's session history.
+
+An error is returned when authentication cannot be resolved, a reference cannot be loaded, settings are invalid, the backend fails, or image data is missing, empty, or invalid base64. Successful response bodies are limited to 128 MiB (including base64 and JSON); larger responses are stopped and reported as errors without retrying. HTTP error bodies over 16 KiB are omitted while preserving the status code. Backend error text is limited to 4 KiB after secret redaction, with a notice when shortened. The caller's cancellation signal is passed to image requests and response reads; cancellation does not establish whether a remote service already performed work.
 
 ## View generated images
 
@@ -125,6 +133,8 @@ Run from the [pi-packages](https://github.com/buYoung/pi-packages) repository ro
 
 ```sh
 pnpm install
+pnpm --filter @buyong/pi-codex-image-gen typecheck
+pnpm --filter @buyong/pi-codex-image-gen lint
 pnpm --filter @buyong/pi-codex-image-gen build
 pnpm --filter @buyong/pi-codex-image-gen exec pi -ne -e ./dist/index.js --skill ./skills
 ```

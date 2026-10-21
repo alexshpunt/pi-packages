@@ -68,12 +68,13 @@ const IMAGE_TURN_ID_HEADER = "x-codex-image-turn-id";
 async function collectReferenceImages(
     plan: ImageRequestPlan,
     ctx: ExtensionToolContext,
+    signal: AbortSignal | undefined,
 ): Promise<ReferenceImage[]> {
     switch (plan.kind) {
         case "generate":
             return [];
         case "edit-paths":
-            return loadReferenceImages(plan.paths);
+            return loadReferenceImages(plan.paths, signal);
         case "edit-history":
             return collectRecentImages(ctx, plan.count);
     }
@@ -91,7 +92,7 @@ async function executeImageGen(
     const details = detailsForPlan(plan);
     let images: ReferenceImage[];
     try {
-        images = await collectReferenceImages(plan, ctx);
+        images = await collectReferenceImages(plan, ctx, signal);
     } catch (error) {
         if (error instanceof ReferenceImageError) {
             return errorResult(error.message, details);
