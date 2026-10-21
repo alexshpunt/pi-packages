@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-21
+
 ### New
 
 - `image_gen` calls now show a short summary with the operation, image size, and saved path instead of the model-facing path hint. Click the path to open the image in your default app.
