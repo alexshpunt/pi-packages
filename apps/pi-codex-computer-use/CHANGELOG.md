@@ -12,6 +12,7 @@
 ### Improved
 
 - Logs summarize image sizes without serializing the image payloads.
+- After the first connection, sessions start the `cua_repl` server on the first tool call instead of at session start, using a saved tool catalog. Sessions and subagents that never use Computer Use no longer keep an idle server, and session startup no longer waits for it.
 
 ## [0.1.3] - 2026-10-20
 

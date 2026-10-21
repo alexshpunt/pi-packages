@@ -1,3 +1,8 @@
+import { setTimeout as delay } from "node:timers/promises";
+import {
+    type AssistantMessage,
+    isRetryableAssistantError,
+} from "@earendil-works/pi-ai";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
     type ApprovalPolicy,
@@ -66,6 +71,14 @@ export interface ReviewExecutionContext {
 type ProviderContext = Parameters<
     ExtensionContext["modelRegistry"]["streamSimple"]
 >[1];
+/**
+ * Pauses before resending a review request that failed with an error Pi's own agent retry would retry
+ * (connection loss, overload, 429/5xx). `modelRegistry.streamSimple` does not retry, and one dropped
+ * connection otherwise denies the reviewed action. Resends stay inside the review deadline.
+ */
+export const REVIEW_RETRY_DELAYS_MS: readonly number[] = [500, 1500];
+/** A resend is not started with less time than this left before the review deadline. */
+const MIN_REVIEW_ATTEMPT_MS = 2000;
 export class PiReviewProvider implements ReviewProvider {
     private readonly investigatedRequests = new WeakSet<ReviewRequest>();
     constructor(
@@ -150,26 +163,38 @@ export class PiReviewProvider implements ReviewProvider {
                     "REVIEW_CONTEXT_OVERFLOW",
                     "Exact review request exceeds model context capacity",
                 );
-            const response = await withSignal(
-                this.context.modelRegistry
-                    .streamSimple(model, context, {
-                        signal: options.signal,
-                        timeoutMs:
-                            round === 0
-                                ? options.timeoutMs
-                                : Math.max(
-                                      1,
-                                      options.timeoutMs -
-                                          (Date.now() - startedAt),
-                                  ),
-                        maxTokens,
-                        // Codex sends no temperature; the Codex backend rejects it.
-                        reasoning,
-                    })
-                    .result(),
-                options.signal,
-            );
-            options.signal.throwIfAborted();
+            let response: AssistantMessage;
+            for (let attempt = 0; ; attempt++) {
+                response = await withSignal(
+                    this.context.modelRegistry
+                        .streamSimple(model, context, {
+                            signal: options.signal,
+                            timeoutMs:
+                                round === 0 && attempt === 0
+                                    ? options.timeoutMs
+                                    : Math.max(
+                                          1,
+                                          options.timeoutMs -
+                                              (Date.now() - startedAt),
+                                      ),
+                            maxTokens,
+                            // Codex sends no temperature; the Codex backend rejects it.
+                            reasoning,
+                        })
+                        .result(),
+                    options.signal,
+                );
+                options.signal.throwIfAborted();
+                const delayMs = REVIEW_RETRY_DELAYS_MS[attempt];
+                if (
+                    delayMs === undefined ||
+                    !isRetryableAssistantError(response) ||
+                    options.timeoutMs - (Date.now() - startedAt) <
+                        delayMs + MIN_REVIEW_ATTEMPT_MS
+                )
+                    break;
+                await delay(delayMs, undefined, { signal: options.signal });
+            }
             if (
                 response.stopReason === "error" ||
                 response.stopReason === "aborted" ||

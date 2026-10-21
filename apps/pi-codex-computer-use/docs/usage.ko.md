@@ -32,7 +32,7 @@ pnpm --filter @buyong/pi-codex-computer-use build
 pnpm --filter @buyong/pi-codex-computer-use exec pi -ne -e ./dist/index.js
 ```
 
-두 경로를 함께 로드하거나 `@buyong/pi-codex`의 같은 확장과 중복하지 마세요. 정상 로드된 확장은 `/computer-use`·`/computer-use-check`를 등록합니다. 기능이 켜져 있고 런타임 연결이 성공해야 도구가 나타납니다. 하단에는 기능·서버 상태를 표시합니다.
+두 경로를 함께 로드하거나 `@buyong/pi-codex`의 같은 확장과 중복하지 마세요. 정상 로드된 확장은 `/computer-use`·`/computer-use-check`를 등록합니다. 기능이 켜져 있고 런타임 연결이 성공해야 도구가 나타납니다. 하단에는 기능·서버 상태를 표시합니다. 첫 연결 때 서버의 도구 목록을 저장합니다. 이후 런타임과 스위치가 같은 세션은 저장본으로 도구를 등록하고 처음 도구를 호출할 때 서버를 시작합니다(그 전까지 하단 `ready`). 시작한 서버의 도구 목록이 다르면 등록한 도구와 저장본을 새 목록으로 바꿉니다.
 
 ## 2. 요구 사항 점검과 해결
 
@@ -172,7 +172,7 @@ JSON-RPC 오류 메시지와 데이터를 포함한 긴 텍스트는 탐색한 �
 | 취소한 호출 때문에 후속 호출이 지연됨 | JavaScript 호출을 순서대로 실행하므로 완료·시간 초과를 기다립니다. 서버가 종료됐다면 상태를 확인합니다. |
 | 호출이 `MCP stdio message exceeds 16777216 bytes`로 실패 | 응답이 16 MiB를 넘어 버려졌습니다. 연결은 유지되므로 더 작은 결과를 요청하세요. 클라이언트가 승인 대기 시간을 줄이지는 않습니다. |
 
-로그는 `<agentDir>/codex-computer-use/mcp.log`에서 5 MiB마다 순환합니다. JSON으로 직렬화하기 전에 이미지 데이터를 base64 문자 수로 치환합니다. 키 기반 가림 후에도 페이지·앱 내용이 남을 수 있습니다. 공유 전에 확인하세요. Desktop 밖의 비공개 인터페이스·사용 정보 전송은 이 연결이 보장하지 않습니다.
+로그는 `<agentDir>/codex-computer-use/mcp.log`에서 5 MiB마다 순환합니다. 저장한 도구 목록은 `<agentDir>/codex-computer-use/tool-catalog.json`이며, 지우면 다음 세션이 서버를 바로 시작할 뿐입니다. JSON으로 직렬화하기 전에 이미지 데이터를 base64 문자 수로 치환합니다. 키 기반 가림 후에도 페이지·앱 내용이 남을 수 있습니다. 공유 전에 확인하세요. Desktop 밖의 비공개 인터페이스·사용 정보 전송은 이 연결이 보장하지 않습니다.
 
 ## 기록된 검증과 남은 한계
 

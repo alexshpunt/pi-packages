@@ -43,7 +43,7 @@ Inside Pi:
 Use mcp__cua_repl__js to run await cua.getState(). Summarize the available apps and browsers without operating them.
 ```
 
-The expected first result is an inventory for the enabled surfaces from `mcp__cua_repl__js`. A connection also exposes `mcp__cua_repl__js_reset`. If startup fails or the server exits unexpectedly, the footer reports an error and runtime tools stay hidden until a restart. A running MCP server or a passed prerequisite check is not proof that every app/browser operation will succeed.
+The expected first result is an inventory for the enabled surfaces from `mcp__cua_repl__js`. A connection also exposes `mcp__cua_repl__js_reset`. After the first connection, later sessions register the tools from a saved catalog and start the server on the first tool call; the footer shows `ready` until then. If startup fails or the server exits unexpectedly, the footer reports an error and runtime tools stay hidden until a restart. A running MCP server or a passed prerequisite check is not proof that every app/browser operation will succeed.
 
 For a browser task after that check, follow the [Chrome task and approval instructions](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.md#4-run-a-task-and-answer-approvals). The runtime returns API documentation with its first entry call; the model must read it before continuing.
 
@@ -87,7 +87,7 @@ Switch changes wait for the agent to become idle. A saved switch is a preference
 - Cold service launch from the macOS app-bundle fallback, Windows execution, desktop-quit operation, permanent grants, downloads/uploads, full CDP, and WebMCP remain unverified.
 - Desktop updates can change private interfaces. Runtime telemetry outside Codex has not been established; check applicable OpenAI terms.
 
-Logs rotate at 5 MiB under `<agentDir>/codex-computer-use/mcp.log`. Image payloads are logged only as base64 character counts, not image data. Key-based masking does not remove every page/app detail. Inspect and redact logs before sharing.
+Logs rotate at 5 MiB under `<agentDir>/codex-computer-use/mcp.log`. The tool catalog saved for deferred startup is `<agentDir>/codex-computer-use/tool-catalog.json`; deleting it only makes the next session start the server immediately again. Image payloads are logged only as base64 character counts, not image data. Key-based masking does not remove every page/app detail. Inspect and redact logs before sharing.
 
 For a missing runtime, unavailable browser, rejected approval surface, or delayed cancellation, use the [troubleshooting table](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.md#troubleshooting). The [full usage guide](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.md) owns discovery details, task examples, and recorded verification; the archive includes it at `docs/usage.md`.
 

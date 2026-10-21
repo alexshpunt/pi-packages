@@ -252,6 +252,8 @@ export class PackageApprovalStore {
             return;
         }
         const task = this.writes.then(async () => {
+            // Merge into the latest file: another Pi session may have approved other packages since load().
+            await this.load();
             const next = [
                 ...this.persistent.filter(
                     (item) => item.packageKey !== approval.packageKey,

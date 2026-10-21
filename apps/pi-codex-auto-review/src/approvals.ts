@@ -441,12 +441,16 @@ export class ApprovalManager {
                     delta: policy.delta,
                 });
                 if (choice === "persistent" && persistence) {
-                    const prior = this.grants.filter(
-                        (item) => item.scope === "persistent",
-                    );
-                    await persistence.save([...prior, grant]);
+                    // Another Pi session may have saved its own rules since this one loaded the file;
+                    // add and revert only this grant on the latest file instead of this process's copy.
+                    const latest = await persistence.load();
+                    await persistence.save([...latest, grant]);
                     if (deadline.signal.aborted) {
-                        await persistence.save(prior);
+                        await persistence.save(
+                            (await persistence.load()).filter(
+                                (item) => item.id !== grant.id,
+                            ),
+                        );
                         return deny(
                             "Persistent approval cancelled and reverted",
                         );

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type {
     AgentToolResult,
     ExtensionAPI,
+    ExtensionContext,
     ToolAnnotations,
     ToolDefinition,
     ToolNamespace,
@@ -19,6 +20,7 @@ import type { ActiveCallTracker } from "./active-call.js";
 import type { BridgeConnection } from "./connection.js";
 import type { BridgeLog } from "./log.js";
 import { BROWSER_BACKENDS_VARIABLE } from "./runtime.js";
+import type { ToolCatalog } from "./tool-catalog.js";
 import type { TSchema } from "./typebox.js";
 
 export const SERVER_NAME = "cua_repl";
@@ -223,6 +225,14 @@ function toAnnotations(tool: Tool): ToolAnnotations | undefined {
 
 export interface ToolBridgeDependencies {
     getConnection(): BridgeConnection | undefined;
+    /**
+     * Returns the running connection, starting the server first when tools were registered from a
+     * cached catalog. Rejects only when `signal` aborts while the server starts.
+     */
+    connect?(options: {
+        signal?: AbortSignal;
+        ctx: ExtensionContext;
+    }): Promise<BridgeConnection | undefined>;
     /** Current turn id, started on `agent_start` (a call outside a run starts one). */
     ensureTurn(): { turnId: string; startedAtUnixMs: number };
     log: BridgeLog;
@@ -247,7 +257,7 @@ function describeError(error: unknown): string {
 /** Codex's runtime supplies API docs; pi must also disclose its narrower enabled surfaces/backends. */
 function toolPromptGuidelines(
     toolName: string,
-    connection: BridgeConnection,
+    catalog: ToolCatalog,
 ): string[] {
     if (toolName === "js_reset")
         return [
@@ -259,9 +269,9 @@ function toolPromptGuidelines(
         "With their default options, cua entry APIs and getAXState already emit their documentation/UI state. Do not wrap those results again in nodeRepl.write or emitImage. Use nodeRepl.write for additional values and await nodeRepl.emitImage for additional images; bare JavaScript expression values are not output.",
         "The JavaScript REPL is persistent: reuse established app/tab bindings rather than repeatedly bootstrapping. After context compaction, call await cua.rewriteDocumentation() before continuing an existing UI task. After a reset/restart, reacquire bindings instead of reusing stale variables.",
     ];
-    if (connection.state.browserUse) {
+    if (catalog.state.browserUse) {
         const backends =
-            connection.environment.env[BROWSER_BACKENDS_VARIABLE] ?? "chrome";
+            catalog.environment.env[BROWSER_BACKENDS_VARIABLE] ?? "chrome";
         guidelines.push(
             `Browser Use in this pi session has only these enabled backends: ${backends}. Codex Desktop examples mentioning other backends (iab, mcpapps, edge) do not make them available here. If a user requests an unavailable backend, explain the limit rather than invoking or silently substituting it.`,
         );
@@ -274,7 +284,7 @@ function toolPromptGuidelines(
             "Browser Use is disabled in this pi session; do not invoke browser entry APIs.",
         );
     }
-    if (!connection.state.computerUse)
+    if (!catalog.state.computerUse)
         guidelines.push(
             "Computer Use is disabled in this pi session; do not invoke native app entry APIs.",
         );
@@ -285,7 +295,7 @@ function createToolDefinition(
     tool: Tool,
     namespace: ToolNamespace,
     deps: ToolBridgeDependencies,
-    connection: BridgeConnection,
+    catalog: ToolCatalog,
 ): ToolDefinition<TSchema, BridgeToolDetails> {
     const name = bridgeToolName(tool.name);
     const annotations = toAnnotations(tool);
@@ -294,7 +304,7 @@ function createToolDefinition(
         tool.title ??
         tool.annotations?.title ??
         `MCP tool ${tool.name} from server ${SERVER_NAME}`;
-    const guidelines = toolPromptGuidelines(tool.name, connection);
+    const guidelines = toolPromptGuidelines(tool.name, catalog);
     return {
         name,
         label: `${SERVER_NAME}/${tool.name}`,
@@ -317,7 +327,21 @@ function createToolDefinition(
         ...(annotations ? { annotations } : {}),
         executionMode: "sequential",
         async execute(toolCallId, params, signal, _onUpdate, ctx) {
-            const connection = deps.getConnection();
+            let connection: BridgeConnection | undefined;
+            try {
+                connection = deps.connect
+                    ? await deps.connect({ signal, ctx })
+                    : deps.getConnection();
+            } catch (error) {
+                if (!signal?.aborted) throw error;
+                deps.onCancelled?.();
+                return errorResult(
+                    tool.name,
+                    `${tool.name} was cancelled`,
+                    0,
+                    true,
+                );
+            }
             if (!connection || connection.isClosed())
                 return errorResult(
                     tool.name,
@@ -457,33 +481,31 @@ function createHiddenDefinition(
 /**
  * Registers `js` and `js_reset` from the server's `tools/list` verbatim (description, schema,
  * annotations, server instructions as the namespace description), with pi host guidance in the
- * model-facing loadout and prompt guidelines. Without a connection, every name
- * registered earlier is re-registered `hidden`, since pi cannot unregister tools. Returns the names
- * currently registered by this package.
+ * model-facing loadout and prompt guidelines. The catalog is a live connection or a cached one whose
+ * server starts on the first call. Without a catalog, every name registered earlier is re-registered
+ * `hidden`, since pi cannot unregister tools. Returns the names currently registered by this package.
  */
 export function registerBridgeTools(
     pi: ExtensionAPI,
-    connection: BridgeConnection | undefined,
+    catalog: ToolCatalog | undefined,
     deps: ToolBridgeDependencies,
     previousNames: readonly string[] = [],
 ): string[] {
     const namespace: ToolNamespace = {
         name: NAMESPACE_NAME,
-        ...(connection?.instructions
-            ? { description: connection.instructions }
-            : {}),
+        ...(catalog?.instructions ? { description: catalog.instructions } : {}),
     };
     const registered: string[] = [];
-    if (connection) {
+    if (catalog) {
         const allowed = new Set(
             EXPOSED_TOOLS.filter((name) =>
-                connection.plan.enabledTools.includes(name),
+                catalog.plan.enabledTools.includes(name),
             ),
         );
-        for (const tool of connection.tools) {
+        for (const tool of catalog.tools) {
             if (!allowed.has(tool.name)) continue;
             pi.registerTool(
-                createToolDefinition(tool, namespace, deps, connection),
+                createToolDefinition(tool, namespace, deps, catalog),
             );
             registered.push(bridgeToolName(tool.name));
         }

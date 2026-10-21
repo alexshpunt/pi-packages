@@ -37,6 +37,12 @@ export class ApprovalSettingsStore {
             );
         }
     }
+    /** Applies `patch` to the settings currently on disk, so another Pi session's saved choices are kept. */
+    async savePatch(patch: GuardSettingsInput): Promise<GuardSettings> {
+        const settings = validateSettings({ ...(await this.load()), ...patch });
+        await this.save(settings);
+        return settings;
+    }
     async save(settings: GuardSettings): Promise<void> {
         validateSettings(settings);
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });

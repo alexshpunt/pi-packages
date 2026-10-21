@@ -43,7 +43,7 @@ Pi에서 다음 순서로 진행합니다.
 Use mcp__cua_repl__js to run await cua.getState(). Summarize the available apps and browsers without operating them.
 ```
 
-첫 결과는 `mcp__cua_repl__js`가 반환한 활성 기능의 목록입니다. 연결되면 `mcp__cua_repl__js_reset`도 제공합니다. 시작에 실패하거나 서버가 예기치 않게 종료되면 하단에 오류를 표시하고 재시작할 때까지 도구를 숨깁니다. MCP 서버가 실행 중이거나 사전 검사를 통과해도 모든 앱·브라우저 작업의 성공을 보장하지는 않습니다.
+첫 결과는 `mcp__cua_repl__js`가 반환한 활성 기능의 목록입니다. 연결되면 `mcp__cua_repl__js_reset`도 제공합니다. 한 번 연결한 뒤의 세션은 저장해 둔 도구 목록으로 도구를 등록하고, 처음 도구를 호출할 때 서버를 시작합니다. 그 전까지 하단에는 `ready`를 표시합니다. 시작에 실패하거나 서버가 예기치 않게 종료되면 하단에 오류를 표시하고 재시작할 때까지 도구를 숨깁니다. MCP 서버가 실행 중이거나 사전 검사를 통과해도 모든 앱·브라우저 작업의 성공을 보장하지는 않습니다.
 
 이후 브라우저 작업은 [Chrome 작업·승인 안내](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.ko.md#4-작업-실행과-승인)를 따르세요. 런타임은 첫 진입 호출에서 API 문서를 반환하며 모델은 다음 호출 전에 읽어야 합니다.
 
@@ -87,7 +87,7 @@ RPC는 기능 두 개와 Close 항목이 있는 반복 선택창을 사용합니
 - macOS 앱 번들 폴백의 최초 서비스 실행, Windows 실행, Desktop 종료 상태, 영구 승인, 다운로드·업로드·전체 CDP·WebMCP는 미검증입니다.
 - Desktop 업데이트로 비공개 인터페이스가 바뀔 수 있습니다. Codex 밖의 런타임 사용 정보 전송 동작은 확인되지 않았습니다. 적용되는 OpenAI 약관을 확인하세요.
 
-로그는 `<agentDir>/codex-computer-use/mcp.log`에 기록하고 5 MiB에서 순환합니다. 이미지 데이터 대신 base64 문자 수만 기록합니다. 키 기반 가림이 모든 페이지·앱 내용을 제거하지는 않습니다. 공유 전에 확인하고 가리세요.
+로그는 `<agentDir>/codex-computer-use/mcp.log`에 기록하고 5 MiB에서 순환합니다. 지연 시작에 쓰는 도구 목록은 `<agentDir>/codex-computer-use/tool-catalog.json`에 저장합니다. 지우면 다음 세션이 서버를 바로 시작할 뿐입니다. 이미지 데이터 대신 base64 문자 수만 기록합니다. 키 기반 가림이 모든 페이지·앱 내용을 제거하지는 않습니다. 공유 전에 확인하고 가리세요.
 
 런타임 부재, 사용 불가 브라우저, 승인 UI 거부나 취소 지연은 [문제 해결 표](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.ko.md#문제-해결)를 참고하세요. 탐색 상세, 작업 예시와 검증 기록은 [전체 사용법](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.ko.md)에 있으며 압축 파일에도 `docs/usage.ko.md`로 포함합니다.
 

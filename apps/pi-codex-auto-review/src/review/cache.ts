@@ -15,6 +15,8 @@ import { isContentStructure } from "./redaction.js";
 const CACHE_VERSION = 2;
 const MAX_REVIEW_APPROVALS = 10_000;
 const HOUR_MS = 60 * 60 * 1000;
+/** How long a statement waits for another process's write before treating the cache as unavailable. */
+const CACHE_BUSY_TIMEOUT_MS = 1000;
 
 function cachedAssessment(value: unknown): ReviewAssessment | undefined {
     if (typeof value !== "string") return;
@@ -64,7 +66,11 @@ export class ReviewApprovalCache {
                 closeSync(openSync(this.path, "a", 0o600));
                 chmodSync(this.path, 0o600);
             }
-            database = new DatabaseSync(this.path, { timeout: 100 });
+            // Parallel Pi sessions and subagents share this file. A busy database within the wait
+            // is a cache miss, which repeats a model review that a slightly longer wait would avoid.
+            database = new DatabaseSync(this.path, {
+                timeout: CACHE_BUSY_TIMEOUT_MS,
+            });
             const version = database.prepare("PRAGMA user_version").get();
             if (version?.user_version !== 0 && version?.user_version !== 1)
                 throw new Error("Unsupported review cache schema");

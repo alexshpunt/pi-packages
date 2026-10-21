@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readFileSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync, statSync, symlinkSync } from "node:fs";
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { claudeCodeSettings, hasRemovedToolEnabled, loadConfig, markStartupNoticeShown, readDetectedPlan, recordDetectedPlan } from "../src/config.js";
 
@@ -158,6 +158,27 @@ describe("loadConfig", () => {
 
 		markStartupNoticeShown();
 		expect(readFileSync(path, "utf-8"), "a typo must not cost the user their config").toBe(malformed);
+	}));
+
+	it("markStartupNoticeShown replaces the config in one step, keeping its mode and a symlink to it", () => withTempHome((home) => {
+		const globalDir = getAgentDir();
+		mkdirSync(globalDir, { recursive: true });
+		const real = join(home, "dotfiles-claude-bridge.json");
+		writeFileSync(real, JSON.stringify({ provider: { strictMcpConfig: false } }), { mode: 0o600 });
+		const path = join(globalDir, "claude-bridge.json");
+		symlinkSync(real, path);
+		const before = statSync(real).ino;
+
+		markStartupNoticeShown();
+		// A new inode means a reader saw either the old file or the complete new one, never a truncated one.
+		expect(statSync(real).ino).not.toBe(before);
+		expect(lstatSync(path).isSymbolicLink(), "a dotfile-managed link must stay a link").toBe(true);
+		const written = JSON.parse(readFileSync(real, "utf-8"));
+		expect(written.startupNoticeShown).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+		expect(written.provider).toStrictEqual({ strictMcpConfig: false });
+		expect(statSync(real).mode & 0o777).toBe(0o600);
+		expect(readdirSync(home).filter((name) => name.endsWith(".tmp"))).toStrictEqual([]);
+		expect(readdirSync(globalDir).filter((name) => name.endsWith(".tmp"))).toStrictEqual([]);
 	}));
 
 	it("markStartupNoticeShown creates the config when there is none", () => withTempHome(() => {
