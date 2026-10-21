@@ -80,6 +80,18 @@ export function failureDetails(error: unknown): JsonObject {
   return { category: "error" };
 }
 
+const TRANSIENT_CONNECTION_CODES = /^(ECONNREFUSED|ECONNRESET|ECONNABORTED|EPIPE|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH|ENETDOWN|ENOTFOUND|EAI_AGAIN|ERR_STREAM_PREMATURE_CLOSE)$/;
+
+/** The request got no usable answer from a working server, so sending it again may succeed. TLS and certificate failures are not included. */
+export function isTransientConnectionFailure(error: unknown): boolean {
+  if (error instanceof RPCError) return error.code === "unavailable" || [502, 503, 504].includes(error.httpStatus ?? 0);
+  return error instanceof Error && "code" in error && typeof error.code === "string" && TRANSIENT_CONNECTION_CODES.test(error.code);
+}
+
+function prematureClose(message: string): Error {
+  return Object.assign(new Error(message), { code: "ERR_STREAM_PREMATURE_CLOSE" });
+}
+
 function retryAfterMs(headers: Headers): number | undefined {
   const value = headers.get("retry-after")?.trim();
   if (!value) return undefined;
@@ -185,8 +197,8 @@ export async function* decodeFrames(
       yield { isEnd: hasEnded, data };
     }
   }
-  if (buffered.length !== 0) throw new Error("The connection ended with an incomplete Connect frame.");
-  if (!hasEnded) throw new Error("The connection ended without EndStream.");
+  if (buffered.length !== 0) throw prematureClose("The connection ended with an incomplete Connect frame.");
+  if (!hasEnded) throw prematureClose("The connection ended without EndStream.");
 }
 
 async function* responseChunks(response: Response, signal: AbortSignal): AsyncGenerator<Uint8Array> {

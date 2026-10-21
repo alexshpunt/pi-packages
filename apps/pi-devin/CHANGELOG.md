@@ -7,7 +7,9 @@
 - A broken sidekick connection now fails its task without terminating the lead Pi. Calls cancelled before handoff no longer start sidekick work, including background calls.
 - Waiting on an already-running background sidekick task no longer delivers the same report twice. Completed background tasks no longer accumulate delivery bookkeeping in long sessions.
 - Sidekick report limits now include error reasons and notices on every delivery path. Saved full reports include the same status, error and report text as the delivered report.
-- Requests no longer fail with "OAuth refresh failed for devin: connect ECONNREFUSED" when only the pre-request login check cannot reach the Devin server. The request is sent with the stored session, a refused connection is retried by Pi, and a real outage reports the connection error itself.
+- Requests no longer fail with "OAuth refresh failed for devin: connect ECONNREFUSED" when only the pre-request login check cannot reach the Devin server. The request is sent with the stored session, and a real outage reports the connection error itself.
+- Model requests whose connection is refused, reset, times out or ends mid-response, and Devin `unavailable` or HTTP 502–504 errors, are now retried automatically by Pi.
+- Several Pi sessions using Devin at once no longer wait on each other before every request. Requests could take 15–40 seconds and occasionally failed with "Credential store read failed for devin: Lock file is already being held".
 
 ## [0.1.3] - 2026-10-20
 

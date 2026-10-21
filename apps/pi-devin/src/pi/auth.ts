@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { OAuthAuth, OAuthCredential } from "@earendil-works/pi-ai";
 import { loginAccount, type LoginOptions } from "../core/auth/index.ts";
 import { DevinClient } from "../core/client.ts";
-import { awaitWithSignal, endpoint, failureDetails, isAuthenticationError, RPCError } from "../core/protocol/transport.ts";
+import { awaitWithSignal, endpoint, isAuthenticationError, isTransientConnectionFailure, RPCError } from "../core/protocol/transport.ts";
 import { object, requiredString, type Credential, type JsonObject } from "../core/types.ts";
 
 export const OAUTH_ONLY_MESSAGE = "Devin uses only the OAuth account session from /login. API key authentication is not supported.";
@@ -32,13 +32,6 @@ export function credentialFromOAuth(credential: OAuthCredential): Credential {
   };
 }
 
-/** A session check that never reached a working server says nothing about the session itself. TLS failures stay fatal. */
-function isUnreachableSessionCheck(error: unknown): boolean {
-  if (error instanceof RPCError) return error.code === "unavailable" || error.httpStatus === 502 || error.httpStatus === 503;
-  const details = failureDetails(error);
-  return details.category === "network" && /^(ECONN|ENET|EHOST|EPIPE$|ENOTFOUND$|EAI_|ETIMEDOUT$)/.test(String(details.code));
-}
-
 function credentialKey(credential: Credential): string {
   return createHash("sha256").update(credential.apiServerURL + "\0" + credential.sessionToken).digest("hex");
 }
@@ -55,6 +48,8 @@ export function createDevinAccountAuth(options: {
   onValidated?: (credential: Credential, ownerHash: string, status: JsonObject) => void;
   onInvalidated?: (credential: Credential, error: unknown) => void;
   getSignal?: () => AbortSignal;
+  /** The account was already checked in this process; each model request checks it again outside Pi's credential lock. */
+  isAccountChecked?: (credential: Credential) => boolean;
 } = {}): DevinAccountAuth {
   const invalid = new Set<string>();
   // Remembers only a hash, never the token. Pi calls toAuth on every request, so the session in use moves back to the front.
@@ -111,6 +106,9 @@ export function createDevinAccountAuth(options: {
       const credential = credentialFromOAuth(current);
       requireUsable(credential);
       rememberOAuth(credential);
+      // expires 0 makes Pi call this before every request while holding the shared auth.json lock. A network
+      // check here serializes every Pi process using Devin, so only the first resolution in a process checks.
+      if (options.isAccountChecked?.(credential)) return current;
       const expectedGeneration = generation;
       const client = (options.createClient ?? ((value) => new DevinClient(value, { profile: "login" })))(credential);
       try {
@@ -120,9 +118,9 @@ export function createDevinAccountAuth(options: {
         return current;
       } catch (error) {
         auth.invalidate(credential, error, expectedGeneration);
-        // expires 0 makes Pi run this check before every request. An unreachable check must not block the request:
-        // keep the stored session so the model request succeeds or reports its own transport error.
-        if (!signal.aborted && isUnreachableSessionCheck(error)) return current;
+        // An unreachable check must not block the request: keep the stored session so the model request
+        // succeeds or reports its own retryable transport error.
+        if (!signal.aborted && isTransientConnectionFailure(error)) return current;
         throw error;
       }
       finally { client.transport.close(); }
