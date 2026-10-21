@@ -32,6 +32,16 @@ export function classifyAccountFailure(status: number | undefined, text: string)
   return undefined;
 }
 
+const CONCURRENCY_LIMIT_PATTERN = /too many concurrent requests/i;
+
+/**
+ * The plan's concurrent request limit ("429 \"too many concurrent requests\""). It clears as soon as another
+ * request on the account finishes, so it is neither an account failure nor a usage limit.
+ */
+export function isConcurrencyLimitMessage(message: string | undefined): boolean {
+  return message !== undefined && statusFromMessage(message) === 429 && CONCURRENCY_LIMIT_PATTERN.test(message);
+}
+
 /** Classify a provider stream `errorMessage`. */
 export function classifyProviderMessage(message: string | undefined): AccountFailure | undefined {
   if (!message) return undefined;

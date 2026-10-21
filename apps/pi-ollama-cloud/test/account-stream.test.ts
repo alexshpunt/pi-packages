@@ -276,3 +276,131 @@ describe("account stream with Pi's openai-completions implementation", () => {
     await router.settle();
   });
 });
+
+describe("account stream at the concurrent request limit", () => {
+  const concurrencyLimit = '429 "too many concurrent requests"';
+
+  /** Answers each call with the next scripted outcome: an error message before start, or "ok". */
+  function sequenceDelegate(outcomes: string[]) {
+    const calls: SimpleStreamOptions[] = [];
+    const delegate: StreamSimpleFunction = (_model, _context, options) => {
+      calls.push(options ?? {});
+      const outcome = outcomes[calls.length - 1] ?? "ok";
+      const stream = createAssistantMessageEventStream();
+      queueMicrotask(() => {
+        if (outcome !== "ok") {
+          stream.push({ type: "error", reason: "error", error: message("error", outcome) });
+          return;
+        }
+        const partial = message("pending");
+        stream.push({ type: "start", partial });
+        stream.push({ type: "done", reason: "stop", message: message("stop") });
+      });
+      return stream;
+    };
+    return { delegate, calls };
+  }
+
+  it("waits with jitter and resends on the same account until a slot frees", async () => {
+    const { router, binding, notify } = services([]);
+    const { delegate, calls } = sequenceDelegate([concurrencyLimit, concurrencyLimit, "ok"]);
+    const waits: number[] = [];
+    const response = createAccountStreamSimple({
+      router,
+      binding,
+      delegate,
+      random: () => 0.25,
+      wait: async (delayMs) => {
+        waits.push(delayMs);
+      },
+    })(model, context, { apiKey: "key-default" });
+    const events = await collect(response);
+    expect(events.some((event) => event.type === "error")).toBe(false);
+    expect((await response.result()).stopReason).toBe("stop");
+    expect(calls.map((call) => call.apiKey)).toEqual(["key-default", "key-default", "key-default"]);
+    expect(waits).toEqual([750, 1500]);
+    expect(notify).toHaveBeenCalledOnce();
+    expect(notify.mock.calls[0][0]).toMatch(/concurrent request limit/);
+    await router.settle();
+  });
+
+  it("hands Pi a retryable error once every wait is used", async () => {
+    const { router, binding } = services([]);
+    const { delegate, calls } = sequenceDelegate(Array(10).fill(concurrencyLimit));
+    const waits: number[] = [];
+    const response = createAccountStreamSimple({
+      router,
+      binding,
+      delegate,
+      random: () => 0.5,
+      wait: async (delayMs) => {
+        waits.push(delayMs);
+      },
+    })(model, context, { apiKey: "key-default" });
+    const result = await response.result();
+    expect(result.errorMessage).toBe(concurrencyLimit);
+    expect(isRetryableAssistantError(result)).toBe(true);
+    expect(waits).toEqual([1000, 2000, 4000, 8000, 16000]);
+    expect(calls).toHaveLength(6);
+    await router.settle();
+  });
+
+  it("stops waiting as soon as the caller aborts", async () => {
+    const { router, binding } = services([]);
+    const { delegate, calls } = sequenceDelegate([concurrencyLimit]);
+    const controller = new AbortController();
+    const response = createAccountStreamSimple({ router, binding, delegate })(model, context, {
+      apiKey: "key-default",
+      signal: controller.signal,
+    });
+    setTimeout(() => controller.abort(), 20);
+    const startedAt = Date.now();
+    const events = await collect(response);
+    expect(Date.now() - startedAt).toBeLessThan(400);
+    expect(events).toEqual([expect.objectContaining({ type: "error", reason: "aborted" })]);
+    expect(calls).toHaveLength(1);
+    await router.settle();
+  });
+
+  it("names a Pi upgrade under a running session instead of only the missing bundle file", async () => {
+    const { router, binding } = services([]);
+    const missing =
+      "Cannot find module '/usr/lib/node_modules/@earendil-works/pi-coding-agent/dist/bundle/chunks/openai-completions-ABC.js' imported from /usr/lib/node_modules/@earendil-works/pi-coding-agent/dist/bundle/index.js";
+    const { delegate } = sequenceDelegate([missing]);
+    const result = await createAccountStreamSimple({ router, binding, delegate })(model, context, {
+      apiKey: "key-default",
+    }).result();
+    expect(result.errorMessage).toBe(
+      `Pi was updated while this session was running. Restart Pi to use Ollama Cloud. (${missing})`,
+    );
+    await router.settle();
+  });
+
+  it("recognizes the limit in the message Pi's openai-completions implementation produces", async () => {
+    const originalFetch = globalThis.fetch;
+    let chats = 0;
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.endsWith("/api/balance")) return Response.json(healthy);
+      chats++;
+      return chats === 1 ? Response.json({ error: "too many concurrent requests" }, { status: 429 }) : chatResponse();
+    }) as typeof fetch;
+    try {
+      const { router, binding } = services([]);
+      const waits: number[] = [];
+      const response = createAccountStreamSimple({
+        router,
+        binding,
+        wait: async (delayMs) => {
+          waits.push(delayMs);
+        },
+      })(model, context, { apiKey: "key-default", maxRetries: 0 });
+      expect((await response.result()).stopReason).toBe("stop");
+      expect(chats).toBe(2);
+      expect(waits).toHaveLength(1);
+      await router.settle();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});

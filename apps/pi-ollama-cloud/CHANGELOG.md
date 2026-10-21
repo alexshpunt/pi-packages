@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 - Preserve unsaved account-state changes after lock or write failures, and retry saving them on the next update unless another process changed the file.
 - Show `/ollama` results, settings-save messages, and errors on stderr in print and JSON modes without disrupting JSON stdout.
 - Recheck referenced keys after a rejected balance check so updated environment references work without a reload; command references still require a Pi restart.
+- Wait for a free slot when an account is at its concurrent request limit (`429 "too many concurrent requests"`), which parallel sessions and subagents on one account hit in bursts. The request is resent on the same account after about 1, 2, 4, 8 and 16 seconds before Pi's own retries take over.
+- Say that Pi must be restarted when an upgrade under a running session removed the file Ollama Cloud requests load, instead of showing only "Cannot find module".
 
 ## [0.14.0] - 2026-10-20
 
