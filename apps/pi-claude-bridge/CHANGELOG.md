@@ -17,6 +17,7 @@
 - Report token usage for isolated summaries, skip already canceled requests, and distinguish cancellation from other failures.
 - Release shared hooks after shutdown even when the last query or session finishes later.
 - Expand home-relative agent directory overrides in the documented manual log cleanup commands.
+- Replace the global config in one step when recording the startup notice or detected plan, so a Pi process or sub-agent starting at the same moment no longer reads a partial file and runs without the user's settings. A symlinked config stays a symlink.
 
 ## 0.12.0 — 2026-10-20
 
