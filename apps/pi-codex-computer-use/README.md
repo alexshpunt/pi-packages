@@ -4,7 +4,7 @@
 
 Operate native apps and Chrome from Pi using the runtime already installed by Codex Desktop. The extension starts Codex's unified `cua_repl` MCP server, forwards its text/images, and brings runtime approval dialogs into Pi.
 
-Use it when Desktop's runtime is available on your machine; it cannot supply that runtime itself. **Computer Use and Browser Use both default to on** and can be switched separately. This is a host bridge, not an automation engine or OS sandbox, and it never bundles, downloads, copies, or redistributes OpenAI's runtime.
+Use it when Desktop's runtime is available on your machine; it cannot supply that runtime itself. **Computer Use and Browser Use both default to on** and can be switched separately. The extension is a bridge to that runtime, not an automation engine or OS sandbox. It does not bundle, download, copy, or redistribute OpenAI's runtime.
 
 ## Requirements
 
@@ -12,7 +12,7 @@ Use it when Desktop's runtime is available on your machine; it cannot supply tha
 | --- | --- |
 | Node.js | 22.19 or later |
 | Pi | 1.0.0 or later. Recorded live checks used 0.99.1; 1.0.2 has only a status smoke-check record. Older versions in the broader manifest peer range are unverified. |
-| Codex Desktop | Installed with its Computer Use runtime and signed in to an account with Codex access. The package cannot verify subscription eligibility or login. |
+| Codex Desktop | Installed, signed in to an account with Codex access, and with its Computer Use plugin enabled at least once so that the runtime configuration exists. The package cannot verify subscription eligibility or login. |
 | Computer Use | Desktop's native service. On macOS, grant Accessibility and Screen Recording to `Codex Computer Use.app`. |
 | Browser Use | Running Google Chrome, the enabled ChatGPT Chrome extension, and Desktop's Chrome/Browser plugin with native messaging host registration |
 
@@ -22,7 +22,7 @@ Recorded live verification used macOS `ChatGPT.app` (bundle ID `com.openai.codex
 
 ## Install and confirm the connection
 
-Install a published release:
+If you already use `@buyong/pi-codex`, it includes this extension; do not install or enable it separately. Otherwise, install a published release (append `@<version>` to pin one):
 
 ```sh
 pi install npm:@buyong/pi-codex-computer-use
@@ -30,12 +30,14 @@ pi list
 pi
 ```
 
-Append `@<version>` to pin a release. For the current checkout or a package not yet published, use the source instructions below. Do not enable this individual extension alongside `@buyong/pi-codex`.
+`pi list` shows `npm:@buyong/pi-codex-computer-use` and its installed path under `User packages:`.
+
+To run unreleased changes, [build and load from source](#build-and-load-from-source).
 
 Inside Pi:
 
-1. Run `/computer-use-check`. Resolve missing requirements for the surfaces you plan to use. `user-owned` needs your confirmation; `unverified` is not a pass. The check can run Desktop's installed validation scripts; it is not an installer or an app/browser task.
-2. Run `/computer-use` and leave only the required surfaces on. Changing either switch restarts their shared runtime.
+1. Run `/computer-use-check`. Resolve missing requirements for the features you plan to use (Computer Use, Browser Use, or both). Items marked `user-owned` (account, login, or OS permissions) need your own confirmation; `unverified` is not a pass. The check can run Desktop's installed validation scripts, but it does not install anything or operate apps or browsers.
+2. Run `/computer-use` and leave on only the features you need: **↑/↓** selects a feature, **Enter/Space** toggles it, and **Esc** closes the list. Changing either switch restarts the shared runtime once the agent is idle, which clears REPL variables and app/tab bindings.
 3. Run `/computer-use status` and check for a running server. If it is not running, follow the reported runtime/setup problem before asking the model to operate anything.
 4. Ask for an inventory without opening tabs or operating apps:
 
@@ -43,13 +45,15 @@ Inside Pi:
 Use mcp__cua_repl__js to run await cua.getState(). Summarize the available apps and browsers without operating them.
 ```
 
-The expected first result is an inventory for the enabled surfaces from `mcp__cua_repl__js`. A connection also exposes `mcp__cua_repl__js_reset`. After the first connection, later sessions register the tools from a saved catalog and start the server on the first tool call; the footer shows `ready` until then. If startup fails or the server exits unexpectedly, the footer reports an error and runtime tools stay hidden until a restart. A running MCP server or a passed prerequisite check is not proof that every app/browser operation will succeed.
+The expected first result is an inventory of the enabled features from `mcp__cua_repl__js`. A connection also exposes `mcp__cua_repl__js_reset`. A running MCP server or a passed prerequisite check is not proof that every app/browser operation will succeed.
+
+After the first connection, later sessions register the tools from a saved catalog and start the server on the first tool call; the footer shows `ready` until then. If startup fails or the server exits unexpectedly, the footer reports an error and runtime tools stay hidden until a restart.
 
 For a browser task after that check, follow the [Chrome task and approval instructions](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.md#4-run-a-task-and-answer-approvals). The runtime returns API documentation with its first entry call; the model must read it before continuing.
 
 ## Change features and inspect status
 
-`/computer-use` opens a single TUI settings list. Use **↑/↓** to select Computer Use or Browser Use and **Enter/Space** to toggle it. Changes save immediately and restart the runtime. The list stays open with the selected row preserved; Esc closes it without undoing saved changes.
+`/computer-use` opens a single TUI settings list. Use **↑/↓** to select Computer Use or Browser Use and **Enter/Space** to toggle it. Esc closes the list without undoing saved changes.
 
 | Command | Purpose |
 | --- | --- |
@@ -59,41 +63,24 @@ For a browser task after that check, follow the [Chrome task and approval instru
 | `/computer-use browser on` / `/computer-use browser off` | Change Browser Use |
 | `/computer-use check` | Compatibility alias for `/computer-use-check` |
 
-RPC uses a repeating two-feature picker with a Close choice. Without UI, the bare command prints status and explicit arguments remain available. Status/check text and runtime discovery, startup, shutdown, and unexpected-exit failures are written to stderr in print/JSON mode.
+A change is saved at once to `<agentDir>/codex-computer-use/settings.json` (`agentDir` is `PI_CODING_AGENT_DIR` when set, otherwise `~/.pi/agent`). It waits for the agent to become idle and then restarts the shared runtime, which **clears REPL variables and app/tab bindings for both features**. A saved switch does not prove that the restart worked, so run `/computer-use status` afterwards. With both features off, no server starts and the runtime tools are hidden.
 
-### Settings file and restart behavior
+The [settings section of the usage guide](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.md#3-select-only-the-features-you-need) covers the file format, what happens with an invalid file, and how RPC and print/JSON mode handle these commands.
 
-Settings live at `<agentDir>/codex-computer-use/settings.json`. `agentDir` honors `PI_CODING_AGENT_DIR` and normally is `~/.pi/agent`.
+## Before you approve or run tasks
 
-```json
-{
-  "computerUse": true,
-  "browserUse": true
-}
-```
-
-A missing file uses defaults without creating it. An existing file must contain exactly these two boolean keys. Invalid or unreadable settings force both features off; toggle commands will not overwrite an invalid file. Fix it and run `/reload` or restart Pi.
-
-Switch changes wait for the agent to become idle. A saved switch is a preference, not proof of a successful runtime restart: check status after changing it. Restarting clears REPL variables and app/tab bindings for both surfaces. With both features off, no server starts and its tools are hidden. Manual settings edits need reload or restart.
-
-## Approvals and limits
-
-- The runtime owns remembered permissions. Where offered, Pi shows **Allow**, **Allow for this session**, **Always allow**, and **Cancel**; non-tool requests also offer **Deny**. These permissions allow operating the app/origin, not just reading it.
-- An ordinary empty-form `js` execution approval from `node_repl` follows Codex's user-reviewer auto-approval rule. Sensitive requests or requests needing user input are not covered by that rule. This bridge does not implement Guardian automatic review.
-- Requests needing user interaction are declined in print/JSON mode. RPC clients must answer Pi UI requests. Supported ordinary forms can use Pi input/select/confirm dialogs; browser sign-in/QR, email OTP, URL-mode requests, and unsupported forms are declined.
-- Cancellation sends MCP cancellation, but already-running JavaScript may continue until completion or the runtime's timeout. No immediate OS-level stop is guaranteed.
-- An MCP response frame over 16 MiB fails the running call with an error instead of waiting for cancellation. The connection and REPL bindings stay available; request smaller results. Approval waits still have no fixed client timeout.
-- Long result text, including JSON-RPC errors, is middle-truncated using the runtime output limit. When saving succeeds, the result names an owner-only temporary file with the complete text. These files are not automatically deleted by the bridge.
+- An approval lets the runtime operate the app or website origin, not only read it. Pi shows **Allow**, **Allow for this session**, **Always allow**, and **Cancel** where the runtime offers them; the runtime stores remembered permissions. An ordinary `js` execution request from `node_repl` with an empty form, nothing sensitive, and no user input is approved automatically. Browser sign-in/QR, email OTP, URL-mode, and unsupported form requests are declined. See [What an approval allows](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.md#what-an-approval-allows).
+- Print/JSON mode declines requests that need user interaction. RPC clients must answer Pi UI requests.
+- Cancellation does not stop JavaScript that is already running; it continues until it finishes or reaches the runtime's timeout.
+- Results longer than the runtime output limit (100,000 bytes, about 25,000 tokens, when the runtime does not report one) are shortened in the middle. When saving succeeds, the result names an owner-only file in the system temporary directory with the complete text; the bridge does not delete these files. Logs under `<agentDir>/codex-computer-use/` can contain page and app content; review them before sharing. Limits and paths are in [Turn end and long output](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.md#turn-end-and-long-output) and [Logs and saved tool catalog](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.md#logs-and-saved-tool-catalog).
 - Cold service launch from the macOS app-bundle fallback, Windows execution, desktop-quit operation, permanent grants, downloads/uploads, full CDP, and WebMCP remain unverified.
 - Desktop updates can change private interfaces. Runtime telemetry outside Codex has not been established; check applicable OpenAI terms.
-
-Logs rotate at 5 MiB under `<agentDir>/codex-computer-use/mcp.log`. The tool catalog saved for deferred startup is `<agentDir>/codex-computer-use/tool-catalog.json`; deleting it only makes the next session start the server immediately again. Image payloads are logged only as base64 character counts, not image data. Key-based masking does not remove every page/app detail. Inspect and redact logs before sharing.
 
 For a missing runtime, unavailable browser, rejected approval surface, or delayed cancellation, use the [troubleshooting table](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.md#troubleshooting). The [full usage guide](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.md) owns discovery details, task examples, and recorded verification; the archive includes it at `docs/usage.md`.
 
 ## Build and load from source
 
-Run from the [pi-packages](https://github.com/buYoung/pi-packages) repository root:
+Run from the [pi-packages](https://github.com/buYoung/pi-packages) repository root. The typecheck, lint, and build steps work without Codex Desktop; the last command, which runs the extension, needs the Desktop setup in [Requirements](#requirements).
 
 ```sh
 pnpm install
@@ -103,7 +90,9 @@ pnpm --filter @buyong/pi-codex-computer-use build
 pnpm --filter @buyong/pi-codex-computer-use exec pi -ne -e ./dist/index.js
 ```
 
-`-ne` disables automatic extension discovery and `-e` loads this extension for one invocation. Desktop setup is still required. The typecheck, lint, and build checks should exit successfully without Desktop. After source changes, rebuild and reload/restart Pi, then run `/computer-use status` again: expect a running server or an explicit runtime error, not hidden tools with a stale `running` footer.
+`-ne` disables automatic extension discovery and `-e` loads this extension for one invocation. The typecheck, lint, and build steps should exit successfully. After source changes, rebuild and reload/restart Pi, then run `/computer-use status` again: expect a running server or an explicit runtime error, not hidden tools with a stale `running` footer.
+
+For package releases, use the [repository release process](https://github.com/buYoung/pi-packages#shared-ci-and-per-package-releases).
 
 ## License
 

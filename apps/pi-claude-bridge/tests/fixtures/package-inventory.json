@@ -18,6 +18,7 @@
   "requiredFiles": [
     "package.json",
     "README.md",
+    "README.ko.md",
     "LICENSE",
     "src/agents-md.ts",
     "src/attachments.ts",

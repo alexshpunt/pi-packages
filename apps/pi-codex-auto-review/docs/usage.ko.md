@@ -2,11 +2,13 @@
 
 [English](usage.md) | **한국어**
 
-`@buyong/pi-codex-auto-review` 설치, 승인 방식 선택, 보호 시작과 정책 설정을 설명합니다. 현재 체크아웃을 기준으로 하므로 npm 릴리스에는 아직 게시하지 않은 소스 변경이 없을 수 있습니다. 다른 확장의 안내는 [README의 패키지 목록](../README.ko.md#작업-공간-패키지)에서 찾을 수 있습니다.
+`@buyong/pi-codex-auto-review` 설치, 승인 방식 선택, 보호 시작과 정책 설정을 설명합니다. 현재 소스를 기준으로 하므로, 게시된 npm 릴리스에는 최근 소스 변경이 아직 들어 있지 않을 수 있습니다. 같은 저장소의 다른 패키지는 [pi-packages README](https://github.com/buYoung/pi-packages/blob/main/README.ko.md#패키지-고르기)에 있습니다.
 
 ## npm에서 설치
 
 Node.js 22.19 이상, Pi 1.0.0 이상과 Pi 모델 접근이 필요합니다. JavaScript 규칙 엔진에는 Rust 컴파일러나 플랫폼별 규칙 바이너리가 필요하지 않습니다.
+
+개별 설치와 `@buyong/pi-codex`를 통해 이 확장을 함께 켜지 마세요. 이전 이름인 `pi-codex-auto-review`가 설치되어 있다면 `pi list`에 표시된 소스를 같은 전역·`--local` 범위에서 먼저 제거합니다.
 
 ```sh
 pi install npm:@buyong/pi-codex-auto-review
@@ -14,7 +16,7 @@ pi list
 pi
 ```
 
-필요하면 Pi에서 `/login`으로 모델 접근을 설정합니다. `/approve`로 승인 방식을 선택한 뒤 프로젝트 파일을 읽고 요약하도록 요청하세요. 일반 범위의 호출은 바로 실행할 수 있고, 승인이 필요한 호출은 선택한 방식으로 검토합니다.
+`pi list`는 `User packages:` 아래에 `npm:@buyong/pi-codex-auto-review`와 설치 경로를 표시합니다. 필요하면 Pi에서 `/login`으로 모델 접근을 설정하고, `/approve`에서 승인 방식을 선택합니다. 일반 범위의 읽기는 허용되므로 프로젝트 파일을 읽고 요약해 달라는 요청은 검토 없이 실행합니다. 검토 과정을 보려면 [빠른 시작](../README.ko.md#빠른-시작)처럼 bash로 정확히 `node --version`을 실행하도록 요청하세요. 기본 정책에서 이 명령은 선택한 방식으로 검토하며, 성공하면 설치된 Node.js 버전을 알려 줍니다.
 
 - 현재 프로젝트의 `.pi/settings.json`에 설치하려면 `--local`을 추가합니다. 프로젝트 신뢰 결정 후에만 패키지를 로드합니다.
 - npm 릴리스로 고정하려면 `@<version>`을 붙입니다. 버전을 생략하면 최근 게시된 릴리스를 설치합니다.
@@ -49,7 +51,9 @@ TUI 또는 UI가 연결된 RPC 세션에서 다음 명령을 실행합니다.
 | `/approve on` | 이전 승인 방식·검토 모델·정책 설정으로 다시 켭니다. 세션의 Full Access는 해제합니다. |
 | `/approve status` | 켜기·끄기 상태와 활성 승인 방식을 표시합니다. |
 
-끄기는 `/approve`의 **Auto Review Off**에서도 선택할 수 있습니다. 꺼진 동안 로컬 도구·직접 셸 호출·MCP 도구는 Pi의 원래 실행 경로를 사용하며, 확장의 기본 셸 제한 시간도 적용하지 않습니다. 일반 설치와 보호 설치 모두 세션 연결 후 Pi의 유효 `shellPath`·`shellCommandPrefix`·`images.autoResize` 설정을 사용하며, 명시적인 SDK `bashOptions`·`readOptions`가 우선합니다. 셸 경로가 미설정이면 그 상태로 Pi의 플랫폼별 탐색에 맡기므로 Windows의 Git Bash 탐색도 유지합니다. Pi의 프로젝트 신뢰 결정과 외부 서버 자체의 인증·권한은 계속 따릅니다.
+끄기는 `/approve`의 **Auto Review Off**에서도 선택할 수 있습니다. 꺼진 동안 로컬 도구·직접 셸 호출·MCP 도구는 Pi의 원래 실행 경로를 사용하며, 확장의 기본 셸 제한 시간도 적용하지 않습니다. Pi의 프로젝트 신뢰 결정과 외부 서버 자체의 인증·권한은 계속 따릅니다.
+
+확장을 켜든 끄든 일반 설치와 보호 설치 모두 세션 연결 후 Pi의 유효 `shellPath`·`shellCommandPrefix`·`images.autoResize` 설정을 사용하며, 명시적인 SDK `bashOptions`·`readOptions`가 우선합니다. 셸 경로가 미설정이면 그 상태로 Pi의 플랫폼별 탐색에 맡기므로 Windows의 Git Bash 탐색도 유지합니다.
 
 켜기·끄기는 `isEnabled`에 저장하며 현재 세션과 다음 실행에 적용합니다. 승인 방식·검토 모델 설정은 유지합니다. `/approve`에서 **Approve for me**, **Ask for approval** 또는 확인한 **Full Access**를 선택하면 다시 켜집니다. 캐시나 검토 모델만 바꾸면 꺼진 상태를 유지합니다.
 
@@ -59,38 +63,17 @@ TUI 또는 UI가 연결된 RPC 세션에서 다음 명령을 실행합니다.
 
 `/approve-model`은 Pi의 현재 `/scoped-models` 범위에서 사용 가능한 모델과 Codex의 승인 검토 모델 `codex-auto-review`를 검색합니다. 검토 모델을 선택해도 주 대화 모델은 바뀌지 않습니다. **Use current Pi model**은 `reviewModel: null`을 설정합니다.
 
-- 모델 범위가 없으면 사용 가능한 전체 모델을 표시합니다.
-- 범위 안의 모델이 모두 사용할 수 없어도 전체 목록으로 확대하지 않습니다.
-- `codex-auto-review`는 `openai`와 `openai-codex` 중 인증이 있고 `gpt-5.6-luna`가 목록에 있는 공급자마다 **Codex Auto Review (openai free)**, **Codex Auto Review (openai-codex)**로 표시합니다. 연결 주소와 한도는 그 공급자의 `gpt-5.6-luna` 값을 씁니다. Pi의 `/model`에는 없으므로 모델 범위와 관계없이 표시합니다.
+- `/scoped-models`에 범위를 정하지 않았으면 사용 가능한 전체 모델을 표시합니다.
+- 범위를 정했는데 그 안의 모델을 하나도 쓸 수 없으면 모델을 표시하지 않으며, 전체 목록을 대신 보여 주지 않습니다.
+- `codex-auto-review`는 `openai`와 `openai-codex` 중 인증이 있고 `gpt-5.6-luna`가 목록에 있는 공급자마다 **Codex Auto Review (openai free)**, **Codex Auto Review (openai-codex)**로 표시합니다. 연결 주소와 한도는 그 공급자의 `gpt-5.6-luna` 값을 씁니다. `codex-auto-review`는 Pi의 `/model` 목록에 없으므로 `/approve-model`은 모델 범위와 관계없이 이 모델을 표시합니다.
 - 선택창이 열린 동안 범위에서 빠진 모델은 저장하지 않습니다.
 - Esc로 취소하면 기존 설정을 유지합니다. 고정 UI 문구는 영어입니다.
 
 선택은 `<agentDir>/guard/settings.json` 또는 명시한 `settingsPath`에 저장합니다. 메뉴 변경은 저장 후 적용하고 이전 정책의 대기 검토와 정확한 작업에 대한 승인 기록을 무효화합니다. 저장할 때는 바꾼 항목만 파일의 현재 내용에 덮어쓰므로, 그 사이 다른 Pi 세션이 저장한 항목은 유지됩니다. 정책 파일을 직접 수정했다면 `/reload`로 확장을 다시 로드하거나 보호 런타임을 재시작하세요.
 
-## 소스에서 빌드
-
-[pi-packages](https://github.com/buYoung/pi-packages) 저장소 루트에서 실행합니다. 개발 SDK는 커밋된 pnpm 잠금 파일로 설치하며, 재포장한 `vendor` SDK는 필요하지 않습니다.
-
-```sh
-pnpm install
-pnpm --filter "@buyong/pi-codex-auto-review..." build
-node apps/pi-codex-auto-review/dist/cli.js --help
-```
-
-이 필터는 자동 검토보다 `@buyong/redact`를 먼저 빌드합니다. 전체 작업 공간 패키지를 빌드하려면 `pnpm build`를 실행합니다.
-
-빌드한 자동 검토 패키지를 계속 사용할 수 있도록 등록하려면 같은 저장소 루트에서 실행합니다.
-
-```sh
-pi install ./apps/pi-codex-auto-review
-pi list
-```
-
-Pi는 로컬 패키지를 복사하지 않고 해당 경로에서 직접 로드합니다. 소스를 수정한 뒤 다시 빌드하고 Pi를 다시 로드하거나 재시작하세요. 같은 확장의 npm 설치를 함께 활성화하지 마세요.
-
 ## 보호가 준비된 상태에서 시작하기
 
-보호 CLI와 `createGuardedRuntime()`은 확장과 제어기의 준비 상태를 확인합니다. 매니페스트의 peer 범위와 관계없이 **Pi 1.0.0 미만의 버전은 `UNSUPPORTED_PI`로 거부합니다.** 모드 재연결 후와 사용자의 직접 셸 호출에도 준비 상태를 확인합니다.
+보호 CLI와 `createGuardedRuntime()`은 확장과 제어기의 준비 상태를 확인합니다. 매니페스트의 peer 범위와 관계없이 **Pi 1.0.0 미만의 버전은 `UNSUPPORTED_PI`로 거부합니다.** 세션이 인터페이스에 다시 연결될 때마다(`session.bindExtensions()`를 호출할 때마다 세션이 새로 시작됩니다), 그리고 사용자의 직접 셸 호출에도 준비 상태를 확인합니다.
 
 이 진입점은 자동 확장 탐색을 끕니다. 추가 확장은 명시적으로 로드하고 코드를 신뢰해야 합니다. 다른 확장의 도구에는 승인 제어가 자동으로 추가되지 않습니다. 로컬 셸·파일 도구와 보호 MCP 어댑터는 기존 승인 경로를 유지합니다.
 
@@ -98,7 +81,12 @@ Pi는 로컬 패키지를 복사하지 않고 해당 경로에서 직접 로드�
 
 ### CLI
 
-위의 소스 빌드를 마친 뒤 저장소 루트에서 실행합니다. `/absolute/path/to/project`를 프로젝트 디렉터리로 바꾸세요.
+보호 CLI는 소스 체크아웃이나 npm 설치에서 실행합니다.
+
+- **소스 체크아웃:** [소스에서 빌드](#소스에서-빌드)한 뒤 저장소 루트에서 아래 예시처럼 `node apps/pi-codex-auto-review/dist/cli.js`를 실행합니다.
+- **npm 설치:** [SDK](#sdk)에 나온 패키지를 설치한 디렉터리에서 같은 옵션으로 `npx pi-codex-auto-review`를 실행합니다. Pi가 관리하는 패키지 설치(`pi install`)는 이 실행 파일이 셸의 `PATH`에 들어가도록 보장하지 않습니다.
+
+`/absolute/path/to/project`를 프로젝트 디렉터리로 바꾸세요.
 
 ```sh
 node apps/pi-codex-auto-review/dist/cli.js --cwd /absolute/path/to/project
@@ -124,9 +112,9 @@ CLI는 설정된 Pi 모델과 자격 증명을 사용합니다. `print`는 텍�
 | `--provider provider --model model` | 등록된 공급자·모델을 정확히 선택합니다. 둘을 함께 지정해야 하며, 모델이 없으면 시작을 막습니다. |
 | `--` | 옵션 해석을 끝내 `-`로 시작하는 프롬프트를 전달합니다. |
 
-이 래퍼는 자체 옵션만 받으며 표준 `pi` CLI의 모든 옵션을 지원하지 않습니다. 일반 npm 설치는 `pi-codex-auto-review` 실행 파일도 제공합니다. Pi가 관리하는 패키지 설치는 이 실행 파일이 셸의 `PATH`에 들어가도록 보장하지 않습니다.
+이 래퍼는 자체 옵션만 받으며 표준 `pi` CLI의 모든 옵션을 지원하지 않습니다.
 
-외부 공급자는 등록 확장을 명시적으로 로드합니다. 이 패키지에는 `pi-ollama-cloud`가 개발 의존성으로 있습니다. 실행할 셸에 `OLLAMA_API_KEY`가 이미 export되어 있다면 다음과 같이 실행합니다.
+외부 공급자는 등록 확장을 명시적으로 로드합니다. 이 패키지의 개발 의존성에는 루트 `index.ts`로 로드하는 `pi-ollama-cloud` 0.12.2가 있습니다. 실행할 셸에 `OLLAMA_API_KEY`가 이미 export되어 있다면 다음과 같이 실행합니다.
 
 ```sh
 node apps/pi-codex-auto-review/dist/cli.js \
@@ -181,11 +169,11 @@ try {
 | `modelRuntime`, `settingsManager`, `sessionManager` | 애플리케이션이 제공하는 Pi 서비스와 세션 저장소 |
 | `trustedExtensions`, `externalExtensions` | 명시적인 인라인 통합. 호출자가 코드의 신뢰를 책임집니다. |
 
-SDK는 승인 UI 없이 시작합니다. 자동 검토는 호출을 승인할 수 있지만, 사용자 검토 요청에는 적절한 인터페이스가 연결되어야 하며 없으면 거부합니다. `settingsManager`를 제공할 때 명시한 신뢰 선택은 그 관리자의 설정과 일치해야 합니다.
+SDK는 승인 UI 없이 시작합니다. 자동 검토는 호출을 승인할 수 있습니다. 사용자 검토 요청은 애플리케이션이 세션에 Pi UI 문맥을 연결(`runtime.session.bindExtensions({ uiContext })`)하지 않으면 거부합니다. `settingsManager`를 넘기면서 `isProjectTrusted`도 지정하면 두 값이 같아야 하며, 다르면 `CONFLICTING_PROJECT_TRUST`로 시작이 실패합니다.
 
 ## 정책 파일
 
-일반 Pi 설치는 `<agentDir>/guard/settings.json`을 읽습니다. CLI의 `--policy`나 SDK의 `settingsPath`로 다른 파일을 선택할 수 있습니다. 명시적 파일은 시작 전에 만들어야 합니다. 빠진 키는 기본값을 사용하고, 알 수 없는 키나 잘못된 값은 거부합니다. SDK `settings`는 기본값만 제공하며 저장된 파일이 우선합니다. 중첩 객체는 깊게 병합하지 않습니다.
+일반 Pi 설치는 `<agentDir>/guard/settings.json`을 읽습니다. CLI의 `--policy`나 SDK의 `settingsPath`로 다른 파일을 선택할 수 있습니다. 명시적 파일은 시작 전에 만들어야 합니다. 빠진 키는 기본값을 사용하고, 알 수 없는 키나 잘못된 값은 거부합니다. SDK `settings`는 기본값만 제공하며 저장된 파일이 우선합니다. 중첩 객체는 깊게 병합하지 않습니다. 정책 파일을 직접 고친 뒤에는 `/reload`를 실행하거나 보호 런타임을 다시 시작하세요.
 
 다음 예시는 기본 승인 동작을 유지하고 명령 규칙 두 개를 추가합니다.
 
@@ -209,9 +197,9 @@ SDK는 승인 UI 없이 시작합니다. 자동 검토는 호출을 승인할 �
 | 필드 | 기본값 | 동작 |
 | --- | --- | --- |
 | `isEnabled` | `true` | `false`면 확장 전체의 검토·승인·정책 검사를 끕니다. `/approve on`·`off`로 즉시 변경하며, 파일을 직접 수정하면 다시 로드하거나 재시작합니다. |
-| `mode` | `"workspace-write"` | 작업 공간·임시 경로의 일반 쓰기를 허용합니다. `"read-only"`는 쓰기를 검토로 보내며 승인된 쓰기는 실행할 수 있습니다. |
-| `approvalPolicy` | `"on-request"` | 필요한 검토를 허용합니다. `"never"`는 승인이 필요한 호출을 차단하지만 정책이 허용한 호출은 차단하지 않습니다. 범주별 설정은 아래에서 설명합니다. |
-| `approvalsReviewer` | `"auto_review"` | `"user"`는 사용자 검토를 요청합니다. |
+| `mode` | `"workspace-write"` | `"workspace-write"` 또는 `"read-only"`. `"workspace-write"`는 작업 공간·임시 경로의 일반 쓰기를 허용합니다. `"read-only"`는 쓰기를 막지 않고 모든 쓰기를 검토로 보내며, 승인된 쓰기는 실행됩니다. |
+| `approvalPolicy` | `"on-request"` | `"on-request"`, `"never"`, 또는 아래의 범주 객체. `"on-request"`는 필요한 검토를 허용합니다. `"never"`는 승인이 필요한 호출을 차단하지만 정책이 허용한 호출은 차단하지 않습니다. 범주별 설정은 아래에서 설명합니다. |
+| `approvalsReviewer` | `"auto_review"` | `"auto_review"` 또는 `"user"`. `"user"`는 사용자 검토를 요청합니다. |
 | `reviewModel` | `null` | 현재 모델 또는 등록된 `{ "provider": "...", "id": "..." }` 쌍 |
 | `commandRules` | `[]` | `allow`·`ask`·`deny`로 판단하는 리터럴 인자 접두사 규칙 |
 | `ruleFiles` | `[]` | 작업 디렉터리 기준의 규칙 파일 경로 |
@@ -250,9 +238,9 @@ SDK는 승인 UI 없이 시작합니다. 자동 검토는 호출을 승인할 �
 | `projectDocMaxBytes` | `32768` | 프로젝트 지침 합산 바이트 한도. 0~1000000의 정수입니다. |
 | `projectDocFallbackFilenames` | `[]` | `AGENTS.override.md`·`AGENTS.md` 다음에 확인할 지침 파일명 |
 | `projectRootMarkers` | `null` | `.git`을 루트 표시로 사용합니다. 목록으로 교체할 수 있고, `[]`은 상위 탐색을 끕니다. |
-| `redaction` | 빈 목록 네 개 | 필수 검토자 가림에 더할 설정. [검토자 가림](#검토자-가림)을 참고하세요. |
+| `redaction` | `{"sensitiveFields":[],"rules":[],"exceptions":[],"piiEntities":[]}` | 필수 검토자 가림에 더할 설정. [검토자 가림](#검토자-가림)을 참고하세요. |
 
-가드는 `agentDir`의 전역 지침과 신뢰한 프로젝트의 루트부터 `cwd`까지의 지침을 탐색합니다. 디렉터리마다 `AGENTS.override.md` → `AGENTS.md` → 설정한 보조 파일 순서로 선택합니다. 보호 파일의 별칭은 거부하며, 도구 출력에 나온 파일명을 지침 출처로 삼지 않습니다. 새로고침하면 파일을 다시 읽습니다.
+가드는 `agentDir`의 전역 지침과 신뢰한 프로젝트의 루트부터 `cwd`까지의 지침을 탐색합니다. 디렉터리마다 `AGENTS.override.md` → `AGENTS.md` → 설정한 보조 파일 순서로 선택합니다. 하드링크 별칭이 있거나 보호된 읽기 경로로 이어지는 지침 파일은 거부하며, 도구 출력에 나온 파일명을 지침 출처로 삼지 않습니다. Pi가 리소스를 다시 불러올 때(예: `/reload`)마다 파일을 다시 읽습니다.
 
 ## 규칙 파일
 
@@ -274,7 +262,7 @@ prefix_rule(["git", "push"], decision="forbidden")
 - 복합 명령에는 가장 강한 판단을 적용합니다. 네트워크 프로토콜 표시는 별도 권한이 아니라 호스트 허용·거부 목록으로 합칩니다.
 - 해석하지 못하는 셸 구문은 신뢰한 전체 명령 규칙이 허용하지 않으면 검토합니다. 이런 bash 명령은 `[<셸>, "-c", 명령]`, PowerShell 스크립트는 `[<PowerShell 실행 파일>, "-Command", 스크립트]`로 대조합니다.
 - 리터럴 PowerShell 스크립트는 Codex PR #20336처럼 내부 명령으로 대조합니다. 중첩된 `bash`·`sh`·`zsh`·`dash`의 `-c`·`-lc`와 `powershell`·`pwsh`의 `-Command`·`-c` 래퍼는 네 단계까지 풉니다. Windows에서는 래퍼 이름을 대소문자 구분 없이, `.exe`·`.cmd`·`.bat`·`.com`을 뺀 이름으로 비교합니다.
-- 알려진 cmdlet이나 기본 별칭으로 시작하는 PowerShell 명령은 대소문자와 상관없이, 쓴 그대로와 문서상의 cmdlet 이름(예: `rm`·`del`·`remove-item`에 대한 `Remove-Item`)으로 모두 대조합니다. 둘 중 어느 형태에 맞는 규칙이든 적용되므로 `forbidden`과 `prompt`는 어느 쪽에서 나와도 효력이 있고, `allow`는 여전히 모든 명령을 덮어야 합니다. 규칙 단어는 정확히 비교하므로 cmdlet 규칙은 문서상의 이름으로 쓰세요. `["rm"]`처럼 별칭으로 쓴 규칙은 그 별칭에만 맞습니다. PowerShell 안의 `bash -c` 스크립트에서 나온 명령은 자기 이름을 유지하므로, 그 안의 `sort`는 `Sort-Object`가 아닙니다.
+- 알려진 cmdlet이나 기본 별칭으로 시작하는 PowerShell 명령은 대소문자와 상관없이 두 번 대조합니다. 한 번은 쓴 그대로, 한 번은 문서상의 cmdlet 이름(예: `rm`·`del`·`remove-item`은 `Remove-Item`)으로 대조합니다. 둘 중 어느 형태에 맞는 규칙이든 적용되므로 `forbidden`과 `prompt`는 어느 쪽에서 나와도 효력이 있고, `allow`는 여전히 모든 명령을 덮어야 합니다. 규칙 단어는 대소문자까지 정확히 비교하므로, 모든 별칭과 표기를 포괄하려면 `["Remove-Item"]`처럼 문서상의 cmdlet 이름으로 규칙을 쓰세요. `["rm"]`처럼 별칭으로 쓴 규칙은 그 별칭에만 맞습니다. PowerShell 안의 `bash -c` 스크립트에서 나온 명령은 자기 이름을 유지하므로, 그 안의 `sort`는 `Sort-Object`가 아닙니다.
 - `curl`·`wget`의 목적지가 명시적인 HTTP URL이 아니거나 별도 설정 파일에서 오면 검토합니다.
 
 **`allow` 규칙은 좁게 지정하세요.** 일치하는 명령을 일반 범위 밖에서도 허용할 수 있지만, Full Access가 꺼져 있으면 절대 거부를 해제하지는 못합니다. PowerShell의 와일드카드·공급자 경로나 Windows의 WSL·POSIX 루트 경로처럼 위치를 확인할 수 없는 대상이 있는 명령은 `allow` 규칙과 맞아도 검토합니다.
@@ -285,7 +273,7 @@ prefix_rule(["git", "push"], decision="forbidden")
 
 승인된 로컬 도구는 Pi의 원래 실행기를 사용하며 최종 명령·작업 디렉터리·환경·제한 시간·취소 신호·호출자 옵션을 유지합니다. `additional_permissions`는 검토 범위를 설명할 뿐 실행 중 그 범위를 강제하지 않습니다.
 
-TUI·RPC 승인 창에서는 **Allow once**, **Allow for this session**, **Save as an allow rule**을 선택할 수 있습니다. 전체 명령의 권한 상승 승인은 한 번만 사용할 수 있습니다. 그 밖의 정확한 작업에 대한 승인은 도구·입력·작업 디렉터리·호출 출처·정책·권한에 묶이며, 정책이나 범위가 바뀌면 무효화합니다. 저장한 규칙과 패키지 승인은 파일의 현재 내용에 합쳐 저장하므로, 실행 중인 다른 Pi 세션이 저장한 항목도 유지됩니다.
+TUI·RPC 승인 창에서는 **Allow once**, **Allow for this session**, **Save as an allow rule**을 선택할 수 있습니다. 전체 명령의 권한 상승 승인은 한 번만 사용할 수 있습니다. 그 밖의 정확한 작업에 대한 승인은 도구·입력·작업 디렉터리·호출 출처·정책·권한에 묶이며, 정책이나 범위가 바뀌면 무효화합니다. 저장한 허용 규칙(`<agentDir>/guard/grants.json`)과 패키지 승인(`<agentDir>/guard/package-approvals.json`)은 그 파일의 최신 내용에 합쳐 저장하므로, 실행 중인 다른 Pi 세션이 저장한 항목도 유지됩니다.
 
 조건을 충족하는 MCP 도구와 스킬 스크립트는 별도의 패키지 승인을 재사용할 수 있습니다.
 
@@ -298,13 +286,13 @@ TUI·RPC 승인 창에서는 **Allow once**, **Allow for this session**, **Save 
 
 읽기 작업의 구조화된 자동 승인 결과는 `<agentDir>/pi-codex-auto-review.sqlite`에 저장합니다. 기본 위치는 `~/.pi/agent/pi-codex-auto-review.sqlite`이며 `PI_CODING_AGENT_DIR`이나 명시한 `agentDir`을 따릅니다. 같은 Pi 자원 디렉터리를 사용하는 세션과 프로세스가 공유합니다. 다른 프로세스가 쓰는 중이면 조회·저장은 최대 1초 기다리고, 그 뒤에도 사용 중이면 캐시 미스로 처리합니다.
 
-- Pi의 `read`·`grep`·`find`·`ls` 도구와 단일 리터럴 셸 읽기 명령이 대상입니다. 셸 명령은 `cat`, `head`, `tail`, `wc`, `rg`, `grep`, `find`, `ls`, `stat`, `pwd`를 확인합니다. `git status`, `git ls-files`, `git rev-parse`도 포함합니다. `git diff`·`log`·`show`는 `--no-ext-diff`와 `--no-textconv`가 있어야 합니다. Windows에서는 경로를 붙인 bash 실행 파일을 재사용하지 않습니다.
+- Pi의 `read`·`grep`·`find`·`ls` 도구와 단일 리터럴 셸 읽기 명령이 대상입니다. 셸 명령은 `cat`, `head`, `tail`, `wc`, `rg`, `grep`, `find`, `ls`, `stat`, `pwd`를 확인합니다. `git status`, `git ls-files`, `git rev-parse`도 포함합니다. `git diff`·`log`·`show`는 `--no-ext-diff`와 `--no-textconv`가 있어야 합니다. 경로를 붙여 쓴 명령(예: `/usr/bin/cat`)은 그 디렉터리가 `/bin`, `/usr/bin`, `/usr/local/bin`, `/opt/homebrew/bin`일 때만 대상입니다. Windows에서는 명령 이름에 `\`, `/`, `:`가 들어 있으면 대상이 아닙니다.
 - PowerShell 읽기는 알려진 매개변수만 쓰고 와일드카드나 공급자 경로가 없는 단일 리터럴 `Get-Content`·`Get-ChildItem`·`Get-Item`·`Test-Path`·`Resolve-Path`·`Get-FileHash`·`Select-String`·`Get-Location` 호출, 또는 `cat`·`ls`·`gci` 같은 기본 별칭이 대상입니다. `rg`와 위 git 하위 명령은 bash와 같은 조건으로 포함합니다.
 - 파이프, 복합 명령, 리다이렉션, 명령 치환, 인터프리터, 쓰기·네트워크 요청은 제외합니다. `find -exec/-delete`나 `rg --pre/--hostname-bin`처럼 실행·쓰기 동작을 추가하는 옵션도 제외합니다.
 - 작업 입력·디렉터리·출처·권한·정책·검토 문맥·모델이 일치해야 재사용합니다. 세션과 호출의 임시 식별자만 비교에서 제외하고 승인 결과는 현재 호출에 다시 연결합니다.
 - 거부·오류·취소·사용자 승인 결과, 명시적인 재검토와 파일 조사를 거친 자동 승인은 저장하지 않습니다. 정책의 절대 거부와 실행 전 재확인은 계속 적용합니다.
 - 만료 시간은 승인 시점부터 계산하며 적중으로 연장하지 않습니다. 설정 변경 후에는 새 정책에 대한 검토와 새 만료 시간을 사용합니다. 만료 항목은 재사용하지 않고 새 승인 저장 시 정리하며 최대 10,000개를 보관합니다.
-- 원문 명령·인수·본문 대신 해시 키와 가린 승인 평가·시간을 저장합니다. DB와 저널 파일은 가드 보호 경로에 포함합니다. DB를 읽거나 저장할 수 없으면 캐시를 건너뛰고 새 검토를 진행합니다.
+- 원문 명령·인수·본문 대신 해시 키와 가린 승인 평가·시간을 저장합니다. DB와 저널 파일은 가드 보호 경로에 포함합니다. DB를 읽거나 저장할 수 없으면 캐시를 건너뛰고 새로 검토합니다.
 
 이 캐시는 승인 판정만 재사용합니다. 파일 조회 결과와 명령 출력은 매번 실제 도구가 생성합니다. 별도의 MCP·스킬 패키지 승인과는 적용 범위가 다릅니다.
 
@@ -322,7 +310,11 @@ TUI·RPC 승인 창에서는 **Allow once**, **Allow for this session**, **Save 
 
 검토 입력에는 현재 정책, 경로·도메인 범위, 최종 실행 인수, 연결된 호출·결과와 관찰한 승인 창 질문·답변을 포함합니다. 환경 증거에는 명시적인 비밀 아닌 값과 생략한 변수 이름을 넣으며 전체 프로세스 환경을 보내지는 않습니다.
 
-가드는 검토 증거와 평가를 Pi 세션의 사용자 지정 기록에 저장해 다시 로드할 때와 활성 분기를 복원할 때 사용합니다. 큰 증거에는 생략 표시와 한도를 적용합니다. Windows의 긴 `PATH`처럼 기록된 환경이 너무 큰 셸 호출은 먼저 가장 긴 환경 값을 줄여 명령·셸·작업 디렉터리를 구조화된 형태로 유지하며, 검토하는 정확한 작업은 그대로 둡니다. 필요한 승인과 현재 대상 전체가 예산 안에 들어가지 않으면 자동 실행하지 않습니다. 감사 기록은 `<agentDir>/guard/audit.jsonl`에 저장하고 원문 도구 인수는 제외합니다. 기본 위치는 `~/.pi/agent/guard/audit.jsonl`이며 `PI_CODING_AGENT_DIR`이나 SDK `agentDir`로 바뀝니다. 메모리에는 최근 1,000개만 남깁니다. 파일은 추가 전용으로 자동 회전·삭제하지 않아 여러 세션에 걸쳐 계속 증가합니다. 공간을 확보하려면 같은 agent 디렉터리를 쓰는 세션을 종료한 뒤 `guard/audit.jsonl`을 수동으로 보관하거나 삭제하세요. 삭제한 파일은 다음 감사 기록 때 다시 생성합니다. 승인 규칙이나 SQLite 캐시는 삭제하지 않습니다.
+가드는 검토 증거와 평가를 Pi 세션의 사용자 지정 기록에 저장해 다시 로드할 때와 활성 분기를 복원할 때 사용합니다. 큰 증거에는 생략 표시와 한도를 적용합니다. Windows의 긴 `PATH`처럼 기록된 환경이 너무 큰 셸 호출은 먼저 가장 긴 환경 값을 줄여 명령·셸·작업 디렉터리를 구조화된 형태로 유지하며, 검토하는 정확한 작업은 그대로 둡니다. 필요한 승인과 현재 대상 전체가 예산 안에 들어가지 않으면 자동 검토가 실패하고 호출을 실행하지 않습니다.
+
+### 감사 기록
+
+감사 기록은 `<agentDir>/guard/audit.jsonl`에 저장하고 원문 도구 인수는 제외합니다. 기본 위치는 `~/.pi/agent/guard/audit.jsonl`이며 `PI_CODING_AGENT_DIR`이나 SDK `agentDir`로 바뀝니다. 메모리에는 최근 1,000개만 남깁니다. 파일은 추가 전용으로 자동 회전·삭제하지 않아 여러 세션에 걸쳐 계속 증가합니다. 공간을 확보하려면 같은 agent 디렉터리를 쓰는 세션을 종료한 뒤 `guard/audit.jsonl`을 수동으로 보관하거나 삭제하세요. 삭제한 파일은 다음 감사 기록 때 다시 생성합니다. 승인 규칙이나 SQLite 캐시는 삭제하지 않습니다.
 
 보호 Pi `select`·`confirm`·`input` 어댑터에서 관찰한 확인만 사용자 확인으로 기록합니다. 비밀번호·API 키 답변은 가립니다. 실제 Pi 모델은 구조화된 `outcome` 평가를 반환해야 합니다. 기존 `decision` 응답은 명시적으로 주입한 SDK `ReviewProvider` 구현만 지원합니다.
 
@@ -358,7 +350,7 @@ TUI·RPC 승인 창에서는 **Allow once**, **Allow for this session**, **Save 
 
 ## MCP 승인
 
-어댑터는 Pi에 등록한 서버, `<agentDir>/mcp.json`과 신뢰한 프로젝트의 `.pi/mcp.json`을 사용합니다. 모드를 다시 연결하면 이전 연결을 닫고 새 연결을 만듭니다. 승인은 실제 서버·도구 등록에 묶이며 검토 중 등록이 바뀌거나 취소되면 실행하지 않습니다.
+어댑터는 Pi에 등록한 서버, `<agentDir>/mcp.json`과 신뢰한 프로젝트의 `.pi/mcp.json`을 사용합니다. 세션이 인터페이스에 다시 연결되면(`session.bindExtensions()`) 어댑터는 이전 연결을 닫고 새 연결을 만듭니다. 승인은 실제 서버·도구 등록에 묶이며 검토 중 등록이 바뀌거나 취소되면 실행하지 않습니다.
 
 SDK `mcpToolPolicies`는 `server/tool` 키별 승인 모드를 선택합니다.
 
@@ -371,7 +363,7 @@ SDK `mcpToolPolicies`는 `server/tool` 키별 승인 모드를 선택합니다.
 
 엄격한 검토, 민감 작업과 필수 사용자 입력은 이런 일반 생략 조건보다 우선합니다. `codex_requires_user_input`을 모델이 대신 승인하지 않습니다. 빈 승인 폼은 처리하지만 입력 필드가 있는 일반 폼과 URL 인증 요청은 거부합니다.
 
-`node_repl/js`에도 같은 규칙을 적용합니다. 추가 승인 요청은 원래 유효한 호출의 도구·연결·입력과 일치해야 하며 다른 도구·커넥터를 대신 지목할 수 없습니다. Off 상태에서도 호출자의 취소·시간 초과 신호를 transport까지 전달하므로 인증 대기가 끝난 뒤 취소된 요청을 늦게 보내지 않습니다. 실패·취소·시간 초과 요청의 로컬 추적 상태도 해제합니다. 이미 전달한 요청의 취소는 외부 서버에 달려 있습니다.
+`node_repl` 서버(Codex Computer Use 런타임)의 `js` 도구에도 같은 규칙을 적용합니다. 실행 중인 MCP 호출이 보내는 승인 요청은 그 호출의 도구·연결·입력과 일치해야 하며, 다른 도구나 커넥터의 승인을 대신 요청할 수 없습니다. Off 상태에서도 호출자의 취소·시간 초과 신호를 transport까지 전달하므로 인증 대기가 끝난 뒤 취소된 요청을 늦게 보내지 않습니다. 실패·취소·시간 초과 요청의 로컬 추적 상태도 해제합니다. 이미 전달한 요청의 취소는 외부 서버에 달려 있습니다.
 
 ## Windows와 PowerShell
 
@@ -381,10 +373,10 @@ Windows의 bash는 Pi가 찾은 셸, 보통 Git Bash로 실행합니다. 경로 
 - WSL bash(`C:\Windows\System32\bash.exe`)에는 드라이브 대응을 적용하지 않으며 Windows 드라이브 경로와 POSIX 절대 경로 인자를 검토합니다. Pi의 셸을 식별하지 못하면 드라이브 경로를 보호 경로와 대조한 뒤 검토합니다.
 - 파일 도구는 Pi와 같이 `/c/...`, `/mnt/c/...`, `/cygdrive/c/...`, `~\`를 받습니다.
 - 보호 경로는 Windows와 macOS에서 대소문자를, macOS에서는 유니코드 정규화 차이도 구분하지 않고 비교합니다. 허용 쓰기·읽기 루트는 정확히 비교하므로 표기가 다른 경로는 허용 대신 검토로 갑니다.
-- 대체 데이터 스트림(`file:stream`, `file::$DATA`), 장치 이름공간(`\\?\`, `\\.\`), 예약 장치 이름(`CON`, `NUL`, `COM1` 등), 드라이브 상대 경로(`C:file`), 루프백·관리 공유, 끝에 점이나 공백이 있거나 8.3 짧은 이름인 없는 경로 구성 요소는 `INVALID_PATH`로 실패합니다.
+- 대체 데이터 스트림(`file:stream`, `file::$DATA`), 장치 이름공간(`\\?\`, `\\.\`), 예약 장치 이름(`CON`, `NUL`, `COM1` 등), 드라이브 상대 경로(`C:file`), 루프백·관리 공유는 `INVALID_PATH`로 실패합니다. 경로 중 아직 없는 부분의 구성 요소가 점이나 공백으로 끝나거나 8.3 짧은 이름 형태(`PROGRA~1`처럼 `~` 뒤에 숫자)일 때도 `INVALID_PATH`로 실패합니다.
 - 다른 호스트의 공유 경로(`\\host\share\...`)는 SMB 연결을 열게 되므로 승인 전에 해석하거나 확인하지 않습니다. 쓴 그대로 보호 경로와 대조한 뒤 검토합니다.
 
-PowerShell 명령은 Codex 리비전 `80b88a700e4300022fe1893ecca9b8376d0c85d9`에서 옮긴, 실패 시 닫히는 리터럴 부분 문법을 사용합니다.
+PowerShell 명령은 Codex 리비전 `80b88a700e4300022fe1893ecca9b8376d0c85d9`에서 옮긴 리터럴 부분 문법으로 해석합니다. 이 문법으로 해석할 수 없는 구문은 안전하다고 보지 않고 검토로 보냅니다(fail-closed).
 
 - 지원: 일반 단어, `''`를 쓰는 작은따옴표, `$`가 없는 큰따옴표, 제한된 백틱 이스케이프, `;`·`|`·줄바꿈, PowerShell 7의 `&&`·`||`, 파일로의 `>`·`>>`, 스트림 1–6의 `N>`·`N>>`, `*>`·`*>>` 리디렉션. 스트림 병합(`2>&1`)은 검토합니다.
 - 검토 필요: 변수와 식(`$`, `@`, `(`, `)`, `{`, `}`), 호출·백그라운드 연산자 `&`, 닷 소싱, 주석, here-string, 붙여 쓴 `-Param:value`, `--%`, `~`, 언어 키워드, 버전에 따라 다른 이스케이프, 유니코드 따옴표·대시 표기.
@@ -402,8 +394,27 @@ PowerShell 명령은 Codex 리비전 `80b88a700e4300022fe1893ecca9b8376d0c85d9`�
 - 승인된 인터프리터의 간접 접근과 실행 중 목적지 변경은 격리하지 않습니다. 네트워크 프록시나 OS 샌드박스가 없습니다.
 - 확장을 신뢰하면 코드가 있는 디렉터리를 모델 쓰기에서 보호하지만, 다른 위치에서 import할 수 있는 모든 의존성을 보호하지는 않습니다.
 
-현재 검증과 과거 샌드박스 결과를 구분한 [검증표](testing/auto-review-protection.ko.md)를 참고하세요.
+현재 검증과 과거 샌드박스 결과를 구분한 [검증표](testing/auto-review-protection.ko.md)를 참고하세요. 이 패키지를 Ollama Cloud로 확인하던 Docker 이미지와 `verify:docker` 명령은 이 저장소가 아니라 이전 [pi-codex-auto-review](https://github.com/buYoung/pi-codex-auto-review) 저장소에 남아 있으며, 기록된 결과는 검증표에 있습니다.
 
-## Docker에서 Ollama Cloud 검증
+## 소스에서 빌드
 
-이 패키지를 Ollama Cloud로 확인하던 Docker 이미지와 `verify:docker` 명령은 이전 [pi-codex-auto-review](https://github.com/buYoung/pi-codex-auto-review) 저장소에 남아 있으며 이 저장소에는 포함하지 않았습니다. 기록된 결과는 [검증표](testing/auto-review-protection.ko.md)에 있습니다.
+[pi-packages](https://github.com/buYoung/pi-packages) 저장소 루트에서 실행합니다. 개발 SDK는 커밋된 pnpm 잠금 파일로 설치하며, 재포장한 `vendor` SDK는 필요하지 않습니다.
+
+```sh
+pnpm install
+pnpm --filter "@buyong/pi-codex-auto-review..." build
+node apps/pi-codex-auto-review/dist/cli.js --help
+```
+
+이 필터는 자동 검토보다 `@buyong/redact`를 먼저 빌드합니다. 전체 작업 공간 패키지를 빌드하려면 `pnpm build`를 실행합니다. 마지막 명령은 `Usage: pi-codex-auto-review [--cwd path]`로 시작하는 보호 CLI 사용법을 출력하고 종료 코드 0으로 끝납니다. Node.js가 stderr에 SQLite `ExperimentalWarning`을 함께 출력할 수 있으며, 빌드 실패를 뜻하지 않습니다.
+
+빌드한 자동 검토 패키지를 계속 사용할 수 있도록 등록하려면 같은 저장소 루트에서 실행합니다.
+
+`npm:@buyong/pi-codex-auto-review`나 `@buyong/pi-codex`가 설치되어 있다면, 한 벌만 로드되도록 먼저 `pi remove`로 제거하세요.
+
+```sh
+pi install ./apps/pi-codex-auto-review
+pi list
+```
+
+Pi는 로컬 패키지를 복사하지 않고 그 경로에서 직접 로드합니다. 소스를 수정한 뒤 다시 빌드하고 Pi를 다시 로드하거나 재시작하세요.

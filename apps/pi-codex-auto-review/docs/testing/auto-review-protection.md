@@ -17,7 +17,7 @@ The current source is an approval assistance extension. It does not enforce OS i
 | Startup | Execution without an exhaustive scan even when unrelated directories cannot be traversed |
 | Protection and denial | Direct protected paths and deny rules rejected before review; failures, cancellation, and timeouts never lead to execution |
 | Network review before execution | curl requests with omitted schemes, configuration files, or both allowed URLs and configuration files pass through automatic or user review. Only the allowed control reaches the owned HTTP server |
-| PowerShell | Replay the Codex `powershell_lowering.json` corpus; scripts Codex leaves opaque, and comment forms it lowers, match the outer invocation. Cmdlet and alias path, network, and rule classification, read-only reuse, opt-in activation, and controller execution |
+| PowerShell | Replays the Codex `powershell_lowering.json` corpus and checks that scripts Codex leaves unparsed, and comment forms Codex lowers, are matched only as the whole outer invocation (`[<powershell executable>, "-Command", script]`). Also checks path, network, and rule classification of cmdlets and aliases, read-only cache reuse, opt-in activation, and controller execution |
 | Windows paths | Platform-injected unit tests of MSYS/Cygwin/WSL operand mapping, Windows path aliases, case- and normalization-insensitive protection, `/tmp` roots, and executable names. Windows-only tests cover real `canonicalPath()` and Git Bash decisions |
 | TypeScript rules | Replay 280 actual results captured from the pinned Codex helper; preserve rule outputs and rejected inputs, cancellation, budgets, and strict request validation |
 | Distribution package | Startup through the actual Pi loader; synchronous and worker-based rule evaluation from the archive; absence of Rust artifacts, `.node` files, sandbox output, and bundled dependencies |
@@ -30,13 +30,27 @@ Approval descriptions follow the [official approval picker](https://learn.chatgp
 
 The reference corpus is [`tests/fixtures/execpolicy-reference.json`](../../tests/fixtures/execpolicy-reference.json). It records the original executable's revision and SHA-256 hash and contains 201 accepted and 79 rejected cases, including Unicode whitespace, invalid Unicode escapes, and numeric conversion boundaries. The TypeScript implementation is checked through its public asynchronous API; the original binary is no longer required by tests or builds. POSIX-specific path cases are excluded from Windows replay, where the existing platform-specific path tests still run. This is a recorded compatibility corpus, not proof of equivalence for every possible Starlark program.
 
-## Historical OS isolation verification
+## Running verification
 
-The following records concern `v0.1.2` and earlier source versions that included a sandbox. GLM5.3 verification distinguished four SDK cases and one CLI case. Earlier platform verification is preserved in the [platform qualification handoff](../handoffs/auto-review/17-platform-qualification.json), and the earlier 112 checks in the [protection matrix handoff](../handoffs/auto-review/10-protection-matrix.json). Check current execution results against the latest run records with a matching source hash.
+Run from the [pi-packages](https://github.com/buYoung/pi-packages) repository root. These commands use no actual credentials.
+
+```sh
+pnpm install
+pnpm --filter "@buyong/pi-codex-auto-review..." build
+pnpm --filter @buyong/pi-codex-auto-review test:unit
+```
+
+`test:unit` runs the unit, integration, conformance, execution, and end-to-end suites on the current operating system. A local pass does not replace other platform, image, or live model results. The repository workflow runs these checks on Ubuntu, macOS, and Windows (with Git Bash) when this package is selected, and on macOS and Windows only when just the Codex bundle is selected; Windows checkouts keep LF line endings.
+
+The Docker (`verify:docker`), platform (`verify:platform`, `verify:windows`), and evidence (`verify:guard`) commands behind the historical records below remain in the previous [pi-codex-auto-review](https://github.com/buYoung/pi-codex-auto-review) repository and are not part of this repository.
+
+## Historical OS isolation verification (v0.1.2 and earlier)
+
+The following records concern `v0.1.2` and earlier source versions that included a sandbox. GLM5.3 verification distinguished four SDK cases and one CLI case. Earlier platform verification is preserved in the [platform qualification verification record](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/17-platform-qualification.json), and the earlier 112 checks in the [protection matrix verification record](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/10-protection-matrix.json). Check current execution results against the latest run records with a matching source hash.
 
 Before the improvements, at `85008b0`, the same source passed 142 checks each on macOS, actual Linux x64, native Docker, and emulated Docker. Four GLM5.3 cases and separate Windows rule and pre-execution denial checks also passed. The record confirmed that 217 audit entries and seven live model logs and reports did not expose keys. A later comprehensive review found defects not covered by those checks. These historical results do not replace the regression cases below or passing results for the current source.
 
-The changes from that comprehensive improvement, final execution evidence, and remaining platform conditions are documented in the [Pi runtime alignment handoff](../handoffs/auto-review/25-pi-runtime-alignment.md).
+The changes from that comprehensive improvement, final execution evidence, and remaining platform conditions are documented in the [Pi runtime alignment verification record](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/25-pi-runtime-alignment.md).
 
 ### Protected and allowed cases in the earlier structure
 
@@ -87,23 +101,23 @@ The baseline is public source `rust-v0.160.0`, commit `a956835d020762cb2b570053a
 | [`exec_policy.rs::execpolicy_blocks_shell_invocation`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/tests/suite/exec_policy.rs#L517) | Checks that policy denials reach the next main-model request as tool results. |
 | [`request_permissions.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/tests/suite/request_permissions.rs#L834) | Checks that additional read-only permissions do not expand to unapproved workspace or temporary writes. |
 | [`guardian_review_cancellation.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/tests/suite/guardian_review_cancellation.rs#L39) | Checks that late approval cannot execute after cancelling review in direct tools or nested code execution. |
-| [`execpolicy`](https://github.com/openai/codex/tree/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/execpolicy) | Connects the original Starlark engine, example validation, executable paths, and network rule conversion. |
+| [`execpolicy`](https://github.com/openai/codex/tree/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/execpolicy) | In the earlier Rust-backed versions, connected the original Starlark engine, example validation, executable paths, and network rule conversion. |
 | [`agents_md.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/src/agents_md.rs) | Checks project root, instruction precedence, byte limits, and trust state. |
-| [`mcp_tool_call.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/tests/suite/mcp_tool_call.rs), [`session/mcp.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/src/session/mcp.rs) | Checks annotation precedence, strict automatic review, sensitive nested approval, and binding to the call source. |
+| [`mcp_tool_call.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/src/mcp_tool_call.rs), [`session/mcp.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/src/session/mcp.rs) | Checks annotation precedence, strict automatic review, sensitive nested approval, and binding to the call source. |
 
 The current replay harness is in [`tests/harness/scenarios.mjs`](../../tests/harness/scenarios.mjs), and scenarios are in [`tests/conformance/protection.test.mjs`](../../tests/conformance/protection.test.mjs). Earlier OS isolation checks are preserved in the [`v0.1.2` tests](https://github.com/buYoung/pi-codex-auto-review/blob/v0.1.2/test/native/sandbox.test.mjs). The harness itself checks missing and excess calls and requests already cancelled.
 
 Extension verification reproduced 131 zombie processes accumulating under Docker PID 1 and `grep` failing to create threads. Harness `--init` and a preliminary orphan-reaping check addressed this while retaining the 256-PID limit and internal file, network, and seccomp restrictions.
 
-Follow-up checks reproduced preexisting hard links bypassing protected-file reads and external-file writes on macOS. Comparing link counts with names in the allowed scope before execution addressed this. Pi's default trust value also allowed a new project's MCP server to start before approval tool calls; startup was restricted to saved trust or explicit selection. Reproduction and fix evidence is in the [hard-link handoff](../handoffs/auto-review/15-hard-links.json) and [platform follow-up handoff](../handoffs/auto-review/18-platform-followups.json).
+Follow-up checks reproduced preexisting hard links bypassing protected-file reads and external-file writes on macOS. Comparing link counts with names in the allowed scope before execution addressed this. Pi's default trust value also allowed a new project's MCP server to start before approval tool calls; startup was restricted to saved trust or explicit selection. Reproduction and fix evidence is in the [hard-link verification record](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/15-hard-links.json) and [platform follow-up verification record](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/18-platform-followups.json).
 
-In actual Ubuntu Docker, external AppArmor policy blocked internal `bwrap` mounts. The harness checks AppArmor availability and sets `apparmor=unconfined` only for owned verification containers. Requested values and actual profiles are recorded in run reports, while internal sandbox file, network, and seccomp checks still run. This is a verification environment setting using [Docker's per-container profile selection](https://docs.docker.com/engine/security/apparmor/). Before-and-after runs are preserved in the [AppArmor handoff](../handoffs/auto-review/20-docker-apparmor.json).
+In actual Ubuntu Docker, external AppArmor policy blocked internal `bwrap` mounts. The harness checks AppArmor availability and sets `apparmor=unconfined` only for owned verification containers. Requested values and actual profiles are recorded in run reports, while internal sandbox file, network, and seccomp checks still run. This is a verification environment setting using [Docker's per-container profile selection](https://docs.docker.com/engine/security/apparmor/). Before-and-after runs are preserved in the [AppArmor verification record](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/20-docker-apparmor.json).
 
-Additional verification running x64 programs on an ARM64 kernel found that one normal shell-output case out of 142 exceeded a three-second limit. The caller-specified timeout for that functional check was adjusted to fifteen seconds. A separate lifecycle check continues to verify an actual two-second timeout, a 3.5-second return limit, and blocking delayed file changes. Executor timeout handling was unchanged. The initial failure and focused results are in the [emulated shell timing handoff](../handoffs/auto-review/22-emulated-shell-timing.json).
+Additional verification running x64 programs on an ARM64 kernel found that one normal shell-output case out of 142 exceeded a three-second limit. The caller-specified timeout for that functional check was adjusted to fifteen seconds. A separate lifecycle check continues to verify an actual two-second timeout, a 3.5-second return limit, and blocking delayed file changes. Executor timeout handling was unchanged. The initial failure and focused results are in the [emulated shell timing verification record](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/22-emulated-shell-timing.json).
 
-The first final macOS aggregation exceeded the package check's twenty-second observation window. A diagnostic copy with a longer window completed normally in 12.6 seconds. Reaggregation retaining the original check and twenty-second limit also passed. The specific cause of the initial delay was not determined. The [package timing handoff](../handoffs/auto-review/24-macos-package-timing.json) preserves both the initial failure and subsequent success.
+The first final macOS aggregation exceeded the package check's twenty-second observation window. A diagnostic copy with a longer window completed normally in 12.6 seconds. Reaggregation retaining the original check and twenty-second limit also passed. The specific cause of the initial delay was not determined. The [package timing verification record](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/24-macos-package-timing.json) preserves both the initial failure and subsequent success.
 
-Normal MCP approval and strict review are distinct. Codex's normal path follows annotations and approval modes even with an automatic reviewer; strict review does not allow those skip conditions. Nested requests cannot lower the original call's strict-review requirement. Corrected behavior and regression checks are recorded in the [MCP routing handoff](../handoffs/auto-review/19-mcp-routing.json).
+Normal MCP approval and strict review are distinct. Codex's normal path follows annotations and approval modes even with an automatic reviewer; strict review does not allow those skip conditions. Nested requests cannot lower the original call's strict-review requirement. Corrected behavior and regression checks are recorded in the [MCP routing verification record](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/19-mcp-routing.json).
 
 Current E2E checks are in [`tests/e2e/guard.test.mjs`](../../tests/e2e/guard.test.mjs). Before fixes, actual Pi and OS paths reproduced array risk levels changing external files, `[]` in restricted paths allowing sibling writes, and `node_repl/js` producing MCP effects without approval. Audit JSON failures and direct command failures after a denial stop were also reproduced this way. The default package check was expanded to run a public Pi session and actual MCP server, so its subprocess observation limit changed from twenty to sixty seconds. Actual executor cancellation and timeout checks remain separate.
 
@@ -117,28 +131,14 @@ Additional approval binding checks reproduced a denied file changing when two MC
 
 ### Scope of the earlier OS isolation verification
 
-- Scenarios replaying the main model and reviewer use actual Pi and an OS sandbox. They do not establish live GLM5.3 judgment accuracy. Four live SDK cases and one CLI case are executed and aggregated separately. Integrated passing results also require actual CLI review calls, file changes, and no credential recording.
-- Default temporary-directory writes and ordinary external-file reads are allowed by the default profile. Operations are not assumed always blocked solely because they are outside the workspace.
-- Shell execution is not transactional. If a first allowed write succeeds and a second write is denied, the first change remains. Tests explicitly check these partial effects.
+- Scenarios replaying the main model and reviewer used actual Pi and an OS sandbox. They do not establish live GLM5.3 judgment accuracy. Four live SDK cases and one CLI case were executed and aggregated separately. Integrated passing results also required actual CLI review calls, file changes, and no credential recording.
+- Default temporary-directory writes and ordinary external-file reads were allowed by the default profile. Operations were not assumed always blocked solely because they were outside the workspace.
+- Shell execution is not transactional. If a first allowed write succeeds and a second write is denied, the first change remains. Tests explicitly checked these partial effects.
 - Creating new files on Linux may require approval of the parent directory scope. Narrow approval of an existing file and creation of a new file are distinct scopes.
-- Preexisting hard links and alternative names for narrowly approved files are checked. Concurrent changes to link structure by host programs outside isolation during execution are not covered. Inspection failures and limit overflows block execution.
-- Linux x64 host execution and x64 execution on an ARM64 kernel are recorded separately. Final aggregation requires actual Linux x64 host results from the same source.
-- Windows verification separately checks the original rule engine, approval policy, and pre-execution rejection of unsupported native execution on the actual OS. It does not establish successful Windows native isolation.
-- External MCP executors are trusted integration layers. Cancellation of requests already sent to external servers, and every provider's account identification or side effects, are not guaranteed. Empty approval forms are handled; ordinary input forms and URL elicitation are rejected. Computer Use classifications and approval exceptions absent from Pi were removed.
-- Native permission roots containing pattern characters are blocked because the runtime cannot represent them literally. This is distinct from support for special-character filenames in ordinary workspaces. Trusted extension directories are protected as control code, but all dependencies that arbitrary trusted extensions execute or import elsewhere are not automatically analyzed.
-- HTTPS CONNECT, SOCKS5 TCP, IPv6, and direct UDP blocking are checked. This does not claim support or verification of SOCKS5 UDP or every network protocol.
+- Preexisting hard links and alternative names for narrowly approved files were checked. Concurrent changes to link structure by host programs outside isolation during execution were not covered. Inspection failures and limit overflows blocked execution.
+- Linux x64 host execution and x64 execution on an ARM64 kernel were recorded separately. Final aggregation required actual Linux x64 host results from the same source.
+- Windows verification separately checked the original rule engine, approval policy, and pre-execution rejection of unsupported native execution on the actual OS. It does not establish successful Windows native isolation.
+- External MCP executors are trusted integration layers. Cancellation of requests already sent to external servers, and every provider's account identification or side effects, are not guaranteed. Empty approval forms were handled; ordinary input forms and URL elicitation were rejected. Computer Use classifications and approval exceptions absent from Pi were removed.
+- Native permission roots containing pattern characters were blocked because the runtime cannot represent them literally. This is distinct from support for special-character filenames in ordinary workspaces. Trusted extension directories are protected as control code, but all dependencies that arbitrary trusted extensions execute or import elsewhere are not automatically analyzed.
+- HTTPS CONNECT, SOCKS5 TCP, IPv6, and direct UDP blocking were checked. This does not claim support or verification of SOCKS5 UDP or every network protocol.
 - Identical decisions to the proprietary Codex model are not guaranteed. Public policies and flows are distinct from observed results of the selected GLM5.3 model.
-
-## Running verification
-
-Run from the [pi-packages](https://github.com/buYoung/pi-packages) repository root. These commands use no actual credentials.
-
-```sh
-pnpm install
-pnpm --filter "@buyong/pi-codex-auto-review..." build
-pnpm --filter @buyong/pi-codex-auto-review test:unit
-```
-
-`test:unit` runs the unit, integration, conformance, execution, and end-to-end suites on the current operating system. A local pass does not replace other platform, image, or live model results. The repository workflow runs these checks on Ubuntu, macOS, and Windows (with Git Bash) when this package is selected, and on macOS and Windows only when just the Codex bundle is selected; Windows checkouts keep LF line endings.
-
-The Docker (`verify:docker`), platform (`verify:platform`, `verify:windows`), and evidence (`verify:guard`) commands behind the records above remain in the previous [pi-codex-auto-review](https://github.com/buYoung/pi-codex-auto-review) repository and are not part of this repository.

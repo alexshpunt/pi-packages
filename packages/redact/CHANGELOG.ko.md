@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### 달라진 것
+
+- README에 `normalizeRedactionConfig()`, `maskRanges`, `hideValue`, 호스트 추가 항목의 정확한 동작과, JSON 배열·`toJSON` 값·여러 줄 구간을 가리는 방식, Node.js 22가 거부하는 사용자 패턴 문법을 적었습니다.
+
 ## [0.1.4] - 2026-10-21
 
 ### 달라진 것

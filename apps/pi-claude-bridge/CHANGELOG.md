@@ -1,5 +1,11 @@
 # Changelog
 
+## UNRELEASED
+
+### Improved
+
+- The README is rewritten in English, and the package now ships a Korean README (`README.ko.md`). It adds a first-request check, an update and removal table, and a license section.
+
 ## 0.13.0 — 2026-10-21
 
 ### Improved

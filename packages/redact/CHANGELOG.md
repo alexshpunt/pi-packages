@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Improved
+
+- The README now states the exact behavior of `normalizeRedactionConfig()`, `maskRanges`, `hideValue`, and host additions, how JSON arrays, `toJSON` values, and multi-line spans are masked, and which custom-pattern syntax Node.js 22 rejects.
+
 ## [0.1.4] - 2026-10-21
 
 ### Improved

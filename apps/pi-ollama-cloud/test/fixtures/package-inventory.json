@@ -22,6 +22,7 @@
     "CHANGELOG.ko.md",
     "CHANGELOG.md",
     "LICENSE",
+    "README.ko.md",
     "README.md",
     "package.json",
     "src/accounts/credentials.ts",

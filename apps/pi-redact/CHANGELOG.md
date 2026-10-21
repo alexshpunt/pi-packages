@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Improved
+
+- The README puts the masking check right after installation, shows the notice and error text used when masking fails, and explains when a settings file is skipped and where that is reported.
+
 ## [0.1.1] - 2026-10-21
 
 ### Improved

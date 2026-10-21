@@ -26,7 +26,7 @@ pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline -
 pnpm --dir apps/pi-ollama-cloud pack --pack-destination "$verification_dir/package"
 ```
 
-모든 검사는 종료 코드 0이어야 합니다. `check`는 파일을 수정하지 않습니다. 생성 데이터 재조회는 이 검증의 일부가 아닙니다. 로드·명령 확인은 [README의 격리 실행](../README.md#개발과-검증)을 따릅니다.
+모든 검사는 종료 코드 0이어야 합니다. `check`는 파일을 수정하지 않습니다. 생성 데이터 재조회는 이 검증의 일부가 아닙니다. 로드·명령 확인은 [README의 격리 실행](../README.ko.md#개발과-검증)을 따릅니다.
 
 ## 생성 데이터 갱신
 

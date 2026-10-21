@@ -27,6 +27,7 @@
   "files": [
     "src",
     "README.md",
+    "README.ko.md",
     "LICENSE"
   ],
   "publishConfig": {

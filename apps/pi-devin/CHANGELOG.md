@@ -6,6 +6,7 @@
 
 - Pi checks the Devin login session again once a day instead of before every request, so Devin requests and model list refreshes no longer take Pi's shared `auth.json` lock and rewrite the file each time. Sessions saved by earlier versions keep working and are checked on their next use.
 - Signing in again to the same Devin account lists its models at once instead of waiting for the list to download again. Another account still sees none of the previous account's models.
+- The package now ships a Korean README (`README.ko.md`), and the README explains how to check a project-scoped installation.
 
 ### Fixed
 

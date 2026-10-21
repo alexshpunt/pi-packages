@@ -23,6 +23,7 @@
   "requiredFiles": [
     "package.json",
     "README.md",
+    "README.ko.md",
     "LICENSE",
     "index.ts",
     "proto/buf/validate/validate.proto",
