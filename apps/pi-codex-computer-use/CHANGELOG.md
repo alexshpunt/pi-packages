@@ -4,7 +4,7 @@
 
 ### Fixed
 
-- Oversized MCP responses now fail pending calls and disconnect instead of waiting indefinitely for cancellation.
+- Oversized MCP responses now fail the running call with an error instead of waiting indefinitely for cancellation; the connection stays usable.
 - Large runtime errors now follow the same output limit and full-output file handling as other results.
 - Unexpected server exits update the footer, and runtime startup/shutdown failures are visible in print/JSON mode.
 - Shutdown no longer leaves its turn-notification wait timer active after cleanup.

@@ -170,7 +170,7 @@ Long text, including JSON-RPC error messages and data, is middle-truncated accor
 | No approval UI in print/JSON | Use interactive Pi or a UI-capable RPC client; the tool error explains why the request was declined. |
 | Login/OTP/URL request declined | Complete login through the supported app/browser flow yourself; this bridge cannot handle those elicitation surfaces. |
 | Cancelled call delays later calls | Let the runtime finish or reach its timeout; it serializes JavaScript calls. Inspect status if the server exited. |
-| Connection closes after a response over 16 MiB | The bridge fails pending calls, hides tools, and updates the footer to an error. Run `/reload` or restart Pi, reacquire REPL bindings, and request smaller results. The client does not shorten approval waits. |
+| A call fails with `MCP stdio message exceeds 16777216 bytes` | The response was over 16 MiB and was discarded. The connection stays open; request smaller results. The client does not shorten approval waits. |
 
 Logs rotate at 5 MiB at `<agentDir>/codex-computer-use/mcp.log`. Image data is replaced with its base64 character count before JSON encoding. Key-based masking can leave page/app content. Review logs before sharing. Private runtime interfaces and telemetry outside Desktop are not guaranteed by this bridge.
 

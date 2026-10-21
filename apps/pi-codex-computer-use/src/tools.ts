@@ -351,6 +351,14 @@ function createToolDefinition(
                           ],
                       }
                     : result;
+            // Bridged calls run one at a time, so a discarded oversized response belongs to this call.
+            const oversized = new AbortController();
+            const stopWatchingOversized = connection.onOversizedResponse(
+                (error) => oversized.abort(error),
+            );
+            const requestSignal = signal
+                ? AbortSignal.any([signal, oversized.signal])
+                : oversized.signal;
             try {
                 const result = await connection.client.request<CallToolResult>(
                     "tools/call",
@@ -359,7 +367,7 @@ function createToolDefinition(
                         arguments: (params ?? {}) as Record<string, unknown>,
                         _meta: meta,
                     },
-                    { timeoutMs: 0, signal },
+                    { timeoutMs: 0, signal: requestSignal },
                 );
                 return withNotes(
                     await convertCallToolResult(result, {
@@ -371,7 +379,10 @@ function createToolDefinition(
                 );
             } catch (error) {
                 const durationMs = Date.now() - started;
-                if (signal?.aborted || error instanceof McpAbortError) {
+                if (
+                    !oversized.signal.aborted &&
+                    (signal?.aborted || error instanceof McpAbortError)
+                ) {
                     deps.log.write("tool-cancelled", {
                         tool: tool.name,
                         callId: toolCallId,
@@ -385,7 +396,9 @@ function createToolDefinition(
                         true,
                     );
                 }
-                const message = describeError(error);
+                const message = oversized.signal.aborted
+                    ? `${describeError(oversized.signal.reason)}; the response was discarded. Return less output per call.`
+                    : describeError(error);
                 deps.log.write("tool-error", {
                     tool: tool.name,
                     callId: toolCallId,
@@ -413,6 +426,7 @@ function createToolDefinition(
                     ),
                 );
             } finally {
+                stopWatchingOversized();
                 if (active) deps.activeCalls?.end(active);
             }
         },
