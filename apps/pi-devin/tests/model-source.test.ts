@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "vitest";
 import { createModels, getSupportedThinkingLevels, InMemoryCredentialStore, InMemoryModelsStore, type Credential as HostCredential, type ModelsPublication, type ModelsStoreEntry, type Provider, type RefreshModelsContext } from "@earendil-works/pi-ai";
-import { createDevinModelSource, DEVIN_API, FUSION_MODEL_ID, type FusionSelection } from "../src/pi/models.ts";
+import { createDevinModelSource, DEVIN_API, FUSION_MODEL_ID, type DevinModel, type FusionSelection } from "../src/pi/models.ts";
 import { parseModelCatalog } from "../src/core/models/catalog.ts";
 import type { EffectiveThinkingLevel } from "../src/core/models/variants.ts";
 import { DevinClient } from "../src/core/client.ts";
@@ -145,6 +145,44 @@ test("after an account or endpoint change or logout, the old list is not exposed
   await source.refreshModels(p.context({ credential: undefined, allowNetwork: false }));
   expect(source.getModels()).toStrictEqual([]);
   expect(source.filterModels(oldModels, undefined)).toStrictEqual([]);
+});
+
+test("a new session of the same verified account reuses the stored catalog under the new session; an unverified or different account does not", async () => {
+  const account = "a".repeat(64), verified = new Map<string, string>([[credential.sessionToken, account]]);
+  let calls = 0;
+  const options = { credentialFromHost, accountOf: (value: { sessionToken: string }) => verified.get(value.sessionToken),
+    fetchCatalog: async () => { calls++; return parseModelCatalog(raw); } };
+  const p = publications();
+  await createDevinModelSource(options).refreshModels(p.context());
+  const saved = p.stored()!;
+  const accounts = (entry: ModelsStoreEntry) => new Set(entry.models.map((model) => (model as DevinModel).devin.account));
+  expect(accounts(saved)).toStrictEqual(new Set([account]));
+  const renewed = { ...hostCredential, access: "renewed-fake-session" } as HostCredential;
+  // Without a verified account for the new session, or for another account, the stored list is not shown.
+  for (const known of [undefined, "b".repeat(64)]) {
+    if (known) verified.set("renewed-fake-session", known);
+    const source = createDevinModelSource(options);
+    await source.refreshModels(p.context({ credential: renewed, stored: saved, allowNetwork: false }));
+    expect(source.getModels()).toStrictEqual([]);
+    expect(p.stored()).toStrictEqual(saved);
+  }
+  // The same account gets the list at once without network, scoped to the new session, and stored under it.
+  verified.set("renewed-fake-session", account);
+  const reused = createDevinModelSource(options);
+  await reused.refreshModels(p.context({ credential: renewed, stored: saved, allowNetwork: false }));
+  expect(reused.getModels().length).toBe(66);
+  expect(reused.filterModels(reused.getModels(), renewed).length).toBe(66);
+  expect(reused.filterModels(reused.getModels(), hostCredential)).toStrictEqual([]);
+  expect(new Set(p.stored()!.models.map((model) => (model as DevinModel).devin.scope))).toStrictEqual(new Set([reused.getModels()[0].devin.scope]));
+  expect(calls).toBe(1);
+  // After a restart the new session restores its stored list before its account is checked again, and a refetch keeps the account.
+  verified.delete("renewed-fake-session");
+  const restarted = createDevinModelSource(options);
+  await restarted.refreshModels(p.context({ credential: renewed, stored: p.stored(), allowNetwork: false }));
+  expect(restarted.getModels().length).toBe(66);
+  await restarted.refreshModels(p.context({ credential: renewed, stored: p.stored(), force: true }));
+  expect(calls).toBe(2);
+  expect(accounts(p.stored()!)).toStrictEqual(new Set([account]));
 });
 
 test("forced and expired refreshes, last-good on failure, and new disabled permissions apply", async () => {

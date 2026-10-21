@@ -115,12 +115,15 @@ test("coding-agent public ModelRuntime real file storage is bounded and Pi logou
     });
     expect(runtime.isUsingOAuth("devin")).toBe(true);
     expect(queries).toBe(0);
+    const saved = await readFile(authPath, "utf8");
+    expect(JSON.parse(saved)).toStrictEqual({ unrelated: other, devin: credential });
+    // Until the session check interval passes, resolving auth neither checks the session nor rewrites the shared auth.json.
     for (let i = 0; i < 3; i++) await runtime.getAuth("devin");
-    expect(queries).toBe(3);
-    expect(JSON.parse(await readFile(authPath, "utf8"))).toStrictEqual({ unrelated: other, devin: credential });
+    expect(queries).toBe(0);
+    expect(await readFile(authPath, "utf8")).toBe(saved);
     await runtime.logout("devin");
     expect(await runtime.getAuth("devin")).toBe(undefined);
-    expect(queries).toBe(3);
+    expect(queries).toBe(0);
     expect(JSON.parse(await readFile(authPath, "utf8"))).toStrictEqual({ unrelated: other });
     expect(await readFile(cliPath, "utf8")).toBe(cliBytes);
     runtime.unregisterProvider("devin");

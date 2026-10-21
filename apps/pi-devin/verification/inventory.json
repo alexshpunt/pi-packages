@@ -126,7 +126,8 @@
     "src/pi/devin-panel.ts",
     "src/pi/devin-settings.ts",
     "src/pi/fusion-picker.ts",
-    "src/pi/usage.ts"
+    "src/pi/usage.ts",
+    "src/pi/usage-store.ts"
   ],
   "forbiddenFiles": [
     "auth.json",

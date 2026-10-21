@@ -6,6 +6,13 @@ import { awaitWithSignal, endpoint, isAuthenticationError, isTransientConnection
 import { object, requiredString, type Credential, type JsonObject } from "../core/types.ts";
 
 export const OAUTH_ONLY_MESSAGE = "Devin uses only the OAuth account session from /login. API key authentication is not supported.";
+/**
+ * Pi checks the stored session again after this interval. It is not a server TTL: the server expiry is unknown, no new token
+ * is issued, and each model request still checks the account outside Pi's credential lock.
+ */
+export const SESSION_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
+/** Upper bound of the account check right after sign-in. Sign-in succeeds even when this check fails. */
+const LOGIN_CHECK_TIMEOUT_MS = 15_000;
 
 export interface DevinAccountAuth extends OAuthAuth {
   readonly generation: number;
@@ -19,7 +26,8 @@ export interface DevinAccountAuth extends OAuthAuth {
 }
 
 export function credentialFromOAuth(credential: OAuthCredential): Credential {
-  if (credential.type !== "oauth" || credential.refresh !== "" || credential.expires !== 0) {
+  // 0.1.4 and earlier stored `expires: 0`; Pi checks such a session again on its next use.
+  if (credential.type !== "oauth" || credential.refresh !== "" || !Number.isSafeInteger(credential.expires) || credential.expires < 0) {
     throw new Error("Unsupported Devin account credential. Sign in again with /login.");
   }
   const metadata = object(credential.devin, "Devin credential metadata");
@@ -50,7 +58,9 @@ export function createDevinAccountAuth(options: {
   getSignal?: () => AbortSignal;
   /** The account was already checked in this process; each model request checks it again outside Pi's credential lock. */
   isAccountChecked?: (credential: Credential) => boolean;
+  now?: () => number;
 } = {}): DevinAccountAuth {
+  const now = options.now ?? Date.now;
   const invalid = new Set<string>();
   // Remembers only a hash, never the token. Pi calls toAuth on every request, so the session in use moves back to the front.
   const oauthSessions = new Set<string>();
@@ -64,6 +74,13 @@ export function createDevinAccountAuth(options: {
     if (oauthSessions.size >= 64) oauthSessions.delete(oauthSessions.values().next().value!);
     oauthSessions.add(key);
     return credential;
+  };
+  const checkAccount = async (credential: Credential, signal: AbortSignal, expectedGeneration: number) => {
+    const client = (options.createClient ?? ((value) => new DevinClient(value, { profile: "login" })))(credential);
+    try {
+      const status = await client.status(signal);
+      if (expectedGeneration === generation) options.onValidated?.(credential, requiredString(client.accountIdentityHash, "Devin account scope"), status);
+    } finally { client.transport.close(); }
   };
   const auth: DevinAccountAuth = {
     name: "Devin account",
@@ -93,9 +110,15 @@ export function createDevinAccountAuth(options: {
       rememberOAuth(credential);
       generation++;
       options.onLogin?.();
+      // Records the new session's account and quota so the same account's model list and usage are available at once.
+      // Sign-in is not a permission check: a failure here is left to the first model request.
+      if (options.onValidated) {
+        try { await checkAccount(credential, AbortSignal.any([signal, AbortSignal.timeout(LOGIN_CHECK_TIMEOUT_MS)]), generation); }
+        catch { /* best effort */ }
+      }
       interaction.notify({ type: "info", message: "Signed in to the Devin account. The server expiry time and refresh grant are unknown. If authentication fails, sign in again with /login." });
       return {
-        type: "oauth", access: credential.sessionToken, refresh: "", expires: 0,
+        type: "oauth", access: credential.sessionToken, refresh: "", expires: now() + SESSION_CHECK_INTERVAL_MS,
         devin: { version: 1, apiServerURL: credential.apiServerURL, createdAt: credential.createdAt, flow: choice },
       };
     },
@@ -106,24 +129,22 @@ export function createDevinAccountAuth(options: {
       const credential = credentialFromOAuth(current);
       requireUsable(credential);
       rememberOAuth(credential);
-      // expires 0 makes Pi call this before every request while holding the shared auth.json lock. A network
-      // check here serializes every Pi process using Devin, so only the first resolution in a process checks.
-      if (options.isAccountChecked?.(credential)) return current;
+      // Pi calls this while holding the shared auth.json lock once the check interval has passed, and saves the result.
+      // The new expiry only schedules the next check; the token is never renewed.
+      const checked = (): OAuthCredential => ({ ...current, expires: now() + SESSION_CHECK_INTERVAL_MS });
+      // Model requests already check the account outside the lock, so a process that checked it does not wait on the network.
+      if (options.isAccountChecked?.(credential)) return checked();
       const expectedGeneration = generation;
-      const client = (options.createClient ?? ((value) => new DevinClient(value, { profile: "login" })))(credential);
       try {
-        // 0 is not a server TTL. Pi's refresh entry point only checks the existing session; it never renews the token.
-        const status = await client.status(signal);
-        if (expectedGeneration === generation) options.onValidated?.(credential, requiredString(client.accountIdentityHash, "Devin account scope"), status);
-        return current;
+        await checkAccount(credential, signal, expectedGeneration);
+        return checked();
       } catch (error) {
         auth.invalidate(credential, error, expectedGeneration);
-        // An unreachable check must not block the request: keep the stored session so the model request
-        // succeeds or reports its own retryable transport error.
+        // An unreachable check must not block the request: keep the stored session unchanged so the model request
+        // succeeds or reports its own retryable transport error, and the next use checks again.
         if (!signal.aborted && isTransientConnectionFailure(error)) return current;
         throw error;
       }
-      finally { client.transport.close(); }
     },
     async toAuth(current) {
       const credential = credentialFromOAuth(current);

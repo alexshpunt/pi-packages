@@ -80,7 +80,7 @@ There are two toggles, both off by default. Changes apply to all sessions at onc
 - **Recommended models only**: `/model` shows only the models that have a variant Devin marks as Recommended, plus Devin Fusion. Devin marks single variants such as `swe-2-high`, but the list keeps the model itself (`swe-2`), so you still pick the thinking level with `/thinking`. The recommended level is not applied automatically. If your account has no recommended models, the full list is shown.
 - **Usage in status line**: the TUI footer shows the remaining daily and weekly quota as bars, plus this session's input and output tokens, like `devin day ▕█████████░▏98% week ▕█████████░▏98% · ↑263 ↓49`. A bar turns to the warning color at 40% or less and to the error color at 20% or less.
 
-Quota is not live. It is refreshed when you log in and by the account check right before each model request, so the usage of the message you just sent shows up after the next request. If that check cannot reach the Devin server (for example `ECONNREFUSED` or a 503), the request is still sent with the last checked account. A model request whose connection is refused, reset or cut off mid-response is reported as `Connection error (…)`, which Pi's automatic retry recognizes; a lasting outage reports that connection error instead of `OAuth refresh failed`. `/devin` and the status line send no network requests. Credits, per-request costs and usage history are not shown.
+Quota is not live. It is refreshed when you log in and by the account check right before each model request, including requests from subagents and the Fusion sidekick that use the same Pi agent directory, so the usage of the message you just sent shows up after the next request. If that check cannot reach the Devin server (for example `ECONNREFUSED` or a 503), the request is still sent with the last checked account. A model request whose connection is refused, reset or cut off mid-response is reported as `Connection error (…)`, which Pi's automatic retry recognizes; a lasting outage reports that connection error instead of `OAuth refresh failed`. `/devin` and the status line send no network requests; the status line picks up quota recorded by other Pi processes at the end of each turn. Credits, per-request costs and usage history are not shown.
 
 If a filter change removes the model you are using from the list, you can keep using it in the current session. When you reopen the session, that model is not restored, so pick a model from the list again.
 
@@ -125,6 +125,7 @@ Like the Devin CLI, requests to the Devin server include device information. On 
 | --- | --- |
 | Pi login data | Managed by Pi. Default `~/.pi/agent/auth.json` |
 | Package settings | `pi-devin/settings.json` (`/devin`) and `pi-devin/fusion.json` (`/devin-fusion`) in the Pi agent directory |
+| Last account quota | `pi-devin/account-usage.json` in the Pi agent directory. Holds only quota values and a hash of the login session, no token or account ID. |
 | Sidekick conversations | `pi-devin/sidekick/<lead session ID>.jsonl` in the Pi agent directory |
 | Complete text of cut sidekick reports | `pi-devin-sidekick-report-*/report.md` in the system temporary directory, readable only by you. Written only when a report exceeds the limit; the system may delete it later. |
 

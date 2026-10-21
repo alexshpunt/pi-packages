@@ -18,6 +18,7 @@ import { catalogScope, createDevinModelSource, DEVIN_API, hasExtendedPromptCache
 import { FUSION_LEAD_GUIDANCE } from "./sidekick.ts";
 import { DevinResponseStream } from "./stream.ts";
 import { accountUsage, type AccountUsage } from "./usage.ts";
+import { memoryAccountUsageStore, type AccountUsageStore } from "./usage-store.ts";
 
 type LoginConfiguration = NonNullable<Parameters<typeof createDevinAccountAuth>[0]>["loginOptions"];
 
@@ -38,7 +39,10 @@ export interface DevinProvider extends Provider<typeof DEVIN_API> {
   getFusionChoices(): FusionChoices | undefined;
   /** Rebuilds the model list from the current catalog without network after the saved Fusion choice or display settings change. */
   rebuildModels(): void;
-  /** Quota from the last account status received. Makes no request; undefined if none was received. */
+  /**
+   * Newest quota received for the current credential by this process or another one sharing the usage store.
+   * Makes no request; undefined if none was received or no credential is current.
+   */
   getAccountUsage(): AccountUsage | undefined;
   shutdown(): void;
 }
@@ -55,6 +59,10 @@ export function createDevinProvider(options: {
   recommendedOnly?: () => boolean;
   /** Also lists exact UIDs that a group already covers. Used only by the sidekick child Pi. */
   listsAllExactModels?: boolean;
+  /** Shares the last account quota with other Pi processes using the same agent directory. Kept in memory only when omitted. */
+  accountUsage?: AccountUsageStore;
+  /** Called after the quota or the current credential may have changed, outside Pi event handlers. */
+  onAccountUsage?: () => void;
   now?: () => number;
 } = {}): DevinProvider {
   const lifecycle = new DevinLifecycle(options.maxModelCalls);
@@ -63,7 +71,9 @@ export function createDevinProvider(options: {
   const fingerprints = new Map<string, FingerprintProvider>();
   const accounts = new Map<string, { ownerHash: string; status: JsonObject }>();
   const now = options.now ?? Date.now;
-  let latestUsage: AccountUsage | undefined;
+  const usageStore = options.accountUsage ?? memoryAccountUsageStore();
+  let latestUsage: { scope: string; usage: AccountUsage } | undefined;
+  const usageChanged = () => { try { options.onAccountUsage?.(); } catch { /* A display failure must not affect requests or refreshes. */ } };
   const clientFor = (credential: Credential, extra: DevinClientOptions = {}): DevinClient => {
     const key = catalogScope(credential);
     let fingerprint = fingerprints.get(key);
@@ -83,8 +93,12 @@ export function createDevinProvider(options: {
   const rememberAccount = (credential: Credential, ownerHash: string, status: JsonObject) => {
     if (lifetime.signal.aborted) return;
     if (accounts.size >= 16) accounts.delete(accounts.keys().next().value!);
-    accounts.set(catalogScope(credential), { ownerHash, status });
-    latestUsage = accountUsage(status, now());
+    const scope = catalogScope(credential);
+    accounts.set(scope, { ownerHash, status });
+    latestUsage = { scope, usage: accountUsage(status, now()) };
+    // Subagents and the Fusion sidekick run in other processes; a failed write only loses sharing.
+    try { usageStore.write(scope, latestUsage.usage); } catch { /* best effort */ }
+    usageChanged();
   };
   const auth = createDevinAccountAuth({
     loginOptions: { ...options.loginOptions, fetch: options.loginOptions?.fetch ?? options.fetch },
@@ -92,11 +106,13 @@ export function createDevinProvider(options: {
     getSignal: () => lifetime.signal,
     isAccountChecked: (credential) => accounts.has(catalogScope(credential)),
     onValidated: rememberAccount,
-    onInvalidated: (credential, error) => { accounts.delete(catalogScope(credential)); latestUsage = undefined; lifecycle.abort(error); },
+    onInvalidated: (credential, error) => { accounts.delete(catalogScope(credential)); latestUsage = undefined; lifecycle.abort(error); usageChanged(); },
     onLogin: () => {
       accounts.clear(); fingerprints.clear(); latestUsage = undefined; source.invalidate();
       lifecycle.abort(new DOMException("The Devin account was re-authenticated.", "AbortError"));
+      usageChanged();
     },
+    now,
   });
   const authenticationFailed = (credential: Credential, error: unknown, generation: number) => {
     if (!isAuthenticationError(error)) return;
@@ -107,6 +123,7 @@ export function createDevinProvider(options: {
     recommendedOnly: options.recommendedOnly,
     listsAllExactModels: options.listsAllExactModels,
     credentialFromHost: (credential) => credential?.type === "oauth" ? auth.credentialFromHost(credential) : undefined,
+    accountOf: (credential) => accounts.get(catalogScope(credential))?.ownerHash,
     fetchCatalog: async (credential, signal) => {
       const generation = auth.generation;
       auth.assertUsable(credential);
@@ -232,8 +249,20 @@ export function createDevinProvider(options: {
     id: "devin", name: "Devin", auth: { oauth: auth }, lifecycle,
     getModels: source.getModels, filterModels: source.filterModels,
     getFusionChoices: source.getFusionChoices, rebuildModels: source.rebuildModels,
-    getAccountUsage: () => latestUsage ? { ...latestUsage } : undefined,
-    refreshModels: (context) => source.refreshModels({ ...context, signal: AbortSignal.any([context.signal, lifetime.signal]) }),
+    getAccountUsage: () => {
+      const scope = source.currentScope();
+      if (!scope) return undefined;
+      const local = latestUsage?.scope === scope ? latestUsage.usage : undefined;
+      let shared: AccountUsage | undefined;
+      try { shared = usageStore.read(scope); } catch { shared = undefined; }
+      const newest = shared && (!local || shared.fetchedAtMs > local.fetchedAtMs) ? shared : local;
+      return newest ? { ...newest } : undefined;
+    },
+    async refreshModels(context) {
+      // Sign-in, logout and restores change the current credential, which decides whose quota is shown.
+      try { await source.refreshModels({ ...context, signal: AbortSignal.any([context.signal, lifetime.signal]) }); }
+      finally { usageChanged(); }
+    },
     stream: (model, context, requestOptions) => infer(model, context, requestOptions), streamSimple: (model, context, requestOptions) => infer(model, context, requestOptions),
     attachSession(binding) {
       if (lifetime.signal.aborted) lifetime = new AbortController();

@@ -3,10 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test, vi } from "vitest";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import { InMemoryCredentialStore, type Provider } from "@earendil-works/pi-ai";
+import { InMemoryCredentialStore, InMemoryModelsStore, type Provider } from "@earendil-works/pi-ai";
 import { createDevinModelSource, DEVIN_API } from "../src/pi/models.ts";
+import { createDevinProvider } from "../src/pi/provider.ts";
 import { parseModelCatalog } from "../src/core/models/catalog.ts";
-import { credential } from "./helpers.ts";
+import type { JsonObject } from "../src/core/types.ts";
+import { credential, MODELS_METHOD, STATUS_METHOD, statusResponse, unaryResponse } from "./helpers.ts";
+import { providerCredential, providerFixture } from "./provider-fixture.ts";
 
 const raw = JSON.parse(await readFile(new URL("./fixtures/model-catalog.json", import.meta.url), "utf8"));
 
@@ -59,4 +62,42 @@ test("the real coding-agent catalog file is restored after restart and not appli
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test("signing in again to the same account lists the stored catalog at once; another account sees none until its own catalog loads", async () => {
+  let userId = "offline-user-id", sessions = 0;
+  const fixture = await providerFixture({ statusFailure: () => {
+    const body = statusResponse() as { userStatus: JsonObject };
+    body.userStatus.userId = userId;
+    return unaryResponse(STATUS_METHOD, body);
+  } });
+  fixture.provider.shutdown();
+  // Every sign-in issues a new session token, as a real re-login does.
+  const loginFetch: typeof fetch = async (url, init) => {
+    const method = new URL(String(url)).pathname.slice(1);
+    if (method.endsWith("/ExchangeDevinCLIPKCECode")) return unaryResponse(method, { sessionToken: `fake-session-${++sessions}` });
+    if (method.endsWith("/ExchangePKCEAuthorizationCode")) return unaryResponse(method, { apiKey: `fake-session-${++sessions}`, apiServerUrl: providerCredential.apiServerURL });
+    return fixture.dependencies.fetch(url, init);
+  };
+  const provider = createDevinProvider({ ...fixture.dependencies, loginOptions: { ...fixture.dependencies.loginOptions, fetch: loginFetch } });
+  const runtime = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: null, modelsStore: new InMemoryModelsStore(), refreshOnCreate: false, allowModelNetwork: false });
+  runtime.registerNativeProvider(provider);
+  const login = () => runtime.login("devin", "oauth", { notify: () => {}, prompt: async (prompt) => prompt.type === "select" ? "manual" : "fake-code" });
+  // The fixture already fetched a catalog for its own provider; only this runtime's fetches count.
+  const fetched = () => fixture.requests.filter((request) => request.method === MODELS_METHOD).length, before = fetched();
+  const catalogs = () => fetched() - before;
+  try {
+    await login();
+    expect((await runtime.refresh({ providers: ["devin"], allowNetwork: true, force: true })).errors.size).toBe(0);
+    const listed = (await runtime.getAvailable("devin")).map((model) => model.id);
+    expect(listed.length).toBeGreaterThan(0);
+    expect(catalogs()).toBe(1);
+    await login();
+    expect(sessions).toBe(2);
+    expect((await runtime.getAvailable("devin")).map((model) => model.id)).toStrictEqual(listed);
+    userId = "another-offline-user";
+    await login();
+    expect(await runtime.getAvailable("devin")).toStrictEqual([]);
+    expect(catalogs()).toBe(1);
+  } finally { provider.shutdown(); runtime.unregisterProvider("devin"); }
 });

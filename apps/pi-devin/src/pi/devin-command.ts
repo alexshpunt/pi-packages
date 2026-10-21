@@ -10,11 +10,21 @@ export const USAGE_STATUS_KEY = "devin-usage";
 const USAGE = "Usage: /devin, /devin recommended on|off, /devin status on|off";
 const ARGUMENT_KEYS: Readonly<Record<string, keyof DevinPreferences>> = { recommended: "recommendedOnly", status: "showUsageStatus" };
 
-/** The status is used in the TUI only. Turning the toggle off clears only this package's key. Values come only from the last account status and session records. */
-export function updateUsageStatus(ctx: ExtensionContext, provider: DevinProvider, settings: DevinSettings): void {
+/** Pi stores a message only after every `message_end` handler ran, so a just-finished response is counted explicitly. */
+function branchWith(ctx: ExtensionContext, pendingMessage: unknown): readonly unknown[] {
+  const branch = ctx.sessionManager.getBranch();
+  if (!pendingMessage || branch.some((entry) => entry.type === "message" && entry.message === pendingMessage)) return branch;
+  return [...branch, { type: "message", message: pendingMessage }];
+}
+
+/**
+ * The status is used in the TUI only. Turning the toggle off clears only this package's key.
+ * Values come only from the last account status and session records; `pendingMessage` is a response not stored yet.
+ */
+export function updateUsageStatus(ctx: ExtensionContext, provider: DevinProvider, settings: DevinSettings, pendingMessage?: unknown): void {
   if (ctx.mode !== "tui") return;
   const text = settings.read().showUsageStatus
-    ? usageStatusText(provider.getAccountUsage(), sessionUsage(ctx.sessionManager.getBranch()), (tone, segment) => ctx.ui.theme.fg(tone, segment)) : undefined;
+    ? usageStatusText(provider.getAccountUsage(), sessionUsage(branchWith(ctx, pendingMessage)), (tone, segment) => ctx.ui.theme.fg(tone, segment)) : undefined;
   ctx.ui.setStatus(USAGE_STATUS_KEY, text);
 }
 

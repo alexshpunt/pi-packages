@@ -1,5 +1,5 @@
 import type { Model } from "@earendil-works/pi-ai";
-import { getAgentDir, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { createDevinProvider, type DevinProvider } from "./provider.ts";
 import { DEVIN_STATE_ENTRY } from "./lifecycle.ts";
 import { registerDevinCommand, updateUsageStatus } from "./devin-command.ts";
@@ -9,7 +9,7 @@ import { memoryFusionSettings, type FusionSettings } from "./fusion-settings.ts"
 import { createSidekickTool, fusionOf, SIDEKICK_TOOL_NAME, type SidekickToolOptions } from "./sidekick.ts";
 
 type ProviderOptions = NonNullable<Parameters<typeof createDevinProvider>[0]>;
-export interface DevinExtensionOptions extends Omit<ProviderOptions, "fusion" | "listsAllExactModels" | "recommendedOnly"> {
+export interface DevinExtensionOptions extends Omit<ProviderOptions, "fusion" | "listsAllExactModels" | "recommendedOnly" | "onAccountUsage"> {
   /** Store for the `/devin-fusion` choice. Kept in memory only when omitted. */
   fusionSettings?: FusionSettings;
   /** Store for the `/devin` display settings. Kept in memory only when omitted. */
@@ -24,14 +24,20 @@ export function registerDevinExtension(pi: ExtensionAPI, options: DevinExtension
   const { fusionSettings, devinSettings, isFusionChild, sidekick: sidekickOptions, ...providerOptions } = options;
   const settings = fusionSettings ?? memoryFusionSettings();
   const preferences = isFusionChild ? undefined : devinSettings ?? memoryDevinSettings();
+  // Context of the current session, used to redraw the status when the quota changes outside event handlers.
+  let statusContext: ExtensionContext | undefined;
+  const refreshStatus = (context: ExtensionContext, pendingMessage?: unknown) => { if (preferences) updateUsageStatus(context, provider, preferences, pendingMessage); };
   // The child Pi runs on the exact UID the lead chose, so it lists every exact UID and ignores the recommended filter.
   const provider = createDevinProvider({
     ...providerOptions, fusion: isFusionChild ? false : () => settings.read(), listsAllExactModels: isFusionChild === true,
     recommendedOnly: preferences ? () => preferences.read().recommendedOnly : undefined,
+    onAccountUsage: () => {
+      if (!statusContext) return;
+      try { refreshStatus(statusContext); } catch { /* The session was replaced or reloaded; its next session_start redraws. */ }
+    },
   });
   pi.registerProvider(provider);
   if (preferences) registerDevinCommand(pi, provider, preferences);
-  const refreshStatus = (context: Parameters<typeof updateUsageStatus>[0]) => { if (preferences) updateUsageStatus(context, provider, preferences); };
   const sidekick = isFusionChild ? undefined
     : createSidekickTool(pi, provider, { agentDir: sidekickOptions?.agentDir ?? getAgentDir, runtime: sidekickOptions?.runtime });
   if (sidekick) {
@@ -60,11 +66,14 @@ export function registerDevinExtension(pi: ExtensionAPI, options: DevinExtension
     });
     sidekick?.onSessionStart(context.sessionManager.getSessionId());
     syncSidekick(context.model);
+    statusContext = context;
     refreshStatus(context);
   });
   pi.on("message_end", (event, context) => {
-    if (event.message.role === "assistant" && event.message.provider === "devin") refreshStatus(context);
+    if (event.message.role === "assistant" && event.message.provider === "devin") refreshStatus(context, event.message);
   });
+  // Subagents and other sessions record quota in the shared store; any model's turn picks it up.
+  pi.on("turn_end", (_event, context) => { refreshStatus(context); });
   pi.on("before_agent_start", () => { provider.lifecycle.begin("agent"); });
   pi.on("agent_start", () => { provider.lifecycle.agentStarted(); });
   // Host retry or overflow recovery can continue after agent_end.
@@ -75,6 +84,6 @@ export function registerDevinExtension(pi: ExtensionAPI, options: DevinExtension
   pi.on("session_before_tree", (event) => { if (event.preparation.userWantsSummary) provider.lifecycle.beforeTree(); });
   pi.on("session_tree", (_event, context) => { provider.lifecycle.treeChanged(); refreshStatus(context); });
   pi.on("cache_warming_decision", (_event, context) => context.model?.provider === "devin" ? { action: "stop" } : undefined);
-  pi.on("session_shutdown", () => { sidekick?.reset(); provider.shutdown(); });
+  pi.on("session_shutdown", () => { statusContext = undefined; sidekick?.reset(); provider.shutdown(); });
   return provider;
 }

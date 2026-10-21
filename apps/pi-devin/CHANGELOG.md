@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Improved
+
+- Pi checks the Devin login session again once a day instead of before every request, so Devin requests and model list refreshes no longer take Pi's shared `auth.json` lock and rewrite the file each time. Sessions saved by earlier versions keep working and are checked on their next use.
+- Signing in again to the same Devin account lists its models at once instead of waiting for the list to download again. Another account still sees none of the previous account's models.
+
+### Fixed
+
+- The status line and `/devin` now include the Devin quota used by subagents and the Fusion sidekick that share the Pi agent directory. Before, the quota changed only when the current Pi session itself sent a Devin request, so it stayed the same when Devin ran only in subagents.
+- The status line's token totals now include the response that just finished. Before, they lagged one response behind during runs with tool calls.
+- The quota in the status line now updates right after sign-in, sign-out and each account check instead of waiting for the next response.
+
 ## [0.1.4] - 2026-10-21
 
 ### Fixed

@@ -12,6 +12,7 @@ import { DevinPanel } from "../src/pi/devin-panel.ts";
 import { DEFAULT_PREFERENCES, devinSettingsPath, fileDevinSettings, memoryDevinSettings } from "../src/pi/devin-settings.ts";
 import { FusionPicker } from "../src/pi/fusion-picker.ts";
 import { formatTokens, progressBar, relativeTime, remainingTone, sessionUsage, usageReport, usageStatusText } from "../src/pi/usage.ts";
+import { accountUsagePath, fileAccountUsageStore } from "../src/pi/usage-store.ts";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { fileFusionSettings, fusionSettingsPath, memoryFusionSettings } from "../src/pi/fusion-settings.ts";
 import { FUSION_MODEL_ID, type DevinModel } from "../src/pi/models.ts";
@@ -554,6 +555,13 @@ test("usage: the status line and details come only from the last account status 
     updateUsageStatus(context("tui"), provider, f.devinSettings);
     updateUsageStatus(context("rpc"), provider, f.devinSettings);
     expect(statuses).toStrictEqual([[USAGE_STATUS_KEY, undefined], [USAGE_STATUS_KEY, "devin [success]day ▕██████████▏100% [success]week ▕██████████▏100% · ↑3 ↓2"]]);
+    // At message_end Pi has not stored the response yet, so it is counted once; a stored response is not counted twice.
+    const pending = { role: "assistant", provider: "devin", usage: { input: 10, output: 20, cacheRead: 0, cacheWrite: 0 } };
+    const storedMessage = f.manager.getBranch().flatMap((entry) => entry.type === "message" && entry.message.role === "assistant" ? [entry.message] : [])[0];
+    statuses.length = 0;
+    updateUsageStatus(context("tui"), provider, f.devinSettings, pending);
+    updateUsageStatus(context("tui"), provider, f.devinSettings, storedMessage);
+    expect(statuses.map(([, text]) => text?.replace(/^.* · /, ""))).toStrictEqual(["↑13 ↓22", "↑3 ↓2"]);
     expect(f.fixture.requests.length).toBe(requestsBefore);
     // Display strings contain no tokens or account identifiers.
     expect([...report, ...statuses.map(([, text]) => text ?? "")].some((text) => text.includes(providerCredential.sessionToken) || text.includes("offline-user-id"))).toBe(false);
@@ -637,6 +645,31 @@ test("/devin screen: shows usage details and toggles, saves on every toggle and 
   expect(screen.every((line) => visibleWidth(line) <= 70)).toBeTruthy();
   panel.handleInput(KEYS.escape);
   expect(closed).toBe(1);
+});
+
+test("shared quota file: the newer record wins, another scope is not read, and malformed files read as nothing and are not repaired", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pi-devin-account-usage-"));
+  const path = accountUsagePath(join(directory, "agent")), store = fileAccountUsageStore(path);
+  const scope = "a".repeat(64), other = "b".repeat(64);
+  const usage = { billingStrategy: "BILLING_STRATEGY_QUOTA", dailyRemainingPercent: 80, weeklyRemainingPercent: 90, fetchedAtMs: 2000 };
+  try {
+    expect(path).toBe(join(directory, "agent", "pi-devin", "account-usage.json"));
+    expect(store.read(scope)).toBe(undefined);
+    store.write(scope, usage);
+    store.write(scope, { dailyRemainingPercent: 99, fetchedAtMs: 1000 }); // An older check from another process is ignored.
+    expect(store.read(scope)).toStrictEqual(usage);
+    expect(store.read(other)).toBe(undefined);
+    expect(JSON.parse(await readFile(path, "utf8"))).toStrictEqual({ schemaVersion: 1, scope, usage });
+    // After a sign-in the new session's record replaces the old one even if its clock is older.
+    store.write(other, { fetchedAtMs: 500 });
+    expect([store.read(scope), store.read(other)]).toStrictEqual([undefined, { fetchedAtMs: 500 }]);
+    for (const bytes of ["{", JSON.stringify({ schemaVersion: 2, scope, usage }), JSON.stringify({ schemaVersion: 1, scope: "short", usage }),
+      JSON.stringify({ schemaVersion: 1, scope, usage: { ...usage, dailyRemainingPercent: "80" } }), JSON.stringify({ schemaVersion: 1, scope, usage: { ...usage, fetchedAtMs: -1 } })]) {
+      await writeFile(path, bytes);
+      expect(store.read(scope)).toBe(undefined);
+      expect(await readFile(path, "utf8")).toBe(bytes);
+    }
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });
 
 test("/devin global store: corrupt or malformed files read as defaults and are not overwritten; writes use schemaVersion 1", async () => {

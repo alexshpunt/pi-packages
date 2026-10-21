@@ -5,7 +5,9 @@ import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
 import { encodeFrame } from "../src/core/protocol/transport.ts";
 import { chatResponseCodec } from "../src/core/protocol/protobuf.ts";
 import type { JsonObject } from "../src/core/types.ts";
-import { errorStreamResponse, finalFrames, STATUS_METHOD, streamResponse } from "./helpers.ts";
+import { createDevinProvider } from "../src/pi/provider.ts";
+import { memoryAccountUsageStore } from "../src/pi/usage-store.ts";
+import { errorStreamResponse, finalFrames, STATUS_METHOD, statusResponse, streamResponse, unaryResponse } from "./helpers.ts";
 import { extendedCacheCatalog, providerCredential, providerFixture, providerHostCredential } from "./provider-fixture.ts";
 
 const context = (): Context => ({ systemPrompt: "Current Pi prompt", messages: [{ role: "user", content: "hello", timestamp: 1 }] });
@@ -159,10 +161,48 @@ test("the account check runs before every request outside Pi's credential lock, 
     expect((await run()).result.stopReason).toBe("stop");
     expect(statusCalls()).toBe(2);
     expect(fixture.chatCalls()).toBe(2);
-    // Pi calls refresh under the shared auth.json lock before each request (expires: 0); it must not wait on the network.
+    // Pi calls refresh under the shared auth.json lock once the check interval passes; a process that already checked does not wait on the network.
     await fixture.provider.auth.oauth!.refresh(providerHostCredential, new AbortController().signal);
     expect(statusCalls()).toBe(2);
   } finally { fixture.provider.shutdown(); }
+});
+
+test("the quota is shared between Pi processes for the same credential, newest first, and never shown for another credential or after logout", async () => {
+  let percent = 90;
+  const fixture = await providerFixture({ statusFailure: () => {
+    const body = statusResponse() as { userStatus: { planStatus: JsonObject } };
+    body.userStatus.planStatus.dailyQuotaRemainingPercent = percent--;
+    return unaryResponse(STATUS_METHOD, body);
+  } });
+  // One store stands for the shared file; each provider stands for a separate Pi process such as a subagent.
+  const store = memoryAccountUsageStore(), clock = { now: 1_000 }, providers: ReturnType<typeof createDevinProvider>[] = [];
+  const refresh = (credential: typeof providerHostCredential | undefined) => ({ credential, allowNetwork: credential !== undefined, force: true,
+    signal: new AbortController().signal, publish: async (value: { update?: () => void }) => { value.update?.(); return true; } });
+  const open = async (credential = providerHostCredential) => {
+    let notices = 0;
+    const provider = createDevinProvider({ ...fixture.dependencies, accountUsage: store, now: () => clock.now, onAccountUsage: () => { notices++; } });
+    providers.push(provider);
+    await provider.refreshModels(refresh(credential));
+    return { provider, notices: () => notices };
+  };
+  const ask = (provider: ReturnType<typeof createDevinProvider>) => collect(provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
+  try {
+    const lead = await open(), child = await open();
+    expect(lead.provider.getAccountUsage()).toBe(undefined);
+    // A request in another process records the quota; the lead shows it without sending a request itself.
+    expect((await ask(child.provider)).result.stopReason).toBe("stop");
+    expect(lead.provider.getAccountUsage()?.dailyRemainingPercent).toBe(90);
+    const leadNotices = lead.notices();
+    clock.now = 2_000;
+    expect((await ask(lead.provider)).result.stopReason).toBe("stop");
+    expect(lead.notices()).toBeGreaterThan(leadNotices);
+    expect([lead.provider.getAccountUsage()?.dailyRemainingPercent, child.provider.getAccountUsage()?.dailyRemainingPercent]).toStrictEqual([89, 89]);
+    // Another credential never sees this quota, and logout hides it.
+    const other = await open({ ...providerHostCredential, access: "another-fake-session" });
+    expect(other.provider.getAccountUsage()).toBe(undefined);
+    await lead.provider.refreshModels(refresh(undefined));
+    expect(lead.provider.getAccountUsage()).toBe(undefined);
+  } finally { for (const provider of [fixture.provider, ...providers]) provider.shutdown(); }
 });
 
 test("an unreachable first account check fails the request with a retryable connection error", async () => {

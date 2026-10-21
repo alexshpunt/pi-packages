@@ -1,6 +1,6 @@
-import { expect, test, vi } from "vitest";
+import { expect, test, vi, type TestContext } from "vitest";
 import { createModels, InMemoryCredentialStore, type AuthInteraction, type Provider } from "@earendil-works/pi-ai";
-import { createDevinAccountAuth, credentialFromOAuth } from "../src/pi/auth.ts";
+import { createDevinAccountAuth, credentialFromOAuth, SESSION_CHECK_INTERVAL_MS } from "../src/pi/auth.ts";
 import { DevinClient } from "../src/core/client.ts";
 import { createFingerprintProvider } from "../src/core/protocol/fingerprint.ts";
 import { RPCError } from "../src/core/protocol/transport.ts";
@@ -20,6 +20,12 @@ function host(auth: ReturnType<typeof createDevinAccountAuth>) {
   };
   models.setProvider(provider);
   return { models, storage, phases };
+}
+
+/** Only `Date` is faked, so the session check becomes due by moving the clock past the check interval. */
+function fakeClock(context: TestContext) {
+  vi.useFakeTimers({ toFake: ["Date"] }); context.onTestFinished(() => { vi.useRealTimers(); });
+  return { passCheckInterval: () => { vi.setSystemTime(Date.now() + SESSION_CHECK_INTERVAL_MS); } };
 }
 
 function manualInteraction(signal?: AbortSignal): AuthInteraction {
@@ -60,12 +66,13 @@ function accountFixture() {
   return { auth, host: host(auth), setStatus: (next: number) => { status = next; }, counts: () => ({ sends, closed, exchanges }) };
 }
 
-test("real OAuth adapter → public Models login, repeated resolve, model refresh and logout", async () => {
+test("real OAuth adapter → public Models login, repeated resolve, a check after the interval, model refresh and logout", async (context) => {
+  const clock = fakeClock(context);
   const f = accountFixture();
   const loggedIn = await f.host.models.login("devin", "oauth", manualInteraction());
   expect(loggedIn.type).toBe("oauth");
   if (loggedIn.type !== "oauth") expect.unreachable();
-  expect(loggedIn.expires).toBe(0);
+  expect(loggedIn.expires).toBe(Date.now() + SESSION_CHECK_INTERVAL_MS);
   expect(loggedIn.refresh).toBe("");
   expect(f.counts().sends).toBe(0); // Login is not a permission check.
   expect((await f.host.models.checkAuth("devin"))?.type).toBe("oauth");
@@ -74,20 +81,28 @@ test("real OAuth adapter → public Models login, repeated resolve, model refres
   expect(auth?.auth.baseUrl).toBe("https://server.codeium.com");
   const repeated = await Promise.all([f.host.models.getAuth("devin"), f.host.models.getAuth("devin")]);
   expect(repeated.every((value) => value?.auth.apiKey === loggedIn.access)).toBe(true);
-  expect(await f.host.storage.read("devin")).toStrictEqual(loggedIn); // No new token or fake expires appears.
+  // Within the interval, resolving and model refreshes neither check the session nor save a credential.
+  expect(await f.host.storage.read("devin")).toStrictEqual(loggedIn);
   await f.host.models.refresh({ allowNetwork: false });
-  expect(f.counts()).toStrictEqual({ sends: 3, closed: 3, exchanges: 1 });
   await f.host.models.refresh({ allowNetwork: true });
   expect(f.host.phases).toStrictEqual([false, false, true]);
-  expect(f.counts()).toStrictEqual({ sends: 4, closed: 4, exchanges: 1 });
+  expect(f.counts()).toStrictEqual({ sends: 0, closed: 0, exchanges: 1 });
+  // After the interval, concurrent resolves check the session once and save only the next check time.
+  clock.passCheckInterval();
+  const checked = await Promise.all([f.host.models.getAuth("devin"), f.host.models.getAuth("devin")]);
+  expect(checked.every((value) => value?.auth.apiKey === loggedIn.access)).toBe(true);
+  expect(f.counts()).toStrictEqual({ sends: 1, closed: 1, exchanges: 1 });
+  expect(await f.host.storage.read("devin")).toStrictEqual({ ...loggedIn, expires: Date.now() + SESSION_CHECK_INTERVAL_MS });
   await f.host.models.logout("devin");
   expect(await f.host.models.getAuth("devin")).toBe(undefined);
-  expect(f.counts()).toStrictEqual({ sends: 4, closed: 4, exchanges: 1 });
+  expect(f.counts()).toStrictEqual({ sends: 1, closed: 1, exchanges: 1 });
 });
 
-test("a 401 session is not replayed automatically and an explicit re-login creates a new client", async () => {
+test("a 401 session is not replayed automatically and an explicit re-login creates a new client", async (context) => {
+  const clock = fakeClock(context);
   const f = accountFixture();
   const loggedIn = await f.host.models.login("devin", "oauth", manualInteraction());
+  clock.passCheckInterval();
   f.setStatus(401);
   await expect(f.host.models.getAuth("devin")).rejects.toThrow(expect.toSatisfy((error: Error & { cause?: unknown }) => error.cause instanceof RPCError && error.cause.kind === "authentication"));
   await expect(f.host.models.getAuth("devin")).rejects.toThrow(/OAuth refresh failed/);
@@ -101,12 +116,35 @@ test("a 401 session is not replayed automatically and an explicit re-login creat
   // A late failure from an older login generation does not invalidate the new login.
   f.auth.invalidate(credentialFromOAuth(renewed), new RPCError("unauthenticated", "old failure"), previousGeneration);
   await f.host.models.getAuth("devin");
+  expect(f.counts()).toStrictEqual({ sends: 1, closed: 1, exchanges: 2 });
+  clock.passCheckInterval();
+  await f.host.models.getAuth("devin");
   expect(f.counts()).toStrictEqual({ sends: 2, closed: 2, exchanges: 2 });
 });
 
-for (const status of [403, 429]) test(`${status} is not remembered as OAuth token expiry`, async () => {
+for (const status of [200, 503]) test(`with an account observer, sign-in checks the new session once and a ${status} check ${status === 200 ? "records the account" : "does not fail sign-in"}`, async () => {
+  const validated: string[] = [];
+  let sends = 0;
+  const auth = createDevinAccountAuth({
+    loginOptions: { fetch: async (url) => unaryResponse(new URL(String(url)).pathname.slice(1), { apiKey: "fake-checked-session" }) },
+    createClient: (credential) => new DevinClient(credential, { profile: "login",
+      fingerprint: createFingerprintProvider(credential.sessionToken, { collectIdentity: () => identity }),
+      fetch: async () => { sends++; return status === 200 ? unaryResponse(STATUS_METHOD, statusResponse()) : Response.json({}, { status }); },
+    }),
+    onValidated: (_credential, ownerHash) => { validated.push(ownerHash); },
+  });
+  const f = host(auth);
+  const credential = await f.models.login("devin", "oauth", manualInteraction());
+  expect(sends).toBe(1);
+  expect(validated.length).toBe(status === 200 ? 1 : 0);
+  expect(await f.storage.read("devin")).toStrictEqual(credential);
+});
+
+for (const status of [403, 429]) test(`${status} is not remembered as OAuth token expiry`, async (context) => {
+  const clock = fakeClock(context);
   const f = accountFixture();
   await f.host.models.login("devin", "oauth", manualInteraction());
+  clock.passCheckInterval();
   f.setStatus(status);
   await expect(f.host.models.getAuth("devin")).rejects.toThrow();
   f.setStatus(200);

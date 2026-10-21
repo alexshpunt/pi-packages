@@ -33,7 +33,7 @@ function fixture(refresh: (current: OAuthCredential, signal: AbortSignal) => Pro
   return { models, storage, phases, mutations: () => mutations };
 }
 
-// 0 is this adapter's 'server expiry unknown, check on every resolve' sentinel. It is not a server TTL.
+// 0 is what this adapter stored up to 0.1.4: Pi checks such a session on every resolve. It is not a server TTL.
 test("Pi 1.3 public OAuth: resolving expires=0 is bounded and an explicit validity guarantee is rejected", async () => {
   let refreshes = 0;
   const f = fixture(async (current) => { refreshes++; return current; });

@@ -28,6 +28,8 @@ export interface DevinModel extends Model<typeof DEVIN_API> {
     fusion?: FusionSelection;
     /** Marked as recommended by the catalog. For a group, true when any variant is recommended. */
     recommended?: true;
+    /** Account identity hash (endpoint and user ID) the catalog belongs to. Lets a new session of the same account reuse it. */
+    account?: string;
   };
 }
 
@@ -39,6 +41,8 @@ export interface ProjectionOptions {
   recommendedOnly?: boolean;
   /** Also lists exact UIDs that a group already covers. Used only by the sidekick child Pi. */
   listsAllExactModels?: boolean;
+  /** Account identity hash recorded with every model. */
+  account?: string;
 }
 
 export function isFusionModelID(id: string): boolean { return id === FUSION_MODEL_ID; }
@@ -59,7 +63,7 @@ function thinkingMap(mappings: Partial<Record<EffectiveThinkingLevel, string>>) 
   return Object.fromEntries(EFFECTIVE_THINKING_LEVELS.map((level) => [level, mappings[level] ?? null]));
 }
 
-function modelDefinition(id: string, name: string, variants: ModelVariant[], mappings: Partial<Record<EffectiveThinkingLevel, string>>, credential: Credential): DevinModel {
+function modelDefinition(id: string, name: string, variants: ModelVariant[], mappings: Partial<Record<EffectiveThinkingLevel, string>>, credential: Credential, account?: string): DevinModel {
   const first = variants[0].model;
   return {
     id, name, api: DEVIN_API, provider: "devin", baseUrl: credential.apiServerURL,
@@ -68,7 +72,7 @@ function modelDefinition(id: string, name: string, variants: ModelVariant[], map
     contextWindow: first.contextWindow, maxTokens: first.maxOutputTokens,
     // Placeholder for Pi's required numeric fields. It does not mean free or a real USD price.
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    devin: { version: CATALOG_VERSION, scope: catalogScope(credential), costsUnknown: true, configs: variants.map((variant) => variant.config) },
+    devin: { version: CATALOG_VERSION, scope: catalogScope(credential), costsUnknown: true, configs: variants.map((variant) => variant.config), ...(account ? { account } : {}) },
   };
 }
 
@@ -199,7 +203,7 @@ export function modelsFromProjection(projection: VariantProjection, credential: 
   const isListed = (uids: readonly string[]) => !isRecommendedOnly || uids.some((uid) => recommendedUIDs.has(uid));
   for (const group of published) {
     if (!isListed(Object.values(group.mappings))) continue;
-    const model = modelDefinition(ids.groups.get(group.id)!, names.get(group.id)!, publishedVariants(group), group.mappings, credential);
+    const model = modelDefinition(ids.groups.get(group.id)!, names.get(group.id)!, publishedVariants(group), group.mappings, credential, options.account);
     if (group.variants.some((variant) => variant.model.isRecommended)) model.devin.recommended = true;
     models.push(model);
   }
@@ -209,7 +213,7 @@ export function modelsFromProjection(projection: VariantProjection, credential: 
   const listedNames = new Set(models.map((model) => model.name));
   for (const variant of exact) {
     const name = listedNames.has(variant.model.name) ? `${variant.model.name} (${variant.model.id})` : variant.model.name;
-    const model = modelDefinition(ids.variants.get(variant.model.id)!, name, [variant], { [variant.level!]: variant.model.id }, credential);
+    const model = modelDefinition(ids.variants.get(variant.model.id)!, name, [variant], { [variant.level!]: variant.model.id }, credential, options.account);
     if (variant.model.isRecommended) model.devin.recommended = true;
     models.push(model);
   }
@@ -218,7 +222,7 @@ export function modelsFromProjection(projection: VariantProjection, credential: 
   if (pair) {
     const lead = projection.groups.find((group) => ids.groups.get(group.id) === pair.leadID)!;
     const sidekick = projection.variants.find((variant) => ids.variants.get(variant.model.id) === pair.sidekickID)!;
-    const model = modelDefinition(FUSION_MODEL_ID, `Devin Fusion · ${names.get(lead.id)} + ${sidekick.model.name}`, publishedVariants(lead), lead.mappings, credential);
+    const model = modelDefinition(FUSION_MODEL_ID, `Devin Fusion · ${names.get(lead.id)} + ${sidekick.model.name}`, publishedVariants(lead), lead.mappings, credential, options.account);
     model.devin.fusion = pair;
     models.push(model);
   }
@@ -228,13 +232,24 @@ export function modelsFromProjection(projection: VariantProjection, credential: 
   return models;
 }
 
-function restoredProjection(stored: Readonly<ModelsStoreEntry> | undefined, credential: Credential): VariantProjection | undefined {
+const ACCOUNT_HASH = /^[a-f0-9]{64}$/;
+interface RestoredCatalog { projection: VariantProjection; account?: string; isSameSession: boolean }
+
+/**
+ * Restores the stored catalog of the same session, or of an earlier session of an account this process verified for `account`.
+ * Every entry must share one scope and one account, so a mixed or edited cache is never partly applied.
+ */
+function restoredCatalog(stored: Readonly<ModelsStoreEntry> | undefined, credential: Credential, account: string | undefined): RestoredCatalog | undefined {
   if (!stored?.models.length) return undefined;
   const scope = catalogScope(credential), configs = new Map<string, JsonObject>();
-  for (const model of stored.models) {
+  let storedScope: unknown, storedAccount: unknown;
+  for (const [index, model] of stored.models.entries()) {
     const metadata = object((model as DevinModel).devin, "cached Devin metadata");
     if ((model.type !== undefined && model.type !== "chat") || model.provider !== "devin" || model.api !== DEVIN_API || model.baseUrl !== credential.apiServerURL
-      || metadata.version !== CATALOG_VERSION || metadata.scope !== scope) return undefined;
+      || metadata.version !== CATALOG_VERSION || typeof metadata.scope !== "string") return undefined;
+    if (metadata.account !== undefined && (typeof metadata.account !== "string" || !ACCOUNT_HASH.test(metadata.account))) return undefined;
+    if (index === 0) { storedScope = metadata.scope; storedAccount = metadata.account; }
+    else if (metadata.scope !== storedScope || metadata.account !== storedAccount) return undefined;
     if (!Array.isArray(metadata.configs)) return undefined;
     const entries = [...metadata.configs, ...(Array.isArray(metadata.unavailable) ? metadata.unavailable : [])];
     for (const value of entries) {
@@ -245,7 +260,10 @@ function restoredProjection(stored: Readonly<ModelsStoreEntry> | undefined, cred
       configs.set(config.modelUid, config);
     }
   }
-  return restoreModelVariants([...configs.values()]);
+  const isSameSession = storedScope === scope;
+  // Another session's catalog is used only for the same verified account; account changes and logout never expose it.
+  if (!isSameSession && (account === undefined || storedAccount !== account)) return undefined;
+  return { projection: restoreModelVariants([...configs.values()]), account: account ?? storedAccount as string | undefined, isSameSession };
 }
 
 export interface DevinModelSource {
@@ -262,6 +280,8 @@ export interface DevinModelSource {
   getFusionChoices(): FusionChoices | undefined;
   /** Rebuilds the model list from the current catalog without network after a saved choice or setting changes. */
   rebuildModels(): void;
+  /** Scope of the credential seen by the last model refresh, even before its catalog loads. Undefined after logout or sign-in. */
+  currentScope(): string | undefined;
   invalidate(): void;
 }
 
@@ -276,20 +296,25 @@ export function createDevinModelSource(options: {
   recommendedOnly?: () => boolean;
   /** Also lists exact UIDs that a group already covers. Used only by the sidekick child Pi. */
   listsAllExactModels?: boolean;
+  /** Account identity hash this process verified for the credential, if any. */
+  accountOf?: (credential: Credential) => string | undefined;
 }): DevinModelSource {
   const now = options.now ?? Date.now, freshnessMs = options.freshnessMs ?? DEFAULT_FRESHNESS_MS;
   if (!Number.isSafeInteger(freshnessMs) || freshnessMs < 0) throw new Error("The model cache check interval must be an integer of 0 or more.");
   const readFusion = options.fusion;
   // The stored list is shared by every Pi process that uses the lead's agent directory. Only the default list is stored,
   // without display filters or the sidekick-only exact list. It still holds every catalog config, so each process rebuilds its own list after restore.
-  const build = (next: VariantProjection, credential: Credential, isForStorage = false) => modelsFromProjection(next, credential, {
+  const build = (next: VariantProjection, credential: Credential, account: string | undefined, isForStorage = false) => modelsFromProjection(next, credential, {
     fusion: readFusion === false ? false : readFusion?.(),
     recommendedOnly: !isForStorage && options.recommendedOnly?.() === true,
     listsAllExactModels: !isForStorage && options.listsAllExactModels === true,
+    account,
   });
-  let models: DevinModel[] = [], projection: VariantProjection | undefined, scope: string | undefined;
-  let checkedAtMs = 0, endpointOverride: string | undefined, modelCredential: Credential | undefined;
-  const clear = () => { models = []; projection = undefined; scope = undefined; checkedAtMs = 0; modelCredential = undefined; };
+  let models: DevinModel[] = [], projection: VariantProjection | undefined, scope: string | undefined, catalogAccount: string | undefined;
+  let checkedAtMs = 0, endpointOverride: string | undefined, modelCredential: Credential | undefined, credentialScope: string | undefined;
+  const clear = () => {
+    models = []; projection = undefined; scope = undefined; catalogAccount = undefined; checkedAtMs = 0; modelCredential = undefined; credentialScope = undefined;
+  };
   const currentProjection = (credential: Credential) => {
     if (!projection || scope !== catalogScope(credential)) throw new Error("No Devin model list matches the current account and endpoint. Refresh the model list.");
     return projection;
@@ -304,8 +329,9 @@ export function createDevinModelSource(options: {
     exactLevel: (uid) => projection?.variants.find((variant) => variant.model.id === uid && isUsable(variant))?.level,
     getFusionChoices: () => projection && readFusion !== false ? fusionChoices(projection) : undefined,
     rebuildModels() {
-      if (projection && modelCredential) models = build(projection, modelCredential);
+      if (projection && modelCredential) models = build(projection, modelCredential, catalogAccount);
     },
+    currentScope: () => credentialScope,
     invalidate: clear,
     filterModels(candidates, credential) {
       try {
@@ -342,20 +368,28 @@ export function createDevinModelSource(options: {
         return;
       }
       const expectedScope = catalogScope(credential);
-      let restored: VariantProjection | undefined;
-      try { restored = restoredProjection(context.stored, credential); }
+      let restored: RestoredCatalog | undefined;
+      try { restored = restoredCatalog(context.stored, credential, options.accountOf?.(credential)); }
       catch { /* A bad cache is never used as run data. The current good state is kept. */ }
       if (restored && (scope !== expectedScope || !projection || (context.stored?.checkedAt ?? 0) > checkedAtMs)) {
-        const restoredModels = build(restored, credential);
+        const { projection: restoredProjection, account: restoredAccount, isSameSession } = restored;
+        const restoredModels = build(restoredProjection, credential, restoredAccount);
         const checkedAt = context.stored?.checkedAt;
         const restoredAtMs = typeof checkedAt === "number" && Number.isFinite(checkedAt) && checkedAt >= 0 && checkedAt <= now() ? checkedAt : 0;
-        const accepted = await context.publish({ update: () => {
-          projection = restored; models = restoredModels; scope = expectedScope; modelCredential = credential;
-          checkedAtMs = restoredAtMs; endpointOverride = context.baseUrl;
-        } });
+        const accepted = await context.publish({
+          // A catalog reused for a new session of the same account is stored under the new session, so a restart restores it too.
+          ...(isSameSession ? {} : { persist: { models: build(restoredProjection, credential, restoredAccount, true), checkedAt: restoredAtMs } }),
+          update: () => {
+            projection = restoredProjection; models = restoredModels; scope = expectedScope; catalogAccount = restoredAccount; modelCredential = credential;
+            checkedAtMs = restoredAtMs; endpointOverride = context.baseUrl; credentialScope = expectedScope;
+          },
+        });
         if (!accepted) return;
-      } else if (scope !== expectedScope || endpointOverride !== context.baseUrl) {
-        const accepted = await context.publish({ update: () => { clear(); endpointOverride = context.baseUrl; } });
+      } else if (scope !== expectedScope || endpointOverride !== context.baseUrl || credentialScope !== expectedScope) {
+        const accepted = await context.publish({ update: () => {
+          if (scope !== expectedScope || endpointOverride !== context.baseUrl) clear();
+          endpointOverride = context.baseUrl; credentialScope = expectedScope;
+        } });
         if (!accepted) return;
       }
       if (!context.allowNetwork) return;
@@ -364,14 +398,16 @@ export function createDevinModelSource(options: {
       const catalog = await awaitWithSignal(options.fetchCatalog(credential, context.signal), context.signal);
       context.signal.throwIfAborted();
       const nextProjection = projectModelVariants(catalog);
-      const nextModels = build(nextProjection, credential);
+      // Known after an account check in this process, or carried over from this same session's catalog.
+      const nextAccount = options.accountOf?.(credential) ?? (scope === expectedScope ? catalogAccount : undefined);
+      const nextModels = build(nextProjection, credential, nextAccount);
       const checkedAt = now();
       if (!Number.isSafeInteger(checkedAt) || checkedAt < 0) throw new Error("Invalid model cache check time.");
       await context.publish({
-        persist: { models: build(nextProjection, credential, true), checkedAt },
+        persist: { models: build(nextProjection, credential, nextAccount, true), checkedAt },
         update: () => {
-          projection = nextProjection; models = nextModels; scope = expectedScope; modelCredential = credential;
-          checkedAtMs = checkedAt; endpointOverride = context.baseUrl;
+          projection = nextProjection; models = nextModels; scope = expectedScope; catalogAccount = nextAccount; modelCredential = credential;
+          checkedAtMs = checkedAt; endpointOverride = context.baseUrl; credentialScope = expectedScope;
         },
       });
     },
