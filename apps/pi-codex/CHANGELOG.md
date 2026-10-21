@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-21
+
 ### Improved
 
 - The README shows what `pi list` prints after installation, and the bundled components include their revised documentation.
