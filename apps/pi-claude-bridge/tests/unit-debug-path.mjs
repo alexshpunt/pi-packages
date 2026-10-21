@@ -3,10 +3,11 @@
  * would silently start writing to the developer's real debug log instead of a
  * temp dir. That regression is otherwise invisible unless CLAUDE_BRIDGE_DEBUG=1.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { execFileSync } from "node:child_process";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { globalConfigPath } from "../src/config.js";
 import { debugLogPath, diagLogPath } from "../src/log-paths.js";
@@ -43,6 +44,48 @@ describe("test harness", () => {
 			if (previous.debug === undefined) delete process.env.CLAUDE_BRIDGE_DEBUG_PATH;
 			else process.env.CLAUDE_BRIDGE_DEBUG_PATH = previous.debug;
 		}
+	});
+});
+
+describe("README manual log cleanup", () => {
+	afterEach(() => vi.unstubAllEnvs());
+
+	describe.each([
+		{ name: "default", value: "" },
+		{ name: "absolute", value: "absolute" },
+		{ name: "home only", value: "~" },
+		{ name: "home subdirectory", value: "~/custom agent" },
+	])("with $name agent directory", ({ value }) => {
+		it.each([false, true])("removes only logs with debug path override=%s", overridden => {
+			const root = mkdtempSync(join(tmpdir(), "bridge cleanup-"));
+			try {
+				vi.stubEnv("HOME", root);
+				vi.stubEnv("PI_CODING_AGENT_DIR", value === "absolute" ? join(root, "agent") : value);
+				vi.stubEnv("CLAUDE_BRIDGE_DEBUG_PATH", overridden ? join(root, "custom", "debug.log") : "");
+				const agent = getAgentDir();
+				const debug = debugLogPath();
+				const cli = join(dirname(debug), "cc-cli-logs");
+				const logs = [debug, diagLogPath(), join(cli, "query.log")];
+				const kept = [
+					join(agent, "claude-bridge.json"),
+					join(root, "claude", "projects", "fixture.jsonl"),
+					join(cli, "keep.txt"),
+					join(cli, "nested", "keep.log"),
+				];
+				for (const path of [...logs, ...kept]) {
+					expect(path.startsWith(root), "fixture must stay inside its isolated HOME").toBe(true);
+					mkdirSync(dirname(path), { recursive: true });
+					writeFileSync(path, "fixture");
+				}
+				const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+				const script = readme.split("### Manual log cleanup")[1].match(/```bash\n([\s\S]*?)```/)[1];
+				execFileSync("bash", ["-eu", "-c", script], { cwd: root, env: process.env });
+				for (const path of logs) expect(existsSync(path), path).toBe(false);
+				for (const path of kept) expect(readFileSync(path, "utf8"), path).toBe("fixture");
+			} finally {
+				rmSync(root, { recursive: true, force: true });
+			}
+		});
 	});
 });
 

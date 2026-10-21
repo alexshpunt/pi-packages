@@ -55,6 +55,43 @@ const fallbackMessage = (id) => ({
 	] },
 });
 
+describe("non-streaming assistant and result fallback", () => {
+	it("emits assistant text once when result repeats it", async () => {
+		const c = makeCtx();
+		const stream = c.currentPiStream;
+		await consume(c, [
+			{ type: "assistant", message: { id: "msg_plain", content: [{ type: "text", text: "OK" }] } },
+			{ type: "result", subtype: "success", is_error: false, result: "OK" },
+		]);
+		__test.finalizeCurrentStream(c);
+		expect(c.turnOutput.content).toStrictEqual([{ type: "text", text: "OK" }]);
+		expect(stream.events.map(e => e.type)).toStrictEqual(["start", "text_start", "text_delta", "text_end", "done", "end"]);
+	});
+
+	it.each([
+		{ name: "empty content", content: [] },
+		{ name: "empty text", content: [{ type: "text", text: "" }] },
+		{ name: "thinking only", content: [{ type: "thinking", thinking: "reasoning", signature: "sig" }] },
+	])(
+		"uses result text when the assistant has $name", async ({ content }) => {
+			const c = makeCtx();
+			await consume(c, [
+				{ type: "assistant", message: { id: "msg_no_text", content } },
+				{ type: "result", subtype: "success", is_error: false, result: "Only answer" },
+			]);
+			expect(c.turnOutput.content.filter(b => b.type === "text")).toStrictEqual([{ type: "text", text: "Only answer" }]);
+		},
+	);
+
+	it("uses a result-only response after resetting a previous assistant turn", async () => {
+		const c = makeCtx();
+		await consume(c, [{ type: "assistant", message: { id: "msg_first", content: [{ type: "text", text: "First" }] } }]);
+		c.resetTurnState(fakeModel);
+		await consume(c, [{ type: "result", subtype: "success", is_error: false, result: "Second" }]);
+		expect(c.turnOutput.content).toStrictEqual([{ type: "text", text: "Second" }]);
+	});
+});
+
 describe("non-streaming fallback after a stalled stream", () => {
 	it("delivers the fallback's tool calls to pi and ends the stream on toolUse", async () => {
 		const c = makeCtx();

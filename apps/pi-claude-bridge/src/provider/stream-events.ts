@@ -430,7 +430,9 @@ export function createStreamEvents(runtime: Pick<BridgeRuntime, "debug" | "descr
 			// capture replay fixtures, so unit tests assert against message shapes Claude
 			// Code really emitted rather than ones we imagined.
 			const recordStreamPath = process.env.CLAUDE_BRIDGE_RECORD_STREAM;
-			if (recordStreamPath) appendFileSync(recordStreamPath, `${JSON.stringify(message)}\n`);
+			if (recordStreamPath) {
+				try { appendFileSync(recordStreamPath, `${JSON.stringify(message)}\n`); } catch { /* Best-effort diagnostics only. */ }
+			}
 			if (wasAborted()) break;
 			await reportHeldRateLimit(queryCtx, model);
 			// Everything below the currentPiStream guard is content, which there is
@@ -508,10 +510,11 @@ export function createStreamEvents(runtime: Pick<BridgeRuntime, "debug" | "descr
 					processAssistantMessage(message, model, customToolNameToPi, queryCtx);
 					break;
 				case "result": {
-						// The failure itself was recorded above the guard, along with the served
-						// context window. What is left here is the success path: push the result
-						// text when no assistant message already delivered it.
-						if (resultError === undefined && !queryCtx.turnSawStreamEvent && message.subtype === "success") {
+					// The failure itself was recorded above the guard, along with the served
+					// context window. Fall back only if neither streaming nor an assistant
+					// message has delivered the text. Thinking alone is not the answer.
+					const hasAssistantText = queryCtx.turnBlocks.some(block => block.type === "text" && block.text);
+					if (resultError === undefined && !queryCtx.turnSawStreamEvent && !hasAssistantText && message.subtype === "success") {
 						ensureTurnStarted(queryCtx);
 						const text = message.result || "";
 						queryCtx.turnBlocks.push({ type: "text", text });

@@ -1,8 +1,8 @@
 // User-facing extension config. Loaded once at extension registration from
 // the global agent dir (getAgentDir(), e.g. ~/.pi/agent/claude-bridge.json)
-// and the project Pi config directory, project overriding global. Missing or
-// unparseable files are ignored (error to console.error, empty object
-// returned) so the extension always starts.
+// and the project Pi config directory, project overriding global. Missing files,
+// unparseable JSON and non-object roots are ignored (error to console.error,
+// empty object returned) so the extension always starts.
 
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
@@ -33,10 +33,18 @@ export interface Config {
 	};
 }
 
+function readConfigObject(path: string): Partial<Config> {
+	const parsed: unknown = JSON.parse(readFileSync(path, "utf-8"));
+	if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+		throw new Error("Config root must be a JSON object");
+	}
+	return parsed as Partial<Config>;
+}
+
 export function tryParseJson(path: string): Partial<Config> {
 	if (!existsSync(path)) return {};
 	try {
-		return JSON.parse(readFileSync(path, "utf-8"));
+		return readConfigObject(path);
 	} catch (e) {
 		console.error(`claude-bridge: failed to parse ${path}: ${e}`);
 		return {};
@@ -64,7 +72,7 @@ function updateGlobalConfig(fields: (existing: Partial<Config>) => Partial<Confi
 	let existing: Partial<Config> = {};
 	if (existsSync(path)) {
 		try {
-			existing = JSON.parse(readFileSync(path, "utf-8"));
+			existing = readConfigObject(path);
 		} catch (e) {
 			console.error(`claude-bridge: leaving ${path} alone, it does not parse: ${e}`);
 			return path;

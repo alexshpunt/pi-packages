@@ -170,11 +170,9 @@ export function registerBridge(pi: ExtensionAPI, runtime: BridgeRuntime) {
 		// Pi discards this runner now: quit, reload and session replacement each load a
 		// fresh module instance. An idle instance leaves the process-wide hook registries
 		// so they do not grow by one per transition. Query state still serving another
-		// session keeps it enlisted, and the stream entry re-enlists it if called again.
-		if (runtime.sessionQueryContexts.size === 0 && runtime.activeQueryContexts.size === 0) {
-			runtime.withdrawRebuildHook();
-			runtime.withdrawReleaseHook();
-		}
+		// session keeps it enlisted until its final release; the stream entry re-enlists
+		// it if called again.
+		runtime.markRunnerShutdown();
 	});
 
 	// Pi and summary extensions own compaction and branch summaries. Their

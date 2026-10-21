@@ -35,7 +35,7 @@ Requires Pi 1.0.0 or newer and Node.js 22.19.0 or newer. Package loading and typ
 - `claude-bridge.json` in pi's agent dir (`PI_CODING_AGENT_DIR`, default `~/.pi/agent`) holds your configuration. The bridge adds `startupNoticeShown` to it after showing the first-run notice, and `detectedPlan` after reading your plan from the Claude Code login.
 - Claude Code session files under `~/.claude/projects/` (or `$CLAUDE_CONFIG_DIR/projects/`) hold the conversation Claude Code resumes from. The bridge rewrites them when it rebuilds a conversation and removes its own temporary sessions, but it does not clean up earlier sessions.
 - `claude-bridge-cc-session` entries in the pi session link a pi branch to its Claude Code session. They are excluded from model context.
-- Debug logs are written only when `CLAUDE_BRIDGE_DEBUG=1` is set (see [Debugging](#debugging)).
+- Debug and per-query CC CLI logs are written only when `CLAUDE_BRIDGE_DEBUG=1` is set. Diagnostic dumps in `claude-bridge-diag.log` can be written even with debugging off. See [Debugging](#debugging) for paths and manual cleanup.
 
 ### Update and remove
 
@@ -64,11 +64,13 @@ The model list comes from pi-ai's Anthropic catalog automatically — when pi-ai
 
 ### 컴팩션과 branch summary
 
-컴팩션과 branch summary는 pi 또는 사용자가 설치한 요약 확장이 담당합니다. 브리지는 이를 대행하거나 실패 시 취소하지 않습니다. `cacheRetention: "none"` 요약 요청만 별도 Claude Code 프로세스로 실행하며, 요청한 pi 세션의 cwd를 사용합니다. 요약 이후의 기록 변경은 기존 rebuild 알림으로 반영합니다.
+컴팩션과 branch summary는 pi 또는 사용자가 설치한 요약 확장이 담당합니다. 브리지는 이를 대행하거나 실패 시 취소하지 않습니다. `cacheRetention: "none"` 요약 요청만 별도 Claude Code 프로세스로 실행하며, 요청한 pi 세션의 cwd를 사용합니다. 요약 결과에는 Claude Code가 보고한 토큰 사용량을 포함합니다. 이미 취소된 요청은 프로세스를 시작하지 않으며, 진행 중 취소도 오류와 구분해 반환합니다. 요약 이후의 기록 변경은 기존 rebuild 알림으로 반영합니다.
 
 ## Configuration
 
 Config: `~/.pi/agent/claude-bridge.json` (global) or the project Pi config directory, usually `.pi/claude-bridge.json` (project; merged over global).
+
+Each file must contain a JSON object. Invalid JSON or a non-object root (`null`, an array, or a primitive) is ignored without blocking the provider. The bridge does not overwrite these files when recording the startup notice or detected plan; fix the file to enable automatic updates again.
 
 ```json
 {
@@ -201,9 +203,32 @@ upstream remote나 자동 동기화는 설정하지 않습니다. 필요할 때 
 Set `CLAUDE_BRIDGE_DEBUG=1` to enable debug output:
 
 - **Bridge log** at `claude-bridge.log` in pi's agent dir (`PI_CODING_AGENT_DIR`, default `~/.pi/agent`) — provider calls, session sync decisions, tool results, CC stderr. Override location with `CLAUDE_BRIDGE_DEBUG_PATH`.
-- **Per-query CC CLI logs** at `cc-cli-logs/<timestamp>-<tag>-<seq>.log` in the same directory — the subprocess's own debug stream; tag is `provider` or `compact-summary`. Shows CC's view of session loading, API requests, and tool calls.
+- **Per-query CC CLI logs** at `cc-cli-logs/<timestamp>-<tag>-<seq>.log` beside the bridge log — the subprocess's own debug stream; tag is `provider` or `compact-summary`. Shows CC's view of session loading, API requests, and tool calls. `CLAUDE_BRIDGE_DEBUG_PATH` also moves this directory beside the overridden bridge log.
+- **Diagnostic dumps** at `claude-bridge-diag.log` in pi's agent dir — unexpected provider-state and prompt-capture failures. These can be written even with debugging off, and `CLAUDE_BRIDGE_DEBUG_PATH` does not move them.
 
-When filing a bug about a session-resume failure (e.g. "No conversation found"), the most useful attachments are the `syncResult:` lines from the bridge log plus the matching `cc-cli-logs/` file for the failing query.
+Bridge diagnostic writes are best-effort: failed writes are silently ignored rather than interrupting the provider or printing over the TUI. Tool-result debug previews are generated only with debugging enabled.
+
+When filing a bug about a session-resume failure (e.g. "No conversation found"), the most useful attachments are the `syncResult:` lines from the bridge log plus the matching `cc-cli-logs/` file for the failing query. Review logs before sharing them; they can contain prompts and tool output.
+
+### Manual log cleanup
+
+Logs have no automatic rotation or deletion. Stop the pi/Claude Code processes using them, save any diagnostics you need, then remove only the log files. In a shell with the same `HOME` and path overrides as pi, the example expands `~` and `~/...` in `PI_CODING_AGENT_DIR` as Pi does:
+
+```bash
+agent_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+case "$agent_dir" in
+  '~') agent_dir="$HOME" ;;
+  '~/'*) agent_dir="$HOME/${agent_dir#\~/}" ;;
+esac
+bridge_log="${CLAUDE_BRIDGE_DEBUG_PATH:-$agent_dir/claude-bridge.log}"
+cli_log_dir="$(dirname "$bridge_log")/cc-cli-logs"
+rm -f -- "$bridge_log" "$agent_dir/claude-bridge-diag.log"
+if [ -d "$cli_log_dir" ]; then
+  find "$cli_log_dir" -maxdepth 1 -type f -name '*.log' -delete
+fi
+```
+
+Do not remove `~/.claude/projects/` (or `$CLAUDE_CONFIG_DIR/projects/`) or its `tool-results/` directories as log cleanup: earlier sessions can still supply data when the bridge rebuilds a conversation.
 
 ## Compatibility with other extensions
 
