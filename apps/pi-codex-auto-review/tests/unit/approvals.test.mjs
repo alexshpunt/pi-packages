@@ -589,3 +589,50 @@ test("[audit] nonempty success/denial/failure population omits content and redac
         ),
     ).toBe("token=[REDACTED] password=[REDACTED] Bearer [REDACTED] [REDACTED]");
 });
+test("[persistence] a second Pi session's persistent rule keeps the first session's rule", async (t) => {
+    const f = await fixture(t),
+        path = join(f.control, "grants.json");
+    const first = manager({ persistence: new FileGrantPersistence(path) }),
+        second = manager({ persistence: new FileGrantPersistence(path) });
+    // Both sessions load the file before either one saves, as two running Pi processes do.
+    await first.initialize();
+    await second.initialize();
+    const a = f.action("bash", { command: "first" }),
+        b = f.action("bash", { command: "second" });
+    expect(
+        (await first.admit(a, decision(a, "ask", "review"), context("persistent")))
+            .isAllowed,
+    ).toBe(true);
+    expect(
+        (await second.admit(b, decision(b, "ask", "review"), context("persistent")))
+            .isAllowed,
+    ).toBe(true);
+    const saved = await new FileGrantPersistence(path).load();
+    expect(saved.map((grant) => grant.actionDigest).sort()).toStrictEqual(
+        [a.digest, b.digest].sort(),
+    );
+});
+test("[persistence] a package approval or settings change from another Pi session is not overwritten", async (t) => {
+    const f = await fixture(t);
+    const { PackageApprovalStore } = await import("../../dist/package-approvals.js");
+    const { ApprovalSettingsStore } = await import("../../dist/approval-settings.js");
+    const packagesPath = join(f.control, "package-approvals.json");
+    const first = new PackageApprovalStore(packagesPath),
+        second = new PackageApprovalStore(packagesPath);
+    await first.load();
+    await second.load();
+    await first.remember({ packageKey: "npm:a", fingerprint: "fa" }, "persistent", "s1");
+    await second.remember({ packageKey: "npm:b", fingerprint: "fb" }, "persistent", "s2");
+    expect(
+        JSON.parse(await readFile(packagesPath, "utf8")).map((item) => item.packageKey).sort(),
+    ).toStrictEqual(["npm:a", "npm:b"]);
+
+    const settingsPath = join(f.control, "settings.json");
+    const settingsA = new ApprovalSettingsStore(settingsPath),
+        settingsB = new ApprovalSettingsStore(settingsPath);
+    await settingsA.savePatch({ reviewCacheTtlHours: 5 });
+    await settingsB.savePatch({ isEnabled: false });
+    const saved = await new ApprovalSettingsStore(settingsPath).load();
+    expect(saved.reviewCacheTtlHours).toBe(5);
+    expect(saved.isEnabled).toBe(false);
+});

@@ -65,7 +65,7 @@ Run `/approve-model` to search available models in Pi's current `/scoped-models`
 - A model removed from the scope while the picker is open is not saved.
 - Esc preserves the existing settings. Fixed UI text is in English.
 
-Selections save to `<agentDir>/guard/settings.json`, or to an explicit `settingsPath`. Menu changes apply after saving and invalidate pending reviews and exact-action grants from the previous policy. For manual policy-file edits, reload the extension with `/reload` or restart the guarded runtime.
+Selections save to `<agentDir>/guard/settings.json`, or to an explicit `settingsPath`. Menu changes apply after saving and invalidate pending reviews and exact-action grants from the previous policy. Saving writes only the changed option over the file's current contents, so options saved meanwhile by another Pi session are kept. For manual policy-file edits, reload the extension with `/reload` or restart the guarded runtime.
 
 ## Building from source
 
@@ -283,7 +283,7 @@ Add its path to `ruleFiles` in your policy and reload or restart. JSON `commandR
 
 Approved local tools use Pi's original executor with the final command, working directory, environment, timeout, cancellation signal, and caller options preserved. `additional_permissions` describes the scope to review; it does not enforce that scope during execution.
 
-TUI/RPC approval dialogs offer **Allow once**, **Allow for this session**, and **Save as an allow rule**. Whole-command escalation approvals are one-use only. Other exact-action grants bind to the tool, input, working directory, invocation source, policy, and permissions. Policy or scope changes invalidate those grants.
+TUI/RPC approval dialogs offer **Allow once**, **Allow for this session**, and **Save as an allow rule**. Whole-command escalation approvals are one-use only. Other exact-action grants bind to the tool, input, working directory, invocation source, policy, and permissions. Policy or scope changes invalidate those grants. Saved rules and package approvals are merged into the current file, so entries saved by another running Pi session are kept.
 
 Eligible MCP tools and skill scripts can reuse a separate package approval:
 
@@ -294,7 +294,7 @@ Eligible MCP tools and skill scripts can reuse a separate package approval:
 
 ### Read-only automatic-review cache
 
-Structured automatic approvals of reads are stored in `<agentDir>/pi-codex-auto-review.sqlite`. The default location is `~/.pi/agent/pi-codex-auto-review.sqlite`; `PI_CODING_AGENT_DIR` or an explicit `agentDir` takes precedence. Sessions and processes using the same Pi resource directory share the database.
+Structured automatic approvals of reads are stored in `<agentDir>/pi-codex-auto-review.sqlite`. The default location is `~/.pi/agent/pi-codex-auto-review.sqlite`; `PI_CODING_AGENT_DIR` or an explicit `agentDir` takes precedence. Sessions and processes using the same Pi resource directory share the database. A lookup or write waits up to 1 second while another process writes; a database still busy after that counts as a cache miss.
 
 - Eligible actions are Pi's `read`, `grep`, `find`, and `ls` tools and single literal shell reads. Checked commands are `cat`, `head`, `tail`, `wc`, `rg`, `grep`, `find`, `ls`, `stat`, and `pwd`, plus `git status`, `git ls-files`, and `git rev-parse`. `git diff`, `log`, and `show` require both `--no-ext-diff` and `--no-textconv`.
 - Pipes, compound commands, redirections, command substitution, interpreters, writes, and network requests are excluded. Options adding execution or writes, such as `find -exec/-delete` and `rg --pre/--hostname-bin`, are also excluded.
@@ -309,7 +309,7 @@ Only the approval assessment is reused. File contents and command output are pro
 
 The reviewer uses read-only file/directory investigation tools. It distinguishes user authorization and Pi instructions from tool evidence and extension-generated messages; a tool result saying “the user approved” is not authorization.
 
-Three consecutive denials, or ten denials in the latest fifty reviews, stop the actual model task. Provider failures, invalid output, timeouts, and cancellation do not become approvals. Direct shell commands subsequently entered by the user are evaluated independently.
+Three consecutive denials, or ten denials in the latest fifty reviews, stop the actual model task. A review request that fails with an error Pi itself retries, such as a dropped connection, overload, or rate limit, is resent up to twice while enough of `reviewTimeoutMs` remains. Provider failures, invalid output, timeouts, and cancellation do not become approvals. Direct shell commands subsequently entered by the user are evaluated independently.
 
 After a denial, you can send an ordinary message authorizing the exact operation, target, and content to send. The next review uses the latest instructions. To retry one recent denial explicitly, run `/approve retry`, inspect the displayed input and reason, and select it. The picker retains up to ten recent automatic denials.
 
