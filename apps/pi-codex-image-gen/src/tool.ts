@@ -19,6 +19,7 @@ import {
     loadReferenceImages,
     ReferenceImageError,
 } from "./reference-images.js";
+import { renderImageGenCall, renderImageGenResult } from "./render.js";
 import {
     detailsForPlan,
     errorResult,
@@ -152,6 +153,8 @@ export const imageGenTool: RegisteredToolDefinition = {
         openWorldHint: true,
     },
     prepareArguments: (args) => parseImageGenArguments(args).arguments,
+    renderCall: renderImageGenCall,
+    renderResult: renderImageGenResult,
     async execute(toolCallId, params, signal, onUpdate, ctx) {
         const { plan } = parseImageGenArguments(params);
         signal?.throwIfAborted();

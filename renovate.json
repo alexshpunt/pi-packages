@@ -2,5 +2,36 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "timezone": "Asia/Seoul",
+  "schedule": [
+    "* 9-12 * * 1-5"
+  ],
+  "prConcurrentLimit": 3,
+  "automerge": false,
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm dependencies (non-major)",
+      "groupSlug": "npm-non-major"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["@earendil-works/pi-*"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Pi SDK (non-major)",
+      "groupSlug": "pi-sdk-non-major"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "GitHub Actions (non-major)",
+      "groupSlug": "github-actions-non-major"
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    }
   ]
 }

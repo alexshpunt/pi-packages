@@ -9,8 +9,9 @@ Modified copy of the "imagegen" skill bundled with OpenAI Codex
 Copyright 2025 OpenAI. Licensed under the Apache License, Version 2.0 (see LICENSE.txt and NOTICE).
 Modified for Pi's `image_gen` tool: the CLI fallback mode and its files were removed, the Codex
 image-viewing tool became Pi's `read` tool, local files are edited through `referenced_image_paths`,
-the save path is the Pi agent directory, and the tool reuses Pi's existing `openai-codex`
-ChatGPT subscription login without changing the chat provider.
+the save path is the Pi agent directory, the tool reuses Pi's existing `openai-codex`
+ChatGPT subscription login without changing the chat provider, and independent images may be
+requested in parallel.
 -->
 
 # Image Generation Skill
@@ -74,6 +75,7 @@ Edit semantics:
 
 Execution strategy:
 - Produce many assets or variants by issuing one `image_gen` call per requested asset or variant. Distinct assets need distinct calls.
+- Multiple images can be generated in parallel: when they do not depend on each other's results, issue all of their `image_gen` calls in the same response.
 
 Assume the user wants a new image unless they clearly ask to change an existing one.
 

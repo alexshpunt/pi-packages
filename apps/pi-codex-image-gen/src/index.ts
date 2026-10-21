@@ -6,7 +6,8 @@ import {
     hideImagegenSkill,
     latestBranchRecord,
 } from "./exposure.js";
-import { imageGenTool } from "./tool.js";
+import { disableImageZoom, enableImageZoom } from "./image-zoom.js";
+import { IMAGE_GEN_TOOL_NAME, imageGenTool } from "./tool.js";
 
 export type {
     ImageBackground,
@@ -46,6 +47,10 @@ const imageGenExtension: ExtensionFactory = (pi) => {
     pi.on("session_start", (_event, ctx) => {
         state.hiddenByExtension = undefined;
         applyExposureDecision(pi, ctx, state);
+        if (ctx.mode === "tui") enableImageZoom(IMAGE_GEN_TOOL_NAME);
+    });
+    pi.on("session_shutdown", () => {
+        disableImageZoom();
     });
     pi.on("session_tree", (_event, ctx) => {
         // Do not carry a different branch's in-memory ownership into this branch.
