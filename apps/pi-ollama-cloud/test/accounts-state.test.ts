@@ -1,7 +1,8 @@
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { dirname, join } from "node:path";
+import lockfile from "proper-lockfile";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   accountStatePath,
   createAccountStateStore,
@@ -10,6 +11,11 @@ import {
   pruneAccountState,
 } from "../src/accounts/state.ts";
 import type { AccountState } from "../src/accounts/types.ts";
+
+vi.mock("node:fs", async (importOriginal) => {
+  const fs = await importOriginal<typeof import("node:fs")>();
+  return { ...fs, renameSync: vi.fn(fs.renameSync) };
+});
 
 const NOW = Date.parse("2026-10-20T12:00:00Z");
 const FINGERPRINT = "0123456789abcdef";
@@ -22,6 +28,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.mocked(renameSync).mockClear();
   rmSync(directory, { recursive: true, force: true });
 });
 
@@ -132,6 +139,79 @@ describe("account state store", () => {
       state.lastAssignedAccountId = "b";
     });
     expect(first.read().lastAssignedAccountId).toBe("b");
+  });
+
+  it.each([false, true])("persists memory-only changes after a lock timeout (existing file: %s)", async (hasFile) => {
+    const store = createAccountStateStore({ path, now: () => NOW });
+    if (hasFile)
+      await store.update((state) => {
+        state.lastAssignedAccountId = "default";
+      });
+    mkdirSync(dirname(path), { recursive: true });
+    const release = lockfile.lockSync(path, { realpath: false });
+    try {
+      await store.update((state) => {
+        state.disabledAccountIds.push("work");
+        state.health[FINGERPRINT] = { updatedAtMs: NOW, isUnauthorized: true };
+      });
+    } finally {
+      release();
+    }
+    expect(store.read().disabledAccountIds).toEqual(["work"]);
+    await store.update((state) => {
+      state.lastAssignedAccountId = "other";
+    });
+    const saved = createAccountStateStore({ path }).read();
+    expect(saved.disabledAccountIds).toEqual(["work"]);
+    expect(saved.health[FINGERPRINT]?.isUnauthorized).toBe(true);
+    expect(saved.lastAssignedAccountId).toBe("other");
+  });
+
+  it("persists memory-only changes after a failed write when the file is unchanged", async () => {
+    const store = createAccountStateStore({ path, now: () => NOW });
+    await store.update((state) => {
+      state.lastAssignedAccountId = "default";
+    });
+    vi.mocked(renameSync).mockImplementationOnce(() => {
+      throw new Error("fixture write failure");
+    });
+    await store.update((state) => {
+      state.disabledAccountIds.push("work");
+    });
+    expect(store.read().disabledAccountIds).toEqual(["work"]);
+    expect(createAccountStateStore({ path }).read().disabledAccountIds).toEqual([]);
+    await store.update((state) => {
+      state.lastAssignedAccountId = "other";
+    });
+    expect(createAccountStateStore({ path }).read()).toMatchObject({
+      disabledAccountIds: ["work"],
+      lastAssignedAccountId: "other",
+    });
+  });
+
+  it("uses a peer's later file revision instead of reviving memory-only changes", async () => {
+    const store = createAccountStateStore({ path, now: () => NOW });
+    const peer = createAccountStateStore({ path, now: () => NOW });
+    await peer.update((state) => {
+      state.lastAssignedAccountId = "default";
+    });
+    vi.mocked(renameSync).mockImplementationOnce(() => {
+      throw new Error("fixture write failure");
+    });
+    await store.update((state) => {
+      state.disabledAccountIds.push("work");
+    });
+    expect(store.read().disabledAccountIds).toEqual(["work"]);
+    await peer.update((state) => {
+      state.disabledAccountIds.push("personal");
+    });
+    await store.update((state) => {
+      state.lastAssignedAccountId = "other";
+    });
+    expect(createAccountStateStore({ path }).read()).toMatchObject({
+      disabledAccountIds: ["personal"],
+      lastAssignedAccountId: "other",
+    });
   });
 
   it("serializes concurrent read-modify-write updates without losing changes", async () => {

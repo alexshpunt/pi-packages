@@ -15,7 +15,7 @@ const originalEnv = {
 };
 let temp: string;
 
-function setup(mode = "print") {
+function setup(mode: ExtensionCommandContext["mode"] = "print") {
   const router = createAccountRouter();
   const binding = createSessionAccountBinding(() => {});
   binding.start({ getSessionId: () => "session-1", getEntries: () => [] });
@@ -40,9 +40,11 @@ function setup(mode = "print") {
   registerOllamaCommand(pi, { router, binding }, controls);
   const notify = vi.fn();
   const custom = vi.fn();
+  const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+  const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
   const ctx = {
     mode,
-    hasUI: mode === "tui",
+    hasUI: mode === "tui" || mode === "rpc",
     cwd: join(temp, "project"),
     modelRegistry: { getApiKeyForProvider: async () => "key-default-secret" },
     ui: { notify, custom },
@@ -50,9 +52,15 @@ function setup(mode = "print") {
   const run = async (args: string) => {
     if (!handler) throw new Error("/ollama is not registered");
     await handler(args, ctx);
-    return notify.mock.calls.at(-1) as [string, string];
+    if (ctx.hasUI) {
+      expect(stderr).not.toHaveBeenCalled();
+      return notify.mock.calls.at(-1)?.[0] as string;
+    }
+    expect(notify).not.toHaveBeenCalled();
+    expect(stdout).not.toHaveBeenCalled();
+    return String(stderr.mock.calls.at(-1)?.[0] ?? "").trimEnd();
   };
-  return { run, controls, notify, custom, binding };
+  return { run, controls, notify, custom, binding, router };
 }
 
 const globalConfig = () => JSON.parse(readFileSync(join(temp, "agent", "ollama-cloud.json"), "utf8"));
@@ -70,6 +78,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   globalThis.fetch = originalFetch;
   for (const [name, value] of [
     ["PI_CODING_AGENT_DIR", originalEnv.agentDir],
@@ -82,11 +91,10 @@ afterEach(() => {
   rmSync(temp, { recursive: true, force: true });
 });
 
-describe("/ollama without the TUI", () => {
-  it("prints settings and accounts with only the first six key characters", async () => {
-    const { run, custom } = setup("print");
-    const [summary, level] = await run("");
-    expect(level).toBe("info");
+describe.each(["print", "json"] as const)("/ollama in %s mode", (mode) => {
+  it("writes settings and accounts to stderr with only the first six key characters", async () => {
+    const { run, custom } = setup(mode);
+    const summary = await run("");
     expect(summary).toContain("Usage status bar: off");
     expect(summary).toContain("Web tools: on");
     expect(summary).toContain("default key-de… [Pi credential] available");
@@ -95,27 +103,33 @@ describe("/ollama without the TUI", () => {
     expect(custom).not.toHaveBeenCalled();
   });
 
-  it("shows the usage report", async () => {
-    const { run } = setup();
-    expect(await run("usage")).toEqual(["Ollama Cloud usage:\n  5h: 25% used\n  Requests (7d): 3", "info"]);
+  it("writes the usage report to stderr", async () => {
+    const { run } = setup(mode);
+    expect(await run("usage")).toBe("Ollama Cloud usage:\n  5h: 25% used\n  Requests (7d): 3");
   });
 
-  it("rejects unknown arguments", async () => {
-    const { run } = setup();
+  it("reports invalid arguments without changing settings", async () => {
+    const { run, controls } = setup(mode);
     for (const args of ["bogus", "usage now", "status on now", "status maybe"]) {
-      const [message, level] = await run(args);
-      expect(level).toBe("error");
-      expect(message).toMatch(/^Usage: \/ollama|Unknown argument/);
+      expect(await run(args)).toMatch(/^Usage: \/ollama|Unknown argument/);
     }
+    expect(controls.setUsageStatusEnabled).not.toHaveBeenCalled();
+    expect(controls.setWebToolsEnabled).not.toHaveBeenCalled();
+  });
+
+  it("writes unexpected command failures to stderr", async () => {
+    const { run, router } = setup(mode);
+    vi.spyOn(router, "listAccounts").mockRejectedValue(new Error("fixture failure"));
+    expect(await run("")).toBe("Ollama Cloud: fixture failure");
   });
 });
 
-describe("/ollama toggles", () => {
+describe.each(["print", "json"] as const)("/ollama toggles in %s mode", (mode) => {
   it("applies and saves the usage status bar and web tools to the global config", async () => {
-    const { run, controls } = setup();
-    expect((await run("status on"))[0]).toMatch(/^Usage status bar on\. Saved to .*ollama-cloud\.json\.$/);
+    const { run, controls } = setup(mode);
+    expect(await run("status on")).toMatch(/^Usage status bar on\. Saved to .*ollama-cloud\.json\.$/);
     expect(controls.setUsageStatusEnabled).toHaveBeenLastCalledWith(true, expect.anything());
-    expect((await run("webtools off"))[1]).toBe("info");
+    expect(await run("webtools off")).toMatch(/^Web tools off\. Saved to .*ollama-cloud\.json\.$/);
     expect(controls.setWebToolsEnabled).toHaveBeenLastCalledWith(false);
     expect(globalConfig()).toEqual({ usageStatus: true, webTools: false });
     await run("status");
@@ -127,30 +141,39 @@ describe("/ollama toggles", () => {
     writeFileSync(join(temp, "agent", "ollama-cloud.json"), JSON.stringify({ futureKey: 1 }));
     mkdirSync(join(temp, "project", ".pi"), { recursive: true });
     writeFileSync(join(temp, "project", ".pi", "ollama-cloud.json"), JSON.stringify({ webTools: true }));
-    const { run } = setup();
-    const [message, level] = await run("webtools off");
-    expect(level).toBe("warning");
-    expect(message).toContain("sets webTools to true and takes precedence when Pi starts");
+    const { run } = setup(mode);
+    expect(await run("webtools off")).toContain("sets webTools to true and takes precedence when Pi starts");
     expect(globalConfig()).toEqual({ futureKey: 1, webTools: false });
   });
 
   it("applies a toggle for this run without overwriting an unreadable global file", async () => {
     mkdirSync(join(temp, "agent"), { recursive: true });
     writeFileSync(join(temp, "agent", "ollama-cloud.json"), "{broken");
-    const { run, controls } = setup();
-    const [message, level] = await run("status on");
-    expect(level).toBe("warning");
-    expect(message).toMatch(/Applied for this run only: .* is not valid JSON/);
+    const { run, controls } = setup(mode);
+    expect(await run("status on")).toMatch(/Applied for this run only: .* is not valid JSON/);
     expect(controls.setUsageStatusEnabled).toHaveBeenCalledWith(true, expect.anything());
     expect(readFileSync(join(temp, "agent", "ollama-cloud.json"), "utf8")).toBe("{broken");
   });
 
   it("refuses to enable web tools while PI_OLLAMA_WEB_TOOLS turns them off", async () => {
     process.env.PI_OLLAMA_WEB_TOOLS = "off";
-    const { run, controls } = setup();
-    expect((await run("webtools on"))[1]).toBe("error");
+    const { run, controls } = setup(mode);
+    expect(await run("webtools on")).toContain("Web tools are disabled by PI_OLLAMA_WEB_TOOLS");
     expect(controls.setWebToolsEnabled).not.toHaveBeenCalled();
-    expect((await run(""))[0]).toContain("Web tools: off (PI_OLLAMA_WEB_TOOLS)");
+    expect(await run("")).toContain("Web tools: off (PI_OLLAMA_WEB_TOOLS)");
+  });
+});
+
+describe.each(["tui", "rpc"] as const)("/ollama with %s UI", (mode) => {
+  it("keeps notification levels for results, errors, and save warnings", async () => {
+    const { run, notify } = setup(mode);
+    await run("status on");
+    expect(notify).toHaveBeenLastCalledWith(expect.stringContaining("Usage status bar on. Saved to"), "info");
+    await run("bogus");
+    expect(notify).toHaveBeenLastCalledWith(expect.stringContaining("Usage: /ollama"), "error");
+    writeFileSync(join(temp, "agent", "ollama-cloud.json"), "{broken");
+    await run("status off");
+    expect(notify).toHaveBeenLastCalledWith(expect.stringContaining("Applied for this run only"), "warning");
   });
 });
 

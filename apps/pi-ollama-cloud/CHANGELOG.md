@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- Preserve unsaved account-state changes after lock or write failures, and retry saving them on the next update unless another process changed the file.
+- Show `/ollama` results, settings-save messages, and errors on stderr in print and JSON modes without disrupting JSON stdout.
+- Recheck referenced keys after a rejected balance check so updated environment references work without a reload; command references still require a Pi restart.
+
 ## [0.14.0] - 2026-10-20
 
 - 진입점을 `src/index.ts`로 옮기고 루트의 호환용 재노출 파일을 제거합니다. 직접 import와 파일 경로를 지정한 로드는 새 `src/` 경로로 변경해야 합니다. 공급자·도구·명령 이름은 유지하며, 개발 CLI에 모델 조회·1+1 채팅·메타데이터 출처·기능별/배포물 진단을 연결합니다.

@@ -62,6 +62,7 @@
     "src/pi/account-requests.ts",
     "src/pi/account-stream.ts",
     "src/pi/chat.ts",
+    "src/pi/command-output.ts",
     "src/pi/config.ts",
     "src/pi/lifecycle.ts",
     "src/pi/ollama-command.ts",

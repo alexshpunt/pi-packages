@@ -234,6 +234,7 @@ export function createAccountRouter(options: AccountRouterOptions = {}): Account
             health.balanceFailedAtMs = now();
             if (failure?.kind === "unauthorized") health.isUnauthorized = true;
           });
+          if (failure?.kind === "unauthorized") storedCache = undefined;
           return undefined;
         }
       })();
@@ -331,7 +332,7 @@ export function createAccountRouter(options: AccountRouterOptions = {}): Account
       }
     });
     if (failure.kind === "unauthorized") {
-      // A rotated key behind a $ENV/!command reference is picked up on the next load.
+      // Re-resolve references on the next load; Pi owns command-result caching.
       storedCache = undefined;
     }
     if (failure.kind === "usage-limit") {
