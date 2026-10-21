@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-21
+
 ### Improved
 
 - The README explains how a successful result appears in terminals with and without inline images, and that local reference paths may start with `~/`.
