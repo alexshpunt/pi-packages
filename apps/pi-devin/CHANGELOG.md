@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-21
+
 ### Improved
 
 - Pi checks the Devin login session again once a day instead of before every request, so Devin requests and model list refreshes no longer take Pi's shared `auth.json` lock and rewrite the file each time. Sessions saved by earlier versions keep working and are checked on their next use.
