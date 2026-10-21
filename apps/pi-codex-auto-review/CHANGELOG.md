@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-21
+
 ### New
 
 - Guard Pi's Windows `powershell` tool like `bash`: a literal PowerShell grammar ported from Codex, cmdlet and alias path/network classification, rule matching of inner commands that also covers the documented names of aliases, read-only review reuse, and review evidence that names the shell. The guarded tool is registered inactive, so `defaultTools` or `--tools` still decides whether it runs; guarded startup no longer excludes it.
