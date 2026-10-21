@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-21
+
 ### 새로워진 것
 
 - 자동 검토가 Pi의 Windows `powershell` 도구를 `bash`처럼 보호합니다(포함된 `@buyong/pi-codex-auto-review` 0.7.0).

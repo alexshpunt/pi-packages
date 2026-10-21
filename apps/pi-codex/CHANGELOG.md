@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-21
+
 ### New
 
 - Automatic review guards Pi's Windows `powershell` tool like `bash` (included `@buyong/pi-codex-auto-review` 0.7.0).

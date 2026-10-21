@@ -1,6 +1,6 @@
 {
     "name": "@buyong/pi-codex",
-    "version": "0.3.3",
+    "version": "0.4.0",
     "description": "Pi용 Codex 통합 패키지: 자동 승인 검토, Computer Use, Fast 모드, 이미지 생성을 함께 설치합니다.",
     "license": "Apache-2.0",
     "keywords": [
