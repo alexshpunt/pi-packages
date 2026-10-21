@@ -1,13 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { isValidImageBase64 } from "./image-data.js";
 
 /** `GENERATED_IMAGE_ARTIFACTS_DIR` in Codex `artifact.rs`. */
 export const GENERATED_IMAGES_DIR = "generated_images";
 /** `MAX_IMAGE_GENERATION_OUTPUT_HINT_BYTES` in Codex `artifact.rs`. */
 export const MAX_OUTPUT_HINT_BYTES = 1024;
-
-const STRICT_BASE64 =
-    /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
 /** Keeps `[A-Za-z0-9_-]`, replaces every other code point with `_`, never empty. */
 export function sanitizeArtifactName(value: string): string {
@@ -32,7 +30,7 @@ export function imageGenerationArtifactPath(
 /** Decodes standard base64 with required padding, as Codex's `BASE64_STANDARD` does. */
 function decodeStrictBase64(value: string): Buffer {
     const trimmed = value.trim();
-    if (!STRICT_BASE64.test(trimmed)) {
+    if (!isValidImageBase64(trimmed)) {
         throw new Error("invalid base64 image data");
     }
     return Buffer.from(trimmed, "base64");

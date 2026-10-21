@@ -1,6 +1,12 @@
 import { STATUS_CODES } from "node:http";
 import type { ImageRequestPlan } from "./arguments.js";
 import type { OpenAiCredentials } from "./auth.js";
+import { boundErrorText } from "./error-output.js";
+import { isValidImageBase64 } from "./image-data.js";
+
+const MAX_ERROR_BODY_BYTES = 16 * 1024;
+// Allows about 96 MiB of image bytes in base64, including a 4096×4096 RGBA PNG.
+const MAX_SUCCESS_BODY_BYTES = 128 * 1024 * 1024;
 
 /**
  * Codex API-provider retry defaults (`ApiRetryConfig` in `model-provider-info/src/lib.rs`):
@@ -63,7 +69,7 @@ class TransportError extends Error {
  */
 export class ImageRequestError extends Error {
     constructor(message: string) {
-        super(message);
+        super(boundErrorText(message));
         this.name = "ImageRequestError";
     }
 }
@@ -231,6 +237,47 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
     }
 }
 
+/** Collects at most maxBytes and cancels unread data on overflow, failure, or caller abort. */
+async function readResponseText(
+    response: Response,
+    maxBytes: number,
+    signal: AbortSignal | undefined,
+): Promise<{ text: string; exceeded: boolean }> {
+    if (response.body === null) {
+        throwIfAborted(signal);
+        return { text: "", exceeded: false };
+    }
+    const reader = response.body.getReader();
+    const cancel = (): void => {
+        void reader.cancel().catch(() => {});
+    };
+    signal?.addEventListener("abort", cancel, { once: true });
+    let complete = false;
+    try {
+        throwIfAborted(signal);
+        const decoder = new TextDecoder();
+        let text = "";
+        let bytes = 0;
+        while (true) {
+            const chunk = await reader.read();
+            throwIfAborted(signal);
+            if (chunk.done) {
+                complete = true;
+                return { text: text + decoder.decode(), exceeded: false };
+            }
+            bytes += chunk.value.byteLength;
+            if (bytes > maxBytes) {
+                return { text: "", exceeded: true };
+            }
+            text += decoder.decode(chunk.value, { stream: true });
+        }
+    } finally {
+        signal?.removeEventListener("abort", cancel);
+        if (!complete) cancel();
+        reader.releaseLock();
+    }
+}
+
 function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
     return new Promise((resolve, reject) => {
         throwIfAborted(signal);
@@ -317,6 +364,9 @@ function decodeImageData(value: unknown): ImageData {
     }
     if (typeof b64.value !== "string") {
         throw decodeError(b64.value, "a string");
+    }
+    if (!isValidImageBase64(b64.value)) {
+        throw new Error("invalid base64 image data");
     }
     const result: ImageData = { b64_json: b64.value };
     const generationId = field(object, "generation_id");
@@ -527,9 +577,12 @@ export class ImagesClient {
             throw new TransportError(classifyFetchError(error));
         }
         const receivedAtMs = Date.now();
-        let text: string;
+        const maxBytes = response.ok
+            ? MAX_SUCCESS_BODY_BYTES
+            : MAX_ERROR_BODY_BYTES;
+        let collected: { text: string; exceeded: boolean };
         try {
-            text = await response.text();
+            collected = await readResponseText(response, maxBytes, signal);
         } catch (error) {
             throwIfAborted(signal);
             throw new TransportError(classifyFetchError(error));
@@ -538,14 +591,22 @@ export class ImagesClient {
             throw new TransportError({
                 kind: "http",
                 status: response.status,
-                body: this.redactErrorText(text),
+                // A truncated body could expose part of a secret crossing the byte boundary.
+                body: collected.exceeded
+                    ? `[HTTP error body omitted: exceeds ${MAX_ERROR_BODY_BYTES} bytes]`
+                    : this.redactErrorText(collected.text),
                 retryAfterDeadlineMs: retryAfterDeadline(
                     response.headers.get("retry-after"),
                     receivedAtMs,
                 ),
             });
         }
-        return text;
+        if (collected.exceeded) {
+            throw new ImageRequestError(
+                `image response exceeds ${MAX_SUCCESS_BODY_BYTES} bytes`,
+            );
+        }
+        return collected.text;
     }
 
     /** `run_with_retry` in Codex `codex-client/src/retry.rs`. */

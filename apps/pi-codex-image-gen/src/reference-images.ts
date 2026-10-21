@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open } from "node:fs/promises";
 import { basename, extname } from "node:path";
 import {
     convertToPng,
@@ -73,12 +74,15 @@ export function sniffImageFormat(bytes: Uint8Array): SniffedFormat {
  */
 async function prepareBytes(
     bytes: Uint8Array,
+    signal: AbortSignal | undefined,
 ): Promise<{ bytes: Uint8Array; mimeType: string }> {
+    signal?.throwIfAborted();
     const format = sniffImageFormat(bytes);
     const decoded = await convertToPng(
         Buffer.from(bytes).toString("base64"),
         "application/octet-stream",
     );
+    signal?.throwIfAborted();
     if (decoded === null) {
         throw new Error(
             format === "other"
@@ -106,21 +110,41 @@ function errorMessage(error: unknown): string {
 /** `image_url` in Codex `tool.rs` for each path, in argument order. */
 export async function loadReferenceImages(
     paths: readonly string[],
+    signal?: AbortSignal,
 ): Promise<ReferenceImage[]> {
+    signal?.throwIfAborted();
     const images: ReferenceImage[] = [];
     for (const path of paths) {
+        signal?.throwIfAborted();
         let bytes: Uint8Array;
         try {
-            bytes = new Uint8Array(await readFile(path));
+            // Nonblocking open avoids hanging on a FIFO; stat the handle to avoid path races.
+            const file = await open(
+                path,
+                constants.O_RDONLY | constants.O_NONBLOCK,
+            );
+            try {
+                signal?.throwIfAborted();
+                if (!(await file.stat()).isFile()) {
+                    throw new Error("referenced image must be a regular file");
+                }
+                signal?.throwIfAborted();
+                bytes = await file.readFile({ signal });
+                signal?.throwIfAborted();
+            } finally {
+                await file.close();
+            }
         } catch (error) {
+            signal?.throwIfAborted();
             throw new ReferenceImageError(
                 `unable to read referenced image at \`${path}\`: ${errorMessage(error)}`,
             );
         }
         let prepared: { bytes: Uint8Array; mimeType: string };
         try {
-            prepared = await prepareBytes(bytes);
+            prepared = await prepareBytes(bytes, signal);
         } catch (error) {
+            signal?.throwIfAborted();
             throw new ReferenceImageError(
                 `unable to process referenced image at \`${path}\`: ${errorMessage(error)}`,
             );

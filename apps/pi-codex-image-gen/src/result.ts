@@ -2,6 +2,7 @@ import { dirname } from "node:path";
 import type { AgentToolResult } from "@earendil-works/pi-coding-agent";
 import type { ImageRequestPlan } from "./arguments.js";
 import { imageGenerationOutputHint } from "./artifact.js";
+import { boundErrorText } from "./error-output.js";
 
 /** Small, base64-free details attached to every result (FDD §11.4). */
 export interface ImageGenDetails {
@@ -22,7 +23,7 @@ export function errorResult(
     details: ImageGenDetails,
 ): AgentToolResult<ImageGenDetails> {
     return {
-        content: [{ type: "text", text: message }],
+        content: [{ type: "text", text: boundErrorText(message) }],
         details,
         isError: true,
     };
