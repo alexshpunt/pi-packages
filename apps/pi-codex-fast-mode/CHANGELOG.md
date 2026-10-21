@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-21
+
 ### Improved
 
 - The README quick start explains how to reach the model row in `/codex-fast` and what `/codex-fast status` reports, and the settings section describes the legacy fields written on save and what happens when settings cannot be loaded.
