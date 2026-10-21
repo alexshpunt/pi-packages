@@ -361,7 +361,9 @@ export function registerApprovalCommands(
         await guard.updateSettings(
             (current) => validateSettings({ ...current, ...patch }),
             context.cwd,
-            (settings) => store.save(settings),
+            async () => {
+                await store.savePatch(patch);
+            },
         );
         context.ui.setStatus(
             "auto-review",

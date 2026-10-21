@@ -934,3 +934,49 @@ test("[review] settings rules, exceptions and the 0.3.0 reviewer patterns mask r
         args: { authorizationHeader: "kept-by-name" },
     });
 });
+test("[review] a dropped connection or overload is resent inside the review deadline; other failures are not", async (t) => {
+    const f = await fixture(t),
+        action = f.action("bash", { command: "npm test" });
+    const allow = { stopReason: "stop", content: [{ type: "text", text: '{"outcome":"allow"}' }] };
+    const failed = (errorMessage) => ({ stopReason: "error", errorMessage, content: [] });
+    const run = async (replies, timeoutMs) => {
+        const calls = [];
+        const provider = new PiReviewProvider({
+            model: { id: "fake", provider: "fixture", api: "test" },
+            modelRegistry: {
+                streamSimple(_selected, _context, options) {
+                    calls.push(options.timeoutMs);
+                    const reply = replies[Math.min(calls.length - 1, replies.length - 1)];
+                    return { result: async () => reply };
+                },
+            },
+        });
+        const result = await reviewAction({
+            action,
+            policyDecision: decision(action, "ask", "review"),
+            provider,
+            trustedAuthorization: "Run project tests",
+            hasUI: false,
+            timeoutMs,
+        });
+        return { result, calls };
+    };
+    const recovered = await run([failed("Connection error."), allow], 20_000);
+    expect(recovered.result.decision).toBe("allow");
+    expect(recovered.calls.length).toBe(2);
+    expect(recovered.calls[1]).toBeLessThan(20_000);
+
+    const overloaded = await run([failed("Our servers are currently overloaded. Please try again later.")], 20_000);
+    expect(overloaded.result.decision).toBe("deny");
+    expect(overloaded.result.result.failure).toBe("provider");
+    expect(overloaded.calls.length).toBe(3);
+
+    const rejected = await run([failed("400 invalid request"), allow], 20_000);
+    expect(rejected.result.decision).toBe("deny");
+    expect(rejected.calls.length).toBe(1);
+
+    // Too little of the deadline is left for another attempt after the first failure.
+    const short = await run([failed("Connection error."), allow], 2_400);
+    expect(short.result.decision).toBe("deny");
+    expect(short.calls.length).toBe(1);
+});
