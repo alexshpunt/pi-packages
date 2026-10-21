@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { createAgentSessionRuntime, createAgentSessionServices, createAgentSessionFromServices, SettingsManager, SessionManager, createReadToolDefinition } from "@earendil-works/pi-coding-agent";
 import { expect, test } from "vitest";
 import { createGuardExtension } from "../../dist/index.js";
-import { shellIdentity } from "../../dist/pi-host.js";
+import { powershellIdentity, shellIdentity } from "../../dist/pi-host.js";
 import { fixture } from "../harness/fixtures.mjs";
 import { FAKE_MODEL, offlineModelRuntime, planStream } from "../harness/pi.mjs";
 
@@ -32,8 +32,9 @@ test("[index] registers without SQLite or rule evaluation, shares initialization
     const f = await registered(t);
     const database = join(f.agentDir, "pi-codex-auto-review.sqlite");
     await expect(access(database)).rejects.toThrow();
-    expect(f.tools.size).toBe(7);
+    expect(f.tools.size).toBe(8);
     expect(f.tools.get("bash").parameters.properties.additional_permissions).toBeDefined();
+    expect(f.tools.get("powershell")).toMatchObject({ defaultActive: false, parameters: { properties: { sandbox_permissions: expect.any(Object) } } });
     const first = f.extension.initialize();
     expect(f.extension.initialize()).toBe(first);
     await first;
@@ -52,19 +53,33 @@ test("[index] registers without SQLite or rule evaluation, shares initialization
     await expect(access(join(broken.workspace, "blocked.txt"))).rejects.toThrow();
 });
 
-test("[index] blocks unsupported PowerShell unless Off or confirmed Full Access, not approvalPolicy=never", async (t) => {
-    const f = await registered(t, { settings: { approvalPolicy: "never" } });
-    const event = { toolName: "powershell", toolCallId: "powershell", input: { command: "Remove-Item protected.txt" } };
-    const call = () => f.handlers.get("tool_call")(event, f.context);
-    expect(await call()).toMatchObject({ block: true, reason: expect.stringContaining("PowerShell is not supported") });
+test("[index] guards opt-in PowerShell like bash; Full Access skips policy and Off uses Pi's own tool", async (t) => {
+    const jobs = [];
+    const f = await registered(t, {
+        executor: { execute: async (job) => { jobs.push(job); return { exitCode: 0 }; }, close: async () => {} },
+    });
+    await f.handlers.get("session_start")({}, f.context);
+    const event = { toolName: "powershell", toolCallId: "powershell", input: { command: "Get-Content notes.txt" } };
+    expect(await f.handlers.get("tool_call")(event, f.context)).toBeUndefined();
+    const run = (id, command) => f.tools.get("powershell").execute(id, { command }, undefined, undefined, f.context);
+    await run("powershell", "Get-Content notes.txt");
+    expect(jobs).toEqual([{ kind: "shell", shell: "powershell", command: "Get-Content notes.txt", shellPath: undefined, cwd: f.workspace }]);
+    const prepared = f.extension.assertReady().reviewContext.snapshot(60000).items.filter((item) => item.content?.stage === "prepared");
+    expect(prepared.at(-1).content).toMatchObject({ tool: "powershell", args: { command: "Get-Content notes.txt", shellPath: await powershellIdentity() } });
+    await expect(run("protected", `Set-Content -LiteralPath '${join(f.control, "protected.txt")}' -Value changed`)).rejects.toThrow("Command writes a protected path");
+    expect(jobs).toHaveLength(1);
     const guard = f.extension.assertReady();
     guard.setFullAccess(true);
-    expect(await call()).toBeUndefined();
+    await run("full-access", `Set-Content -LiteralPath '${join(f.control, "protected.txt")}' -Value changed`);
+    expect(jobs).toHaveLength(2);
     guard.setFullAccess(false);
     await guard.updateSettings((current) => ({ ...current, isEnabled: false }), f.workspace, async () => {});
-    expect(await call()).toBeUndefined();
-    await guard.updateSettings((current) => ({ ...current, isEnabled: true }), f.workspace, async () => {});
-    expect(await call()).toMatchObject({ block: true });
+    // Off delegates to Pi's own PowerShell tool, which exists only on Windows.
+    await writeFile(join(f.workspace, "notes.txt"), "notes");
+    const off = run("off", "Get-Content notes.txt");
+    if (process.platform === "win32") expect((await off).content[0].text).toContain("notes");
+    else await expect(off).rejects.toThrow("only available on Windows");
+    expect(jobs).toHaveLength(2);
 });
 
 for (const isEnabled of [true, false]) {
@@ -104,7 +119,7 @@ test("[index] ordinary shell settings reach execution and unset shell stays unse
     await run("default");
     expect(jobs[1].shellPath).toBeUndefined();
     const actions = f.extension.assertReady().reviewContext.snapshot(60000).items.filter((item) => item.source === "tool-call" && item.content.stage === "prepared");
-    expect(JSON.stringify(actions)).toContain(await shellIdentity());
+    expect(actions.map((item) => item.content.args.shellPath)).toStrictEqual(["/configured/shell", await shellIdentity()]);
 });
 
 for (const isEnabled of [true, false]) {

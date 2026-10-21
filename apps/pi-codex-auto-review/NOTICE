@@ -2,6 +2,9 @@ pi-codex-auto-review includes a TypeScript port of the execution policy
 contracts and the guardian policy from OpenAI Codex, revision
 a956835d020762cb2b570053af06f643a11c0ecc. The rule interpreter and evaluator
 run as JavaScript; the upstream Rust library and binaries are not bundled.
+The literal PowerShell lowering is a TypeScript port of the PowerShell command
+parser from OpenAI Codex, revision 80b88a700e4300022fe1893ecca9b8376d0c85d9,
+without its tree-sitter dependency.
 The upstream attribution notice is reproduced below.
 
 OpenAI Codex

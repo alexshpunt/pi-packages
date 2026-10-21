@@ -17,7 +17,13 @@ import {
     immutable,
     type PolicyDecision,
 } from "./contracts.js";
-import { canonicalPath, resolveToolPath } from "./policy/paths.js";
+import {
+    canonicalPath,
+    isRemoteWindowsPath,
+    resolveToolPath,
+} from "./policy/paths.js";
+import { executableName } from "./policy/platform-paths.js";
+import { analyzePowerShell } from "./policy/powershell.js";
 import { analyzeShell } from "./policy/shell.js";
 
 /** An approved MCP tool or skill version; the same content skips a repeated review. */
@@ -44,14 +50,16 @@ const SCRIPT_INTERPRETERS = new Set([
 const MAX_SKILL_ROOT_DEPTH = 6;
 const MAX_SKILL_FILES = 2000;
 const MAX_SKILL_BYTES = 64 * 1024 * 1024;
+/** Bigint metadata: Windows file indexes exceed the safe integer range of a number. */
 const fileDigests = new Map<
     string,
-    { size: number; mtimeMs: number; ino: number; sha256: string }
+    { size: bigint; mtimeNs: bigint; ino: bigint; sha256: string }
 >();
 
 /**
  * Only the "may this package run?" question is cached. Extra paths, network domains,
- * escalation, rule prompts, strict MCP review and user-input requests are reviewed again.
+ * unbound shell targets, escalation, rule prompts, strict MCP review and user-input
+ * requests are reviewed again.
  */
 export function isPackageCacheEligible(policy: PolicyDecision): boolean {
     return (
@@ -62,7 +70,8 @@ export function isPackageCacheEligible(policy: PolicyDecision): boolean {
         policy.authority === undefined &&
         policy.delta.readPaths.length === 0 &&
         policy.delta.writePaths.length === 0 &&
-        policy.delta.domains.length === 0
+        policy.delta.domains.length === 0 &&
+        policy.unboundTargets === undefined
     );
 }
 
@@ -94,23 +103,35 @@ export function mcpPackageApproval(input: {
 export async function skillPackageApproval(
     command: string,
     cwd: string,
+    shell: "bash" | "powershell" = "bash",
 ): Promise<PackageApproval | undefined> {
     let analysis: ReturnType<typeof analyzeShell>;
     try {
-        analysis = analyzeShell(command);
+        // Each shell's own literal grammar decides what runs; never bash rules for PowerShell.
+        analysis =
+            shell === "powershell"
+                ? analyzePowerShell(command)
+                : analyzeShell(command);
     } catch {
         return undefined;
     }
     if (!analysis.isSupported || analysis.commands.length !== 1)
         return undefined;
     const [executable = "", firstArgument] = analysis.commands[0].argv;
-    const script = executable.includes("/")
+    const isPowerShell = shell === "powershell";
+    const script = (isPowerShell ? /[\\/]/ : /\//).test(executable)
         ? executable
-        : SCRIPT_INTERPRETERS.has(basename(executable))
+        : SCRIPT_INTERPRETERS.has(
+                isPowerShell
+                    ? executableName(executable, "win32")
+                    : basename(executable),
+            )
           ? firstArgument
           : undefined;
     if (!script || script.startsWith("-")) return undefined;
     const target = await canonicalPath(await resolveToolPath(script, cwd), cwd);
+    // Fingerprinting a script on a remote share would contact it before approval.
+    if (isRemoteWindowsPath(target)) return undefined;
     if (!(await stat(target).catch(() => undefined))?.isFile())
         return undefined;
     const root = await findSkillRoot(dirname(target));
@@ -153,8 +174,8 @@ async function directoryDigest(root: string): Promise<string | undefined> {
                 continue;
             }
             if (!entry.isFile()) return undefined;
-            const info = await lstat(path);
-            totalBytes += info.size;
+            const info = await lstat(path, { bigint: true });
+            totalBytes += Number(info.size);
             if (files.length >= MAX_SKILL_FILES || totalBytes > MAX_SKILL_BYTES)
                 return undefined;
             const known = fileDigests.get(path);
@@ -162,7 +183,7 @@ async function directoryDigest(root: string): Promise<string | undefined> {
             if (
                 !known ||
                 known.size !== info.size ||
-                known.mtimeMs !== info.mtimeMs ||
+                known.mtimeNs !== info.mtimeNs ||
                 known.ino !== info.ino
             ) {
                 sha256 = createHash("sha256")
@@ -170,7 +191,7 @@ async function directoryDigest(root: string): Promise<string | undefined> {
                     .digest("hex");
                 fileDigests.set(path, {
                     size: info.size,
-                    mtimeMs: info.mtimeMs,
+                    mtimeNs: info.mtimeNs,
                     ino: info.ino,
                     sha256,
                 });

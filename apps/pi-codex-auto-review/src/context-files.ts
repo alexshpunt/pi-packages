@@ -10,7 +10,7 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { GuardError, type PermissionProfile } from "./contracts.js";
 import type { GuardSettings } from "./policy/index.js";
-import { isWithin } from "./policy/paths.js";
+import { isProtectedWithin, isWithin } from "./policy/paths.js";
 
 export interface ContextFile {
     readonly path: string;
@@ -68,7 +68,7 @@ function boundedRead(
         NAMES.includes(basename(path));
     if (
         !isGlobalInstruction &&
-        (profile.denyRead.some((root) => isWithin(target, root)) ||
+        (profile.denyRead.some((root) => isProtectedWithin(target, root)) ||
             !profile.readRoots.some((root) => isWithin(target, root)))
     ) {
         throw new GuardError(

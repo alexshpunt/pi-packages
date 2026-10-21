@@ -540,9 +540,10 @@ export async function reviewAction(options: {
                 };
             if (
                 legacy.decision === "allow" &&
-                Object.values(policyDecision.delta).some(
+                (Object.values(policyDecision.delta).some(
                     (paths) => paths.length,
-                )
+                ) ||
+                    policyDecision.unboundTargets !== undefined)
             )
                 return {
                     ...legacy,

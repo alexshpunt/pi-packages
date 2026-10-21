@@ -4,7 +4,9 @@ import { expect, test } from "vitest";
 import { EMPTY_DELTA } from "../../dist/contracts.js";
 import { PiExecutor } from "../../dist/tools/executor.js";
 import { fixture } from "../harness/fixtures.mjs";
-import { shellQuote } from "../harness/shell.mjs";
+import { shellQuote, workloadEnvironment } from "../harness/shell.mjs";
+
+const isWindows = process.platform === "win32";
 
 async function setup(t) {
     const f = await fixture(t),
@@ -49,19 +51,24 @@ test("[execution] shell cwd, caller environment, output and nonzero status reach
     const result = await f.executor.execute(
         {
             kind: "shell",
-            command: 'pwd; printf "$OWNED_VALUE"; exit 7',
+            // Git Bash prints its POSIX view of the cwd unless asked for the Windows path.
+            command: `${isWindows ? "pwd -W" : "pwd"}; printf "$OWNED_VALUE"; exit 7`,
             cwd: f.workspace,
         },
         f.profile,
         EMPTY_DELTA,
         {
-            env: { PATH: process.env.PATH, OWNED_VALUE: "caller-value" },
+            env: isWindows
+                ? workloadEnvironment({ OWNED_VALUE: "caller-value" })
+                : { PATH: process.env.PATH, OWNED_VALUE: "caller-value" },
             onData: (chunk) => output.push(chunk),
         },
     );
     expect(result.exitCode).toBe(7);
     const text = Buffer.concat(output).toString();
-    expect(text.includes(f.workspace)).toBeTruthy();
+    const portable = (path) =>
+        isWindows ? path.replaceAll("\\", "/").toLowerCase() : path;
+    expect(portable(text).includes(portable(f.workspace))).toBeTruthy();
     expect(text.includes("caller-value")).toBeTruthy();
 });
 test("[execution] the executor uses the supplied SDK delegate once and exposes the linked caller cancellation", async (t) => {
@@ -173,4 +180,25 @@ test("[cancellation] close settles a running SDK shell and rejects subsequent ex
             EMPTY_DELTA,
         ),
     ).rejects.toThrow();
+});
+test("[execution] PowerShell jobs use Pi's PowerShell operations, which exist only on Windows", async (t) => {
+    const f = await setup(t),
+        output = [];
+    const pending = f.executor.execute(
+        {
+            kind: "shell",
+            shell: "powershell",
+            command: "Write-Output owned-powershell",
+            cwd: f.workspace,
+        },
+        f.profile,
+        EMPTY_DELTA,
+        { onData: (chunk) => output.push(chunk) },
+    );
+    if (!isWindows) {
+        await expect(pending).rejects.toThrow(/only available on Windows/);
+        return;
+    }
+    expect((await pending).exitCode).toBe(0);
+    expect(Buffer.concat(output).toString()).toContain("owned-powershell");
 });

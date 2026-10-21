@@ -22,6 +22,44 @@ import {
 } from "./redaction.js";
 
 export const AUTHORIZATION_ENTRY = "pi-codex-auto-review.authorization.v1";
+const ENTRY_BUDGET_MARKER = '<truncated reason="review-entry-budget" />';
+
+/**
+ * Pi passes the whole inherited environment to shell operations, which on Windows alone
+ * can exceed an entry's budget. Shorten the longest masked values first so the entry keeps
+ * its structured arguments; the bound action and the exact reviewed action stay complete.
+ */
+function compactEnvironment(value: Json, maxChars: number): Json {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return value;
+    const args = value.args;
+    if (!args || typeof args !== "object" || Array.isArray(args)) return value;
+    const environment = args.environment;
+    if (
+        !environment ||
+        typeof environment !== "object" ||
+        Array.isArray(environment) ||
+        canonicalJson(value).length <= maxChars
+    )
+        return value;
+    const compacted: { [key: string]: Json } = { ...environment };
+    const entry = () => ({
+        ...value,
+        args: { ...args, environment: { ...compacted } },
+    });
+    const names = Object.keys(compacted).sort(
+        (left, right) =>
+            canonicalJson(compacted[right]).length -
+                canonicalJson(compacted[left]).length ||
+            (left < right ? -1 : 1),
+    );
+    for (const name of names) {
+        if (canonicalJson(entry()).length <= maxChars) break;
+        if (canonicalJson(compacted[name]).length > ENTRY_BUDGET_MARKER.length)
+            compacted[name] = ENTRY_BUDGET_MARKER;
+    }
+    return entry();
+}
 export const REVIEW_CONTEXT_ENTRY = "pi-codex-auto-review.context.v1";
 /** Mask reviewer-bound evidence; content envelope identifiers stay unchanged. */
 export function safeEvidence(
@@ -342,11 +380,16 @@ export class ReviewContextStore {
         isTruncated = false,
     ): void {
         let safe = safeEvidence(content, this.redactor());
-        const text = canonicalJson(safe),
-            maxChars =
-                source === "tool-call" || source === "tool-result"
-                    ? 4000
-                    : 20000;
+        const maxChars =
+            source === "tool-call" || source === "tool-result" ? 4000 : 20000;
+        if (trust === "evidence" && source === "tool-call") {
+            const compacted = compactEnvironment(safe, maxChars);
+            if (compacted !== safe) {
+                safe = compacted;
+                isTruncated = true;
+            }
+        }
+        const text = canonicalJson(safe);
         if (trust === "evidence" && text.length > maxChars) {
             const metadata =
                 safe && typeof safe === "object" && !Array.isArray(safe)

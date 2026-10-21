@@ -285,6 +285,56 @@ test("[review] pinned short/full assessments and policy retain risk thresholds a
     expect(custom.text.includes("# Outcome Policy")).toBeTruthy();
     expect(custom.digest).not.toBe(policy.digest);
 });
+test("[review] a large inherited shell environment is shortened before the entry loses its structured arguments", async (t) => {
+    const f = await fixture(t);
+    const store = new ReviewContextStore();
+    store.reset("s");
+    // Windows runners pass a multi-kilobyte PATH through Pi's shell environment.
+    const environment = {
+        PATH: Array.from({ length: 240 }, (_, i) => `C:\\Tools\\owned-${i}\\bin`).join(";"),
+        PATHEXT: ".COM;.EXE;.BAT;.CMD",
+        SYSTEMROOT: "C:\\Windows",
+    };
+    const prepared = (args) => {
+        const action = f.action("bash", args);
+        store.preparedAction(action);
+        return store.snapshot(60000).items.find(
+            (item) => item.content.toolCallId === action.toolCallId,
+        );
+    };
+    const large = prepared({
+        command: "printf body",
+        shellPath: "C:\\Program Files\\Git\\bin\\bash.exe",
+        environment,
+    });
+    expect(large.isTruncated).toBe(true);
+    expect(large.content.excerpt).toBeUndefined();
+    expect(large.content.args).toStrictEqual({
+        command: "printf body",
+        shellPath: "C:\\Program Files\\Git\\bin\\bash.exe",
+        environment: {
+            PATH: '<truncated reason="review-entry-budget" />',
+            PATHEXT: ".COM;.EXE;.BAT;.CMD",
+            SYSTEMROOT: "C:\\Windows",
+        },
+    });
+    expect(JSON.stringify(large.content).length).toBeLessThanOrEqual(4000);
+    // Entries within the budget, as on the POSIX test hosts, are unchanged.
+    const small = prepared({
+        command: "printf body",
+        environment: { PATH: "/usr/bin:/bin" },
+    });
+    expect(small.isTruncated).toBeUndefined();
+    expect(small.content.args.environment).toStrictEqual({
+        PATH: "/usr/bin:/bin",
+    });
+    // A command that alone exceeds the budget still falls back to a bounded excerpt.
+    const command = prepared({
+        command: `printf ${"x".repeat(6000)}`,
+        environment,
+    });
+    expect(command.content.excerpt).toContain("review-entry-budget");
+});
 test("[review] retained authorization survives follow-ups, compaction and branch restoration without trusting tool text or thinking", () => {
     const store = new ReviewContextStore();
     store.reset("s");

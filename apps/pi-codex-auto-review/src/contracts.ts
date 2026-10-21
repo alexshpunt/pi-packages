@@ -19,6 +19,7 @@ export type EvidenceStatus =
     | "not-run";
 export type ToolName =
     | "bash"
+    | "powershell"
     | "read"
     | "edit"
     | "write"
@@ -27,6 +28,7 @@ export type ToolName =
     | "ls";
 export const TOOL_NAMES: readonly ToolName[] = Object.freeze([
     "bash",
+    "powershell",
     "read",
     "edit",
     "write",
@@ -79,6 +81,12 @@ export interface PolicyDecision {
     readonly requiresFreshReview?: boolean;
     readonly requiresUserInput?: boolean;
     readonly authority?: ExecutionAuthority;
+    /**
+     * Shell targets the policy could not bind to a canonical location (unknown shell
+     * mapping, wildcards, provider or remote paths). They are reviewed but absent from
+     * `delta`, so consumers must not read an empty delta as "no extra scope".
+     */
+    readonly unboundTargets?: readonly ("read" | "write")[];
 }
 export type ApprovalPolicy =
     | "on-request"
@@ -212,6 +220,8 @@ export interface NetworkApprovalRequest {
 export type WorkerJob =
     | {
           kind: "shell";
+          /** Shell tools default to bash; PowerShell runs through Pi's PowerShell operations. */
+          shell?: "bash" | "powershell";
           command: string;
           cwd: string;
           shellPath?: string;

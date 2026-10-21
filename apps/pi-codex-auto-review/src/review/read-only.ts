@@ -1,5 +1,12 @@
 import { basename, dirname, resolve } from "node:path";
 import type { GuardAction, PolicyDecision } from "../contracts.js";
+import { commandName } from "../policy/platform-paths.js";
+import { analyzePowerShell } from "../policy/powershell.js";
+import {
+    bindPowerShellParameters,
+    isProviderPath,
+    resolvePowerShellCommand,
+} from "../policy/powershell-commands.js";
 import { analyzeShell } from "../policy/shell.js";
 
 const READ_TOOLS = new Set(["read", "grep", "find", "ls"]);
@@ -15,6 +22,7 @@ const READ_COMMANDS = new Set([
     "stat",
     "pwd",
 ]);
+/** POSIX locations only; Windows path-qualified executables are never reused. */
 const COMMAND_DIRECTORIES = new Set([
     "/bin",
     "/usr/bin",
@@ -84,7 +92,11 @@ function isReadOnlyGit(argv: readonly string[]): boolean {
     );
 }
 
-function isReadOnlyShellCommand(command: string, cwd: string): boolean {
+function isReadOnlyShellCommand(
+    command: string,
+    cwd: string,
+    platform: NodeJS.Platform,
+): boolean {
     if (hasShellOperators(command)) return false;
     const analysis = analyzeShell(command);
     if (!analysis.isSupported || analysis.commands.length !== 1) return false;
@@ -92,11 +104,16 @@ function isReadOnlyShellCommand(command: string, cwd: string): boolean {
     if (parsed.writes.length || parsed.reads.length) return false;
     const executable = parsed.argv[0] ?? "";
     if (
-        executable.includes("/") &&
-        !COMMAND_DIRECTORIES.has(dirname(resolve(cwd, executable)))
+        platform === "win32"
+            ? /[\\/:]/.test(executable)
+            : executable.includes("/") &&
+              !COMMAND_DIRECTORIES.has(dirname(resolve(cwd, executable)))
     )
         return false;
-    const name = basename(executable);
+    const name =
+        platform === "win32"
+            ? commandName(executable, platform)
+            : basename(executable);
     if (name === "git") return isReadOnlyGit(parsed.argv);
     if (!READ_COMMANDS.has(name)) return false;
     if (
@@ -110,6 +127,46 @@ function isReadOnlyShellCommand(command: string, cwd: string): boolean {
     )
         return false;
     return true;
+}
+
+const POWERSHELL_READS = new Set([
+    "get-content",
+    "get-childitem",
+    "get-item",
+    "test-path",
+    "resolve-path",
+    "get-filehash",
+    "select-string",
+    "get-location",
+]);
+const WILDCARD = /[*?[\]]/;
+
+/** The PowerShell counterpart: one literal read command without pipelines or redirection. */
+function isReadOnlyPowerShellCommand(command: string): boolean {
+    const analysis = analyzePowerShell(command);
+    if (!analysis.isSupported || analysis.commands.length !== 1) return false;
+    const parsed = analysis.commands[0];
+    if (parsed.writes.length || parsed.receivesPipeline) return false;
+    const resolved = resolvePowerShellCommand(parsed.argv[0] ?? "");
+    const args = parsed.argv.slice(1);
+    if (resolved?.kind === "native") {
+        if (args.some((arg) => arg.includes('"'))) return false;
+        if (resolved.name === "git") return isReadOnlyGit(parsed.argv);
+        return (
+            resolved.name === "rg" &&
+            !hasExcludedOption(parsed.argv, ["--pre", "--hostname-bin"])
+        );
+    }
+    if (resolved?.kind !== "cmdlet" || !POWERSHELL_READS.has(resolved.name))
+        return false;
+    const binding = bindPowerShellParameters(resolved.spec, args);
+    // Wildcards and provider paths can reach locations the literal path does not name.
+    return (
+        binding !== undefined &&
+        [...binding.bound.values()].every(
+            (value) => !WILDCARD.test(value) && !isProviderPath(value),
+        )
+    );
 }
 
 /** Reuse only bounded local reads, never pipes, mutations, network or fresh-review requests. */
@@ -127,11 +184,15 @@ export function isReadOnlyReview(
         policy.authority?.kind === "reviewed-command" ||
         policy.delta.writePaths.length ||
         policy.delta.domains.length ||
+        policy.unboundTargets?.includes("write") ||
         action.args.sandbox_permissions === "require_escalated"
     )
         return false;
     if (READ_TOOLS.has(action.tool)) return true;
-    if (action.tool !== "bash" || typeof action.args.command !== "string")
+    if (
+        (action.tool !== "bash" && action.tool !== "powershell") ||
+        typeof action.args.command !== "string"
+    )
         return false;
     const environment = action.args.environment;
     if (
@@ -146,7 +207,13 @@ export function isReadOnlyReview(
     )
         return false;
     try {
-        return isReadOnlyShellCommand(action.args.command, action.cwd);
+        return action.tool === "powershell"
+            ? isReadOnlyPowerShellCommand(action.args.command)
+            : isReadOnlyShellCommand(
+                  action.args.command,
+                  action.cwd,
+                  process.platform,
+              );
     } catch {
         return false;
     }

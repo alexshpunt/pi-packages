@@ -114,7 +114,9 @@ test("[approval-settings] approve configures user or model review and the select
     expect(
         JSON.parse(await readFile(f.settingsPath, "utf8")).approvalsReviewer,
     ).toBe("user");
-    expect((await stat(f.settingsPath)).mode & 0o777).toBe(0o600);
+    // Windows reports only the read-only attribute in mode bits (0o666 or 0o444).
+    if (process.platform !== "win32")
+        expect((await stat(f.settingsPath)).mode & 0o777).toBe(0o600);
     await f.tools
         .get("write")
         .execute(
