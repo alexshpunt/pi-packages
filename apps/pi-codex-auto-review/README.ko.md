@@ -49,7 +49,7 @@ Use bash to run exactly node --version and report the result. Do not install any
 - 개별 설치와 `@buyong/pi-codex`를 통해 같은 확장을 함께 켜지 마세요. 중복 등록이 도구·명령·이벤트 처리에 영향을 줄 수 있습니다.
 - 이전 이름인 `pi-codex-auto-review`에서 전환할 때는 `pi list`에 표시된 소스를 제거하고 스코프 패키지를 설치합니다. 제거할 때도 같은 전역·`--local` 범위를 사용하세요.
 
-**승인 제어가 로드되지 않으면 실행 시작을 거부해야 하나요?** [보호 CLI·SDK](docs/usage.ko.md#보호가-준비된-상태에서-시작하기)를 사용하세요. 일반 Pi 확장 로딩은 실패를 알리고 확장 없이 계속할 수 있습니다.
+**승인 제어가 로드되지 않으면 실행 시작을 거부해야 하나요?** [보호 CLI·SDK](docs/usage.ko.md#보호가-준비된-상태에서-시작하기)를 사용하세요. Pi 1.3.0은 새 CLI 시작 중 확장 로딩 오류가 나면 종료 코드 1로 끝납니다. 다시 로드와 SDK의 오류 처리는 별개이며, 보호 시작은 실행 전에 제어기 준비 상태까지 확인합니다.
 
 ## 승인 방식과 설정
 
@@ -64,6 +64,8 @@ Use bash to run exactly node --version and report the result. Do not install any
 
 `/approve off`로 확장 전체를 끄고, `/approve on`으로 이전 승인 방식과 검토 모델을 유지한 채 다시 켭니다. `/approve status`는 현재 상태를 표시합니다. 켜기·끄기는 즉시 적용하고 다음 실행에도 유지합니다. 승인 방식을 메뉴에서 선택하면 확장이 다시 켜집니다.
 
+일반 설치도 Off 상태를 포함해 Pi의 유효 `shellPath`·`shellCommandPrefix`·`images.autoResize` 설정을 유지하며, 명시적인 SDK 도구 옵션이 우선합니다. 셸 경로를 지정하지 않으면 Pi가 플랫폼에 맞게 탐색합니다. 초기화는 `--help`용 확장 로딩이 아닌 세션 시작이나 첫 사용 때 수행합니다.
+
 설정은 `<agentDir>/guard/settings.json` 또는 CLI·SDK에서 선택한 정책 파일에 저장합니다. `agentDir`은 보통 `~/.pi/agent`이며 `PI_CODING_AGENT_DIR`을 따릅니다. 선택창을 취소하면 기존 설정을 유지합니다. 명령·선택창·승인 창의 고정 문구는 영어입니다.
 
 모델 범위, 저장 설정과 다시 로드는 [사용법](docs/usage.ko.md#승인-방식과-검토-모델-선택)을 참고하세요. 작업이 거부되면 이유를 읽고 승인을 바꾸거나 [`/approve retry`](docs/usage.ko.md#거부오류재시도)를 사용하세요. 재시도는 자동 승인이 아니라 새 검토를 요청합니다.
@@ -74,6 +76,7 @@ Use bash to run exactly node --version and report the result. Do not install any
 
 | 대상 | 동작 |
 | --- | --- |
+| 내장 `powershell` 호출 | 미지원으로 차단합니다. `bash`를 사용하세요. 일반 설치에서는 Off 또는 확인한 Full Access일 때만 허용하며, 보호 시작에서는 도구 자체를 제외합니다. |
 | 일반 작업 공간·임시 디렉터리 쓰기 | `workspace-write`는 허용하고 `read-only`는 검토합니다. |
 | 일반 범위 밖이나 프로젝트 `.git`·`.agents`·`.codex`·`.aws`·`.pi` 메타데이터 쓰기 | 무조건 차단하지 않고 검토합니다. |
 | 가드 제어 파일·선택한 정책·규칙 파일 | 보호 도구의 읽기·쓰기를 차단합니다. 프로젝트 `.pi/guard`는 쓰기를 차단합니다. |
@@ -81,7 +84,7 @@ Use bash to run exactly node --version and report the result. Do not install any
 
 절대 거부는 모델 검토와 저장 승인보다 먼저 확인합니다. 검토 오류·시간 초과·취소는 승인으로 처리하지 않습니다. 저장된 정확한 작업 승인은 도구·입력·실행 문맥·정책·요청 범위에 묶입니다. 조건을 충족하는 MCP 도구와 스킬 스크립트는 버전·내용이 그대로일 때 별도의 패키지 승인을 재사용할 수 있습니다.
 
-검토자에게 전달할 증거는 `@buyong/redact`로 가립니다. 사용자 규칙과 선택적 개인정보 탐지도 제공합니다. 가림은 검토자 사본을 보호하며 승인 후 실행할 원래 작업을 바꾸지 않습니다. [정책 설정](docs/usage.ko.md#정책-파일), [승인 재사용](docs/usage.ko.md#정확한-작업에-대한-승인과-실행), [검토자 가림](docs/usage.ko.md#검토자-가림)을 참고하세요.
+검토자에게 전달할 증거는 `@buyong/redact`로 가립니다. 사용자 규칙과 선택적 개인정보 탐지도 제공합니다. 가림은 검토자 사본을 보호하며 승인 후 실행할 원래 작업을 바꾸지 않습니다. 파일 조사는 최대 1 MiB의 전체 원문을 경로와 함께 가린 뒤 발췌하며, 더 큰 파일은 거부합니다. 메모리에는 최근 감사 기록 1,000개만 보관하지만 `<agentDir>/guard/audit.jsonl` 파일은 회전 없이 계속 증가합니다. 수동으로 보관하거나 삭제하기 전에 세션을 종료하세요. [정책 설정](docs/usage.ko.md#정책-파일), [승인 재사용](docs/usage.ko.md#정확한-작업에-대한-승인과-실행), [검토자 가림](docs/usage.ko.md#검토자-가림)을 참고하세요.
 
 ### 승인이 보장하지 않는 것
 
@@ -117,6 +120,21 @@ pnpm --filter @buyong/pi-codex-auto-review test:unit
 ```
 
 `build`는 이 패키지가 가져오는 `@buyong/redact`도 함께 빌드합니다. `test:unit`은 현재 OS에서 단위·통합·적합성·실행·종단 간 테스트를 모델·UI 고정 응답으로 실행하며 유료 모델을 호출하지 않습니다. 빌드한 확장 로드는 [소스 설치](docs/usage.ko.md#소스에서-빌드)를 따르세요.
+
+빌드 후 저장소 루트에서 다음 모델 없는 검사를 실행합니다. 설치된 Pi CLI가 필요합니다.
+
+```sh
+cd apps/pi-codex-auto-review
+pnpm run typecheck
+pnpm run lint
+pnpm run test:unit
+verification_dir="$(mktemp -d)"
+PI_CODING_AGENT_DIR="$verification_dir" PI_OFFLINE=1 \
+  pi --no-extensions -e "$PWD/dist/index.js" --help
+test ! -e "$verification_dir/pi-codex-auto-review.sqlite"
+```
+
+예상 결과는 검사 종료 코드 0과 검토 DB를 만들지 않는 도움말 출력입니다. Pi 자체 설정·인증 파일은 임시 디렉터리에 생길 수 있습니다. 도움말 검사는 세션이나 실모델을 실행하지 않습니다.
 
 로컬 통과는 다른 OS나 실모델을 검증하지 않습니다. 이전 [pi-codex-auto-review](https://github.com/buYoung/pi-codex-auto-review) 저장소의 Docker·Windows 검증은 이 저장소에 포함하지 않았으며, 그 기록은 [검증표](docs/testing/auto-review-protection.ko.md)에 남아 있습니다.
 

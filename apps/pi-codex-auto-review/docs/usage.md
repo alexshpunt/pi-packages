@@ -21,7 +21,7 @@ In Pi, configure model access with `/login` if needed. Run `/approve` to choose 
 - Pi supplies the host SDK to managed extensions. Do not add a second SDK copy or symbolic link to the managed package.
 - Remove an installation with `pi remove <source>`, using the source shown by `pi list`. Use `--local` when removing a project-scoped entry.
 
-Normal extension registration connects the guarded local tools and the guarded MCP adapter. It replaces Pi's built-in MCP extension to avoid duplicate connections. **Registration is not a protected-startup guarantee:** Pi can report an extension loading failure and continue. Use the [CLI or SDK](#run-with-protected-startup) when approval controls must be ready before execution.
+Normal extension registration connects the guarded local tools and the guarded MCP adapter. It replaces Pi's built-in MCP extension to avoid duplicate connections. **Registration is not a protected-startup guarantee:** Pi 1.3.0 exits with code 1 for extension loading errors on a fresh CLI startup, but reload and SDK loading have separate error handling. Auto Review defers policy, rule, and SQLite initialization to session start or first use; failures block protected operations until reload or restart. Use the [guarded CLI or SDK](#run-with-protected-startup) for an explicit readiness check before execution, including after reload.
 
 ## Choose an approval method and review model
 
@@ -37,6 +37,8 @@ Run `/approve` in a TUI session, or in RPC with a client that answers Pi UI requ
 
 The first two choices persist. **Full Access is never saved** and lasts until Pi exits or you choose another approval mode. It also bypasses otherwise absolute path and command denials. Cancelling the confirmation returns to the picker without enabling it. Policy enforcement, approval reuse, and MCP review described below assume the extension is on and Full Access is off.
 
+The built-in `powershell` tool is unsupported: ordinary installation blocks it while the extension is on and Full Access is off, even with `approvalPolicy: "never"`. Use `bash` instead. PowerShell syntax is not checked with bash rules. Guarded startup excludes PowerShell in every mode.
+
 ### Turn the whole extension off or back on
 
 Run these commands in TUI or RPC with a connected UI:
@@ -47,7 +49,7 @@ Run these commands in TUI or RPC with a connected UI:
 | `/approve on` | Restores the previous approval mode, review model, and policy settings; clears session Full Access |
 | `/approve status` | Shows whether the extension is on or off and the active approval mode |
 
-You can also select **Auto Review Off** in `/approve`. While off, local tools, direct shell calls, and MCP tools use Pi's original execution paths, without the extension's fallback shell timeout. Pi's project trust decisions and external servers' own authentication and permissions still apply.
+You can also select **Auto Review Off** in `/approve`. While off, local tools, direct shell calls, and MCP tools use Pi's original execution paths, without the extension's fallback shell timeout. Ordinary and guarded installations both use Pi's effective `shellPath`, `shellCommandPrefix`, and `images.autoResize` settings after session binding; explicit SDK `bashOptions`/`readOptions` override them. An unset shell path stays unset for Pi's platform-specific discovery, including Git Bash on Windows. Pi's project trust decisions and external servers' own authentication and permissions still apply.
 
 On/off changes save as `isEnabled` and apply to the current session and future runs. Approval mode and review model settings are retained. Choosing **Approve for me**, **Ask for approval**, or confirmed **Full Access** in `/approve` turns the extension back on. Changing only the cache or review model leaves it off.
 
@@ -317,7 +319,7 @@ A retry triggers **one new review**, not an automatic allow or session grant. Th
 
 Review input includes current policy, path/domain scope, final execution arguments, linked calls and results, and observed approval-dialog questions and answers. Environment evidence includes explicit non-secret values and the names of omitted variables, not the complete process environment.
 
-The guard saves review evidence and assessments in Pi session custom records for reloads and active-branch restoration. Large evidence is bounded with omission markers. If required authorization and the complete current target do not fit the budget, execution is not automatic. Audit records are stored in `<agentDir>/guard/audit.jsonl` and omit raw tool arguments.
+The guard saves review evidence and assessments in Pi session custom records for reloads and active-branch restoration. Large evidence is bounded with omission markers. If required authorization and the complete current target do not fit the budget, execution is not automatic. Audit records are stored in `<agentDir>/guard/audit.jsonl` and omit raw tool arguments. The default location is `~/.pi/agent/guard/audit.jsonl`; `PI_CODING_AGENT_DIR` or SDK `agentDir` changes it. Memory retains only the newest 1,000 records. The file is append-only, has no automatic rotation or deletion, and grows across sessions. To reclaim space, stop sessions using that agent directory, then manually archive or delete `guard/audit.jsonl`; the next audit event recreates a deleted file. This does not delete approval grants or the SQLite cache.
 
 Only confirmations observed through the protected Pi `select`, `confirm`, and `input` adapters count as recorded user confirmations. Password/API-key answers are masked. Actual Pi models must return the structured `outcome` assessment; the legacy `decision` response is supported only for explicitly injected SDK `ReviewProvider` implementations.
 
@@ -329,7 +331,7 @@ Built-in and compatibility rules mask provider tokens, authorization values, URL
 
 If an action contains a detected value, the reviewer receives a masked copy and `redactedActionFields` containing JSON paths and rule IDs, not values. Masking alone does not force denial or a user prompt. Approval binding and execution use the **original action**, so masking is not a mechanism for preventing the approved command from sending a secret.
 
-Masking occurs before evidence budgets and excerpts. New redaction settings apply to subsequently added evidence; stored evidence remains as recorded. Detection can miss unsupported formats or mask harmless values. Review logs before sharing them.
+Masking occurs before evidence budgets and excerpts. File investigation reads complete text from regular files up to 1 MiB, masks it with the file-path hint (including `.env` values), then renders up to 120 lines and the 12,000-character output budget. Larger files explicitly fail investigation rather than exposing an unmasked prefix. This investigation-only read does not alter the normal `read` result returned to the user. New redaction settings apply to subsequently added evidence; stored evidence remains as recorded. Detection can miss unsupported formats or mask harmless values. Review logs before sharing them.
 
 | `redaction` key | Entry | Effect |
 | --- | --- | --- |
@@ -366,7 +368,7 @@ SDK `mcpToolPolicies` selects an approval mode for a `server/tool` key:
 
 Strict review, sensitive operations, and required user input override these normal skip paths. `codex_requires_user_input` is not approved by the model on your behalf. The adapter handles empty approval forms but rejects ordinary forms with input fields and URL authentication requests.
 
-The same rules apply to `node_repl/js`. Additional approval requests must match the original live call's tool, connection, and input; they cannot name another tool or connector instead. Already-dispatched cancellation depends on the external server.
+The same rules apply to `node_repl/js`. Additional approval requests must match the original live call's tool, connection, and input; they cannot name another tool or connector instead. Caller cancellation and timeout signals reach the transport, including while Off, so authentication waits cannot later dispatch a cancelled request. Failed, cancelled, or timed-out requests release their local tracking. Already-dispatched cancellation depends on the external server.
 
 ## Execution limits
 

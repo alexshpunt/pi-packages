@@ -31,6 +31,8 @@ export function redact(text: string, markers: readonly string[] = []): string {
         if (marker) safe = safe.split(marker).join("[REDACTED]");
     return safe;
 }
+const MAX_MEMORY_RECORDS = 1000;
+
 export class AuditLog {
     private tail: Promise<unknown> = Promise.resolve();
     constructor(
@@ -88,6 +90,8 @@ export class AuditLog {
             ),
         ) as typeof record;
         this.records.push(safe);
+        if (this.records.length > MAX_MEMORY_RECORDS)
+            this.records.splice(0, this.records.length - MAX_MEMORY_RECORDS);
         if (!this.path) return;
         const path = this.path;
         const pending = this.tail.then(async () => {

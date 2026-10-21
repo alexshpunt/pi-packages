@@ -10,8 +10,9 @@ import {
 import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import { expect, test } from "vitest";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { getPiSDKEntryPath } from "../../dist/pi-host.js";
 import { EMPTY_DELTA } from "../../dist/contracts.js";
 import { PiExecutor } from "../../dist/tools/executor.js";
 import { auditPopulationPath, fixture } from "../harness/fixtures.mjs";
@@ -120,7 +121,7 @@ test("[workflow] SDK shell approval and invalid settings on reload cannot activa
     await mkdir(join(f.agentDir, "guard"), { recursive: true });
     await writeFile(join(f.agentDir, "guard/settings.json"), "{invalid");
     await expect(runtime.session.reload()).rejects.toThrow(
-        /failed to load|not ready/,
+        /Approval settings could not be loaded/,
     );
     await expect(
         runtime.session.executeBash(
@@ -1140,6 +1141,17 @@ try {
     );
     expect(help.stdout).toMatch(/^Usage: pi-codex-auto-review /);
     expect(help.stdout).not.toMatch(/[가-힣]/);
+});
+test("[startup] ordinary Pi --help does not initialize the review database", async (t) => {
+    const f = await fixture(t);
+    const cli = fileURLToPath(new URL("cli.js", pathToFileURL(getPiSDKEntryPath())));
+    const result = await exec(process.execPath, [cli, "--no-extensions", "-e", join(repository, "dist/index.js"), "--help"], {
+        cwd: f.workspace,
+        env: { ...process.env, PI_CODING_AGENT_DIR: f.agentDir, PI_OFFLINE: "1" },
+        timeout: 30000,
+    });
+    expect(result.stdout).toContain("--help");
+    await expect(access(join(f.agentDir, "pi-codex-auto-review.sqlite"))).rejects.toThrow();
 });
 test("[cleanup] nonempty owned audit population is scanned and native resources settle before disposal", async (t) => {
     const population = await readFile(auditPopulationPath, "utf8");

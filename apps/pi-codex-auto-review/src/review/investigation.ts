@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { constants } from "node:fs";
+import { open } from "node:fs/promises";
 import type { Redactor } from "@buyong/redact";
 import {
     canonicalJson,
@@ -13,11 +15,59 @@ import type { ToolExecutor } from "../tools/executor.js";
 import { safeEvidence } from "./context.js";
 import { reviewRedactor } from "./redaction.js";
 
+const MAX_INSPECTION_BYTES = 1024 * 1024;
+
+async function readInspectionFile(
+    path: string,
+    signal: AbortSignal,
+): Promise<string> {
+    signal.throwIfAborted();
+    const file = await open(
+        path,
+        constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+    );
+    try {
+        const metadata = await file.stat();
+        if (!metadata.isFile())
+            throw new GuardError(
+                "REVIEW_INVESTIGATION",
+                "Inspection requires a regular text file",
+            );
+        if (metadata.size > MAX_INSPECTION_BYTES)
+            throw new GuardError(
+                "REVIEW_INVESTIGATION",
+                "Inspection file exceeds the 1 MiB read limit",
+            );
+        const buffer = Buffer.alloc(MAX_INSPECTION_BYTES + 1);
+        let length = 0;
+        while (length < buffer.length) {
+            signal.throwIfAborted();
+            const { bytesRead } = await file.read(
+                buffer,
+                length,
+                buffer.length - length,
+                length,
+            );
+            if (!bytesRead) break;
+            length += bytesRead;
+        }
+        signal.throwIfAborted();
+        if (length > MAX_INSPECTION_BYTES)
+            throw new GuardError(
+                "REVIEW_INVESTIGATION",
+                "Inspection file exceeds the 1 MiB read limit",
+            );
+        return buffer.subarray(0, length).toString("utf8");
+    } finally {
+        await file.close();
+    }
+}
+
 export const INVESTIGATION_TOOLS = [
     {
         name: "inspect_file",
         description:
-            "Read local text without modifying it; use only when it changes the review decision.",
+            "Inspect regular text files up to 1 MiB without modifying them; use only when it changes the review decision.",
         parameters: {
             type: "object",
             properties: { path: { type: "string" } },
@@ -87,26 +137,48 @@ export class LocalInvestigation implements ReviewInvestigation {
             allowedDomains: [],
             deniedDomains: [],
         });
-        const tool = name === "inspect_file" ? "read" : "ls";
-        const result = await this.executor.execute(
-            {
-                kind: "tool",
-                tool,
-                args: { path, limit: tool === "read" ? 120 : 100 },
-                cwd: this.cwd,
-                toolCallId: `review-${randomUUID()}`,
-            },
-            profile,
-            EMPTY_DELTA,
-            { signal, timeoutSeconds: 15 },
-        );
+        let visible: Json;
+        if (name === "inspect_file") {
+            const original = await readInspectionFile(path, signal);
+            const masked = this.redactor.redactText(original, {
+                filePath: path,
+            });
+            const lines = masked.split("\n");
+            visible = [
+                {
+                    type: "text",
+                    text:
+                        lines.slice(0, 120).join("\n") +
+                        (lines.length > 120
+                            ? '\n<truncated reason="inspection-line-limit" />'
+                            : ""),
+                },
+            ];
+        } else {
+            const result = await this.executor.execute(
+                {
+                    kind: "tool",
+                    tool: "ls",
+                    args: { path, limit: 100 },
+                    cwd: this.cwd,
+                    toolCallId: `review-${randomUUID()}`,
+                },
+                profile,
+                EMPTY_DELTA,
+                { signal, timeoutSeconds: 15 },
+            );
+            signal.throwIfAborted();
+            const raw = result as {
+                content?: { type: string; text?: string }[];
+            };
+            visible =
+                raw.content
+                    ?.filter((item) => item.type === "text")
+                    .map((item) => ({ type: "text", text: item.text ?? "" })) ??
+                [];
+        }
         signal.throwIfAborted();
-        const raw = result as { content?: { type: string; text?: string }[] };
-        const visible: Json =
-            raw.content
-                ?.filter((item) => item.type === "text")
-                .map((item) => ({ type: "text", text: item.text ?? "" })) ?? [];
-        // Mask the full output before the excerpt so a cut cannot split a detection.
+        // File contents are masked before either line or character excerpting.
         const text = canonicalJson(safeEvidence(visible, this.redactor));
         return text.length <= 12000
             ? text

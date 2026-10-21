@@ -9,16 +9,18 @@ import {
     createLsToolDefinition,
     createReadToolDefinition,
     createWriteToolDefinition,
+    type ExtensionAPI,
     type ExtensionFactory,
     type McpExtensionOptions,
     type ReadToolOptions,
+    type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { registerApprovalCommands } from "./approval-commands.js";
 import { ApprovalSettingsStore } from "./approval-settings.js";
 import { ApprovalManager, FileGrantPersistence } from "./approvals.js";
 import { AuditLog } from "./audit.js";
 import type { PermissionProfile } from "./contracts.js";
-import { createProfile } from "./contracts.js";
+import { createProfile, GuardError } from "./contracts.js";
 import { PackageApprovalStore } from "./package-approvals.js";
 import { defaultProfile, type GuardSettingsInput } from "./policy/index.js";
 import { ReviewApprovalCache } from "./review/cache.js";
@@ -28,7 +30,7 @@ import {
     safeEvidence,
 } from "./review/context.js";
 import type { ReviewProvider } from "./reviewer.js";
-import { GuardController } from "./tools/controller.js";
+import { GuardController, guardedToolParameters } from "./tools/controller.js";
 import { PiExecutor, type ToolExecutor } from "./tools/executor.js";
 import {
     createGuardedMcpExtension,
@@ -50,29 +52,33 @@ export interface GuardOptions {
     mcpToolPolicies?: McpToolPolicies;
 }
 export function createGuardExtension(options: GuardOptions = {}) {
-    let controller: GuardController | undefined;
-    const factory: ExtensionFactory = async (pi) => {
-        const previous = controller;
-        controller = undefined;
-        await previous?.close();
-        const cwd = options.cwd ?? process.cwd();
-        const agentDir =
-            options.agentDir ??
-            process.env.PI_CODING_AGENT_DIR ??
-            join(homedir(), ".pi", "agent");
-        const controlDir = join(agentDir, "guard");
-        const reviewCachePath = resolve(
-            agentDir,
-            "pi-codex-auto-review.sqlite",
-        );
-        const settingsPath = options.settingsPath
-            ? resolve(options.settingsPath)
-            : join(controlDir, "settings.json");
-        const settingsStore = new ApprovalSettingsStore(
-            settingsPath,
-            options.settings,
-            Boolean(options.settingsPath),
-        );
+    const cwd = options.cwd ?? process.cwd();
+    const agentDir =
+        options.agentDir ??
+        process.env.PI_CODING_AGENT_DIR ??
+        join(homedir(), ".pi", "agent");
+    const controlDir = join(agentDir, "guard");
+    const reviewCachePath = resolve(agentDir, "pi-codex-auto-review.sqlite");
+    const settingsPath = options.settingsPath
+        ? resolve(options.settingsPath)
+        : join(controlDir, "settings.json");
+    const settingsStore = new ApprovalSettingsStore(
+        settingsPath,
+        options.settings,
+        Boolean(options.settingsPath),
+    );
+    type State = {
+        api?: ExtensionAPI;
+        controller?: GuardController;
+        initialization?: Promise<GuardController>;
+        registered?: boolean;
+        closed?: boolean;
+    };
+    let current: State = {};
+    async function createController(
+        state: State,
+        cwd: string,
+    ): Promise<GuardController> {
         const settings = await settingsStore.load();
         // Only guard control files stay absolutely protected; Codex has no other default denies.
         const baseline = await defaultProfile(
@@ -129,7 +135,7 @@ export function createGuardExtension(options: GuardOptions = {}) {
             ),
             reviewCache: new ReviewApprovalCache(reviewCachePath),
         });
-        controller = new GuardController({
+        const controller = new GuardController({
             profile,
             settings,
             executor: options.executor ?? new PiExecutor(),
@@ -138,35 +144,135 @@ export function createGuardExtension(options: GuardOptions = {}) {
             provider: options.provider,
             shellPath: options.bashOptions?.shellPath,
             persistContext: (item) =>
-                pi.appendEntry(REVIEW_CONTEXT_ENTRY, item),
+                state.api?.appendEntry(REVIEW_CONTEXT_ENTRY, item),
         });
         try {
             await controller.initialize(cwd);
         } catch (error) {
             await controller.close();
-            controller = undefined;
             throw error;
         }
-        const guard = controller;
-        pi.registerTool(
-            guard.wrapTool(
-                createBashToolDefinition(cwd, options.bashOptions),
-                options.bashOptions,
-            ),
+        state.controller = controller;
+        return controller;
+    }
+    function initialize(
+        state: State,
+        directory = cwd,
+    ): Promise<GuardController> {
+        if (state.closed)
+            return Promise.reject(
+                new GuardError(
+                    "GUARD_NOT_READY",
+                    "Guard is not ready for execution",
+                ),
+            );
+        // Keep failures until reload: partial initialization must never enable a fallback.
+        state.initialization ??= createController(state, directory).then(
+            (guard) => {
+                if (state.closed)
+                    throw new GuardError(
+                        "GUARD_NOT_READY",
+                        "Guard is not ready for execution",
+                    );
+                guard.assertReady();
+                return guard;
+            },
         );
-        pi.registerTool(
-            guard.wrapTool(
-                createReadToolDefinition(cwd, options.readOptions),
-                options.readOptions,
-            ),
-        );
-        pi.registerTool(guard.wrapTool(createEditToolDefinition(cwd)));
-        pi.registerTool(guard.wrapTool(createWriteToolDefinition(cwd)));
-        pi.registerTool(guard.wrapTool(createGrepToolDefinition(cwd)));
-        pi.registerTool(guard.wrapTool(createFindToolDefinition(cwd)));
-        pi.registerTool(guard.wrapTool(createLsToolDefinition(cwd)));
-        pi.on("session_start", (_event, context) => {
+        return state.initialization;
+    }
+    function assertReady(state: State): GuardController {
+        if (state.closed || !state.controller)
+            throw new GuardError(
+                "GUARD_NOT_READY",
+                "pi-codex-auto-review is not ready for execution",
+            );
+        state.controller.assertReady();
+        return state.controller;
+    }
+    async function closeState(state: State): Promise<void> {
+        state.closed = true;
+        await state.initialization?.catch(() => {});
+        await state.controller?.close();
+    }
+    const factory: ExtensionFactory = async (pi) => {
+        if (current.registered) {
+            await closeState(current);
+            current = {};
+        }
+        const state = current;
+        state.api = pi;
+        state.registered = true;
+        const ready = async (directory?: string) => {
+            const guard = await initialize(state, directory);
             guard.assertReady();
+            return guard;
+        };
+        const bashOptions = (): Omit<BashToolOptions, "operations"> => {
+            const settings = pi.getSettings();
+            return {
+                commandPrefix: settings.shellCommandPrefix,
+                shellPath: settings.shellPath,
+                ...options.bashOptions,
+            };
+        };
+        const readOptions = (): Omit<ReadToolOptions, "operations"> => ({
+            autoResizeImages: pi.getSettings().images?.autoResize ?? true,
+            ...options.readOptions,
+        });
+        const register = <
+            TParameters extends ToolDefinition["parameters"] & {
+                properties: Record<string, ToolDefinition["parameters"]>;
+            },
+            TDetails,
+            TState,
+        >(
+            definition: ToolDefinition<TParameters, TDetails, TState>,
+            getOptions?: () => BashToolOptions | ReadToolOptions,
+            createDelegate?: (
+                cwd: string,
+                options?: BashToolOptions | ReadToolOptions,
+            ) => ToolDefinition<TParameters, TDetails, TState>,
+        ) => {
+            pi.registerTool({
+                ...definition,
+                parameters: guardedToolParameters(
+                    definition.name,
+                    definition.parameters,
+                ),
+                execute: async (id, params, signal, update, context) => {
+                    signal?.throwIfAborted();
+                    const guard = await ready(context.cwd);
+                    signal?.throwIfAborted();
+                    const toolOptions = getOptions?.();
+                    const delegate =
+                        createDelegate?.(context.cwd, toolOptions) ??
+                        definition;
+                    return guard
+                        .wrapTool(delegate, toolOptions)
+                        .execute(id, params, signal, update, context);
+                },
+            });
+        };
+        register(
+            createBashToolDefinition(cwd, options.bashOptions),
+            bashOptions,
+            (cwd, options) =>
+                createBashToolDefinition(cwd, options as BashToolOptions),
+        );
+        register(
+            createReadToolDefinition(cwd, options.readOptions),
+            readOptions,
+            (cwd, options) =>
+                createReadToolDefinition(cwd, options as ReadToolOptions),
+        );
+        register(createEditToolDefinition(cwd));
+        register(createWriteToolDefinition(cwd));
+        register(createGrepToolDefinition(cwd));
+        register(createFindToolDefinition(cwd));
+        register(createLsToolDefinition(cwd));
+        pi.on("session_start", async (_event, context) => {
+            const guard = await ready(context.cwd);
+            guard.options.shellPath = bashOptions().shellPath;
             guard.reset(
                 context.sessionManager.getSessionId(),
                 context.sessionManager,
@@ -179,19 +285,22 @@ export function createGuardExtension(options: GuardOptions = {}) {
                         : "Auto-review: Off",
                 );
         });
-        pi.on("session_tree", (_event, context) => {
+        pi.on("session_tree", async (_event, context) => {
+            const guard = await ready(context.cwd);
             guard.reset(
                 context.sessionManager.getSessionId(),
                 context.sessionManager,
             );
         });
-        pi.on("session_compact", (event) => {
+        pi.on("session_compact", async (event, context) => {
+            const guard = await ready(context.cwd);
             guard.reviewContext.summary(
                 event.compactionEntry.summary,
                 event.compactionEntry.id,
             );
         });
-        pi.on("input", (event) => {
+        pi.on("input", async (event, context) => {
+            const guard = await ready(context.cwd);
             if (event.source === "interactive" || event.source === "rpc") {
                 guard.authorizeUser(event.text);
                 pi.appendEntry(AUTHORIZATION_ENTRY, {
@@ -200,22 +309,35 @@ export function createGuardExtension(options: GuardOptions = {}) {
                 });
             }
         });
-        pi.on("before_agent_start", (event) => {
+        pi.on("before_agent_start", async (event, context) => {
+            const guard = await ready(context.cwd);
             guard.reviewContext.instructions(event);
         });
-        pi.on("agent_start", (_event, context) => {
+        pi.on("agent_start", async (_event, context) => {
+            const guard = await ready(context.cwd);
             guard.startTurn(context);
         });
-        pi.on("message_end", (event) => {
+        pi.on("message_end", async (event, context) => {
+            const guard = await ready(context.cwd);
             guard.reviewContext.message(event.message);
         });
         // Like Codex dynamic and extension tools, other extension tools run without approval;
         // shell, file, network and MCP actions keep their own review paths.
-        pi.on("tool_call", (event) => {
-            guard.assertReady();
+        pi.on("tool_call", async (event, context) => {
+            const guard = await ready(context.cwd);
+            if (
+                event.toolName === "powershell" &&
+                guard.options.settings.isEnabled &&
+                !guard.isFullAccess
+            )
+                return {
+                    block: true,
+                    reason: "PowerShell is not supported by Auto Review. Use bash instead; PowerShell requires Auto Review Off or confirmed Full Access.",
+                };
             guard.noteCall(event);
         });
-        pi.on("tool_execution_end", (event) => {
+        pi.on("tool_execution_end", async (event, context) => {
+            const guard = await ready(context.cwd);
             const result = event.result ?? {},
                 callIdentity = guard.reviewContext.callIdentity(
                     event.toolCallId,
@@ -255,42 +377,41 @@ export function createGuardExtension(options: GuardOptions = {}) {
             );
             guard.completeCall(event.toolCallId);
         });
-        pi.on("user_bash", (event, context) => {
-            guard.assertReady();
+        pi.on("user_bash", async (event, context) => {
+            const guard = await ready(context.cwd);
+            guard.options.shellPath = bashOptions().shellPath;
             if (!guard.options.settings.isEnabled) return;
             return {
                 operations: guard.userBashOperations(context, event.command),
             };
         });
         pi.on("session_shutdown", async () => {
-            await guard.close();
+            await closeState(state);
         });
-        registerApprovalCommands(pi, guard, settingsStore);
+        registerApprovalCommands(pi, () => ready(), settingsStore);
         if (options.mcp !== false) {
             try {
                 const mcp = await createGuardedMcpExtension(
                     agentDir,
-                    () => guard,
+                    () => assertReady(state),
                     options.mcp,
                     options.mcpToolPolicies,
+                    () => ready(),
                 );
                 await (typeof mcp === "function" ? mcp : mcp.factory)(pi);
             } catch (error) {
-                await guard.close();
-                controller = undefined;
+                await closeState(state);
                 throw error;
             }
         }
     };
     return {
         factory,
-        assertReady() {
-            if (!controller)
-                throw new Error(
-                    "pi-codex-auto-review extension failed to load",
-                );
-            controller.assertReady();
-            return controller;
+        initialize: () => initialize(current),
+        assertReady: () => assertReady(current),
+        async close() {
+            await closeState(current);
+            current = {};
         },
     };
 }

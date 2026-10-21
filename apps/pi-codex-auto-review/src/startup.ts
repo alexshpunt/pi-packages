@@ -124,17 +124,9 @@ export async function createGuardedRuntime(options: GuardedRuntimeOptions) {
             trustedExtensionPaths,
             cwd: input.cwd,
             agentDir: input.agentDir,
-            bashOptions: {
-                commandPrefix: settingsManager.getShellCommandPrefix(),
-                shellPath: settingsManager.getShellPath(),
-                ...options.bashOptions,
-            },
-            readOptions: {
-                autoResizeImages: settingsManager.getImageAutoResize(),
-                ...options.readOptions,
-            },
         });
         try {
+            await guard.initialize();
             const external = (options.externalExtensions ?? []).map(
                 (extension) =>
                     guardedExternalExtension(extension, () =>
@@ -222,6 +214,8 @@ export async function createGuardedRuntime(options: GuardedRuntimeOptions) {
             };
             const reload = session.reload.bind(session);
             session.reload = async (...args) => {
+                await guard.close();
+                await guard.initialize();
                 await reload(...args);
                 const controller = guard.assertReady();
                 // Pi omits session_start after reload when print/SDK mode has no UI or command bindings.
@@ -268,7 +262,7 @@ export async function createGuardedRuntime(options: GuardedRuntimeOptions) {
             return { ...result, services, diagnostics: services.diagnostics };
         } catch (error) {
             try {
-                await guard.assertReady().close();
+                await guard.close();
             } catch {}
             throw error;
         }
