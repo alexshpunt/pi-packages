@@ -18,7 +18,8 @@ Pi packages (extensions and their resources) in one Turborepo workspace.
 | [`apps/pi-codex-computer-use`](apps/pi-codex-computer-use) | Codex Computer Use and Browser Use through the Codex Desktop runtime |
 | [`apps/pi-codex-fast-mode`](apps/pi-codex-fast-mode) | OpenAI Fast and Ultrafast service tiers |
 | [`apps/pi-codex-image-gen`](apps/pi-codex-image-gen) | Codex-compatible `image_gen` tool and `imagegen` skill |
-| [`packages/redact`](packages/redact) | Credential, private-key, and opt-in PII masking library; published for `pi-codex-auto-review` |
+| [`apps/pi-redact`](apps/pi-redact) | Masks credentials in tool results and every model request before they reach a language model |
+| [`packages/redact`](packages/redact) | Credential, private-key, and opt-in PII masking library; published for `pi-codex-auto-review` and `pi-redact` |
 | [`packages/typescript-config`](packages/typescript-config) | Shared `tsconfig` bases |
 
 ## Develop
@@ -28,7 +29,7 @@ Requires Node.js 22.19 or later and pnpm 10.
 ```bash
 pnpm install
 pnpm check                          # typecheck and lint every package, cached by Turborepo
-pnpm build                          # compile the packages that ship dist/ (pi-codex family, redact)
+pnpm build                          # compile the packages that ship dist/ (pi-codex family, pi-redact, redact)
 pnpm --filter @buyong/pi-ollama-cloud typecheck
 pi -e ./apps/pi-ollama-cloud        # load an app in Pi for one session
 ```
@@ -68,5 +69,5 @@ upstream remote나 자동 동기화는 설정하지 않습니다. 원본 변경�
 - Distribute through npm. `pi install git:` installs a repository root, so it cannot install one app from this workspace.
 - Declare the Pi host packages (`@earendil-works/pi-ai`, `pi-agent-core`, `pi-coding-agent`, `pi-tui`, `typebox`) in `peerDependencies` with `"*"`, and in `devDependencies` with `catalog:`. Never in `dependencies`: a second copy splits Pi's classes and registries.
 - Pi loads each installed package with its own module root. A shared package from `packages/` is a separate copy in every app that uses it, so it can hold types, constants, and pure functions, not shared state. Apps that coordinate at runtime do it through `globalThis[Symbol.for(...)]`.
-- Pi runs the TypeScript sources directly. The pi-codex family and `redact` are the exception: they publish `tsc` output from `dist/`, so build before type checking, testing, or loading them from source.
+- Pi runs the TypeScript sources directly. The pi-codex family, `pi-redact`, and `redact` are the exception: they publish `tsc` output from `dist/`, so build before type checking, testing, or loading them from source.
 - A shared package that an app imports at runtime must be published with it or bundled into it; decide which before adding the first one. `redact` is published on its own and released before the apps that install it.

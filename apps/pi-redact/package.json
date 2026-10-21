@@ -1,0 +1,69 @@
+{
+  "name": "@buyong/pi-redact",
+  "version": "0.0.0",
+  "description": "Masks credentials and private keys in Pi tool results, model requests, and summaries before they reach a language model.",
+  "license": "Apache-2.0",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "redaction",
+    "secrets",
+    "credentials"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buYoung/pi-packages.git",
+    "directory": "apps/pi-redact"
+  },
+  "homepage": "https://github.com/buYoung/pi-packages/tree/main/apps/pi-redact#readme",
+  "bugs": {
+    "url": "https://github.com/buYoung/pi-packages/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "pi": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "test:unit": "vitest run",
+    "prepack": "tsc"
+  },
+  "dependencies": {
+    "@buyong/redact": "workspace:*"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.js.map",
+    "README.md",
+    "README.ko.md",
+    "LICENSE"
+  ]
+}
