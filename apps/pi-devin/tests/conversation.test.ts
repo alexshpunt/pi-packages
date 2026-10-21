@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import { runConversation } from "../src/cli/conversation.ts";
 import { DevinClient } from "../src/core/client.ts";
 import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
@@ -15,9 +14,9 @@ test("multiple tools, parallel execution, title and next-turn steps and IDs are 
   const client = new DevinClient(credential, { fingerprint: fingerprint(), fetch: async (_url, init) => {
     const body = requestBody(CHAT_METHOD, init!); requests.push(body);
     if (body.chatModelUid === "swe-1-6-fast") {
-      assert.equal(body.executionId, undefined);
-      assert.equal(object(body.trajectoryReference, "trajectory").stepType, undefined);
-      assert.equal((body.chatMessagePrompts as JsonObject[]).length, 1);
+      expect(body.executionId).toBe(undefined);
+      expect(object(body.trajectoryReference, "trajectory").stepType).toBe(undefined);
+      expect((body.chatMessagePrompts as JsonObject[]).length).toBe(1);
       return streamResponse(finalFrames("Small sums"));
     }
     primary++;
@@ -28,12 +27,12 @@ test("multiple tools, parallel execution, title and next-turn steps and IDs are 
     ]);
     const messages = body.chatMessagePrompts as JsonObject[];
     if (primary === 2) {
-      assert.equal(messages.length, 6);
-      assert.equal(messages[3].modelUid, model.id);
-      assert.equal(messages[3].thinking, "opaque");
-      assert.equal(messages[3].signature, "sig");
-      assert.notEqual(messages[3].messageId, "server-id");
-      assert.deepEqual(messages.slice(4).map((m) => [m.toolCallId, m.prompt, m.promptCacheOptions]), [
+      expect(messages.length).toBe(6);
+      expect(messages[3].modelUid).toBe(model.id);
+      expect(messages[3].thinking).toBe("opaque");
+      expect(messages[3].signature).toBe("sig");
+      expect(messages[3].messageId).not.toBe("server-id");
+      expect(messages.slice(4).map((m) => [m.toolCallId, m.prompt, m.promptCacheOptions])).toStrictEqual([
         ["call-a", "3", { type: "CACHE_CONTROL_TYPE_EPHEMERAL" }], ["call-b", "12", { type: "CACHE_CONTROL_TYPE_EPHEMERAL" }],
       ]);
     }
@@ -43,21 +42,21 @@ test("multiple tools, parallel execution, title and next-turn steps and IDs are 
   const catalog = [{ ...model, id: "alias-shadow", familyId: "shadow", aliases: [model.id] }, model];
   await runConversation(client, state, catalog, { prompt: "add numbers", tools: [addTool] });
   await runConversation(client, state, catalog, { prompt: "next turn", tools: [addTool] });
-  assert.deepEqual(requests.map((r) => object(r.trajectoryReference, "trajectory").stepIndex ?? 0), [0, 1, 2, 3]);
-  assert.equal(state.nextStepIndex, 4);
-  assert.equal(state.title, "Small sums");
-  assert.equal(requests[0].executionId, requests[2].executionId);
-  assert.notEqual(requests[0].executionId, requests[3].executionId);
+  expect(requests.map((r) => object(r.trajectoryReference, "trajectory").stepIndex ?? 0)).toStrictEqual([0, 1, 2, 3]);
+  expect(state.nextStepIndex).toBe(4);
+  expect(state.title).toBe("Small sums");
+  expect(requests[0].executionId).toBe(requests[2].executionId);
+  expect(requests[0].executionId).not.toBe(requests[3].executionId);
   for (const r of requests) {
-    if (r.executionId) assert.equal(r.chatModelUid, model.id);
-    assert.equal(r.cascadeId, state.cascadeId);
-    assert.equal(r.clientSessionId, state.id);
-    assert.equal(object(r.trajectoryReference, "trajectory").trajectoryId, state.trajectoryId);
-    assert.equal(Number(object(r.configuration, "configuration").maxTokens), model.maxOutputTokens);
+    if (r.executionId) expect(r.chatModelUid).toBe(model.id);
+    expect(r.cascadeId).toBe(state.cascadeId);
+    expect(r.clientSessionId).toBe(state.id);
+    expect(object(r.trajectoryReference, "trajectory").trajectoryId).toBe(state.trajectoryId);
+    expect(Number(object(r.configuration, "configuration").maxTokens)).toBe(model.maxOutputTokens);
   }
   const firstIds = (requests[0].chatMessagePrompts as JsonObject[]).map((m) => m.messageId);
   const nextIds = (requests[2].chatMessagePrompts as JsonObject[]).slice(0, 3).map((m) => m.messageId);
-  assert.ok(firstIds.every((id, index) => id !== nextIds[index]));
+  expect(firstIds.every((id, index) => id !== nextIds[index])).toBeTruthy();
 });
 
 test("router preliminary and input-based assignment and the JWT apply to the real inference", async () => {
@@ -66,24 +65,24 @@ test("router preliminary and input-based assignment and the JWT apply to the rea
     const method = new URL(String(url)).pathname.slice(1);
     const body = requestBody(method, init!); records.push(body);
     if (method === ASSIGN_MODEL_METHOD) {
-      assert.equal(body.modelRouterUid, "adaptive");
-      assert.equal(new Headers(init?.headers).get("sentry-trace"), null);
+      expect(body.modelRouterUid).toBe("adaptive");
+      expect(new Headers(init?.headers).get("sentry-trace")).toBe(null);
       return unaryResponse(method, { assignment: { modelUid: model.id, assignmentJwt: "mock-assignment-jwt" } });
     }
-    assert.equal(body.chatModelUid, model.id);
-    assert.equal(body.modelAssignmentJwt, "mock-assignment-jwt");
-    assert.equal(Number(object(body.configuration, "configuration").maxTokens), 5000);
+    expect(body.chatModelUid).toBe(model.id);
+    expect(body.modelAssignmentJwt).toBe("mock-assignment-jwt");
+    expect(Number(object(body.configuration, "configuration").maxTokens)).toBe(5000);
     return streamResponse(finalFrames());
   } });
   const state = createSession("adaptive");
   const catalog = [{ ...model, id: "alias-shadow", familyId: "shadow", aliases: ["adaptive", model.id] },
     model, { ...model, id: "adaptive", isRouter: true }];
   await runConversation(client, state, catalog, { prompt: "route this", maxTokens: 5000, generateTitle: false });
-  assert.equal(records.length, 3);
-  assert.equal(records[0].chatMessagePrompt, undefined);
-  assert.equal(object(records[1].chatMessagePrompt, "routing prompt").prompt, "route this");
-  assert.equal(records[0].cascadeId, records[1].cascadeId);
-  assert.equal(records[1].cascadeId, records[2].cascadeId);
+  expect(records.length).toBe(3);
+  expect(records[0].chatMessagePrompt).toBe(undefined);
+  expect(object(records[1].chatMessagePrompt, "routing prompt").prompt).toBe("route this");
+  expect(records[0].cascadeId).toBe(records[1].cascadeId);
+  expect(records[1].cascadeId).toBe(records[2].cascadeId);
 });
 
 test("the title request starts even on a primary auth error and neither is retried", async () => {
@@ -92,8 +91,8 @@ test("the title request starts even on a primary auth error and neither is retri
     models.push(requestBody(CHAT_METHOD, init!).chatModelUid);
     return Response.json({ code: "unauthenticated", message: "mock failure" }, { status: 401 });
   } });
-  await assert.rejects(runConversation(client, createSession(model.id), [model], { prompt: "hello" }), /unauthenticated/);
-  assert.deepEqual(models, [model.id, "swe-1-6-fast"]);
+  await expect(runConversation(client, createSession(model.id), [model], { prompt: "hello" })).rejects.toThrow(/unauthenticated/);
+  expect(models).toStrictEqual([model.id, "swe-1-6-fast"]);
 });
 
 test("the cancel signal reaches the concurrently running primary and title requests", async () => {
@@ -110,12 +109,12 @@ test("the cancel signal reaches the concurrently running primary and title reque
     });
   } });
   const pending = runConversation(client, createSession(model.id), [model], { prompt: "hello", signal: controller.signal });
-  const rejected = assert.rejects(pending, /stop both/);
+  const rejected = expect(pending).rejects.toThrow(/stop both/);
   await bothStarted;
   controller.abort(new Error("stop both"));
   await rejected;
-  assert.equal(signals.length, 2);
-  assert.ok(signals.every((signal) => signal.aborted));
+  expect(signals.length).toBe(2);
+  expect(signals.every((signal) => signal.aborted)).toBeTruthy();
 });
 
 test("tool parallelism, error results, unregistered tools and duplicate ID boundaries", async () => {
@@ -123,11 +122,11 @@ test("tool parallelism, error results, unregistered tools and duplicate ID bound
   let active = 0; let peak = 0;
   const tool = { ...addTool, execute: async () => { peak = Math.max(peak, ++active); await Promise.resolve(); active--; return "result"; } };
   await executeTools(calls, [tool], { allowParallel: true });
-  assert.equal(peak, 2);
-  peak = 0; await executeTools(calls, [tool], { allowParallel: false }); assert.equal(peak, 1);
+  expect(peak).toBe(2);
+  peak = 0; await executeTools(calls, [tool], { allowParallel: false }); expect(peak).toBe(1);
   const errors = await executeTools([{ ...calls[0], argumentsJson: '{"a":"bad","b":2}' }], [addTool]);
-  assert.equal(errors[0].toolResultIsError, true);
-  assert.equal(errors[0].toolCallId, "one");
-  await assert.rejects(executeTools([...calls, { ...calls[0], id: "three", name: "bash" }], [tool]), /Arbitrary/);
-  await assert.rejects(executeTools([calls[0], calls[0]], [tool]), /Duplicate/);
+  expect(errors[0].toolResultIsError).toBe(true);
+  expect(errors[0].toolCallId).toBe("one");
+  await expect(executeTools([...calls, { ...calls[0], id: "three", name: "bash" }], [tool])).rejects.toThrow(/Arbitrary/);
+  await expect(executeTools([calls[0], calls[0]], [tool])).rejects.toThrow(/Duplicate/);
 });

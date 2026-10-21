@@ -3,8 +3,7 @@
 // cacheRetention:none routes the summary to an isolated subprocess; the bridge
 // observes the completed tree rewrite without taking over the operation.
 
-import { describe, it, before, after } from "node:test";
-import assert from "node:assert/strict";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { readFileSync, statSync } from "node:fs";
 import { setTimeout as sleep } from "node:timers/promises";
 import { createRpcHarness } from "./lib/rpc-harness.mjs";
@@ -23,8 +22,8 @@ const harness = createRpcHarness({
 describe("native branch summarization", () => {
 	const { startAndWait, stop, send, promptAndWait, DEBUG_LOG } = harness;
 
-	before(async () => { await startAndWait(); });
-	after(async () => { await stop(); });
+	beforeAll(async () => { await startAndWait(); });
+	afterAll(async () => { await stop(); });
 
 	/** The command returns before the summary finishes, and a slash command emits no
 	 *  agent_end, so wait for the completed native tree operation in the bridge log. */
@@ -49,12 +48,12 @@ describe("native branch summarization", () => {
 		const completed = /session_tree: (?:marking needsRebuild|history rewritten)/;
 		const log = await waitForLog(mark, completed);
 
-		assert.match(log, /provider: one-off summarizer call/, `native summary never reached the isolated path:\n${log.slice(-1500)}`);
-		assert.match(log, /compact summary: done textLen=[1-9]\d*/, `no summary was produced:\n${log.slice(-1500)}`);
-		assert.match(log, completed, `native tree navigation did not finish:\n${log.slice(-1500)}`);
-		assert.doesNotMatch(log, /session_before_tree: takeover/, "bridge must not take over branch summarization");
+		expect(log, `native summary never reached the isolated path:\n${log.slice(-1500)}`).toMatch(/provider: one-off summarizer call/);
+		expect(log, `no summary was produced:\n${log.slice(-1500)}`).toMatch(/compact summary: done textLen=[1-9]\d*/);
+		expect(log, `native tree navigation did not finish:\n${log.slice(-1500)}`).toMatch(completed);
+		expect(log, "bridge must not take over branch summarization").not.toMatch(/session_before_tree: takeover/);
 		// The whole point: it ran as its own subprocess, so the resolver that would
 		// have refused pi's summarization prompt was never consulted.
-		assert.doesNotMatch(log, /no capture for this \d+-char system prompt/, "the summary reached the provider path");
+		expect(log, "the summary reached the provider path").not.toMatch(/no capture for this \d+-char system prompt/);
 	});
 });

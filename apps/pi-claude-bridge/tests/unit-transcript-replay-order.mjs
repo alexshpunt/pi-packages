@@ -10,8 +10,7 @@
 // exact-match lookup never spuriously throws. A name pi does not rank — an extension's
 // custom section such as `mcp_servers`, or a future pi built-in — sorts after `cwd`, where
 // pi's builder puts every custom section.
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 
 import { __test } from "../src/index.js";
 
@@ -75,20 +74,17 @@ describe("toBridgeContext section replay order", () => {
 		// Map replay order after the skills re-add: preamble, tools, rules, docs, cwd, skills.
 		// Canonical order puts skills before cwd. Byte-equality with the canonical render is
 		// what lets the prompt-capture exact-key lookup match.
-		assert.equal(replayedSystemPrompt(SKILLS_REORDERED), ["P", "T", "R", "D", "S", "/w"].join("\n\n"));
+		expect(replayedSystemPrompt(SKILLS_REORDERED)).toBe(["P", "T", "R", "D", "S", "/w"].join("\n\n"));
 	});
 
 	it("ranks a section pi does not know about after cwd", () => {
-		assert.equal(replayedSystemPrompt(UNKNOWN_SECTION_CANONICAL), ["P", "T", "R", "D", "/w", "E"].join("\n\n"));
+		expect(replayedSystemPrompt(UNKNOWN_SECTION_CANONICAL)).toBe(["P", "T", "R", "D", "/w", "E"].join("\n\n"));
 	});
 
 	it("puts a late-introduced custom section after cwd, matching pi's builder order", () => {
 		// pi's buildSystemPrompt renders: preamble, tools, rules, docs, addendum,
 		// project_context, skills, cwd, then every custom section.
-		assert.equal(
-			replayedSystemPrompt(MCP_SECTION_LATE),
-			["P", "T", "R", "D", "A", "C", "S", "/w", "M"].join("\n\n"),
-		);
+		expect(replayedSystemPrompt(MCP_SECTION_LATE)).toBe(["P", "T", "R", "D", "A", "C", "S", "/w", "M"].join("\n\n"));
 	});
 
 	it("keeps a custom section appended after the built-ins", () => {
@@ -97,7 +93,7 @@ describe("toBridgeContext section replay order", () => {
 			systemMessage({ sections: { preamble: "P", tools: "T", cwd: "/w", myextension: "X" } }),
 			userMessage("go"),
 		];
-		assert.equal(replayedSystemPrompt(messages), ["P", "T", "/w", "X"].join("\n\n"));
+		expect(replayedSystemPrompt(messages)).toBe(["P", "T", "/w", "X"].join("\n\n"));
 	});
 
 	it("renders the canonical head alone unchanged (fresh-session shape)", () => {
@@ -107,7 +103,7 @@ describe("toBridgeContext section replay order", () => {
 			}),
 			userMessage("go"),
 		];
-		assert.equal(replayedSystemPrompt(messages), ["P", "T", "R", "D", "S", "/w"].join("\n\n"));
+		expect(replayedSystemPrompt(messages)).toBe(["P", "T", "R", "D", "S", "/w"].join("\n\n"));
 	});
 
 	it("joins text-array content like string content", () => {
@@ -116,7 +112,7 @@ describe("toBridgeContext section replay order", () => {
 			systemMessage({ sections: { cwd: "/w" } }),
 			userMessage("go"),
 		];
-		assert.equal(replayedSystemPrompt(messages), ["A\nB", "/w"].join("\n\n"));
+		expect(replayedSystemPrompt(messages)).toBe(["A\nB", "/w"].join("\n\n"));
 	});
 
 	it("reconstructs the tool set through removals and re-adds", () => {
@@ -132,11 +128,11 @@ describe("toBridgeContext section replay order", () => {
 			tools: undefined,
 			systemPrompt: undefined,
 		});
-		assert.deepEqual(context.tools, [grepTool, readTool]);
+		expect(context.tools).toStrictEqual([grepTool, readTool]);
 	});
 
 	it("returns a context without system messages unchanged (systemless call shape)", () => {
 		const context = { messages: [userMessage("go")], systemPrompt: "P", tools: [] };
-		assert.equal(toBridgeContext(context), context, "same object reference — a true no-op");
+		expect(toBridgeContext(context), "same object reference — a true no-op").toBe(context);
 	});
 });

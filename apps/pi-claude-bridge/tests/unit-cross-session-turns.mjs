@@ -16,8 +16,7 @@
  * reassigned the shared session slot to the child's conversation, and the
  * parent's own completion then deleted its file.
  */
-import { describe, it, beforeEach, afterEach } from "node:test";
-import assert from "node:assert/strict";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { getSessionPath } from "cc-session-io";
 import { tmpdir } from "node:os";
@@ -84,7 +83,7 @@ const tools = [{ name: "read", description: "Read a fixture file.", parameters: 
 const callWithTool = (sessionId, messages, signal) => streamSimple(model, { messages, tools }, { sessionId, signal });
 const settled = async (sessionId) => {
 	for (let i = 0; i < 400 && [...__test.activeQueryContexts].some((c) => c.piSessionId === sessionId); i++) await new Promise((r) => setTimeout(r, 5));
-	assert.ok(![...__test.activeQueryContexts].some((c) => c.piSessionId === sessionId), `${sessionId} settled`);
+	expect([...__test.activeQueryContexts].some((c) => c.piSessionId === sessionId), `${sessionId} settled`).toBeFalsy();
 };
 
 beforeEach(() => {
@@ -139,8 +138,7 @@ describe("cross-session conversation isolation", () => {
 		scripts.push({ label: "P turn 2", steps: [init("cc-P2"), result("ok")] });
 		await call(P, [u1, a1, tr1, a2, u2]).result();
 
-		assert.equal(calls.at(-1).resume, "cc-P",
-			"the parent's turn 2 resumes its own conversation, not the child's");
+		expect(calls.at(-1).resume, "the parent's turn 2 resumes its own conversation, not the child's").toBe("cc-P");
 	});
 
 	it("a background child finishing after the parent leaves the parent's conversation in place", async () => {
@@ -150,7 +148,7 @@ describe("cross-session conversation isolation", () => {
 
 		scripts.push({ label: "P turn 1", steps: [init("cc-P"), result("parent answer")] });
 		await call(P, [u1]).result();
-		assert.equal(getSharedSession(P).sessionId, "cc-P");
+		expect(getSharedSession(P).sessionId).toBe("cc-P");
 
 		// Background child starts and parks; the parent proceeds without it.
 		scripts.push({ label: "child", steps: [init("cc-C"), gC.wait, result("child answer")] });
@@ -158,16 +156,15 @@ describe("cross-session conversation isolation", () => {
 
 		scripts.push({ label: "P turn 2", steps: [init("cc-P2"), result("ok")] });
 		await call(P, [u1, a2, u2]).result();
-		assert.equal(calls.at(-1).resume, "cc-P", "the parent keeps resuming its own conversation");
+		expect(calls.at(-1).resume, "the parent keeps resuming its own conversation").toBe("cc-P");
 
 		gC.open();
 		await child.result();
 
-		assert.equal(getSharedSession(P).sessionId, "cc-P",
-			"the child's completion cannot reassign the parent's conversation");
+		expect(getSharedSession(P).sessionId, "the child's completion cannot reassign the parent's conversation").toBe("cc-P");
 		const childSlot = getSharedSession(C);
-		assert.ok(childSlot && childSlot.sessionId === "cc-C", "the child keeps its own conversation for its next turn");
-		assert.equal(childSlot.piSessionId, C, "tagged with the session that owns it");
+		expect(childSlot && childSlot.sessionId === "cc-C", "the child keeps its own conversation for its next turn").toBeTruthy();
+		expect(childSlot.piSessionId, "tagged with the session that owns it").toBe(C);
 	});
 
 	it("a missed steer survives successful completion and rebuilds the next turn", async () => {
@@ -181,29 +178,29 @@ describe("cross-session conversation isolation", () => {
 		scripts.push({ label: "second", steps: [init("cc-P2"), g.wait, result("second answer")] });
 		const second = call(P, [u1, a1, u2]);
 		await settle();
-		assert.equal(calls.at(-1).resume, "cc-missed");
+		expect(calls.at(-1).resume).toBe("cc-missed");
 
 		// The CLI has stopped accepting input, but still returns a successful
 		// result. Model the provider's tool-result path counting the steer before
 		// the next turn, so cursor-based sync alone cannot recover it.
 		const context = [...__test.activeQueryContexts].find((c) => c.piSessionId === P);
-		assert.ok(context, "second turn is still active");
+		expect(context, "second turn is still active").toBeTruthy();
 		context.promptStream.fail(new Error("prompt stream closed"));
 		await __test.deliverToolResults(context, [], [{ type: "text", text: "missed steer" }], 4);
 		getSharedSession(P).cursor = 4;
 		context.latestCursor = 4;
-		assert.equal(getSharedSession(P).needsRebuild, true);
+		expect(getSharedSession(P).needsRebuild).toBe(true);
 		g.open();
 		await second.result();
-		assert.equal(getSharedSession(P).needsRebuild, true, "completion must not forget the missed steer");
+		expect(getSharedSession(P).needsRebuild, "completion must not forget the missed steer").toBe(true);
 
 		const rebuiltFile = getSessionPath("cc-missed", process.cwd(), claudeDir);
-		assert.equal(existsSync(rebuiltFile), false, "the fake SDK has not written a session file");
+		expect(existsSync(rebuiltFile), "the fake SDK has not written a session file").toBe(false);
 		scripts.push({ label: "third", steps: [init("cc-P3"), result("third answer")] });
 		await call(P, [u1, a1, u2, missed, a2, u3]).result();
-		assert.equal(existsSync(rebuiltFile), true, "the next turn imports pi history rather than reusing CC's incomplete session");
-		assert.match(readFileSync(rebuiltFile, "utf8"), /missed steer/, "the rebuilt history includes the undelivered steer");
-		assert.ok(!getSharedSession(P).needsRebuild, "the rebuilt turn clears the query's missed-steer mark");
+		expect(existsSync(rebuiltFile), "the next turn imports pi history rather than reusing CC's incomplete session").toBe(true);
+		expect(readFileSync(rebuiltFile, "utf8"), "the rebuilt history includes the undelivered steer").toMatch(/missed steer/);
+		expect(getSharedSession(P).needsRebuild, "the rebuilt turn clears the query's missed-steer mark").toBeFalsy();
 	});
 
 	it("a missed steer in the first turn rebuilds even without an existing mirror", async () => {
@@ -214,23 +211,23 @@ describe("cross-session conversation isolation", () => {
 		scripts.push({ label: "first", steps: [init("cc-first-missed"), g.wait, result("first answer")] });
 		const first = call(P, [u1]);
 		await settle();
-		assert.equal(getSharedSession(P), null, "clean start has no mirror until completion");
+		expect(getSharedSession(P), "clean start has no mirror until completion").toBe(null);
 
 		const context = [...__test.activeQueryContexts].find((c) => c.piSessionId === P);
-		assert.ok(context, "first turn is still active");
+		expect(context, "first turn is still active").toBeTruthy();
 		context.promptStream.fail(new Error("prompt stream closed"));
 		await __test.deliverToolResults(context, [], [{ type: "text", text: "missed first-turn steer" }], 2);
 		context.latestCursor = 2;
 		g.open();
 		await first.result();
-		assert.equal(getSharedSession(P).needsRebuild, true, "completion records the miss despite having no earlier mirror");
+		expect(getSharedSession(P).needsRebuild, "completion records the miss despite having no earlier mirror").toBe(true);
 
 		const rebuiltFile = getSessionPath("cc-first-missed", process.cwd(), claudeDir);
-		assert.equal(existsSync(rebuiltFile), false);
+		expect(existsSync(rebuiltFile)).toBe(false);
 		scripts.push({ label: "second", steps: [init("cc-first-missed"), result("second answer")] });
 		await call(P, [u1, missed, a1, u2]).result();
-		assert.match(readFileSync(rebuiltFile, "utf8"), /missed first-turn steer/);
-		assert.ok(!getSharedSession(P).needsRebuild, "the next query starts without the prior miss");
+		expect(readFileSync(rebuiltFile, "utf8")).toMatch(/missed first-turn steer/);
+		expect(getSharedSession(P).needsRebuild, "the next query starts without the prior miss").toBeFalsy();
 	});
 
 	it("a parent error followed by a child turn does not hand the child the parent's conversation", async () => {
@@ -246,8 +243,7 @@ describe("cross-session conversation isolation", () => {
 		scripts.push({ label: "P turn 2", steps: [init("cc-P2"), result("ok")] });
 		await call(P, [u1, a2, u2]).result();
 
-		assert.equal(calls.at(-1).resume, "cc-P",
-			"the parent resumes its own conversation after a child ran while it backed off");
+		expect(calls.at(-1).resume, "the parent resumes its own conversation after a child ran while it backed off").toBe("cc-P");
 	});
 });
 
@@ -258,15 +254,15 @@ describe("reentrancy is judged within the calling session", () => {
 		scripts.push({ label: "P parks", steps: [init("cc-P"), ...toolUse("toolu_P1"), g.wait, result("parent answer")] });
 		const history = [user("parent task")];
 		const parked = await callWithTool(P, history).result();
-		assert.equal(parked.stopReason, "toolUse", "P sits at its tool call");
+		expect(parked.stopReason, "P sits at its tool call").toBe("toolUse");
 		return {
 			async finish() {
 				const finishing = callWithTool(P, [...history, parked, toolResult("toolu_P1")]).result();
 				g.open();
-				assert.equal((await finishing).stopReason, "stop");
+				expect((await finishing).stopReason).toBe("stop");
 				await settled(P);
-				assert.equal(getSharedSession(P).sessionId, "cc-P", "P completes on its own conversation");
-				assert.equal(getSharedSession(P).cursor, 3);
+				expect(getSharedSession(P).sessionId, "P completes on its own conversation").toBe("cc-P");
+				expect(getSharedSession(P).cursor).toBe(3);
 			},
 		};
 	}
@@ -282,16 +278,16 @@ describe("reentrancy is judged within the calling session", () => {
 		scripts.push({ label: "B 2", steps: [init("cc-B2"), result("b2")] });
 		await callWithTool(B, [setup, first, a1, user("second")]).result();
 		await settled(B);
-		assert.equal(getSharedSession(B).cursor, 4);
+		expect(getSharedSession(B).cursor).toBe(4);
 
 		// An extension folds B's history without any pi event: two priors replace four.
 		scripts.push({ label: "B folded", steps: [init("cc-B3"), result("b3")] });
 		await callWithTool(B, [user("summary of B so far"), say("noted"), user("after fold")]).result();
 		await settled(B);
-		assert.equal(calls.at(-1).resume, "cc-B", "B rebuilds its own conversation from the folded history and resumes it");
-		assert.match(readFileSync(getSessionPath("cc-B", process.cwd(), claudeDir), "utf8"), /summary of B so far/);
-		assert.equal(getSharedSession(B).sessionId, "cc-B");
-		assert.equal(getSharedSession(B).cursor, 3);
+		expect(calls.at(-1).resume, "B rebuilds its own conversation from the folded history and resumes it").toBe("cc-B");
+		expect(readFileSync(getSessionPath("cc-B", process.cwd(), claudeDir), "utf8")).toMatch(/summary of B so far/);
+		expect(getSharedSession(B).sessionId).toBe("cc-B");
+		expect(getSharedSession(B).cursor).toBe(3);
 
 		await p.finish();
 	});
@@ -308,18 +304,18 @@ describe("reentrancy is judged within the calling session", () => {
 		scripts.push({ label: "B aborted", steps: [init("cc-B2"), ...toolUse("toolu_B2"), gate().wait, result("unreachable")] });
 		const history = [first, a1, user("second")];
 		const parked = await callWithTool(B, history, abort.signal).result();
-		assert.equal(parked.stopReason, "toolUse");
+		expect(parked.stopReason).toBe("toolUse");
 		abort.abort();
 		await settled(B);
 
 		const queued = calls.length;
 		const orphan = await callWithTool(B, [...history, parked, toolResult("toolu_B2")], abort.signal).result();
-		assert.equal(orphan.stopReason, "stop");
-		assert.equal(orphan.content.length, 0);
-		assert.equal(calls.length, queued, "no query starts for the orphaned result");
-		assert.equal(getSharedSession(B).cursor, 5, "B's cursor counts the orphaned result");
-		assert.equal(getSharedSession(B).sessionId, "cc-B");
-		assert.equal(getSharedSession(P), null, "P's mirror is untouched until its own turn completes");
+		expect(orphan.stopReason).toBe("stop");
+		expect(orphan.content.length).toBe(0);
+		expect(calls.length, "no query starts for the orphaned result").toBe(queued);
+		expect(getSharedSession(B).cursor, "B's cursor counts the orphaned result").toBe(5);
+		expect(getSharedSession(B).sessionId).toBe("cc-B");
+		expect(getSharedSession(P), "P's mirror is untouched until its own turn completes").toBe(null);
 
 		await p.finish();
 	});
@@ -334,18 +330,18 @@ describe("reentrancy is judged within the calling session", () => {
 		scripts.push({ label: "B parks", steps: [init("cc-B2"), ...toolUse("toolu_B2"), g.wait, result("b2")] });
 		const history = [first, a1, user("second")];
 		const parked = await callWithTool(B, history).result();
-		assert.equal(parked.stopReason, "toolUse");
+		expect(parked.stopReason).toBe("toolUse");
 
 		scripts.push({ label: "B reentrant", steps: [init("cc-B-side"), result("side answer")] });
 		await callWithTool(B, [user("side question")]).result();
-		assert.equal(calls.at(-1).resume, undefined, "the reentrant query starts clean");
-		assert.equal(getSharedSession(B).sessionId, "cc-B", "and leaves the session's conversation in place");
+		expect(calls.at(-1).resume, "the reentrant query starts clean").toBe(undefined);
+		expect(getSharedSession(B).sessionId, "and leaves the session's conversation in place").toBe("cc-B");
 
 		const finishing = callWithTool(B, [...history, parked, toolResult("toolu_B2")]).result();
 		g.open();
-		assert.equal((await finishing).stopReason, "stop");
+		expect((await finishing).stopReason).toBe("stop");
 		await settled(B);
-		assert.equal(getSharedSession(B).sessionId, "cc-B");
-		assert.equal(getSharedSession(B).cursor, 5);
+		expect(getSharedSession(B).sessionId).toBe("cc-B");
+		expect(getSharedSession(B).cursor).toBe(5);
 	});
 });

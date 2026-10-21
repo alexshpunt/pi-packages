@@ -1,5 +1,4 @@
-import { it } from "node:test";
-import assert from "node:assert/strict";
+import { expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { createSession } from "cc-session-io";
@@ -58,29 +57,29 @@ async function exceptionThenRetry(isAborted) {
 
 it("keeps the owning mirror after an exception and rebuilds the retry at the same CC id", async () => {
 	const result = await exceptionThenRetry(false);
-	assert.equal(result.failedReason, "error");
-	assert.equal(result.afterFailure?.sessionId, result.originalId);
-	assert.equal(result.afterFailure?.cursor, 2);
-	assert.equal(result.afterFailure?.needsRebuild, true);
-	assert.notEqual(result.afterFailure?.forceRotate, true);
-	assert.equal(result.siblingUnchanged, true);
-	assert.equal(result.retryReason, "stop");
-	assert.equal(result.afterRetry.sessionId, result.originalId);
-	assert.deepEqual(result.resumeIds, [result.originalId, result.originalId]);
-	assert.ok(result.logs.some(line => /syncResult: path=rebuild .* preserved$/.test(line)));
-	assert.equal(result.previousFileExists, true);
-	assert.ok(result.closeCount >= 2);
+	expect(result.failedReason).toBe("error");
+	expect(result.afterFailure?.sessionId).toBe(result.originalId);
+	expect(result.afterFailure?.cursor).toBe(2);
+	expect(result.afterFailure?.needsRebuild).toBe(true);
+	expect(result.afterFailure?.forceRotate).not.toBe(true);
+	expect(result.siblingUnchanged).toBe(true);
+	expect(result.retryReason).toBe("stop");
+	expect(result.afterRetry.sessionId).toBe(result.originalId);
+	expect(result.resumeIds).toStrictEqual([result.originalId, result.originalId]);
+	expect(result.logs.some(line => /syncResult: path=rebuild .* preserved$/.test(line))).toBeTruthy();
+	expect(result.previousFileExists).toBe(true);
+	expect(result.closeCount >= 2).toBeTruthy();
 });
 
 it("still marks aborted queries for rotation and preserves their old file", async () => {
 	const result = await exceptionThenRetry(true);
-	assert.equal(result.failedReason, "aborted");
-	assert.equal(result.afterFailure?.sessionId, result.originalId);
-	assert.equal(result.afterFailure?.needsRebuild, true);
-	assert.equal(result.afterFailure?.forceRotate, true);
-	assert.notEqual(result.afterRetry.sessionId, result.originalId);
-	assert.equal(result.resumeIds[1], result.afterRetry.sessionId);
-	assert.ok(result.logs.some(line => /syncResult: path=rebuild .* rotated-post-abort$/.test(line)));
-	assert.equal(result.siblingUnchanged, true);
-	assert.equal(result.previousFileExists, true);
+	expect(result.failedReason).toBe("aborted");
+	expect(result.afterFailure?.sessionId).toBe(result.originalId);
+	expect(result.afterFailure?.needsRebuild).toBe(true);
+	expect(result.afterFailure?.forceRotate).toBe(true);
+	expect(result.afterRetry.sessionId).not.toBe(result.originalId);
+	expect(result.resumeIds[1]).toBe(result.afterRetry.sessionId);
+	expect(result.logs.some(line => /syncResult: path=rebuild .* rotated-post-abort$/.test(line))).toBeTruthy();
+	expect(result.siblingUnchanged).toBe(true);
+	expect(result.previousFileExists).toBe(true);
 });

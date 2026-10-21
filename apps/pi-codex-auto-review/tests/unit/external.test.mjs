@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import { expect, test } from "vitest";
 import {
     approvalEligible,
     createAction,
@@ -20,15 +19,13 @@ test("[external-policy] Codex MCP annotation precedence and four approval modes"
         [{ destructiveHint: false, openWorldHint: false }, false],
         [{ readOnlyHint: false, openWorldHint: false }, true],
     ]) {
-        assert.equal(
+        expect(
             requiresMcpApproval(annotations),
-            expected,
             JSON.stringify(annotations),
-        );
-        assert.equal(requiresMcpApproval(annotations, "prompt"), true);
-        assert.equal(requiresMcpApproval(annotations, "approve"), false);
-        assert.equal(
-            requiresMcpApproval(annotations, "writes"),
+        ).toBe(expected);
+        expect(requiresMcpApproval(annotations, "prompt")).toBe(true);
+        expect(requiresMcpApproval(annotations, "approve")).toBe(false);
+        expect(requiresMcpApproval(annotations, "writes")).toBe(
             annotations.readOnlyHint !== true,
         );
     }
@@ -59,42 +56,37 @@ test("[external-policy] Codex MCP annotation precedence and four approval modes"
         registration: "r",
         annotations: { readOnlyHint: true },
     };
-    assert.equal(
-        externalPolicy(action, identity, validateSettings({})).kind,
+    expect(externalPolicy(action, identity, validateSettings({})).kind).toBe(
         "allow",
     );
-    assert.equal(
+    expect(
         externalPolicy(
             action,
             { ...identity, requiresStrictReview: true },
             validateSettings({}),
         ).requiresFreshReview,
-        true,
-    );
-    assert.equal(
+    ).toBe(true);
+    expect(
         externalPolicy(
             action,
             { ...identity, approvalMode: "approve" },
             validateSettings({}),
         ).kind,
-        "allow",
-    );
-    assert.equal(
+    ).toBe("allow");
+    expect(
         externalPolicy(
             action,
             identity,
             validateSettings({ approvalsReviewer: "user" }),
         ).kind,
-        "allow",
-    );
-    assert.equal(
+    ).toBe("allow");
+    expect(
         externalPolicy(
             action,
             { ...identity, requiresUserInput: true },
             validateSettings({}),
         ).requiresUserInput,
-        true,
-    );
+    ).toBe(true);
     const repl = {
         ...identity,
         server: "node_repl",
@@ -102,31 +94,27 @@ test("[external-policy] Codex MCP annotation precedence and four approval modes"
         annotations: { destructiveHint: true },
         approvalMode: "prompt",
     };
-    assert.equal(
+    expect(
         externalPolicy(
             action,
             repl,
             validateSettings({ approvalsReviewer: "user" }),
         ).kind,
-        "ask",
-    );
-    assert.equal(
+    ).toBe("ask");
+    expect(
         externalPolicy(
             action,
             { ...repl, isSensitiveAction: true },
             validateSettings({ approvalsReviewer: "user" }),
         ).kind,
-        "ask",
-    );
-    assert.equal(
+    ).toBe("ask");
+    expect(
         approvalEligible({ sandbox: true, rules: true }, "mcp_elicitations"),
-        false,
-    );
-    assert.equal(
+    ).toBe(false);
+    expect(
         approvalEligible(
             { sandbox: false, rules: false, mcp_elicitations: true },
             "mcp_elicitations",
         ),
-        true,
-    );
+    ).toBe(true);
 });

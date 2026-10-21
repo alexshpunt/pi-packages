@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { mkdir, readFile, symlink, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { createProfile } from "../../dist/contracts.js";
 import {
     defaultProfile,
@@ -48,14 +47,14 @@ async function runScenario(
         ...calls.map((call) => ({ calls: [call] })),
         { inspect },
     ]);
-    t.after(replay.dispose);
+    t.onTestFinished(replay.dispose);
     await runtime.session.prompt(prompt);
     replay.assertComplete();
     reviews.assertComplete();
-    assert.ok(
-        !JSON.stringify(replay.results).includes(f.secret),
+    expect(
+        JSON.stringify(replay.results).includes(f.secret),
         "Protected content must not reach tool results",
-    );
+    ).toBeFalsy();
     return { runtime, replay, reviews };
 }
 
@@ -65,31 +64,30 @@ test("[scenario-harness] finite replay rejects extra and missing main-model or r
     const context = { messages: [] };
     const cancelled = new AbortController();
     cancelled.abort();
-    await assert.rejects(
+    await expect(
         session.agent.streamFunction(FAKE_MODEL, context, {
             signal: cancelled.signal,
         }),
-        { name: "AbortError" },
-    );
-    assert.equal(replay.requests.length, 0);
+    ).rejects.toThrow(expect.objectContaining({ name: "AbortError" }));
+    expect(replay.requests.length).toBe(0);
     await session.agent.streamFunction(FAKE_MODEL, context, {});
-    assert.throws(() => replay.assertComplete(), /Every scripted main-model/);
+    expect(() => replay.assertComplete()).toThrow(/Every scripted main-model/);
     await session.agent.streamFunction(FAKE_MODEL, context, {});
     replay.assertComplete();
-    await assert.rejects(
+    await expect(
         session.agent.streamFunction(FAKE_MODEL, context, {}),
-        /Unexpected main-model/,
-    );
-    assert.throws(() => replay.assertComplete(), /Script assertions/);
+    ).rejects.toThrow(/Unexpected main-model/);
+    expect(() => replay.assertComplete()).toThrow(/Script assertions/);
     const reviews = replayReviews([allow]);
-    assert.throws(() => reviews.assertComplete(), /Every scripted reviewer/);
+    expect(() => reviews.assertComplete()).toThrow(/Every scripted reviewer/);
     await reviews.provider.complete({ data: "{}" });
     reviews.assertComplete();
-    await assert.rejects(
-        reviews.provider.complete({ data: "{}" }),
+    await expect(reviews.provider.complete({ data: "{}" })).rejects.toThrow(
         /Unexpected reviewer/,
     );
-    assert.throws(() => reviews.assertComplete(), /Reviewer script assertions/);
+    expect(() => reviews.assertComplete()).toThrow(
+        /Reviewer script assertions/,
+    );
 });
 
 for (const tool of ["read", "grep", "find", "ls", "write", "edit"]) {
@@ -123,22 +121,19 @@ for (const tool of ["read", "grep", "find", "ls", "write", "edit"]) {
                 { name: tool, args: argsFor(protectedFile, f.control) },
             ],
             inspect: async ({ results }) => {
-                assert.equal(
-                    results[0].isError,
+                expect(results[0].isError, JSON.stringify(results[0])).toBe(
                     false,
-                    JSON.stringify(results[0]),
                 );
-                assert.equal(results[1].isError, true);
-                assert.equal(await readFile(protectedFile, "utf8"), f.secret);
+                expect(results[1].isError).toBe(true);
+                expect(await readFile(protectedFile, "utf8")).toBe(f.secret);
             },
         });
-        assert.equal(
-            await readFile(allowed, "utf8"),
+        expect(await readFile(allowed, "utf8")).toBe(
             ["write", "edit"].includes(tool)
                 ? "changed fixture"
                 : "owned fixture",
         );
-        assert.match(JSON.stringify(replay.results[1]), /Protected path/);
+        expect(JSON.stringify(replay.results[1])).toMatch(/Protected path/);
     });
 }
 
@@ -164,14 +159,12 @@ for (const isTempExcluded of [false, true]) {
             replies: isTempExcluded ? [deny] : [],
             options: { profile, settings },
         });
-        assert.equal(
+        expect(
             replay.results[0].isError,
-            false,
             "Default readable roots permit ordinary outside reads",
-        );
-        assert.equal(replay.results[1].isError, isTempExcluded);
-        assert.equal(
-            await readFile(target, "utf8"),
+        ).toBe(false);
+        expect(replay.results[1].isError).toBe(isTempExcluded);
+        expect(await readFile(target, "utf8")).toBe(
             isTempExcluded ? "unchanged" : "temporary control",
         );
     });
@@ -238,13 +231,14 @@ for (const row of [
             ],
             replies: [row.reply],
         });
-        assert.equal(replay.results[0].isError, !row.canWrite);
-        assert.equal(
-            await readFile(target, "utf8"),
+        expect(replay.results[0].isError).toBe(!row.canWrite);
+        expect(await readFile(target, "utf8")).toBe(
             row.canWrite ? "reviewed change" : "unchanged",
         );
         if (row.code)
-            assert.ok(JSON.stringify(replay.results[0]).includes(row.code));
+            expect(
+                JSON.stringify(replay.results[0]).includes(row.code),
+            ).toBeTruthy();
     });
 }
 
@@ -276,12 +270,12 @@ for (const category of ["sandbox", "rules"]) {
                 },
             },
         });
-        assert.deepEqual(
-            replay.results.map((result) => result.isError),
-            [false, true],
-        );
-        assert.equal(await readFile(allowed, "utf8"), "ordinary");
-        assert.equal(await readFile(target, "utf8"), "unchanged");
+        expect(replay.results.map((result) => result.isError)).toStrictEqual([
+            false,
+            true,
+        ]);
+        expect(await readFile(allowed, "utf8")).toBe("ordinary");
+        expect(await readFile(target, "utf8")).toBe("unchanged");
     });
 }
 
@@ -313,12 +307,14 @@ for (const isWrapped of [false, true]) {
                 },
             ],
         });
-        assert.deepEqual(
-            replay.results.map((result) => result.isError),
-            [false, true],
+        expect(replay.results.map((result) => result.isError)).toStrictEqual([
+            false,
+            true,
+        ]);
+        expect(JSON.stringify(replay.results[1])).toMatch(/forbidden/);
+        await expect(readFile(target)).rejects.toThrow(
+            expect.objectContaining({ code: "ENOENT" }),
         );
-        assert.match(JSON.stringify(replay.results[1]), /forbidden/);
-        await assert.rejects(readFile(target), { code: "ENOENT" });
     });
 }
 
@@ -328,7 +324,7 @@ test("[review-routing] a timed-out review and its late allow reply cannot trigge
     const lateReply = Promise.withResolvers();
     let reviewSignal,
         prompts = 0;
-    t.after(() => lateReply.resolve(allow));
+    t.onTestFinished(() => lateReply.resolve(allow));
     const { replay } = await runScenario(t, f, {
         options: { settings: { reviewTimeoutMs: 50 } },
         configure: (runtime) =>
@@ -349,34 +345,30 @@ test("[review-routing] a timed-out review and its late allow reply cannot trigge
         ],
         replies: [
             (_request, options) => {
-                assert.equal(options.timeoutMs, 50);
+                expect(options.timeoutMs).toBe(50);
                 reviewSignal = options.signal;
                 return lateReply.promise;
             },
         ],
     });
-    assert.equal(reviewSignal.aborted, true);
-    assert.equal(prompts, 0);
-    assert.equal(replay.results[0].isError, true);
-    assert.match(JSON.stringify(replay.results[0]), /AUTO_REVIEW_TIMEOUT/);
-    assert.doesNotMatch(
-        JSON.stringify(replay.results[0]),
-        /AUTO_REVIEW_DENIED/,
-    );
+    expect(reviewSignal.aborted).toBe(true);
+    expect(prompts).toBe(0);
+    expect(replay.results[0].isError).toBe(true);
+    expect(JSON.stringify(replay.results[0])).toMatch(/AUTO_REVIEW_TIMEOUT/);
+    expect(JSON.stringify(replay.results[0])).not.toMatch(/AUTO_REVIEW_DENIED/);
     lateReply.resolve(allow);
     await new Promise((resolve) => setImmediate(resolve));
-    assert.equal(await readFile(target, "utf8"), "unchanged");
+    expect(await readFile(target, "utf8")).toBe("unchanged");
     const audit = (
         await readFile(join(f.agentDir, "guard/audit.jsonl"), "utf8")
     )
         .trim()
         .split("\n")
         .map((line) => JSON.parse(line));
-    assert.equal(
+    expect(
         audit.filter((item) => item.review?.status === "timed-out").length,
-        1,
-    );
-    assert.equal(audit.filter((item) => item.event === "execution").length, 0);
+    ).toBe(1);
+    expect(audit.filter((item) => item.event === "execution").length).toBe(0);
 });
 
 // Each tool call needs its own approval; approval is not an OS write grant.
@@ -404,23 +396,23 @@ for (const location of ["cwd", "temporary"]) {
             ],
             replies: [
                 (request) => {
-                    assert.deepEqual(
+                    expect(
                         JSON.parse(request.data).requestedPermissionDelta
                             .writePaths,
-                        [target],
-                    );
+                    ).toStrictEqual([target]);
                     return allow;
                 },
                 () => deny,
                 () => deny,
             ],
         });
-        assert.deepEqual(
-            replay.results.map((result) => result.isError),
-            [false, true, true],
-        );
-        assert.equal(await readFile(target, "utf8"), "approved");
-        assert.equal(await readFile(sibling, "utf8"), "unchanged sibling");
+        expect(replay.results.map((result) => result.isError)).toStrictEqual([
+            false,
+            true,
+            true,
+        ]);
+        expect(await readFile(target, "utf8")).toBe("approved");
+        expect(await readFile(sibling, "utf8")).toBe("unchanged sibling");
     });
 }
 
@@ -454,20 +446,17 @@ for (const destination of ["sibling", "protected"]) {
                 },
             ],
         });
-        assert.equal(replay.results[0].isError, true);
-        assert.match(
-            JSON.stringify(replay.results[0]),
+        expect(replay.results[0].isError).toBe(true);
+        expect(JSON.stringify(replay.results[0])).toMatch(
             destination === "protected"
                 ? /protected path/
                 : /Resolved permissions changed/,
         );
-        assert.equal(await readFile(target, "utf8"), "unchanged");
-        assert.equal(
-            await readFile(join(sibling, "sentinel.txt"), "utf8"),
+        expect(await readFile(target, "utf8")).toBe("unchanged");
+        expect(await readFile(join(sibling, "sentinel.txt"), "utf8")).toBe(
             "sibling unchanged",
         );
-        assert.equal(
-            await readFile(join(f.control, "sentinel.txt"), "utf8"),
+        expect(await readFile(join(f.control, "sentinel.txt"), "utf8")).toBe(
             "protected unchanged",
         );
     });
@@ -500,8 +489,8 @@ for (const isNested of [false, true]) {
         const replay = await replayScenario(runtime.session, [
             { calls: [call] },
         ]);
-        t.after(replay.dispose);
-        t.after(() => lateReply.resolve(allow));
+        t.onTestFinished(replay.dispose);
+        t.onTestFinished(() => lateReply.resolve(allow));
         const pending = runtime.session.prompt(
             "Start the owned write, then stop when cancelled.",
         );
@@ -509,10 +498,12 @@ for (const isNested of [false, true]) {
         await runtime.session.abort();
         lateReply.resolve(allow);
         await pending;
-        assert.equal(request.signal.aborted, true);
+        expect(request.signal.aborted).toBe(true);
         replay.assertComplete({ isCancelled: true });
         reviews.assertComplete();
-        assert.equal(await readFile(target, "utf8"), "unchanged");
-        assert.ok(!JSON.stringify(replay.results).includes("Write successful"));
+        expect(await readFile(target, "utf8")).toBe("unchanged");
+        expect(
+            JSON.stringify(replay.results).includes("Write successful"),
+        ).toBeFalsy();
     });
 }

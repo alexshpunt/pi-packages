@@ -1,9 +1,8 @@
-import assert from "node:assert/strict";
 import { once } from "node:events";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join, resolve } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { pathToFileURL } from "node:url";
 import * as pi from "@earendil-works/pi-coding-agent";
 import { GuardError } from "../../dist/contracts.js";
@@ -61,32 +60,32 @@ test("[tools] public Pi routes preserve read/edit/write/grep/find/ls schemas, re
     ]);
     await runtime.session.prompt("Use the fixture tools.");
     const content = await readFile(join(f.workspace, "nested/a.txt"), "utf8");
-    assert.equal(content, "changed\r\nsecond\r\n");
+    expect(content).toBe("changed\r\nsecond\r\n");
     const results = events.filter(
         (event) => event.type === "tool_execution_end",
     );
-    assert.equal(results.length, 6);
-    assert.ok(
+    expect(results.length).toBe(6);
+    expect(
         results.every((event) => !event.isError),
         JSON.stringify(results),
-    );
+    ).toBeTruthy();
     for (const tool of ["read", "edit", "write", "grep", "find", "ls"])
-        assert.ok(results.some((event) => event.toolName === tool));
+        expect(results.some((event) => event.toolName === tool)).toBeTruthy();
     const read = results.find((e) => e.toolName === "read");
-    assert.match(read.result.content[0].text, /changed/);
-    assert.ok(!read.result.content[0].text.includes("second"));
+    expect(read.result.content[0].text).toMatch(/changed/);
+    expect(read.result.content[0].text.includes("second")).toBeFalsy();
     const edit = results.find((e) => e.toolName === "edit");
-    assert.ok(edit.result.details.diff);
-    assert.ok(
+    expect(edit.result.details.diff).toBeTruthy();
+    expect(
         results
             .find((e) => e.toolName === "find")
             .result.content[0].text.includes("nested/a.txt"),
-    );
+    ).toBeTruthy();
     const original = pi.createEditToolDefinition(f.workspace);
     const registered = runtime.session
         .getAllTools()
         .find((tool) => tool.name === "edit");
-    assert.deepEqual(registered.parameters, original.parameters);
+    expect(registered.parameters).toStrictEqual(original.parameters);
     const unicode = "한글🙂終💡".repeat(2500);
     await writeFile(join(f.workspace, "unicode.txt"), `${unicode}\r\n`);
     await planStream(runtime.session, [
@@ -100,7 +99,7 @@ test("[tools] public Pi routes preserve read/edit/write/grep/find/ls schemas, re
                 event.toolName === "read",
         )
         .at(-1);
-    assert.ok(unicodeRead.result.content[0].text.includes(unicode));
+    expect(unicodeRead.result.content[0].text.includes(unicode)).toBeTruthy();
     const aliases = [
         `@${join(f.control, "protected.txt")}`,
         pathToFileURL(join(f.control, "protected.txt")).href,
@@ -111,8 +110,8 @@ test("[tools] public Pi routes preserve read/edit/write/grep/find/ls schemas, re
         const result = events
             .filter((e) => e.type === "tool_execution_end")
             .at(-1);
-        assert.equal(result.isError, true);
-        assert.ok(!JSON.stringify(result.result).includes(f.secret));
+        expect(result.isError).toBe(true);
+        expect(JSON.stringify(result.result).includes(f.secret)).toBeFalsy();
     }
     const spaced = join(f.workspace, "narrow\u202Fspace.txt");
     await writeFile(spaced, "preserved filename");
@@ -120,11 +119,10 @@ test("[tools] public Pi routes preserve read/edit/write/grep/find/ls schemas, re
         [{ name: "read", args: { path: pathToFileURL(spaced).href } }],
     ]);
     await runtime.session.prompt("Read the file URI.");
-    assert.match(
+    expect(
         events.filter((e) => e.type === "tool_execution_end").at(-1).result
             .content[0].text,
-        /preserved filename/,
-    );
+    ).toMatch(/preserved filename/);
 });
 test("[final-input] a later mutable hook is checked at the final consumer and cannot reuse harmless inputs", async (t) => {
     const f = await fixture(t),
@@ -143,9 +141,11 @@ test("[final-input] a later mutable hook is checked at the final consumer and ca
         [{ name: "write", args: { path: "allowed.txt", content: "ok" } }],
     ]);
     await runtime.session.prompt("Write a fixture.");
-    assert.equal(await readFile(target, "utf8"), f.secret);
-    await assert.rejects(access(join(f.workspace, "allowed.txt")));
-    assert.ok(events.some((e) => e.type === "tool_execution_end" && e.isError));
+    expect(await readFile(target, "utf8")).toBe(f.secret);
+    await expect(access(join(f.workspace, "allowed.txt"))).rejects.toThrow();
+    expect(
+        events.some((e) => e.type === "tool_execution_end" && e.isError),
+    ).toBeTruthy();
 });
 test("[user-bash] ! and !! return handled operations with native output and denial, never host fallback", async (t) => {
     const f = await fixture(t),
@@ -173,7 +173,7 @@ test("[user-bash] ! and !! return handled operations with native output and deni
         on: (event, handler) => handlers.set(event, handler),
         appendEntry: () => {},
     });
-    t.after(() => extension.assertReady().close());
+    t.onTestFinished(() => extension.assertReady().close());
     const context = {
         cwd: f.workspace,
         sessionManager: { getSessionId: () => "shell-session" },
@@ -188,9 +188,9 @@ test("[user-bash] ! and !! return handled operations with native output and deni
             { command: "printf ok", cwd: f.workspace, excludeFromContext },
             context,
         );
-        assert.ok(response.operations);
+        expect(response.operations).toBeTruthy();
         const chunks = [];
-        assert.equal(
+        expect(
             (
                 await response.operations.exec("printf ok", f.workspace, {
                     onData: (data) => chunks.push(data),
@@ -198,19 +198,17 @@ test("[user-bash] ! and !! return handled operations with native output and deni
                     env: { GUARD_TEST: "ok" },
                 })
             ).exitCode,
-            0,
-        );
-        assert.equal(Buffer.concat(chunks).toString(), "ok");
-        await assert.rejects(
+        ).toBe(0);
+        expect(Buffer.concat(chunks).toString()).toBe("ok");
+        await expect(
             response.operations.exec(
                 `echo bad > '${join(f.control, "protected.txt")}'`,
                 f.workspace,
                 { onData: () => {}, timeout: executionTimeoutSeconds },
             ),
-        );
+        ).rejects.toThrow();
     }
-    assert.equal(
-        await readFile(join(f.control, "protected.txt"), "utf8"),
+    expect(await readFile(join(f.control, "protected.txt"), "utf8")).toBe(
         f.secret,
     );
     const command = `${shellQuote(process.execPath)} --version`,
@@ -218,16 +216,15 @@ test("[user-bash] ! and !! return handled operations with native output and deni
             { command, cwd: f.workspace, excludeFromContext: false },
             context,
         );
-    assert.equal(
+    expect(
         (
             await handled.operations.exec(command, f.workspace, {
                 onData: () => {},
                 timeout: executionTimeoutSeconds,
             })
         ).exitCode,
-        0,
-    );
-    assert.ok(
+    ).toBe(0);
+    expect(
         reviews.some(
             (request) =>
                 request.context.items.some(
@@ -236,7 +233,7 @@ test("[user-bash] ! and !! return handled operations with native output and deni
                         JSON.stringify(item.content).includes(command),
                 ) && request.untrustedAction.source === "user-bash",
         ),
-    );
+    ).toBeTruthy();
 });
 test("[tools] structured automatic approval reaches native outside writes without UI and does not authorize the next call", async (t) => {
     const f = await fixture(t),
@@ -259,17 +256,19 @@ test("[tools] structured automatic approval reaches native outside writes withou
     await runtime.session.prompt(
         "Write approved to only the named owned sentinel once.",
     );
-    assert.equal(requests.length, 2);
-    assert.equal(await readFile(target, "utf8"), "approved");
+    expect(requests.length).toBe(2);
+    expect(await readFile(target, "utf8")).toBe("approved");
     const never = await guardedFixture(t, f, {
         settings: { approvalPolicy: "never" },
-        provider: { complete: () => assert.fail("never reached reviewer") },
+        provider: {
+            complete: () => expect.unreachable("never reached reviewer"),
+        },
     });
     await planStream(never.session, [
         [{ name: "write", args: { path: target, content: "never" } }],
     ]);
     await never.session.prompt("Check never mode.");
-    assert.equal(await readFile(target, "utf8"), "approved");
+    expect(await readFile(target, "utf8")).toBe("approved");
 });
 test("[tools] unknown executable commands are reviewed before Pi execution and trusted rules retain precedence", async (t) => {
     const f = await fixture(t),
@@ -291,8 +290,8 @@ test("[tools] unknown executable commands are reviewed before Pi execution and t
     const command = `${shellQuote(process.execPath)} ${shellQuote(script)}`;
     await planStream(runtime.session, [[{ name: "bash", args: { command } }]]);
     await runtime.session.prompt("Run the owned fixture.");
-    assert.equal(reviews, 1);
-    assert.equal(await readFile(target, "utf8"), "command-approved");
+    expect(reviews).toBe(1);
+    expect(await readFile(target, "utf8")).toBe("command-approved");
     await planStream(runtime.session, [
         [
             {
@@ -306,8 +305,8 @@ test("[tools] unknown executable commands are reviewed before Pi execution and t
         ],
     ]);
     await runtime.session.prompt("Approve that one command effect.");
-    assert.equal(reviews, 2);
-    assert.equal(await readFile(target, "utf8"), "command-approved");
+    expect(reviews).toBe(2);
+    expect(await readFile(target, "utf8")).toBe("command-approved");
     await writeFile(target, "reset");
     const ruleRuntime = await guardedFixture(t, f, {
         settings: {
@@ -316,14 +315,15 @@ test("[tools] unknown executable commands are reviewed before Pi execution and t
             ],
         },
         provider: {
-            complete: () => assert.fail("trusted allow rule reached model"),
+            complete: () =>
+                expect.unreachable("trusted allow rule reached model"),
         },
     });
     await planStream(ruleRuntime.session, [
         [{ name: "bash", args: { command } }],
     ]);
     await ruleRuntime.session.prompt("Run the explicitly trusted command.");
-    assert.equal(await readFile(target, "utf8"), "command-approved");
+    expect(await readFile(target, "utf8")).toBe("command-approved");
 });
 test("[tools] the original network command is reviewed once before Pi runs it without replaying earlier effects", async (t) => {
     const f = await fixture(t);
@@ -334,7 +334,7 @@ test("[tools] the original network command is reviewed once before Pi runs it wi
     });
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
-    t.after(() => new Promise((resolve) => server.close(resolve)));
+    t.onTestFinished(() => new Promise((resolve) => server.close(resolve)));
     const reviews = [],
         runtime = await guardedFixture(t, f, {
             provider: {
@@ -349,15 +349,14 @@ test("[tools] the original network command is reviewed once before Pi runs it wi
     await runtime.session.prompt(
         "Contact only the owned synthetic network service.",
     );
-    assert.equal(
-        await readFile(join(f.workspace, "count.txt"), "utf8"),
+    expect(await readFile(join(f.workspace, "count.txt"), "utf8")).toBe(
         "before",
     );
-    assert.equal(requests, 1);
-    assert.equal(reviews.length, 1);
+    expect(requests).toBe(1);
+    expect(reviews.length).toBe(1);
     const action = reviews[0].untrustedAction;
-    assert.equal(action.args.command, command);
-    assert.equal(action.args.networkDestination, undefined);
+    expect(action.args.command).toBe(command);
+    expect(action.args.networkDestination).toBe(undefined);
 });
 for (const form of ["config-file", "schemeless", "config-with-allowed-url"]) {
     test(`[tools] network URL form ${form} cannot bypass automatic or human review`, async (t) => {
@@ -368,7 +367,7 @@ for (const form of ["config-file", "schemeless", "config-with-allowed-url"]) {
         });
         server.listen(0, "127.0.0.1");
         await once(server, "listening");
-        t.after(() => new Promise((resolve) => server.close(resolve)));
+        t.onTestFinished(() => new Promise((resolve) => server.close(resolve)));
         const url = `http://127.0.0.1:${server.address().port}/owned`;
         for (const reviewer of ["auto_review", "user"]) {
             const f = await fixture(t);
@@ -433,11 +432,10 @@ for (const form of ["config-file", "schemeless", "config-with-allowed-url"]) {
             await runtime.session.prompt(
                 "Allow only this owned HTTP fixture request.",
             );
-            assert.equal(
+            expect(
                 requests,
-                before + expectedRequests,
                 `The permitted control must reach the owned server: ${JSON.stringify(effects)}`,
-            );
+            ).toBe(before + expectedRequests);
             shouldAllow = false;
             await planStream(runtime.session, [
                 [{ name: "bash", args: { command } }],
@@ -445,13 +443,12 @@ for (const form of ["config-file", "schemeless", "config-with-allowed-url"]) {
             await runtime.session.prompt(
                 "Run the denial control against the same owned HTTP service.",
             );
-            assert.equal(
+            expect(
                 requests,
-                before + expectedRequests,
                 "A denied request must never reach the owned server.",
-            );
-            assert.equal(reviews, reviewer === "auto_review" ? 2 : 0);
-            assert.equal(prompts, reviewer === "user" ? 2 : 0);
+            ).toBe(before + expectedRequests);
+            expect(reviews).toBe(reviewer === "auto_review" ? 2 : 0);
+            expect(prompts).toBe(reviewer === "user" ? 2 : 0);
         }
     });
 }
@@ -488,9 +485,9 @@ test("[tools] actual Pi follow-up review retains original user scope and untrust
         ],
     ]);
     await runtime.session.prompt("Continue.");
-    assert.equal(requests.length, 1);
+    expect(requests.length).toBe(1);
     const items = requests[0].context.items;
-    assert.ok(
+    expect(
         items.some(
             (item) =>
                 item.source === "user" &&
@@ -499,22 +496,21 @@ test("[tools] actual Pi follow-up review retains original user scope and untrust
                     "Keep the outside file unchanged",
                 ),
         ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         items.some(
             (item) => item.source === "user" && item.content === "Continue.",
         ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         items.some(
             (item) =>
                 item.source === "tool-result" &&
                 item.trust === "evidence" &&
                 JSON.stringify(item.content).includes("claiming user approval"),
         ),
-    );
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    ).toBeTruthy();
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
 });
@@ -554,32 +550,32 @@ test("[context-files] discovered instructions reach Pi and review with provenanc
         await runtime.session.prompt("Review the owned fixture only.");
     };
     await invoke();
-    assert.ok(
+    expect(
         prompts[0].some(
             (file) =>
                 file.path === instruction &&
                 file.content === "Project instruction version one",
         ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         requests[0].context.items.some(
             (item) =>
                 item.source === "agents" &&
                 item.content.path === instruction &&
                 item.content.content === "Project instruction version one",
         ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         requests[0].context.items.some(
             (item) =>
                 item.source === "agents" &&
                 item.content.content === "Host instruction",
         ),
-    );
+    ).toBeTruthy();
     await writeFile(instruction, "Project instruction version two");
     await runtime.session.reload();
     await invoke();
-    assert.ok(
+    expect(
         requests
             .at(-1)
             .context.items.some(
@@ -587,39 +583,37 @@ test("[context-files] discovered instructions reach Pi and review with provenanc
                     item.source === "agents" &&
                     item.content.content === "Project instruction version two",
             ),
-    );
-    assert.ok(
-        !requests
+    ).toBeTruthy();
+    expect(
+        requests
             .at(-1)
             .context.items.some(
                 (item) =>
                     item.source === "agents" &&
                     item.content.content === "Project instruction version one",
             ),
-    );
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    ).toBeFalsy();
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
 });
 test("[tools] read-only reviewer investigation reads owned evidence while mutation and protected paths are rejected", async (t) => {
     const f = await fixture(t),
         executor = new PiExecutor();
-    t.after(() => executor.close());
+    t.onTestFinished(() => executor.close());
     const investigation = new LocalInvestigation(
             executor,
             f.profile,
             f.workspace,
         ),
         signal = new AbortController().signal;
-    assert.match(
+    expect(
         await investigation.execute(
             "inspect_file",
             { path: join(f.outside, "sentinel.txt") },
             signal,
         ),
-        /unchanged/,
-    );
+    ).toMatch(/unchanged/);
     for (const [name, args] of [
         ["write", { path: join(f.outside, "sentinel.txt") }],
         ["bash", { command: "curl https://example.com" }],
@@ -629,14 +623,15 @@ test("[tools] read-only reviewer investigation reads owned evidence while mutati
             { path: "a", sandbox_permissions: "require_escalated" },
         ],
     ])
-        await assert.rejects(investigation.execute(name, args, signal));
+        await expect(
+            investigation.execute(name, args, signal),
+        ).rejects.toThrow();
     const caller = new AbortController();
     caller.abort();
-    await assert.rejects(
+    await expect(
         investigation.execute("inspect_file", { path: "a" }, caller.signal),
-    );
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    ).rejects.toThrow();
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
 });
@@ -650,16 +645,15 @@ test("[user-bash] installed Pi session consumer records ! and !! with the guarde
             cwd: f.workspace,
             excludeFromContext,
         });
-        assert.ok(handled.operations);
+        expect(handled.operations).toBeTruthy();
         const result = await runtime.session.executeBash(
             "printf session-shell",
             undefined,
             { operations: handled.operations, excludeFromContext },
         );
-        assert.equal(result.exitCode, 0);
-        assert.equal(result.output, "session-shell");
-        assert.equal(
-            runtime.session.messages.at(-1).excludeFromContext,
+        expect(result.exitCode).toBe(0);
+        expect(result.output).toBe("session-shell");
+        expect(runtime.session.messages.at(-1).excludeFromContext).toBe(
             excludeFromContext,
         );
     }
@@ -676,8 +670,8 @@ test("[tools] TUI/RPC approvals cover one complete edit action and print/JSON de
         const ui = {
             select: async (_title, options, dialog) => {
                 prompts++;
-                assert.ok(dialog.signal);
-                assert.equal(dialog.timeout, 60000);
+                expect(dialog.signal).toBeTruthy();
+                expect(dialog.timeout).toBe(60000);
                 return options[0];
             },
             notify: () => {},
@@ -700,16 +694,16 @@ test("[tools] TUI/RPC approvals cover one complete edit action and print/JSON de
             ],
         ]);
         await runtime.session.prompt("Edit only this owned sentinel.");
-        assert.equal(await readFile(target, "utf8"), `approved-${mode}`);
+        expect(await readFile(target, "utf8")).toBe(`approved-${mode}`);
     }
-    assert.equal(prompts, 2);
+    expect(prompts).toBe(2);
     for (const mode of ["print", "json"]) {
         await runtime.session.bindExtensions({ mode });
         await planStream(runtime.session, [
             [{ name: "write", args: { path: target, content: "no-ui" } }],
         ]);
         await runtime.session.prompt("No UI.");
-        assert.equal(await readFile(target, "utf8"), "approved-rpc");
+        expect(await readFile(target, "utf8")).toBe("approved-rpc");
     }
 });
 test("[tools] outside creation reviews the exact target and cannot approve a later sibling", async (t) => {
@@ -726,7 +720,7 @@ test("[tools] outside creation reviews the exact target and cannot approve a lat
         uiContext: {
             select: async (title, choices) => {
                 prompts++;
-                assert.ok(title.includes(target));
+                expect(title.includes(target)).toBeTruthy();
                 return prompts === 1 ? choices[0] : choices.at(-1);
             },
             notify: () => {},
@@ -743,10 +737,9 @@ test("[tools] outside creation reviews the exact target and cannot approve a lat
         ],
     ]);
     await runtime.session.prompt("Write this owned outside target.");
-    assert.equal(await readFile(target, "utf8"), "approved outside");
-    assert.equal(prompts, 1);
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    expect(await readFile(target, "utf8")).toBe("approved outside");
+    expect(prompts).toBe(1);
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
     await planStream(runtime.session, [
@@ -761,9 +754,8 @@ test("[tools] outside creation reviews the exact target and cannot approve a lat
         ],
     ]);
     await runtime.session.prompt("Check a separate request.");
-    assert.equal(prompts, 2);
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    expect(prompts).toBe(2);
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
 });
@@ -772,9 +764,10 @@ test("[startup] public startup performs no execution qualification, still reject
         modelRuntime = await offlineModelRuntime(f),
         executor = {
             qualify: async () =>
-                assert.fail("Startup must not qualify a sandbox"),
+                expect.unreachable("Startup must not qualify a sandbox"),
             close: async () => {},
-            execute: async () => assert.fail("Startup must not execute a tool"),
+            execute: async () =>
+                expect.unreachable("Startup must not execute a tool"),
         };
     const started = await createGuardedRuntime({
         cwd: f.workspace,
@@ -789,10 +782,9 @@ test("[startup] public startup performs no execution qualification, still reject
     const broken = () => {
         throw new Error("factory discarded");
     };
-    await assert.rejects(
+    await expect(
         guardedFixture(t, f, { trustedExtensions: [broken] }),
-        /failed to load/,
-    );
+    ).rejects.toThrow(/failed to load/);
     let called = false;
     const unknown = (api) =>
         api.registerTool({
@@ -813,7 +805,7 @@ test("[startup] public startup performs no execution qualification, still reject
         [{ name: "unknown", args: { path: "a" } }],
     ]);
     await runtime.session.prompt("Check unknown.");
-    assert.equal(called, true);
+    expect(called).toBe(true);
 });
 test("[startup] explicit installed cloud provider loads through public Pi TypeScript loader without automatic discovery", async (t) => {
     const f = await fixture(t),
@@ -821,7 +813,7 @@ test("[startup] explicit installed cloud provider loads through public Pi TypeSc
         previousWebTools = process.env.PI_OLLAMA_WEB_TOOLS;
     process.env.PI_CODING_AGENT_DIR = f.agentDir;
     process.env.PI_OLLAMA_WEB_TOOLS = "0";
-    t.after(() => {
+    t.onTestFinished(() => {
         if (previousAgentDir === undefined)
             delete process.env.PI_CODING_AGENT_DIR;
         else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
@@ -839,29 +831,32 @@ test("[startup] explicit installed cloud provider loads through public Pi TypeSc
             resolve("node_modules/pi-ollama-cloud/index.ts"),
         ],
     });
-    assert.ok(runtime.session.modelRuntime.getModel("ollama-cloud", "glm-5.3"));
-    assert.ok(
-        !runtime.session
+    expect(
+        runtime.session.modelRuntime.getModel("ollama-cloud", "glm-5.3"),
+    ).toBeTruthy();
+    expect(
+        runtime.session
             .getAllTools()
             .some((tool) => tool.name.startsWith("ollama_web_")),
-    );
+    ).toBeFalsy();
     let reloadHookCalls = 0;
     await runtime.session.reload({
         beforeSessionStart: async () => {
             reloadHookCalls++;
         },
     });
-    assert.equal(reloadHookCalls, 1);
-    assert.ok(runtime.session.modelRuntime.getModel("ollama-cloud", "glm-5.3"));
-    assert.ok(
-        !runtime.session
+    expect(reloadHookCalls).toBe(1);
+    expect(
+        runtime.session.modelRuntime.getModel("ollama-cloud", "glm-5.3"),
+    ).toBeTruthy();
+    expect(
+        runtime.session
             .getAllTools()
             .some((tool) => tool.name.startsWith("ollama_web_")),
-    );
-    assert.equal(
+    ).toBeFalsy();
+    expect(
         (await runtime.session.executeBash("printf explicit-provider")).output,
-        "explicit-provider",
-    );
+    ).toBe("explicit-provider");
 });
 test("[startup] default permissions protect the guard control directory inside the explicitly selected agent directory", async (t) => {
     const f = await fixture(t),
@@ -875,7 +870,7 @@ test("[startup] default permissions protect the guard control directory inside t
         agentDir: f.agentDir,
         provider: {
             complete: () =>
-                assert.fail("Controller credentials reached review"),
+                expect.unreachable("Controller credentials reached review"),
         },
     });
     await extension.factory({
@@ -884,7 +879,7 @@ test("[startup] default permissions protect the guard control directory inside t
         on: () => {},
         appendEntry: () => {},
     });
-    t.after(() => extension.assertReady().close());
+    t.onTestFinished(() => extension.assertReady().close());
     const sessionManager = pi.SessionManager.inMemory(f.workspace),
         context = {
             cwd: f.workspace,
@@ -895,7 +890,7 @@ test("[startup] default permissions protect the guard control directory inside t
     extension
         .assertReady()
         .reset(sessionManager.getSessionId(), sessionManager);
-    await assert.rejects(
+    await expect(
         tools
             .find((tool) => tool.name === "read")
             .execute(
@@ -905,9 +900,8 @@ test("[startup] default permissions protect the guard control directory inside t
                 undefined,
                 context,
             ),
-        /Protected path/,
-    );
-    assert.equal(await readFile(authPath, "utf8"), "owned-auth-fixture");
+    ).rejects.toThrow(/Protected path/);
+    expect(await readFile(authPath, "utf8")).toBe("owned-auth-fixture");
 });
 test("[options] caller metadata permissions remain effective while mandatory Pi control paths stay protected", async (t) => {
     const f = await fixture(t),
@@ -953,13 +947,11 @@ test("[options] caller metadata permissions remain effective while mandatory Pi 
     await runtime.session.prompt(
         "Exercise only the explicitly selected metadata permissions.",
     );
-    assert.equal(
-        await readFile(join(metadata, "state.txt"), "utf8"),
+    expect(await readFile(join(metadata, "state.txt"), "utf8")).toBe(
         "caller-permitted",
     );
-    assert.equal(await readFile(locked, "utf8"), "locked");
-    assert.equal(
-        await readFile(join(piDirectory, "mcp.json"), "utf8"),
+    expect(await readFile(locked, "utf8")).toBe("locked");
+    expect(await readFile(join(piDirectory, "mcp.json"), "utf8")).toBe(
         '{"mcpServers":{}}',
     );
 });
@@ -979,11 +971,10 @@ test("[nested] actual built-in codemode calls reach guarded local tools and reta
         ],
     ]);
     await runtime.session.prompt("Run the nested fixture.");
-    assert.equal(
-        await readFile(join(f.workspace, "nested.txt"), "utf8"),
+    expect(await readFile(join(f.workspace, "nested.txt"), "utf8")).toBe(
         "nested-effect",
     );
-    assert.ok(
+    expect(
         events.some(
             (e) =>
                 e.type === "tool_execution_end" &&
@@ -991,10 +982,10 @@ test("[nested] actual built-in codemode calls reach guarded local tools and reta
                 e.toolName === "bash" &&
                 e.result.structuredContent.exit_code === 0,
         ),
-    );
+    ).toBeTruthy();
     const audit = await readFile(join(f.agentDir, "guard/audit.jsonl"), "utf8");
-    assert.ok(audit.trim().split("\n").length >= 4);
-    assert.ok(!audit.includes(f.secret));
+    expect(audit.trim().split("\n").length >= 4).toBeTruthy();
+    expect(audit.includes(f.secret)).toBeFalsy();
 });
 test("[options] supplied bash prefix, spawn cwd/env, seconds, signal and streaming reach the final consumer", async (t) => {
     const f = await fixture(t),
@@ -1037,7 +1028,7 @@ test("[options] supplied bash prefix, spawn cwd/env, seconds, signal and streami
         on: (name, handler) => handlers.set(name, handler),
         appendEntry: () => {},
     });
-    t.after(() => extension.assertReady().close());
+    t.onTestFinished(() => extension.assertReady().close());
     const context = {
             cwd: f.workspace,
             sessionManager: pi.SessionManager.inMemory(f.workspace),
@@ -1055,27 +1046,25 @@ test("[options] supplied bash prefix, spawn cwd/env, seconds, signal and streami
                 (value) => updates.push(value),
                 context,
             );
-    assert.equal(calls[0].job.command, "echo prefix\nprintf original");
-    assert.equal(calls[0].options.env.GUARD_OPTION, "provided");
-    assert.equal(calls[0].options.env.SECRET, f.secret);
-    assert.equal(reviews.length, 1);
-    assert.equal(
-        reviews[0].untrustedAction.args.environment.GUARD_OPTION,
+    expect(calls[0].job.command).toBe("echo prefix\nprintf original");
+    expect(calls[0].options.env.GUARD_OPTION).toBe("provided");
+    expect(calls[0].options.env.SECRET).toBe(f.secret);
+    expect(reviews.length).toBe(1);
+    expect(reviews[0].untrustedAction.args.environment.GUARD_OPTION).toBe(
         "provided",
     );
-    assert.ok(
-        !Object.hasOwn(reviews[0].untrustedAction.args.environment, "SECRET"),
-    );
-    assert.deepEqual(
+    expect(
+        Object.hasOwn(reviews[0].untrustedAction.args.environment, "SECRET"),
+    ).toBeFalsy();
+    expect(
         reviews[0].untrustedAction.args.redactedEnvironmentVariables,
-        ["SECRET"],
-    );
-    assert.equal(calls[0].options.timeoutSeconds, 0.4);
-    assert.equal(result.structuredContent.exit_code, 9);
-    assert.equal(result.structuredContent.output, "streamed");
-    assert.ok(updates.length);
+    ).toStrictEqual(["SECRET"]);
+    expect(calls[0].options.timeoutSeconds).toBe(0.4);
+    expect(result.structuredContent.exit_code).toBe(9);
+    expect(result.structuredContent.output).toBe("streamed");
+    expect(updates.length).toBeTruthy();
     caller.abort();
-    assert.equal(calls[0].options.signal.aborted, true);
+    expect(calls[0].options.signal.aborted).toBe(true);
 });
 test("[tools] the host file queue waits for a cancelled invocation to settle before admitting another mutation", async (t) => {
     const f = await fixture(t),
@@ -1119,7 +1108,7 @@ test("[tools] the host file queue waits for a cancelled invocation to settle bef
         on: (event, handler) => handlers.set(event, handler),
         appendEntry: () => {},
     });
-    t.after(() => extension.assertReady().close());
+    t.onTestFinished(() => extension.assertReady().close());
     const context = {
             cwd: f.workspace,
             sessionManager: pi.SessionManager.inMemory(f.workspace),
@@ -1138,8 +1127,8 @@ test("[tools] the host file queue waits for a cancelled invocation to settle bef
             context,
         )
         .then(
-            () => assert.fail("Cancelled worker succeeded"),
-            (error) => assert.equal(error.code, "CANCELLED"),
+            () => expect.unreachable("Cancelled worker succeeded"),
+            (error) => expect(error.code).toBe("CANCELLED"),
         );
     await startedPromise;
     const second = write.execute(
@@ -1151,13 +1140,13 @@ test("[tools] the host file queue waits for a cancelled invocation to settle bef
     );
     caller.abort();
     await new Promise((resolve) => setImmediate(resolve));
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].options.signal.aborted, true);
+    expect(calls.length).toBe(1);
+    expect(calls[0].options.signal.aborted).toBe(true);
     releaseFirst();
     await first;
     await second;
-    assert.equal(calls.length, 2);
-    assert.equal(calls[1].job.args.content, "second");
+    expect(calls.length).toBe(2);
+    expect(calls[1].job.args.content).toBe("second");
 });
 test("[tools] three denied reviews interrupt the actual Pi turn before a fourth action", async (t) => {
     const f = await fixture(t);
@@ -1185,23 +1174,25 @@ test("[tools] three denied reviews interrupt the actual Pi turn before a fourth 
         ]),
     );
     await runtime.session.prompt("Exercise owned denial limits.");
-    assert.equal(reviews, 3);
-    assert.ok(events.some((event) => event.type === "agent_end"));
+    expect(reviews).toBe(3);
+    expect(events.some((event) => event.type === "agent_end")).toBeTruthy();
     const results = events.filter(
         (event) => event.type === "tool_execution_end",
     );
-    assert.ok(
+    expect(
         results.some((event) =>
             JSON.stringify(event.result).includes("AUTO_REVIEW_DENIED"),
         ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         results.some((event) =>
             JSON.stringify(event.result).includes("policy circumvention"),
         ),
-    );
+    ).toBeTruthy();
     for (let index = 0; index < 5; index++)
-        await assert.rejects(access(join(f.outside, `denied-${index}.txt`)));
+        await expect(
+            access(join(f.outside, `denied-${index}.txt`)),
+        ).rejects.toThrow();
     await planStream(runtime.session, [
         [
             {
@@ -1214,7 +1205,7 @@ test("[tools] three denied reviews interrupt the actual Pi turn before a fourth 
         ],
     ]);
     await runtime.session.prompt("A new user turn.");
-    assert.equal(reviews, 4);
+    expect(reviews).toBe(4);
 });
 test("[final-input] authorization changed during a pending review cannot reach native execution", async (t) => {
     const f = await fixture(t),
@@ -1239,7 +1230,7 @@ test("[final-input] authorization changed during a pending review cannot reach n
         on: () => {},
         appendEntry: () => {},
     });
-    t.after(() => extension.assertReady().close());
+    t.onTestFinished(() => extension.assertReady().close());
     const sessionManager = pi.SessionManager.inMemory(f.workspace),
         context = {
             cwd: f.workspace,
@@ -1265,9 +1256,8 @@ test("[final-input] authorization changed during a pending review cannot reach n
     await ready;
     controller.authorizeUser("Cancel that write.");
     finish('{"outcome":"allow"}');
-    await assert.rejects(pending, /authorization changed/);
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    await expect(pending).rejects.toThrow(/authorization changed/);
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
 });
@@ -1306,22 +1296,21 @@ test("[tools] real Pi approve command changes the approval route without sending
         [{ name: "write", args: { path: target, content: "user-approved" } }],
     ]);
     await runtime.session.prompt("Modify only the owned sentinel.");
-    assert.equal(reviews, 0);
-    assert.equal(dialogs, 1);
-    assert.equal(await readFile(target, "utf8"), "user-approved");
+    expect(reviews).toBe(0);
+    expect(dialogs).toBe(1);
+    expect(await readFile(target, "utf8")).toBe("user-approved");
     mode = "Approve for me";
     await runtime.session.prompt("/approve");
     await planStream(runtime.session, [
         [{ name: "write", args: { path: target, content: "model-approved" } }],
     ]);
     await runtime.session.prompt("Modify that same owned sentinel.");
-    assert.equal(reviews, 1);
-    assert.equal(dialogs, 1);
-    assert.equal(await readFile(target, "utf8"), "model-approved");
-    assert.equal(
+    expect(reviews).toBe(1);
+    expect(dialogs).toBe(1);
+    expect(await readFile(target, "utf8")).toBe("model-approved");
+    expect(
         JSON.parse(
             await readFile(join(f.agentDir, "guard/settings.json"), "utf8"),
         ).approvalsReviewer,
-        "auto_review",
-    );
+    ).toBe("auto_review");
 });

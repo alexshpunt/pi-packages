@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { ProjectTrustStore } from "@earendil-works/pi-coding-agent";
 import { fixture } from "../harness/fixtures.mjs";
 import { FixtureMcpTransport, mcpFixture, mcpText } from "../harness/mcp.mjs";
@@ -69,9 +68,8 @@ test("[external-tools] strict MCP tools review exact final input despite read-on
     });
     await invoke(runtime, "mcp__owned__inspect");
     await invoke(runtime, "mcp__owned__inspect");
-    assert.deepEqual(
+    expect(
         effects,
-        ["final-input", "final-input"],
         JSON.stringify({
             notices,
             methods: transport.methods,
@@ -80,23 +78,20 @@ test("[external-tools] strict MCP tools review exact final input despite read-on
                 (event) => event.type === "tool_execution_end",
             ),
         }),
-    );
-    assert.equal(reviews.length, 2);
-    assert.equal(
-        reviews[0].untrustedAction.args.arguments.value,
-        "final-input",
-    );
-    assert.equal(reviews[0].untrustedAction.args.externalTool.server, "owned");
-    assert.ok(
+    ).toStrictEqual(["final-input", "final-input"]);
+    expect(reviews.length).toBe(2);
+    expect(reviews[0].untrustedAction.args.arguments.value).toBe("final-input");
+    expect(reviews[0].untrustedAction.args.externalTool.server).toBe("owned");
+    expect(
         transport.calls.every(
             (call) => typeof call.params._meta.callId === "string",
         ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         events
             .filter((event) => event.type === "tool_execution_end")
             .every((event) => !event.isError),
-    );
+    ).toBeTruthy();
 });
 test("[external-tools] connected-account evidence is copied only from the explicit registered MCP metadata field", async (t) => {
     const f = await fixture(t),
@@ -111,7 +106,7 @@ test("[external-tools] connected-account evidence is copied only from the explic
             }),
             tool("unknown", { _meta: { account: "unverified@example.test" } }),
         ],
-        () => assert.fail("Denied account fixture executed"),
+        () => expect.unreachable("Denied account fixture executed"),
     );
     const runtime = await guardedFixture(t, f, {
         mcp: mcpFixture("owned", transport),
@@ -124,16 +119,13 @@ test("[external-tools] connected-account evidence is copied only from the explic
     });
     await invoke(runtime, "mcp__owned__identified");
     await invoke(runtime, "mcp__owned__unknown");
-    assert.equal(
-        requests[0].untrustedAction.args.connected_account_email,
+    expect(requests[0].untrustedAction.args.connected_account_email).toBe(
         "verified@example.test",
     );
-    assert.equal(
-        requests[1].untrustedAction.args.connected_account_email,
+    expect(requests[1].untrustedAction.args.connected_account_email).toBe(
         undefined,
     );
-    assert.equal(
-        requests[1].untrustedAction.args.externalTool.account,
+    expect(requests[1].untrustedAction.args.externalTool.account).toBe(
         "unverified@example.test",
     );
 });
@@ -156,7 +148,7 @@ test("[external-tools] MCP denial, required human input and granular policy prev
         let reviews = 0;
         const transport = new FixtureMcpTransport(
             [tool("write", extra)],
-            async () => assert.fail("Denied MCP tool executed"),
+            async () => expect.unreachable("Denied MCP tool executed"),
         );
         const runtime = await guardedFixture(t, f, {
             mcp: mcpFixture("owned", transport),
@@ -169,8 +161,8 @@ test("[external-tools] MCP denial, required human input and granular policy prev
             },
         });
         await invoke(runtime, "mcp__owned__write");
-        assert.equal(transport.calls.length, 0);
-        assert.equal(reviews, extra._meta || settings.approvalPolicy ? 0 : 1);
+        expect(transport.calls.length).toBe(0);
+        expect(reviews).toBe(extra._meta || settings.approvalPolicy ? 0 : 1);
     }
 });
 test("[external-tools] ordinary automatic MCP routing honors read-only hints and configured approval modes", async (t) => {
@@ -191,14 +183,14 @@ test("[external-tools] ordinary automatic MCP routing honors read-only hints and
         mcpToolPolicies: { "owned/configured": { approvalMode: "approve" } },
         provider: {
             complete: () =>
-                assert.fail(
+                expect.unreachable(
                     "Ordinary permitted MCP action unnecessarily reached reviewer",
                 ),
         },
     });
     await invoke(runtime, "mcp__owned__read");
     await invoke(runtime, "mcp__owned__configured");
-    assert.deepEqual(effects, ["read", "configured"]);
+    expect(effects).toStrictEqual(["read", "configured"]);
 });
 test("[external-tools] user reviewer honors read hints and requires UI for destructive tools", async (t) => {
     const f = await fixture(t),
@@ -218,11 +210,13 @@ test("[external-tools] user reviewer honors read hints and requires UI for destr
     const runtime = await guardedFixture(t, f, {
         mcp: mcpFixture("owned", transport),
         settings: { approvalsReviewer: "user" },
-        provider: { complete: () => assert.fail("User reviewer called model") },
+        provider: {
+            complete: () => expect.unreachable("User reviewer called model"),
+        },
     });
     await invoke(runtime, "mcp__owned__read");
     await invoke(runtime, "mcp__owned__write");
-    assert.deepEqual(effects, ["read"]);
+    expect(effects).toStrictEqual(["read"]);
     let prompts = 0;
     await runtime.session.bindExtensions({
         mode: "rpc",
@@ -237,8 +231,8 @@ test("[external-tools] user reviewer honors read hints and requires UI for destr
         },
     });
     await invoke(runtime, "mcp__owned__write");
-    assert.deepEqual(effects, ["read", "write"]);
-    assert.equal(prompts, 1);
+    expect(effects).toStrictEqual(["read", "write"]);
+    expect(prompts).toBe(1);
 });
 test("[external-tools] MCP node_repl/js cannot nominate another tool or connector for nested approval", async (t) => {
     const f = await fixture(t),
@@ -278,11 +272,10 @@ test("[external-tools] MCP node_repl/js cannot nominate another tool or connecto
         },
     });
     await invoke(runtime, "mcp__node_repl__js");
-    assert.equal(reviews.length, 1);
-    assert.equal(reviews[0].untrustedAction.args.externalTool.kind, "mcp");
-    assert.deepEqual(replies, ["decline"]);
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    expect(reviews.length).toBe(1);
+    expect(reviews[0].untrustedAction.args.externalTool.kind).toBe("mcp");
+    expect(replies).toStrictEqual(["decline"]);
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
 });
@@ -332,12 +325,12 @@ test("[external-tools] spoofed origin, user-input requests and forms cannot borr
         settings: { approvalsReviewer: "user" },
         provider: {
             complete: () =>
-                assert.fail("User-only request reached auto review"),
+                expect.unreachable("User-only request reached auto review"),
         },
     });
     await invoke(runtime, "mcp__node_repl__js");
-    assert.equal(transport.calls.length, 1);
-    assert.deepEqual(replies, ["decline", "decline", "decline"]);
+    expect(transport.calls.length).toBe(1);
+    expect(replies).toStrictEqual(["decline", "decline", "decline"]);
 });
 test("[external-tools] a nested MCP request cannot downgrade the originating strict review requirement", async (t) => {
     const f = await fixture(t);
@@ -374,8 +367,8 @@ test("[external-tools] a nested MCP request cannot downgrade the originating str
         },
     });
     await invoke(runtime, "mcp__node_repl__js");
-    assert.equal(reviews, 2);
-    assert.equal(transport.replies.at(-1).result.action, "accept");
+    expect(reviews).toBe(2);
+    expect(transport.replies.at(-1).result.action).toBe("accept");
 });
 test("[external-tools] changed registration and cancellation during review cannot execute a registered adapter", async (t) => {
     const f = await fixture(t);
@@ -416,8 +409,8 @@ test("[external-tools] changed registration and cancellation during review canno
         },
     });
     await invoke(runtime, "owned_external");
-    assert.equal(effects, 0);
-    assert.equal(reviews, 1);
+    expect(effects).toBe(0);
+    expect(reviews).toBe(1);
     const cancelled = await guardedFixture(t, f, {
         externalExtensions: [
             {
@@ -440,8 +433,8 @@ test("[external-tools] changed registration and cancellation during review canno
         },
     });
     await invoke(cancelled, "owned_external");
-    assert.equal(effects, 0);
-    assert.equal(reviews, 2);
+    expect(effects).toBe(0);
+    expect(reviews).toBe(2);
 });
 test("[external-tools] real MCP stdio server reuses an approval of the same tool version and preserves structured results", async (t) => {
     const f = await fixture(t),
@@ -479,20 +472,19 @@ test("[external-tools] real MCP stdio server reuses an approval of the same tool
     runtime.session.subscribe((event) => events.push(event));
     await invoke(runtime, "mcp__stdio__write_owned", "approved-effect");
     await invoke(runtime, "mcp__stdio__write_owned", "reused-effect");
-    assert.equal(reviews, 1);
-    assert.equal(await readFile(target, "utf8"), "reused-effect");
+    expect(reviews).toBe(1);
+    expect(await readFile(target, "utf8")).toBe("reused-effect");
     const result = events.find(
         (event) => event.type === "tool_execution_end" && !event.isError,
     );
-    assert.equal(
-        result.result.structuredContent.structuredContent.value,
+    expect(result.result.structuredContent.structuredContent.value).toBe(
         "approved-effect",
     );
-    assert.ok(
-        !events.some(
+    expect(
+        events.some(
             (event) => event.type === "tool_execution_end" && event.isError,
         ),
-    );
+    ).toBeFalsy();
 });
 test("[external-tools] explicit human-input flag uses a fresh human dialog without automatic inference", async (t) => {
     const f = await fixture(t);
@@ -508,14 +500,15 @@ test("[external-tools] explicit human-input flag uses a fresh human dialog witho
     const runtime = await guardedFixture(t, f, {
         mcp: mcpFixture("owned", transport),
         provider: {
-            complete: () => assert.fail("Required human input reached model"),
+            complete: () =>
+                expect.unreachable("Required human input reached model"),
         },
     });
     await runtime.session.bindExtensions({
         mode: "rpc",
         uiContext: {
             select: async (_title, choices) => {
-                assert.deepEqual(choices, ["Allow once", "Deny"]);
+                expect(choices).toStrictEqual(["Allow once", "Deny"]);
                 prompts++;
                 return prompts === 1 ? choices[0] : choices[1];
             },
@@ -526,8 +519,8 @@ test("[external-tools] explicit human-input flag uses a fresh human dialog witho
     });
     await invoke(runtime, "mcp__owned__confirm");
     await invoke(runtime, "mcp__owned__confirm");
-    assert.equal(prompts, 2);
-    assert.equal(effects, 1);
+    expect(prompts).toBe(2);
+    expect(effects).toBe(1);
 });
 test("[external-tools] ordinary MCP elicitation reviews registered arguments instead of a substituted payload", async (t) => {
     const f = await fixture(t),
@@ -555,12 +548,11 @@ test("[external-tools] ordinary MCP elicitation reviews registered arguments ins
         },
     });
     await invoke(runtime, "mcp__owned__write", "actual-input");
-    assert.equal(reviews.length, 2);
-    assert.equal(
-        reviews[1].untrustedAction.args.arguments.value,
+    expect(reviews.length).toBe(2);
+    expect(reviews[1].untrustedAction.args.arguments.value).toBe(
         "actual-input",
     );
-    assert.equal(transport.replies.at(-1).result.action, "accept");
+    expect(transport.replies.at(-1).result.action).toBe("accept");
 });
 test("[external-tools] concurrent MCP calls with a reused caller ID cannot borrow another approval", {
     timeout: 15000,
@@ -619,7 +611,10 @@ test("[external-tools] concurrent MCP calls with a reused caller ID cannot borro
             extension.tools.get("mcp__owned__action"),
         )
         .find(Boolean);
-    assert.ok(registered, "Pi must register the actual guarded MCP definition");
+    expect(
+        registered,
+        "Pi must register the actual guarded MCP definition",
+    ).toBeTruthy();
     const context = runtime.session.extensionRunner.createContext();
     await Promise.all([
         registered.definition.execute(
@@ -637,13 +632,12 @@ test("[external-tools] concurrent MCP calls with a reused caller ID cannot borro
             context,
         ),
     ]);
-    assert.equal(await readFile(deniedTarget, "utf8"), "unchanged");
-    assert.equal(await readFile(allowedTarget, "utf8"), "allowed");
-    assert.deepEqual(reviews.sort(), ["allowed", "blocked"]);
-    assert.equal(
+    expect(await readFile(deniedTarget, "utf8")).toBe("unchanged");
+    expect(await readFile(allowedTarget, "utf8")).toBe("allowed");
+    expect(reviews.sort()).toStrictEqual(["allowed", "blocked"]);
+    expect(
         new Set(transport.calls.map((call) => call.params._meta.callId)).size,
-        2,
-    );
+    ).toBe(2);
 });
 test("[external-tools] project MCP startup requires a recorded or explicit project trust decision", async (t) => {
     const f = await fixture(t),
@@ -670,20 +664,20 @@ test("[external-tools] project MCP startup requires a recorded or explicit proje
     });
     await planStream(untrusted.session, []);
     await untrusted.session.prompt("Do not start untrusted project resources.");
-    assert.equal(await readFile(target, "utf8"), "unchanged");
+    expect(await readFile(target, "utf8")).toBe("unchanged");
     const trusted = await guardedFixture(t, f, {
         settingsManager: undefined,
         isProjectTrusted: true,
     });
     await planStream(trusted.session, []);
     await trusted.session.prompt("Load the explicitly trusted owned project.");
-    assert.equal(await readFile(target, "utf8"), "started-by-project-config");
+    expect(await readFile(target, "utf8")).toBe("started-by-project-config");
     await writeFile(target, "unchanged");
     new ProjectTrustStore(f.agentDir).set(f.workspace, true);
     const recorded = await guardedFixture(t, f, { settingsManager: undefined });
     await planStream(recorded.session, []);
     await recorded.session.prompt("Use the recorded owned project trust.");
-    assert.equal(await readFile(target, "utf8"), "started-by-project-config");
+    expect(await readFile(target, "utf8")).toBe("started-by-project-config");
     await writeFile(target, "unchanged");
     const explicitDeny = await guardedFixture(t, f, {
         settingsManager: undefined,
@@ -691,5 +685,5 @@ test("[external-tools] project MCP startup requires a recorded or explicit proje
     });
     await planStream(explicitDeny.session, []);
     await explicitDeny.session.prompt("Keep this project untrusted.");
-    assert.equal(await readFile(target, "utf8"), "unchanged");
+    expect(await readFile(target, "utf8")).toBe("unchanged");
 });

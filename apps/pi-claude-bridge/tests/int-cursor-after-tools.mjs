@@ -9,8 +9,7 @@
 //
 // See: https://github.com/elidickinson/pi-claude-bridge/issues/4
 
-import { test } from "node:test";
-import assert from "node:assert";
+import { expect, test } from "vitest";
 import { readFileSync } from "node:fs";
 import { createRpcHarness } from "./lib/rpc-harness.mjs";
 
@@ -30,13 +29,13 @@ test("turn 2 reuses session after tool-using turn 1 (no spurious rebuild)", { ti
 		const text1 = await harness.promptAndWait(
 			"Use the Read tool to read package.json and tell me the top-level name field. Just the name, nothing else."
 		);
-		assert.ok(text1, "Turn 1 should produce text");
+		expect(text1, "Turn 1 should produce text").toBeTruthy();
 
 		// Turn 2: text-only, should reuse session
 		const text2 = await harness.promptAndWait(
 			"What was the name you just read? Repeat it."
 		);
-		assert.ok(text2, "Turn 2 should produce text");
+		expect(text2, "Turn 2 should produce text").toBeTruthy();
 
 		// Check sync decisions
 		const debugLog = readFileSync(harness.DEBUG_LOG, "utf8");
@@ -48,10 +47,8 @@ test("turn 2 reuses session after tool-using turn 1 (no spurious rebuild)", { ti
 		const rebuilds = paths.filter((p) => p === "rebuild").length;
 		const reuses = paths.filter((p) => p === "reuse").length;
 
-		assert.strictEqual(rebuilds, 0,
-			`spurious rebuild(s) — cursor likely stuck at 1 after tool-using first turn (issue #4). sync paths: ${paths.join(", ")}`);
-		assert.ok(reuses >= 1,
-			`expected at least 1 reuse for turn 2, got ${reuses}. sync paths: ${paths.join(", ")}`);
+		expect(rebuilds, `spurious rebuild(s) — cursor likely stuck at 1 after tool-using first turn (issue #4). sync paths: ${paths.join(", ")}`).toBe(0);
+		expect(reuses >= 1, `expected at least 1 reuse for turn 2, got ${reuses}. sync paths: ${paths.join(", ")}`).toBeTruthy();
 	} finally {
 		await harness.stop();
 	}

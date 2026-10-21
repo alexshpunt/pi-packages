@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { mkdir, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import {
     createAction,
     createProfile,
@@ -53,52 +52,45 @@ test("[paths] path-prefix escapes, symlink ancestors and nonexistent targets are
     const f = await setup(t);
     await symlink(f.control, join(f.workspace, "link"));
     await symlink(f.outside, join(f.workspace, "outside-link"));
-    assert.equal(
+    expect(
         (await f.evaluate("read", { path: "link/protected.txt" })).kind,
-        "deny",
-    );
-    assert.equal(
+    ).toBe("deny");
+    expect(
         (
             await f.evaluate("write", {
                 path: "outside-link/new.txt",
                 content: "x",
             })
         ).kind,
-        "ask",
-    );
-    assert.equal(
+    ).toBe("ask");
+    expect(
         (await f.evaluate("write", { path: "nested/new.txt", content: "x" }))
             .kind,
-        "allow",
-    );
-    assert.equal(
+    ).toBe("allow");
+    expect(
         (await f.evaluate("read", { path: `${f.workspace}-other/a` })).kind,
-        "ask",
-    );
-    assert.equal(isWithin(`${f.workspace}-other`, f.workspace), false);
-    assert.equal(
+    ).toBe("ask");
+    expect(isWithin(`${f.workspace}-other`, f.workspace)).toBe(false);
+    expect(
         await canonicalPath("outside-link/missing/target", f.workspace),
-        join(f.outside, "missing/target"),
-    );
-    assert.equal(
+    ).toBe(join(f.outside, "missing/target"));
+    expect(
         (await f.evaluate("read", { path: "../control/protected.txt" }))
             .isHardDeny,
-        true,
-    );
+    ).toBe(true);
     for (const path of [
         `@${f.control}/protected.txt`,
         `file://${f.control}/protected.txt`,
     ])
-        assert.equal((await f.evaluate("read", { path })).isHardDeny, true);
-    assert.equal(
+        expect((await f.evaluate("read", { path })).isHardDeny).toBe(true);
+    expect(
         await resolveToolPath(
             "~/control/protected.txt",
             f.workspace,
             false,
             f.root,
         ),
-        join(f.control, "protected.txt"),
-    );
+    ).toBe(join(f.control, "protected.txt"));
 });
 test("[rules] deny outranks allow for every compound segment and stale identities", async (t) => {
     const f = await setup(t, {
@@ -107,32 +99,26 @@ test("[rules] deny outranks allow for every compound segment and stale identitie
             { prefix: ["git", "push"], decision: "deny" },
         ],
     });
-    assert.equal(
+    expect(
         (await f.evaluate("bash", { command: "git status && git push" })).kind,
-        "deny",
-    );
-    assert.equal(
+    ).toBe("deny");
+    expect(
         (await f.evaluate("bash", { command: "git status | git push" })).kind,
-        "deny",
-    );
-    assert.equal(
+    ).toBe("deny");
+    expect(
         (await f.evaluate("bash", { command: "git status; git push" })).kind,
-        "deny",
-    );
-    assert.equal(
-        (await f.evaluate("bash", { command: "gitx status" })).kind,
+    ).toBe("deny");
+    expect((await f.evaluate("bash", { command: "gitx status" })).kind).toBe(
         "ask",
     );
-    assert.equal(
+    expect(
         (
             await f.policy.evaluate(
                 f.action("read", { path: "a" }, { policyRevision: "stale" }),
             )
         ).kind,
-        "deny",
-    );
-    assert.equal(
-        (await f.evaluate("unverified", { readOnlyHint: true })).kind,
+    ).toBe("deny");
+    expect((await f.evaluate("unverified", { readOnlyHint: true })).kind).toBe(
         "ask",
     );
 });
@@ -143,15 +129,14 @@ test("[shell] ordinary reads run directly and advanced syntax cannot borrow a pr
             { prefix: ["echo"], decision: "allow" },
         ],
     });
-    assert.deepEqual(analyzeShell("printf '%s' 'a b'").commands[0].argv, [
+    expect(analyzeShell("printf '%s' 'a b'").commands[0].argv).toStrictEqual([
         "printf",
         "%s",
         "a b",
     ]);
-    assert.equal(
+    expect(
         (await f.evaluate("bash", { command: "printf '%s' 'a b'" })).kind,
-        "allow",
-    );
+    ).toBe("allow");
     for (const command of [
         "echo $(node dangerous.js)",
         "echo `whoami`",
@@ -164,50 +149,52 @@ test("[shell] ordinary reads run directly and advanced syntax cannot borrow a pr
         "echo 'unclosed",
     ]) {
         const result = await f.evaluate("bash", { command });
-        assert.equal(result.kind, "ask", command);
-        assert.equal(result.authority, undefined, command);
+        expect(result.kind, command).toBe("ask");
+        expect(result.authority, command).toBe(undefined);
     }
     const interpreter = await f.evaluate("bash", {
         command: 'node -e "process.exit(0)"',
     });
-    assert.equal(interpreter.authority.kind, "command-rule");
-    assert.equal(
-        (await f.evaluate("bash", { command: "npm test" })).kind,
+    expect(interpreter.authority.kind).toBe("command-rule");
+    expect((await f.evaluate("bash", { command: "npm test" })).kind).toBe(
         "ask",
     );
-    assert.equal(
+    expect(
         (
             await f.evaluate("bash", {
                 command: `echo x > '${f.control}/protected.txt'`,
             })
         ).kind,
-        "deny",
-    );
+    ).toBe("deny");
     const result = await f.evaluate("bash", {
         command: `echo x > '${f.outside}/sentinel.txt'`,
     });
-    assert.equal(result.kind, "ask");
-    assert.deepEqual(result.delta.writePaths, [
+    expect(result.kind).toBe("ask");
+    expect(result.delta.writePaths).toStrictEqual([
         join(f.outside, "sentinel.txt"),
     ]);
     const externalRead = await f.evaluate("bash", {
         command: `cat '${f.outside}/sentinel.txt'`,
     });
-    assert.equal(externalRead.kind, "ask");
-    assert.deepEqual(externalRead.delta.readPaths, [
+    expect(externalRead.kind).toBe("ask");
+    expect(externalRead.delta.readPaths).toStrictEqual([
         join(f.outside, "sentinel.txt"),
     ]);
 });
 test("[rules] literal Codex prefix_rule grammar validates examples and strongest decision across wrappers", async (t) => {
     const text = `# trusted rules\nprefix_rule(pattern=["git", ["show","status"]], decision="allow", match=["git status"], not_match=["git push"],)\nprefix_rule(pattern=["git","show"],decision="prompt",justification="Inspect before running")\nprefix_rule(pattern=["git","show","secret"],decision="forbidden")`;
     const rules = parseRules(text);
-    assert.ok(rules.some((rule) => matchesRule(["git", "status"], rule)));
-    assert.ok(!rules.some((rule) => matchesRule(["git", "push"], rule)));
-    assert.deepEqual(ruleCommands('bash -lc "git status && git show x"'), [
+    expect(
+        rules.some((rule) => matchesRule(["git", "status"], rule)),
+    ).toBeTruthy();
+    expect(
+        rules.some((rule) => matchesRule(["git", "push"], rule)),
+    ).toBeFalsy();
+    expect(ruleCommands('bash -lc "git status && git show x"')).toStrictEqual([
         ["git", "status"],
         ["git", "show", "x"],
     ]);
-    assert.deepEqual(ruleCommands("echo ok > file"), [
+    expect(ruleCommands("echo ok > file")).toStrictEqual([
         ["/bin/bash", "-c", "echo ok > file"],
     ]);
     for (const invalid of [
@@ -217,7 +204,7 @@ test("[rules] literal Codex prefix_rule grammar validates examples and strongest
         "prefix_rule(pattern=[[]])",
         'prefix_rule(pattern=["a"],decision="approve")',
     ])
-        assert.throws(() => parseRules(invalid));
+        expect(() => parseRules(invalid)).toThrow();
     const f = await fixture(t),
         path = join(f.control, "trusted.rules");
     await writeFile(path, text);
@@ -241,17 +228,15 @@ test("[rules] literal Codex prefix_rule grammar validates examples and strongest
                 f.profile,
             ),
         );
-    assert.equal((await evaluate("git status")).authority.kind, "command-rule");
-    assert.equal(
+    expect((await evaluate("git status")).authority.kind).toBe("command-rule");
+    expect(
         (await evaluate('bash -lc "git status && git show x"'))
             .approvalCategory,
-        "rules",
-    );
-    assert.equal(
-        (await evaluate("git status && git show secret")).isHardDeny,
+    ).toBe("rules");
+    expect((await evaluate("git status && git show secret")).isHardDeny).toBe(
         true,
     );
-    assert.equal((await evaluate("git status && echo x")).authority, undefined);
+    expect((await evaluate("git status && echo x")).authority).toBe(undefined);
 });
 test("[paths] write-protected metadata remains readable and scoped elevation differs from absolute denial", async (t) => {
     const f = await fixture(t),
@@ -259,14 +244,13 @@ test("[paths] write-protected metadata remains readable and scoped elevation dif
     await mkdir(git);
     await writeFile(join(git, "HEAD"), "owned");
     const setupValue = await setup(t, {}, {}); // Existing absolute denyRead/denyWrite coverage remains separate.
-    assert.equal(
+    expect(
         (
             await setupValue.evaluate("read", {
                 path: join(setupValue.control, "protected.txt"),
             })
         ).kind,
-        "deny",
-    );
+    ).toBe("deny");
     const profile = createProfile({
         ...f.profile,
         denyWrite: [...f.profile.denyWrite, git],
@@ -285,15 +269,11 @@ test("[paths] write-protected metadata remains readable and scoped elevation dif
             },
             profile,
         );
-    assert.equal(
-        (await policy.evaluate(action("cat .git/HEAD"))).kind,
-        "allow",
-    );
-    assert.equal((await policy.evaluate(action("ls .git"))).kind, "allow");
-    assert.equal(
+    expect((await policy.evaluate(action("cat .git/HEAD"))).kind).toBe("allow");
+    expect((await policy.evaluate(action("ls .git"))).kind).toBe("allow");
+    expect(
         (await policy.evaluate(action("echo x > .git/HEAD"))).isHardDeny,
-        true,
-    );
+    ).toBe(true);
     const basePolicy = new PolicyEngine(
         validateSettings({}),
         createProfile({ ...f.profile, readOnlyPaths: [git] }),
@@ -305,7 +285,7 @@ test("[paths] write-protected metadata remains readable and scoped elevation dif
         },
         basePolicy.profile,
     );
-    assert.equal((await basePolicy.evaluate(request)).kind, "ask");
+    expect((await basePolicy.evaluate(request)).kind).toBe("ask");
 });
 test("[settings] default readable roots, temporary roots and Git worktree metadata match the declared boundary", async (t) => {
     const f = await fixture(t),
@@ -317,18 +297,18 @@ test("[settings] default readable roots, temporary roots and Git worktree metada
     const profile = await defaultProfile(f.workspace, validateSettings({}), [
         f.control,
     ]);
-    assert.deepEqual(profile.readRoots, ["/"]);
-    assert.ok(
+    expect(profile.readRoots).toStrictEqual(["/"]);
+    expect(
         profile.writeRoots.includes(await canonicalPath("/tmp", f.workspace)),
-    );
+    ).toBeTruthy();
     for (const path of [
         join(f.workspace, ".git"),
         join(f.workspace, ".agents"),
         join(f.workspace, ".codex"),
         gitdir,
     ])
-        assert.ok(profile.readOnlyPaths.includes(path), path);
-    assert.ok(profile.denyRead.includes(f.control));
+        expect(profile.readOnlyPaths.includes(path), path).toBeTruthy();
+    expect(profile.denyRead.includes(f.control)).toBeTruthy();
 });
 test("[shell] literal network destinations follow rules and dynamic commands require review", async (t) => {
     const f = await setup(
@@ -342,47 +322,44 @@ test("[shell] literal network destinations follow rules and dynamic commands req
     const allowed = await f.evaluate("bash", {
         command: "curl https://api.example.com",
     });
-    assert.equal(allowed.kind, "allow");
-    assert.deepEqual(allowed.delta.domains, []);
-    assert.equal(
+    expect(allowed.kind).toBe("allow");
+    expect(allowed.delta.domains).toStrictEqual([]);
+    expect(
         (await f.evaluate("bash", { command: "curl https://example.com" }))
             .kind,
-        "ask",
-    );
-    assert.equal(
+    ).toBe("ask");
+    expect(
         (
             await f.evaluate("bash", {
                 command: "curl https://a.blocked.example.com",
             })
         ).isHardDeny,
-        true,
-    );
+    ).toBe(true);
     const dynamic = await f.evaluate("bash", {
         command: 'host=api.example.com; curl "http://$host/proof"',
     });
-    assert.equal(dynamic.kind, "ask");
-    assert.deepEqual(dynamic.delta.domains, []);
+    expect(dynamic.kind).toBe("ask");
+    expect(dynamic.delta.domains).toStrictEqual([]);
     const full = await f.evaluate("bash", {
         command: "node action.js",
         sandbox_permissions: "require_escalated",
     });
-    assert.equal(full.kind, "ask");
-    assert.equal(full.authority.kind, "reviewed-command");
+    expect(full.kind).toBe("ask");
+    expect(full.authority.kind).toBe("reviewed-command");
     const scoped = await f.evaluate("bash", {
         command: "node action.js",
         additional_permissions: { writePaths: [join(f.outside, "owned.txt")] },
     });
-    assert.equal(scoped.kind, "ask");
-    assert.equal(scoped.authority, undefined);
-    assert.equal(
+    expect(scoped.kind).toBe("ask");
+    expect(scoped.authority).toBe(undefined);
+    expect(
         (
             await f.evaluate("bash", {
                 command: "echo x",
                 additional_permissions: { writePaths: [f.control] },
             })
         ).isHardDeny,
-        true,
-    );
+    ).toBe(true);
 });
 test("[settings] corrupt or weakening settings fail closed and read-only file writes require permission", async (t) => {
     const f = await setup(
@@ -390,9 +367,8 @@ test("[settings] corrupt or weakening settings fail closed and read-only file wr
         { mode: "read-only" },
         { mode: "read-only", writeRoots: [] },
     );
-    assert.equal((await f.evaluate("read", { path: "a" })).kind, "allow");
-    assert.equal(
-        (await f.evaluate("write", { path: "a", content: "x" })).kind,
+    expect((await f.evaluate("read", { path: "a" })).kind).toBe("allow");
+    expect((await f.evaluate("write", { path: "a", content: "x" })).kind).toBe(
         "ask",
     );
     for (const settings of [
@@ -404,13 +380,13 @@ test("[settings] corrupt or weakening settings fail closed and read-only file wr
         { commandRules: [{ prefix: [], decision: "allow" }] },
         { allowedDomains: ["*"] },
     ])
-        assert.throws(() => validateSettings(settings));
+        expect(() => validateSettings(settings)).toThrow();
     const path = join(f.control, "policy.json");
     await writeFile(path, "{bad");
-    await assert.rejects(loadSettings(path), /could not be loaded/);
+    await expect(loadSettings(path)).rejects.toThrow(/could not be loaded/);
 });
 test("[settings] reviewer redaction settings default to empty lists and reject entries without echoing values", () => {
-    assert.deepEqual(validateSettings({}).redaction, {
+    expect(validateSettings({}).redaction).toStrictEqual({
         sensitiveFields: [],
         rules: [],
         exceptions: [],
@@ -423,11 +399,10 @@ test("[settings] reviewer redaction settings default to empty lists and reject e
         piiEntities: ["EMAIL_ADDRESS"],
     };
     const settings = validateSettings({ redaction });
-    assert.deepEqual(settings.redaction, redaction);
-    assert.deepEqual(
+    expect(settings.redaction).toStrictEqual(redaction);
+    expect(
         validateSettings(JSON.parse(JSON.stringify(settings))),
-        settings,
-    );
+    ).toStrictEqual(settings);
     for (const invalid of [
         null,
         [],
@@ -455,11 +430,12 @@ test("[settings] reviewer redaction settings default to empty lists and reject e
         },
         { piiEntities: ["EMAIL"] },
     ])
-        assert.throws(
-            () => validateSettings({ redaction: invalid }),
-            (error) =>
-                error.code === "INVALID_SETTINGS" &&
-                /^Invalid redaction/.test(error.message) &&
-                !/PRIVATE_|Invalid regular expression/.test(error.message),
+        expect(() => validateSettings({ redaction: invalid })).toThrow(
+            expect.toSatisfy(
+                (error) =>
+                    error.code === "INVALID_SETTINGS" &&
+                    /^Invalid redaction/.test(error.message) &&
+                    !/PRIVATE_|Invalid regular expression/.test(error.message),
+            ),
         );
 });

@@ -1,8 +1,18 @@
-// Source-only Node test preload. The artifact itself gets no SDK copies or test files.
-import { registerHooks } from "node:module";
+// Source-only Vitest configuration that runs the provider tests against an extracted artifact.
+// The artifact itself gets no SDK copies or test files.
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, relative, sep } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "vitest/config";
+import base from "../../vitest.config.ts";
+
+// The archive has no CLI (`cli.ts`, `src/cli/`), so only these suites can load from it.
+const ARTIFACT_TESTS = [
+  "tests/pi-provider*.test.ts",
+  "tests/pi-integration.test.ts",
+  "tests/pi-runtime.test.ts",
+  "tests/pi-lifecycle*.test.ts",
+];
 
 const sourceRoot = realpathSync(fileURLToPath(new URL("../..", import.meta.url)));
 const artifactRoot = realpathSync(required("PI_DEVIN_TEST_PACKAGE_ROOT"));
@@ -30,7 +40,7 @@ function entry(root) {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   const selected = pkg.exports ? target(pkg.exports["."] ?? pkg.exports) : pkg.main ?? "./index.js";
   if (!selected) throw new Error("No public import entry: " + pkg.name);
-  return pathToFileURL(resolve(root, selected)).href;
+  return resolve(root, selected);
 }
 function peerRoot(name) {
   for (let directory = piRoot;; directory = dirname(directory)) {
@@ -48,28 +58,37 @@ const peers = new Map([
   ["@earendil-works/pi-tui", entry(peerRoot("@earendil-works/pi-tui"))],
 ]);
 const mappedFiles = new Set();
-registerHooks({
-  resolve(specifier, context, next) {
-    const host = peers.get(specifier);
-    if (host) return next(host, context);
-    if (context.parentURL && (specifier.startsWith(".") || specifier.startsWith("file:") || specifier.startsWith("/"))) {
-      const url = new URL(specifier, context.parentURL);
-      if (url.protocol === "file:") {
-        const file = fileURLToPath(url), local = relative(sourceRoot, file);
-        if (local.startsWith("src" + sep) || ["index.ts", "cli.ts"].includes(local)) {
-          const replacement = resolve(artifactRoot, local);
-          mappedFiles.add(local);
-          return next(pathToFileURL(replacement).href, context);
-        }
-      }
-    }
-    return next(specifier, context);
+
+// Vitest resolves every import of the tests and of the modules they load here, in its main process.
+const artifactRedirect = {
+  name: "pi-devin-artifact-redirect",
+  enforce: "pre",
+  resolveId(source, importer) {
+    const host = peers.get(source);
+    if (host) return host;
+    if (!importer || !(source.startsWith(".") || source.startsWith("file:") || source.startsWith("/"))) return null;
+    const queryStart = source.indexOf("?");
+    const path = queryStart < 0 ? source : source.slice(0, queryStart);
+    const query = queryStart < 0 ? "" : source.slice(queryStart);
+    const file = path.startsWith("file:") ? fileURLToPath(path) : resolve(dirname(importer.split("?")[0]), path);
+    const local = relative(sourceRoot, file);
+    if (!local.startsWith("src" + sep) && !["index.ts", "cli.ts"].includes(local)) return null;
+    mappedFiles.add(local);
+    return resolve(artifactRoot, local) + query;
   },
-});
+};
+
 const reportDir = process.env.PI_DEVIN_TEST_REPORT_DIR;
 if (reportDir) process.on("exit", () => {
   writeFileSync(join(reportDir, "artifact-mapping-" + process.pid + ".json"), JSON.stringify({
     sourceRoot, artifactRoot, piRoot, mappedFiles: [...mappedFiles].sort(),
     hostEntries: Object.fromEntries(peers),
   }, null, 2) + "\n");
+});
+
+export default defineConfig({
+  ...base,
+  root: sourceRoot,
+  plugins: [artifactRedirect],
+  test: { ...base.test, include: ARTIFACT_TESTS },
 });

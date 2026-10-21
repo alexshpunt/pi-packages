@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import {
   InMemoryCredentialStore, InMemoryModelsStore, type Api, type Credential as HostCredential, type Model, type Provider, type SimpleStreamOptions,
@@ -40,7 +39,7 @@ test("OAuth only: Pi API key resolution paths are rejected without a Devin reque
     const before = fixture.requests.length;
     const result = await runtime.completeSimple(model, { messages: [{ role: "user", content: "hello", timestamp: 1 }] }, { reasoning: "medium", ...options })
       .catch((error: Error) => ({ stopReason: "thrown", errorMessage: error.message }));
-    assert.equal(JSON.stringify(result).includes(serviceKey) || JSON.stringify(result).includes(windsurfKey), false);
+    expect(JSON.stringify(result).includes(serviceKey) || JSON.stringify(result).includes(windsurfKey)).toBe(false);
     return { stopReason: result.stopReason, errorMessage: result.errorMessage ?? "", requests: fixture.requests.slice(before) };
   }
   try {
@@ -50,36 +49,36 @@ test("OAuth only: Pi API key resolution paths are rejected without a Devin reque
     const storedKey = await host({ stored: { type: "api_key", key: serviceKey } });
     const environmentOnly = await host();
     for (const runtime of [runtimeKey, storedKey, environmentOnly]) {
-      assert.equal(runtime.getProvider("devin")!.auth.apiKey, undefined);
+      expect(runtime.getProvider("devin")!.auth.apiKey).toBe(undefined);
       const result = await attempt(runtime);
-      assert.match(result.errorMessage, /not configured/);
-      assert.deepEqual(result.requests, []);
+      expect(result.errorMessage).toMatch(/not configured/);
+      expect(result.requests).toStrictEqual([]);
     }
     // An apiKey in models.json makes the host synthesize an API key method. Without OAuth there are no Devin models,
     // so Pi 1.3.0 stops with an unregistered API error instead of reaching the provider; no Devin request is sent either way.
     const configuredKey = await host({ models: { providers: { devin: { apiKey: "$DEVIN_API_KEY" } } } });
-    assert.ok(configuredKey.getProvider("devin")!.auth.apiKey);
-    assert.deepEqual(configuredKey.getModels("devin"), []);
+    expect(configuredKey.getProvider("devin")!.auth.apiKey).toBeTruthy();
+    expect(configuredKey.getModels("devin")).toStrictEqual([]);
     const configured = await attempt(configuredKey);
-    assert.match(configured.errorMessage, /No API provider registered for api: devin-connect/);
-    assert.deepEqual(configured.requests, []);
+    expect(configured.errorMessage).toMatch(/No API provider registered for api: devin-connect/);
+    expect(configured.requests).toStrictEqual([]);
     // Even with OAuth, the provider rejects a different key overridden by the caller, while the OAuth-resolved session keeps using models.
     // The stored OAuth wins even when models.json has an apiKey in the same runtime.
     const oauth = await host({ models: { providers: { devin: { apiKey: "$WINDSURF_API_KEY" } } } });
     await oauth.login("devin", "oauth", { notify: () => {}, prompt: async (prompt) => prompt.type === "select" ? "manual" : "ordinary-oauth-code" });
     const refresh = await oauth.refresh({ providers: ["devin"], allowNetwork: true, force: true });
-    assert.equal(refresh.errors.size, 0);
+    expect(refresh.errors.size).toBe(0);
     const model = oauth.getModels("devin").find((entry) => entry.id === "swe-2")!;
     for (const apiKey of [serviceKey, windsurfKey]) {
       const rejected = await attempt(oauth, { apiKey }, model);
-      assert.equal(rejected.errorMessage, OAUTH_ONLY_MESSAGE);
-      assert.deepEqual(rejected.requests, []);
+      expect(rejected.errorMessage).toBe(OAUTH_ONLY_MESSAGE);
+      expect(rejected.requests).toStrictEqual([]);
     }
     const accepted = await attempt(oauth, {}, model);
-    assert.equal(accepted.stopReason, "stop", accepted.errorMessage);
+    expect(accepted.stopReason, accepted.errorMessage).toBe("stop");
     const chat = accepted.requests.find((request) => request.method === CHAT_METHOD)!;
-    assert.equal((chat.body.metadata as JsonObject).apiKey, providerCredential.sessionToken);
-    assert.equal(accepted.requests.every((request) => !JSON.stringify(request.body).includes(serviceKey) && !JSON.stringify(request.body).includes(windsurfKey)), true);
+    expect((chat.body.metadata as JsonObject).apiKey).toBe(providerCredential.sessionToken);
+    expect(accepted.requests.every((request) => !JSON.stringify(request.body).includes(serviceKey) && !JSON.stringify(request.body).includes(windsurfKey))).toBe(true);
   } finally {
     for (const provider of providers) (provider as ReturnType<typeof createDevinProvider>).shutdown();
     for (const [name, value] of Object.entries(previous)) { if (value === undefined) delete process.env[name]; else process.env[name] = value; }
@@ -114,16 +113,16 @@ test("coding-agent public ModelRuntime real file storage is bounded and Pi logou
     const credential = await runtime.login("devin", "oauth", {
       notify: () => {}, prompt: async (prompt) => prompt.type === "select" ? "manual" : "plain-file-code",
     });
-    assert.equal(runtime.isUsingOAuth("devin"), true);
-    assert.equal(queries, 0);
+    expect(runtime.isUsingOAuth("devin")).toBe(true);
+    expect(queries).toBe(0);
     for (let i = 0; i < 3; i++) await runtime.getAuth("devin");
-    assert.equal(queries, 3);
-    assert.deepEqual(JSON.parse(await readFile(authPath, "utf8")), { unrelated: other, devin: credential });
+    expect(queries).toBe(3);
+    expect(JSON.parse(await readFile(authPath, "utf8"))).toStrictEqual({ unrelated: other, devin: credential });
     await runtime.logout("devin");
-    assert.equal(await runtime.getAuth("devin"), undefined);
-    assert.equal(queries, 3);
-    assert.deepEqual(JSON.parse(await readFile(authPath, "utf8")), { unrelated: other });
-    assert.equal(await readFile(cliPath, "utf8"), cliBytes);
+    expect(await runtime.getAuth("devin")).toBe(undefined);
+    expect(queries).toBe(3);
+    expect(JSON.parse(await readFile(authPath, "utf8"))).toStrictEqual({ unrelated: other });
+    expect(await readFile(cliPath, "utf8")).toBe(cliBytes);
     runtime.unregisterProvider("devin");
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

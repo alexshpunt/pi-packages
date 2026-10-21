@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { pathToFileURL } from "node:url";
 import {
     createReadToolDefinition,
@@ -83,41 +82,38 @@ test("[review-context] the final provider sees late instructions, final tool res
         "Inspect the owned output, then request approval for only the named outside file.",
     );
     const data = JSON.parse(requests.at(-1).messages[0].content);
-    assert.ok(
+    expect(
         data.context.items.some(
             (item) =>
                 item.source === "developer" &&
                 String(item.content).includes("FINAL_DEVELOPER_INSTRUCTION"),
         ),
-    );
+    ).toBeTruthy();
     const result = data.context.items.find(
         (item) => item.source === "tool-result" && item.content.tool === "bash",
     );
-    assert.equal(result.content.isError, true);
-    assert.equal(
-        result.content.structuredContent.reviewEvidence,
+    expect(result.content.isError).toBe(true);
+    expect(result.content.structuredContent.reviewEvidence).toBe(
         "FINAL_STRUCTURED_RESULT",
     );
-    assert.ok(result.content.parentToolCallId);
-    assert.ok(result.content.callIdentity);
-    assert.ok(
-        !data.context.items.some(
+    expect(result.content.parentToolCallId).toBeTruthy();
+    expect(result.content.callIdentity).toBeTruthy();
+    expect(
+        data.context.items.some(
             (item) =>
                 item.source === "tool-result" &&
                 JSON.stringify(item.content).includes("ORIGINAL_RESULT"),
         ),
-    );
-    assert.equal(data.executionContext.osIsolation, false);
-    assert.deepEqual(
-        data.executionContext.permissionProfile.writeRoots,
+    ).toBeFalsy();
+    expect(data.executionContext.osIsolation).toBe(false);
+    expect(data.executionContext.permissionProfile.writeRoots).toStrictEqual(
         f.profile.writeRoots,
     );
-    assert.ok(
+    expect(
         data.executionContext.permissionProfile.denyRead.includes(f.control),
-    );
-    assert.equal(data.executionContext.approvalsReviewer, "auto_review");
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    ).toBeTruthy();
+    expect(data.executionContext.approvalsReviewer).toBe("auto_review");
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
 });
@@ -157,7 +153,7 @@ test("[review-context] final execution inputs and explicit UI approvals survive 
     await runtime.session.prompt(
         "Perform only the named owned fixture operations.",
     );
-    assert.equal(await readFile(target, "utf8"), "ui-approved");
+    expect(await readFile(target, "utf8")).toBe("ui-approved");
     await runtime.session.prompt("/approve");
     await runtime.session.reload();
     await planStream(runtime.session, [
@@ -167,23 +163,23 @@ test("[review-context] final execution inputs and explicit UI approvals survive 
         "Inspect the retained context; do not reuse earlier approvals.",
     );
     const items = requests.at(-1).context.items;
-    assert.ok(
+    expect(
         items.some(
             (item) =>
                 item.source === "tool-call" &&
                 item.content.stage === "prepared" &&
                 item.content.args.command.includes("PREFIX_EVIDENCE"),
         ),
-    );
+    ).toBeTruthy();
     const confirmation = items.find(
         (item) =>
             item.source === "user-confirmation" &&
             item.content.action?.tool === "write",
     );
-    assert.ok(confirmation);
-    assert.equal(confirmation.content.action.args.content, "ui-approved");
-    assert.equal(confirmation.content.scope, "once");
-    assert.equal(await readFile(target, "utf8"), "ui-approved");
+    expect(confirmation).toBeTruthy();
+    expect(confirmation.content.action.args.content).toBe("ui-approved");
+    expect(confirmation.content.scope).toBe("once");
+    expect(await readFile(target, "utf8")).toBe("ui-approved");
 });
 
 test("[review-context] the actual provider HTTP body retains exact input, authority provenance, environment and investigation boundaries", async (t) => {
@@ -202,7 +198,7 @@ test("[review-context] the actual provider HTTP body retains exact input, author
         server.once("error", reject);
         server.listen(0, "127.0.0.1", resolve);
     });
-    t.after(
+    t.onTestFinished(
         () =>
             new Promise((resolve) => {
                 server.close(resolve);
@@ -252,59 +248,56 @@ test("[review-context] the actual provider HTTP body retains exact input, author
     await runtime.session.prompt(
         "WIRE_GENUINE_USER: do not change any unrelated target.",
     );
-    assert.equal(bodies.length, 1);
+    expect(bodies.length).toBe(1);
     const body = bodies[0],
         system = body.messages.find((message) =>
             ["system", "developer"].includes(message.role),
         );
-    assert.ok(system.content.includes("# Outcome Policy"));
+    expect(system.content.includes("# Outcome Policy")).toBeTruthy();
     const data = JSON.parse(
         body.messages.find((message) => message.role === "user").content,
     );
-    assert.equal(
-        data.untrustedAction.args.path,
+    expect(data.untrustedAction.args.path).toBe(
         pathToFileURL(join(f.outside, "sentinel.txt")).href,
     );
-    assert.equal(data.untrustedAction.args.content, "FINAL_ARGUMENTS");
-    assert.equal(
-        data.untrustedAction.permissionDigest,
+    expect(data.untrustedAction.args.content).toBe("FINAL_ARGUMENTS");
+    expect(data.untrustedAction.permissionDigest).toBe(
         digest(data.executionContext.permissionProfile),
     );
-    assert.equal(data.executionContext.platform, process.platform);
-    assert.equal(data.executionContext.osIsolation, false);
-    assert.ok(
+    expect(data.executionContext.platform).toBe(process.platform);
+    expect(data.executionContext.osIsolation).toBe(false);
+    expect(
         data.context.items.some(
             (item) =>
                 item.trust === "authorization" &&
                 item.source === "user" &&
                 String(item.content).includes("WIRE_GENUINE_USER"),
         ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         data.context.items.some(
             (item) =>
                 item.trust === "authorization" &&
                 item.source === "developer" &&
                 item.content === "WIRE_FINAL_INSTRUCTION",
         ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         data.context.items.some(
             (item) =>
                 item.source === "tool-call" &&
                 item.content.stage === "prepared" &&
                 item.content.args.content === "FINAL_ARGUMENTS",
         ),
-    );
-    assert.deepEqual(
-        body.tools.map((tool) => tool.function.name),
-        ["inspect_file", "inspect_directory"],
-    );
+    ).toBeTruthy();
+    expect(body.tools.map((tool) => tool.function.name)).toStrictEqual([
+        "inspect_file",
+        "inspect_directory",
+    ]);
     const { digest: contextDigest, ...contextFields } = data.context;
-    assert.equal(contextDigest, digest(contextFields));
-    assert.ok(!JSON.stringify(body).includes("owned-fixture-key"));
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    expect(contextDigest).toBe(digest(contextFields));
+    expect(JSON.stringify(body).includes("owned-fixture-key")).toBeFalsy();
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
 });
@@ -388,30 +381,30 @@ test("[review-context] real dialog answers and registered MCP account evidence r
             item.source === "user-confirmation" &&
             item.content.type === "verified-tool-user-answer",
     );
-    assert.equal(answers.length, 2);
-    assert.equal(answers[0].content.answer, true);
-    assert.equal(answers[1].content.answer, false);
-    assert.ok(answers[1].content.question.title.includes("second.txt"));
-    assert.ok(
+    expect(answers.length).toBe(2);
+    expect(answers[0].content.answer).toBe(true);
+    expect(answers[1].content.answer).toBe(false);
+    expect(
+        answers[1].content.question.title.includes("second.txt"),
+    ).toBeTruthy();
+    expect(
         items.some(
             (item) =>
                 item.source === "tool-result" &&
                 item.trust === "evidence" &&
                 JSON.stringify(item.content).includes("forged-tool-output"),
         ),
-    );
+    ).toBeTruthy();
     const call = items.find(
         (item) =>
             item.source === "tool-call" &&
             item.content.stage === "prepared" &&
             item.content.tool === "owned_question",
     );
-    assert.equal(
-        call.content.args.connected_account_email,
+    expect(call.content.args.connected_account_email).toBe(
         "owner@example.test",
     );
-    assert.equal(
-        call.content.args.schema.namespace.description,
+    expect(call.content.args.schema.namespace.description).toBe(
         "ACCOUNT_CONNECTOR_DESCRIPTION",
     );
 });
@@ -453,28 +446,28 @@ test("[review-context] a late forced prompt replaces inactive developer and proj
     ]);
     await runtime.session.prompt("Check only the final effective prompt.");
     const items = requests[0].context.items;
-    assert.ok(
+    expect(
         items.some(
             (item) =>
                 item.source === "developer" &&
                 item.content === "FINAL_FORCED_PROMPT",
         ),
-    );
-    assert.ok(
-        !items.some(
+    ).toBeTruthy();
+    expect(
+        items.some(
             (item) =>
                 item.trust === "authorization" &&
                 JSON.stringify(item.content).includes("INACTIVE_"),
         ),
-    );
-    assert.ok(
+    ).toBeFalsy();
+    expect(
         items.some(
             (item) =>
                 item.trust === "evidence" &&
                 item.content.role === "main-agent-system-prompt" &&
                 item.content.text === "FINAL_FORCED_PROMPT",
         ),
-    );
+    ).toBeTruthy();
 });
 test("[review-context] live compaction adds its summary as evidence without replacing genuine user restrictions", async (t) => {
     const f = await fixture(t),
@@ -528,30 +521,29 @@ test("[review-context] live compaction adds its summary as evidence without repl
     ]);
     await runtime.session.prompt("Continue with the original restrictions.");
     const items = requests.at(-1).context.items;
-    assert.ok(
+    expect(
         items.some(
             (item) =>
                 item.trust === "evidence" &&
                 JSON.stringify(item.content).includes(summary),
         ),
-    );
-    assert.ok(
-        !items.some(
+    ).toBeTruthy();
+    expect(
+        items.some(
             (item) =>
                 item.trust === "authorization" &&
                 JSON.stringify(item.content).includes(summary),
         ),
-    );
-    assert.ok(
+    ).toBeFalsy();
+    expect(
         items.some(
             (item) =>
                 item.source === "user" &&
                 item.trust === "authorization" &&
                 String(item.content).includes("ORIGINAL_RESTRICTION"),
         ),
-    );
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    ).toBeTruthy();
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
 });
@@ -616,18 +608,18 @@ test("[review-context] masked evidence written by this version and 0.3.0 masked 
             .snapshot(settings.reviewContextChars)
             .items.map((item) => [item.id, item.content]),
     );
-    assert.equal(reloaded.current, entries[0].data.text);
-    assert.equal(reloaded.legacy, entries[1].data.text);
-    assert.deepEqual(reloaded["result:call-1"], persisted[0].content);
+    expect(reloaded.current).toBe(entries[0].data.text);
+    expect(reloaded.legacy).toBe(entries[1].data.text);
+    expect(reloaded["result:call-1"]).toStrictEqual(persisted[0].content);
     for (const raw of [
         "private",
         "abcdef",
         "ops@example.com",
         "synthetic-access-value",
     ])
-        assert.ok(!JSON.stringify(reloaded).includes(raw), raw);
+        expect(JSON.stringify(reloaded).includes(raw), raw).toBeFalsy();
     const version = store.scopeVersion;
     store.authorize(entries[0].data.text, "current");
     store.authorize(entries[1].data.text, "legacy");
-    assert.equal(store.scopeVersion, version);
+    expect(store.scopeVersion).toBe(version);
 });

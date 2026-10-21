@@ -73,20 +73,16 @@ check_env node verification/scripts/validate-package.mjs "$artifact_dir" \
   --expect "$package_dir/verification/inventory.json" \
   --pi-root "$PI_ROOT" --runtime --report "$check_dir/extracted-check.json"
 check_env env PI_DEVIN_TEST_PACKAGE_ROOT="$artifact_dir" PI_DEVIN_TEST_PI_ROOT="$PI_ROOT" \
-  node --import "$package_dir/verification/scripts/artifact-loader.mjs" --test \
-  "$package_dir"/tests/pi-provider*.test.ts \
-  "$package_dir/tests/pi-integration.test.ts" \
-  "$package_dir/tests/pi-runtime.test.ts" \
-  "$package_dir"/tests/pi-lifecycle*.test.ts
+  pnpm exec vitest run --config verification/scripts/artifact-vitest.config.mjs
 ```
 
-Expected: the extracted resource check `pass` and provider checks **51/51**. These checks cover the account login object, catalog, exact UIDs, protobuf, images, tool results, retries, compression, cancellation, session replacement, the prompt cache, Fusion and SDK mode binding. They do not run the tool runner in place of Pi. Running all of `tests/*.test.ts` through the loader is not supported: the archive does not contain the CLI (`cli.ts`, `src/cli/`), so the CLI tests have nothing to load from it. The loader redirects only imports within the same process to the extracted artifact.
+Expected: the extracted resource check `pass` and provider checks **51/51**. These checks cover the account login object, catalog, exact UIDs, protobuf, images, tool results, retries, compression, cancellation, session replacement, the prompt cache, Fusion and SDK mode binding. They do not run the tool runner in place of Pi. The configuration fixes the suites to `tests/pi-provider*`, `pi-integration`, `pi-runtime` and `pi-lifecycle*`. Running all of `tests/*.test.ts` against the artifact is not supported: the archive does not contain the CLI (`cli.ts`, `src/cli/`), so the CLI tests have nothing to load from it. Only the imports Vitest resolves for the tests are redirected to the extracted artifact; processes the tests start are not.
 
 Check the real Pi execution path of the extracted artifact by passing `--package-root "$artifact_dir" --pi-root "$PI_ROOT"` to the step 6 runner. The Pi process sandbox then also refuses reads of the source `src/`, `index.ts` and `cli.ts`, and the help scenario checks that refusal (`EPERM`) as a control.
 
-`artifact-loader.mjs` is a source-only Node preload that redirects the production imports of the source tests to the extracted artifact and pins host imports to the **public entries** of `PI_ROOT`. The tests and fake inputs are only check tools, not runtime dependencies of the archive. It uses Node's public `registerHooks()`. Setting `PI_DEVIN_TEST_REPORT_DIR` to an existing directory saves a per-process mapping record.
+`artifact-vitest.config.mjs` is a source-only Vitest configuration that redirects the production imports of the source tests to the extracted artifact and pins host imports to the **public entries** of `PI_ROOT`. The tests and fake inputs are only check tools, not runtime dependencies of the archive. It uses a Vite `resolveId` plugin, and Vitest compiles the redirected artifact files with its own TypeScript transform, so Pi's real load path is checked by the step 6 runner below. Setting `PI_DEVIN_TEST_REPORT_DIR` to an existing directory saves the mapping record of the Vitest process.
 
-The recorded sandbox run used an extraction path containing spaces and Hangul characters, and a separate cwd. Its provider checks (44 at that time) passed even while the OS sandbox (`sandbox-exec`) refused network outside loopback, the real HOME outside the repository and Node, and reads of the source `apps/pi-devin/src/`, `index.ts` and `cli.ts`. Source tests run without the loader under the same profile fail with `EPERM` (negative control). The command above, which only sets environment variables, does not by itself provide the same OS isolation.
+The recorded sandbox run predates the move to Vitest and used the former Node preload (`artifact-loader.mjs`). It used an extraction path containing spaces and Hangul characters, and a separate cwd. Its provider checks (44 at that time) passed even while the OS sandbox (`sandbox-exec`) refused network outside loopback, the real HOME outside the repository and Node, and reads of the source `apps/pi-devin/src/`, `index.ts` and `cli.ts`. Source tests run without the loader under the same profile fail with `EPERM` (negative control). The command above, which only sets environment variables, does not by itself provide the same OS isolation.
 
 ## 5. Local Pi registration and cleanup
 

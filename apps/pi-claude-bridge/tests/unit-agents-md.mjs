@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { formatProjectContext } from "../src/agents-md.js";
 
 describe("project context forwarding", () => {
@@ -10,13 +9,13 @@ describe("project context forwarding", () => {
 			{ path: "/project/nested/AGENTS.md", content: "nested instructions" },
 		]);
 
-		assert.match(prompt, /^<project_context>\n\nProject-specific instructions and guidelines:/);
-		assert.ok(prompt.indexOf("global instructions") < prompt.indexOf("parent instructions"));
-		assert.ok(prompt.indexOf("parent instructions") < prompt.indexOf("nested instructions"));
-		assert.match(prompt, /<project_instructions path="\/project\/CLAUDE\.md">/);
+		expect(prompt).toMatch(/^<project_context>\n\nProject-specific instructions and guidelines:/);
+		expect(prompt.indexOf("global instructions") < prompt.indexOf("parent instructions")).toBeTruthy();
+		expect(prompt.indexOf("parent instructions") < prompt.indexOf("nested instructions")).toBeTruthy();
+		expect(prompt).toMatch(/<project_instructions path="\/project\/CLAUDE\.md">/);
 	});
 
 	it("returns undefined when Pi finds no context files", () => {
-		assert.equal(formatProjectContext([]), undefined);
+		expect(formatProjectContext([])).toBe(undefined);
 	});
 });

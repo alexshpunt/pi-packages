@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { renderSkillsBlock } from "../src/skills.js";
 
 function skill(name, { disabled = false } = {}) {
@@ -16,20 +15,20 @@ function skill(name, { disabled = false } = {}) {
 describe("skills block rendering", () => {
 	it("formats skills and names the MCP read tool for provider queries", () => {
 		const result = renderSkillsBlock([skill("browser")], "mcp");
-		assert.ok(result?.startsWith("The following skills"));
-		assert.match(result, /Use the read tool \(mcp__custom-tools__read\)/);
-		assert.match(result, /<location>\/skills\/browser\/SKILL\.md<\/location>/);
+		expect(result?.startsWith("The following skills")).toBeTruthy();
+		expect(result).toMatch(/Use the read tool \(mcp__custom-tools__read\)/);
+		expect(result).toMatch(/<location>\/skills\/browser\/SKILL\.md<\/location>/);
 	});
 
 	it("emits nothing without a usable reader or visible skills", () => {
-		assert.equal(renderSkillsBlock([skill("browser")], "none"), undefined);
-		assert.equal(renderSkillsBlock([], "mcp"), undefined);
-		assert.equal(renderSkillsBlock([skill("hidden", { disabled: true })], "mcp"), undefined);
+		expect(renderSkillsBlock([skill("browser")], "none")).toBe(undefined);
+		expect(renderSkillsBlock([], "mcp")).toBe(undefined);
+		expect(renderSkillsBlock([skill("hidden", { disabled: true })], "mcp")).toBe(undefined);
 	});
 
 	it("uses Pi's XML escaping", () => {
 		const escaped = skill("browser");
 		escaped.description = "read <this> & that";
-		assert.match(renderSkillsBlock([escaped], "mcp"), /read &lt;this&gt; &amp; that/);
+		expect(renderSkillsBlock([escaped], "mcp")).toMatch(/read &lt;this&gt; &amp; that/);
 	});
 });

@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import {
     createAgentSession,
     createAgentSessionRuntime,
@@ -42,8 +41,7 @@ test("[identity] canonical snapshots bind final input/cwd/source/session/policy/
     const f = await fixture(t),
         args = { path: "a", nested: { z: 1, a: 2 } };
     const a = f.action("read", args, { toolCallId: "a" });
-    assert.equal(
-        a.digest,
+    expect(a.digest).toBe(
         f.action(
             "read",
             { nested: { a: 2, z: 1 }, path: "a" },
@@ -51,10 +49,10 @@ test("[identity] canonical snapshots bind final input/cwd/source/session/policy/
         ).digest,
     );
     args.nested.z = 7;
-    assert.equal(a.args.nested.z, 1);
-    assert.throws(() => {
+    expect(a.args.nested.z).toBe(1);
+    expect(() => {
         a.args.path = "b";
-    }, TypeError);
+    }).toThrow(TypeError);
     for (const changed of [
         { tool: "write" },
         { args: { path: "b" } },
@@ -63,34 +61,32 @@ test("[identity] canonical snapshots bind final input/cwd/source/session/policy/
         { sessionId: "new" },
         { policyRevision: "new" },
     ]) {
-        assert.notEqual(
-            a.digest,
+        expect(a.digest).not.toBe(
             f.action(changed.tool ?? "read", changed.args ?? a.args, {
                 toolCallId: "a",
                 ...changed,
             }).digest,
         );
     }
-    assert.throws(() => canonicalJson({ x: NaN }));
-    assert.throws(() => canonicalJson({ x: undefined }));
-    assert.throws(() => createAction({ ...a, args: [] }, f.profile));
+    expect(() => canonicalJson({ x: NaN })).toThrow();
+    expect(() => canonicalJson({ x: undefined })).toThrow();
+    expect(() => createAction({ ...a, args: [] }, f.profile)).toThrow();
 });
 test("[profiles] profiles are immutable and read-only cannot silently gain writes", async (t) => {
     const f = await fixture(t);
-    assert.throws(() => f.profile.writeRoots.push(f.outside));
-    assert.throws(() => createProfile({ ...f.profile, mode: "read-only" }));
-    assert.throws(() =>
+    expect(() => f.profile.writeRoots.push(f.outside)).toThrow();
+    expect(() => createProfile({ ...f.profile, mode: "read-only" })).toThrow();
+    expect(() =>
         createProfile({ ...f.profile, readRoots: ["relative"] }),
-    );
-    assert.notEqual(
-        digest(f.profile),
+    ).toThrow();
+    expect(digest(f.profile)).not.toBe(
         digest(
             createProfile({ ...f.profile, mode: "read-only", writeRoots: [] }),
         ),
     );
-    assert.throws(() =>
+    expect(() =>
         decision(f.action("read", {}), "allow", "bad", undefined, true),
-    );
+    ).toThrow();
 });
 test("[ipc] invalid protocol frames cannot be treated as worker success", () => {
     for (const frame of [
@@ -107,12 +103,11 @@ test("[ipc] invalid protocol frames cannot be treated as worker success", () => 
         { schemaVersion: 1, type: "data", data: 2 },
         { schemaVersion: 1, type: "update", result: {} },
     ])
-        assert.throws(() => validateWorkerFrame(frame));
-    assert.deepEqual(
+        expect(() => validateWorkerFrame(frame)).toThrow();
+    expect(
         validateWorkerFrame({ schemaVersion: 1, type: "result", result: null })
             .result,
-        null,
-    );
+    ).toStrictEqual(null);
 });
 test("[evidence] incomplete, stale, blocked, skipped, duplicate or simulated-native proof cannot pass", () => {
     const valid = {
@@ -154,42 +149,35 @@ test("[evidence] incomplete, stale, blocked, skipped, duplicate or simulated-nat
         { blockedReasons: ["blocked"] },
         { evidenceKind: "unit-doubles" },
     ])
-        assert.throws(() =>
+        expect(() =>
             validateEvidence({ ...valid, ...changed }, ["effect"]),
-        );
-    assert.throws(() =>
+        ).toThrow();
+    expect(() =>
         validateEvidence(valid, ["effect"], {
             contractDigest: "changed",
             sourceDigest: "source",
         }),
-    );
-    assert.throws(
-        () => validateEvidence({ ...valid, nativeControls: [] }, ["effect"]),
-        /observed permitted and denied/,
-    );
-    assert.throws(
-        () =>
-            validateEvidence(valid, ["effect"], {
-                contractDigest: "contract",
-                sourceDigest: "source",
-                platform: "linux-x64",
-            }),
-        /architecture/,
-    );
-    assert.throws(
-        () =>
-            validateEvidence(valid, ["effect"], {
-                contractDigest: "contract",
-                sourceDigest: "source",
-                requireRun: true,
-            }),
-        /executed/,
-    );
-    assert.throws(
-        () =>
-            validateEvidence({ ...valid, provenance: "synthetic" }, ["effect"]),
-        /Synthetic/,
-    );
+    ).toThrow();
+    expect(() =>
+        validateEvidence({ ...valid, nativeControls: [] }, ["effect"]),
+    ).toThrow(/observed permitted and denied/);
+    expect(() =>
+        validateEvidence(valid, ["effect"], {
+            contractDigest: "contract",
+            sourceDigest: "source",
+            platform: "linux-x64",
+        }),
+    ).toThrow(/architecture/);
+    expect(() =>
+        validateEvidence(valid, ["effect"], {
+            contractDigest: "contract",
+            sourceDigest: "source",
+            requireRun: true,
+        }),
+    ).toThrow(/executed/);
+    expect(() =>
+        validateEvidence({ ...valid, provenance: "synthetic" }, ["effect"]),
+    ).toThrow(/Synthetic/);
     const current = {
         ...valid,
         schemaVersion: 2,
@@ -210,7 +198,7 @@ test("[evidence] incomplete, stale, blocked, skipped, duplicate or simulated-nat
         { native: { behavior: ["effect"] } },
         expected,
     );
-    assert.throws(() =>
+    expect(() =>
         validatePlatformEvidence(
             {
                 ...platform,
@@ -219,8 +207,8 @@ test("[evidence] incomplete, stale, blocked, skipped, duplicate or simulated-nat
             { native: { behavior: ["effect"] } },
             expected,
         ),
-    );
-    assert.throws(() =>
+    ).toThrow();
+    expect(() =>
         validatePlatformEvidence(
             {
                 ...platform,
@@ -229,7 +217,7 @@ test("[evidence] incomplete, stale, blocked, skipped, duplicate or simulated-nat
             { native: { behavior: ["effect"] } },
             expected,
         ),
-    );
+    ).toThrow();
     validateEvidence(
         {
             ...valid,
@@ -252,7 +240,7 @@ test("[evidence] concurrent synthetic platform and same-platform storage preserv
                 }),
         ),
     );
-    assert.equal(new Set(runs.map((run) => run.directory)).size, 4);
+    expect(new Set(runs.map((run) => run.directory)).size).toBe(4);
     const bytes = runs.map((run, index) =>
         JSON.stringify({
             runId: run.runId,
@@ -266,18 +254,16 @@ test("[evidence] concurrent synthetic platform and same-platform storage preserv
             writeImmutable(join(run.directory, "proof.json"), bytes[index]),
         ),
     );
-    await assert.rejects(
+    await expect(
         writeImmutable(join(runs[0].directory, "proof.json"), "replacement"),
-        { code: "EEXIST" },
-    );
-    assert.deepEqual(
+    ).rejects.toThrow(expect.objectContaining({ code: "EEXIST" }));
+    expect(
         await Promise.all(
             runs.map((run) =>
                 readFile(join(run.directory, "proof.json"), "utf8"),
             ),
         ),
-        bytes,
-    );
+    ).toStrictEqual(bytes);
 });
 test("[public-api] supported installed Pi exposes complete tool contracts and protected startup seams", () => {
     for (const [name, value] of Object.entries({
@@ -298,17 +284,16 @@ test("[public-api] supported installed Pi exposes complete tool contracts and pr
         createFindToolDefinition,
         createLsToolDefinition,
     }))
-        assert.equal(typeof value, "function", name);
+        expect(typeof value, name).toBe("function");
     const tool = createBashToolDefinition(process.cwd());
-    assert.equal(tool.name, "bash");
-    assert.ok(tool.outputSchema);
-    assert.equal(typeof tool.execute, "function");
+    expect(tool.name).toBe("bash");
+    expect(tool.outputSchema).toBeTruthy();
+    expect(typeof tool.execute).toBe("function");
 });
 test("[identity] retry semantics survive a new invocation but bind session, policy and context", async (t) => {
     const f = await fixture(t),
         original = f.action("write", { path: "a", content: "b" });
-    assert.equal(
-        retryIdentity(original, "context"),
+    expect(retryIdentity(original, "context")).toBe(
         retryIdentity(
             f.action("write", { path: "a", content: "b" }),
             "context",
@@ -319,12 +304,10 @@ test("[identity] retry semantics survive a new invocation but bind session, poli
         f.action("write", original.args, { sessionId: "other" }),
         f.action("write", original.args, { policyRevision: "changed" }),
     ])
-        assert.notEqual(
-            retryIdentity(original, "context"),
+        expect(retryIdentity(original, "context")).not.toBe(
             retryIdentity(action, "context"),
         );
-    assert.notEqual(
-        retryIdentity(original, "context"),
+    expect(retryIdentity(original, "context")).not.toBe(
         retryIdentity(original, "changed"),
     );
 });
@@ -334,24 +317,21 @@ test("[profiles] old settings adapt while new routing and model settings reject 
         commandRules: [{ prefix: ["git", "status"], decision: "allow" }],
         reviewTimeoutMs: 5000,
     });
-    assert.equal(legacy.approvalPolicy, "on-request");
-    assert.equal(legacy.approvalsReviewer, "auto_review");
-    assert.equal(legacy.reviewTimeoutMs, 5000);
-    assert.equal(approvalEligible("never", "sandbox"), false);
-    assert.equal(
-        approvalEligible({ sandbox: false, rules: true }, "rules"),
+    expect(legacy.approvalPolicy).toBe("on-request");
+    expect(legacy.approvalsReviewer).toBe("auto_review");
+    expect(legacy.reviewTimeoutMs).toBe(5000);
+    expect(approvalEligible("never", "sandbox")).toBe(false);
+    expect(approvalEligible({ sandbox: false, rules: true }, "rules")).toBe(
         true,
     );
-    assert.equal(
-        approvalEligible({ sandbox: false, rules: true }, "sandbox"),
+    expect(approvalEligible({ sandbox: false, rules: true }, "sandbox")).toBe(
         false,
     );
-    assert.deepEqual(
+    expect(
         validateSettings({
             reviewModel: { provider: "ollama-cloud", id: "operator-choice" },
         }).reviewModel,
-        { provider: "ollama-cloud", id: "operator-choice" },
-    );
+    ).toStrictEqual({ provider: "ollama-cloud", id: "operator-choice" });
     for (const value of [
         { approvalPolicy: { sandbox: true } },
         { approvalsReviewer: "unknown" },
@@ -362,5 +342,5 @@ test("[profiles] old settings adapt while new routing and model settings reject 
         { ruleFiles: [4] },
         { excludeTmpdir: "false" },
     ])
-        assert.throws(() => validateSettings(value));
+        expect(() => validateSettings(value)).toThrow();
 });

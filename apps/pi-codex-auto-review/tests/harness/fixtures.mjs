@@ -39,7 +39,7 @@ export async function fixture(t) {
     const secret = `SYNTHETIC_GUARD_SECRET_${randomUUID()}`;
     await writeFile(join(control, "protected.txt"), secret);
     await writeFile(join(outside, "sentinel.txt"), "unchanged");
-    t.after(async () => {
+    t.onTestFinished(async () => {
         try {
             for (const path of [
                 join(control, "audit.jsonl"),

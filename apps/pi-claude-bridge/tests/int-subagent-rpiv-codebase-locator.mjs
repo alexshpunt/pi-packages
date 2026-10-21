@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Reproduction/regression for rpiv-pi codebase-locator subagents hanging while
 // claude-bridge has a parent Claude Code query active.
 //
@@ -6,11 +5,11 @@
 // mechanism directly: @tintinweb/pi-subagents Agent tool + rpiv-pi's pinned
 // codebase-locator agent definition from @juicesharp/rpiv-pi v0.6.0.
 
-import assert from "node:assert/strict";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { expect, test } from "vitest";
 import { createRpcHarness } from "./lib/rpc-harness.mjs";
 
 const DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -26,7 +25,7 @@ const RPIV_LOCATOR_FIXTURE = resolve(DIR, "tests/fixtures/rpiv-pi-v0.6.0-agents/
 // the calling session, never from another session's live query.
 const CONCURRENT_SESSION_QUERY_MARKER = /provider: fresh query setup, isReentrant=false, activeContexts=[1-9]\d*/g;
 const STUCK_MARKER = /MCP handlers still waiting after delivering 0 results|tool handler\(s\) still waiting|currentPiStream overwritten/;
-assert.ok(existsSync(RPIV_LOCATOR_FIXTURE), `missing rpiv codebase-locator fixture: ${RPIV_LOCATOR_FIXTURE}`);
+expect(existsSync(RPIV_LOCATOR_FIXTURE), `missing rpiv codebase-locator fixture: ${RPIV_LOCATOR_FIXTURE}`).toBeTruthy();
 
 const testAgentDir = mkdtempSync(join(tmpdir(), "subagent-rpiv-locator-dir-"));
 const testProjectDir = mkdtempSync(join(tmpdir(), "subagent-rpiv-locator-project-"));
@@ -89,33 +88,31 @@ After the Agent tool returns, do not use more tools. ${background ? "Write 80 sh
 	);
 	await waitForEvent("agent_end", TEST_TIMEOUT);
 	const text = collector.stop();
-	assert.match(
+	expect(
 		text,
-		new RegExp(expectedMarker),
 		`parent did not report ${background ? "background" : "foreground"} Agent completion. Text: ${text.slice(0, 500)}`,
-	);
+	).toMatch(new RegExp(expectedMarker));
 	await waitForConcurrentSessionQueryAbove(beforeConcurrent, background ? "background Agent" : "foreground Agent");
 }
 
-await startAndWait();
+test("rpiv codebase-locator subagents finish while the parent query is in flight", async () => {
+	await startAndWait();
 
-try {
-	await runAgentPrompt({ background: false, expectedMarker: "PARENT-SAW-FOREGROUND-RPIV-CODEBASE-LOCATOR" });
-	await runAgentPrompt({ background: true, expectedMarker: "PARENT-STARTED-BACKGROUND-RPIV-CODEBASE-LOCATOR" });
+	try {
+		await runAgentPrompt({ background: false, expectedMarker: "PARENT-SAW-FOREGROUND-RPIV-CODEBASE-LOCATOR" });
+		await runAgentPrompt({ background: true, expectedMarker: "PARENT-STARTED-BACKGROUND-RPIV-CODEBASE-LOCATOR" });
 
-	const log = debugLog();
-	assert.match(log, /mcp handler: Agent \[toolu_/, "debug log never showed the parent Agent MCP handler");
-	assert.doesNotMatch(log, STUCK_MARKER, "debug log contains stuck-handler/stream-overwrite signature");
-
-	console.log("PASS");
-} catch (err) {
-	process.exitCode = 1;
-	console.log(`FAIL: ${err.message}\n${err.stack}`);
-	console.log(`  RPC log:    ${RPC_LOG}`);
-	console.log(`  Debug log:  ${DEBUG_LOG}`);
-	try { console.log(`  Debug tail:\n${readFileSync(DEBUG_LOG, "utf8").slice(-6000)}`); } catch {}
-} finally {
-	await stop();
-	rmSync(testAgentDir, { recursive: true, force: true });
-	rmSync(testProjectDir, { recursive: true, force: true });
-}
+		const log = debugLog();
+		expect(log, "debug log never showed the parent Agent MCP handler").toMatch(/mcp handler: Agent \[toolu_/);
+		expect(log, "debug log contains stuck-handler/stream-overwrite signature").not.toMatch(STUCK_MARKER);
+	} catch (err) {
+		console.log(`  RPC log:    ${RPC_LOG}`);
+		console.log(`  Debug log:  ${DEBUG_LOG}`);
+		try { console.log(`  Debug tail:\n${readFileSync(DEBUG_LOG, "utf8").slice(-6000)}`); } catch {}
+		throw err;
+	} finally {
+		await stop();
+		rmSync(testAgentDir, { recursive: true, force: true });
+		rmSync(testProjectDir, { recursive: true, force: true });
+	}
+});

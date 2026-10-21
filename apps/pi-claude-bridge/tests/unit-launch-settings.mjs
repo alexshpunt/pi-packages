@@ -1,34 +1,33 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import { buildProviderLaunchSettings, buildSummaryLaunchSettings } from "../src/cc/launch-settings.js";
 
 test("provider launches with only bridge MCP pre-approved and always-strict config", () => {
 	const options = buildProviderLaunchSettings({ strictMcpConfig: false });
-	assert.equal(options.permissionMode, "dontAsk");
-	assert.deepEqual(options.allowedTools, ["mcp__custom-tools"]);
-	assert.deepEqual(options.tools, []);
-	assert.equal(options.strictMcpConfig, true);
-	assert.equal(options.extraArgs, undefined);
-	assert.equal(options.settings.disableAllHooks, true);
+	expect(options.permissionMode).toBe("dontAsk");
+	expect(options.allowedTools).toStrictEqual(["mcp__custom-tools"]);
+	expect(options.tools).toStrictEqual([]);
+	expect(options.strictMcpConfig).toBe(true);
+	expect(options.extraArgs).toBe(undefined);
+	expect(options.settings.disableAllHooks).toBe(true);
 });
 
 test("summary keeps settings sources but excludes prompts, hooks, and persistence", () => {
 	const options = buildSummaryLaunchSettings();
-	assert.equal(Object.hasOwn(options, "settingSources"), false);
-	assert.equal(options.settings.disableAllHooks, true);
-	assert.deepEqual(options.settings.claudeMdExcludes, ["**/CLAUDE.md", "**/AGENTS.md", "**/.claude/rules/**"]);
-	assert.equal(options.settings.autoMemoryEnabled, false);
-	assert.equal(options.strictMcpConfig, true);
-	assert.deepEqual(options.tools, []);
-	assert.equal(options.persistSession, false);
-	assert.equal(options.maxTurns, 1);
+	expect(Object.hasOwn(options, "settingSources")).toBe(false);
+	expect(options.settings.disableAllHooks).toBe(true);
+	expect(options.settings.claudeMdExcludes).toStrictEqual(["**/CLAUDE.md", "**/AGENTS.md", "**/.claude/rules/**"]);
+	expect(options.settings.autoMemoryEnabled).toBe(false);
+	expect(options.strictMcpConfig).toBe(true);
+	expect(options.tools).toStrictEqual([]);
+	expect(options.persistSession).toBe(false);
+	expect(options.maxTurns).toBe(1);
 });
 
 test("launch policy preserves executable and provider memory choices", () => {
 	const provider = buildProviderLaunchSettings({ pathToClaudeCodeExecutable: "/fixture/claude", autoMemoryEnabled: true });
 	const summary = buildSummaryLaunchSettings({ pathToClaudeCodeExecutable: "/fixture/claude", autoMemoryEnabled: true });
-	assert.equal(provider.pathToClaudeCodeExecutable, "/fixture/claude");
-	assert.equal(summary.pathToClaudeCodeExecutable, "/fixture/claude");
-	assert.equal(provider.settings.autoMemoryEnabled, true);
-	assert.equal(summary.settings.autoMemoryEnabled, false);
+	expect(provider.pathToClaudeCodeExecutable).toBe("/fixture/claude");
+	expect(summary.pathToClaudeCodeExecutable).toBe("/fixture/claude");
+	expect(provider.settings.autoMemoryEnabled).toBe(true);
+	expect(summary.settings.autoMemoryEnabled).toBe(false);
 });

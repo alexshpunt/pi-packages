@@ -7,8 +7,7 @@
  * with a transport, then raw JSON-RPC — so the assertions cover what Claude
  * actually receives rather than an intermediate representation.
  */
-import { describe, it, before } from "node:test";
-import assert from "node:assert/strict";
+import { beforeAll, describe, expect, it } from "vitest";
 import { createToolServer } from "../src/mcp-server.js";
 
 const NESTED_TOOL_SCHEMA = {
@@ -83,15 +82,12 @@ describe("MCP tool schema advertisement", () => {
 	// but cannot go on the wire. Advertising it as "no arguments" instead would
 	// surface much later as pi rejecting the arguments Claude did not send.
 	it("rejects a non-object parameter schema at construction, naming the tool", () => {
-		assert.throws(
-			() => createToolServer("custom-tools", [
-				{ name: "bad_tool", description: "", inputSchema: { type: "string" }, handler: async () => ({ content: [] }) },
-			]),
-			/bad_tool: MCP tool parameters must be an object schema/,
-		);
+		expect(() => createToolServer("custom-tools", [
+			{ name: "bad_tool", description: "", inputSchema: { type: "string" }, handler: async () => ({ content: [] }) },
+		])).toThrow(/bad_tool: MCP tool parameters must be an object schema/);
 	});
 
-	before(async () => {
+	beforeAll(async () => {
 		const server = createToolServer("custom-tools", [
 			{
 				name: "ask_user_question",
@@ -105,28 +101,28 @@ describe("MCP tool schema advertisement", () => {
 	});
 
 	it("preserves top-level properties and required", () => {
-		assert.deepStrictEqual(Object.keys(listed.properties).sort(), ["config", "either", "options", "question"]);
-		assert.deepStrictEqual(listed.required, ["question", "options"]);
-		assert.strictEqual(listed.properties.question.description, "Question to ask");
+		expect(Object.keys(listed.properties).sort()).toStrictEqual(["config", "either", "options", "question"]);
+		expect(listed.required).toStrictEqual(["question", "options"]);
+		expect(listed.properties.question.description).toBe("Question to ask");
 	});
 
 	it("preserves object properties nested in an array", () => {
 		const item = listed.properties.options.items;
-		assert.deepStrictEqual(Object.keys(item.properties).sort(), ["detail", "label"]);
-		assert.deepStrictEqual(item.required, ["label"]);
-		assert.strictEqual(item.properties.label.description, "Short label");
+		expect(Object.keys(item.properties).sort()).toStrictEqual(["detail", "label"]);
+		expect(item.required).toStrictEqual(["label"]);
+		expect(item.properties.label.description).toBe("Short label");
 	});
 
 	it("preserves nested object properties, enums and required", () => {
 		const config = listed.properties.config;
-		assert.deepStrictEqual(Object.keys(config.properties).sort(), ["mode", "retries"]);
-		assert.deepStrictEqual(config.required, ["mode"]);
-		assert.deepStrictEqual(config.properties.mode.enum, ["single", "multi"]);
-		assert.strictEqual(config.properties.retries.type, "integer");
+		expect(Object.keys(config.properties).sort()).toStrictEqual(["mode", "retries"]);
+		expect(config.required).toStrictEqual(["mode"]);
+		expect(config.properties.mode.enum).toStrictEqual(["single", "multi"]);
+		expect(config.properties.retries.type).toBe("integer");
 	});
 
 	it("preserves anyOf branches", () => {
-		assert.deepStrictEqual(listed.properties.either.anyOf, [{ type: "string" }, { type: "number" }]);
+		expect(listed.properties.either.anyOf).toStrictEqual([{ type: "string" }, { type: "number" }]);
 	});
 });
 
@@ -158,9 +154,9 @@ describe("MCP tool invocation", () => {
 		const { callTool } = await connectClient(createToolServer("custom-tools", twoTools(calls)));
 
 		const beta = await callTool("beta", "toolu_b", { x: "hi" });
-		assert.deepStrictEqual(calls, [["beta", "toolu_b"]]);
-		assert.strictEqual(beta.result.content[0].text, "from beta");
-		assert.strictEqual(beta.result.isError, true);
+		expect(calls).toStrictEqual([["beta", "toolu_b"]]);
+		expect(beta.result.content[0].text).toBe("from beta");
+		expect(beta.result.isError).toBe(true);
 	});
 
 	// Claude sends the authoritative tool_use id on every call. Inferring it from
@@ -173,7 +169,7 @@ describe("MCP tool invocation", () => {
 		await callTool("beta", "toolu_second", { x: "hi" });
 		await callTool("alpha", "toolu_first");
 
-		assert.deepStrictEqual(calls, [["beta", "toolu_second"], ["alpha", "toolu_first"]]);
+		expect(calls).toStrictEqual([["beta", "toolu_second"], ["alpha", "toolu_first"]]);
 	});
 
 	it("fails loudly when the tool_use id is absent rather than mispairing", async () => {
@@ -182,8 +178,8 @@ describe("MCP tool invocation", () => {
 
 		const res = await callTool("alpha", null);
 		const message = res.error?.message ?? JSON.stringify(res.result);
-		assert.match(message, /toolUseId/i);
-		assert.deepStrictEqual(calls, [], "handler must not run without an id to pair its result to");
+		expect(message).toMatch(/toolUseId/i);
+		expect(calls, "handler must not run without an id to pair its result to").toStrictEqual([]);
 	});
 
 	// toolCallId is internal bookkeeping for pairing results; it is not part of
@@ -205,7 +201,7 @@ describe("MCP tool invocation", () => {
 		);
 
 		const res = await callTool("alpha", "toolu_x");
-		assert.deepStrictEqual(Object.keys(res.result).sort(), ["content", "isError"]);
+		expect(Object.keys(res.result).sort()).toStrictEqual(["content", "isError"]);
 	});
 
 	// A schema-validation rejection would skip the handler entirely, desyncing
@@ -232,7 +228,7 @@ describe("MCP tool invocation", () => {
 		);
 
 		const res = await callTool("strict", "toolu_y", { count: "not-a-number", extra: 1 });
-		assert.ok(called, "handler must run — pi validates and executes tools, not the MCP layer");
-		assert.strictEqual(res.result.content[0].text, "ran");
+		expect(called, "handler must run — pi validates and executes tools, not the MCP layer").toBeTruthy();
+		expect(res.result.content[0].text).toBe("ran");
 	});
 });

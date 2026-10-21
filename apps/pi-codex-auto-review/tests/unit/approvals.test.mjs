@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import {
     ApprovalManager,
     FileGrantPersistence,
@@ -55,7 +54,7 @@ test("[grants] disabled categories never call reviewers or dialogs and user rout
         },
     };
     for (const approvalPolicy of ["never", { sandbox: false, rules: true }]) {
-        assert.equal(
+        expect(
             (
                 await manager({ approvalPolicy }).admit(
                     action,
@@ -63,12 +62,11 @@ test("[grants] disabled categories never call reviewers or dialogs and user rout
                     request,
                 )
             ).isAllowed,
-            false,
-        );
+        ).toBe(false);
     }
-    assert.equal(reviews, 0);
-    assert.equal(dialogs, 0);
-    assert.equal(
+    expect(reviews).toBe(0);
+    expect(dialogs).toBe(0);
+    expect(
         (
             await manager({ approvalsReviewer: "user" }).admit(
                 action,
@@ -76,10 +74,9 @@ test("[grants] disabled categories never call reviewers or dialogs and user rout
                 request,
             )
         ).isAllowed,
-        true,
-    );
-    assert.equal(reviews, 0);
-    assert.equal(dialogs, 1);
+    ).toBe(true);
+    expect(reviews).toBe(0);
+    expect(dialogs).toBe(1);
 });
 test("[grants] denial breaker uses three consecutive or ten of fifty reviews and retains at most ten recent denials", async (t) => {
     const f = await fixture(t),
@@ -97,26 +94,22 @@ test("[grants] denial breaker uses three consecutive or ten of fifty reviews and
         },
     };
     const lifecycle = new ReviewLifecycle();
-    assert.equal(
-        lifecycle.record(action, "context", denied).shouldInterrupt,
+    expect(lifecycle.record(action, "context", denied).shouldInterrupt).toBe(
         false,
     );
-    assert.equal(
-        lifecycle.record(action, "context", denied).shouldInterrupt,
+    expect(lifecycle.record(action, "context", denied).shouldInterrupt).toBe(
         false,
     );
-    assert.equal(
-        lifecycle.record(action, "context", denied).shouldInterrupt,
+    expect(lifecycle.record(action, "context", denied).shouldInterrupt).toBe(
         true,
     );
-    assert.equal(lifecycle.signal.aborted, true);
+    expect(lifecycle.signal.aborted).toBe(true);
     lifecycle.startTurn();
-    assert.equal(lifecycle.signal.aborted, false);
+    expect(lifecycle.signal.aborted).toBe(false);
     for (let i = 0; i < 10; i++) {
-        assert.equal(
+        expect(
             lifecycle.record(action, "context", denied).shouldInterrupt,
-            i === 9,
-        );
+        ).toBe(i === 9);
         lifecycle.record(action, "context", {
             ...denied,
             status: "timed-out",
@@ -124,20 +117,18 @@ test("[grants] denial breaker uses three consecutive or ten of fifty reviews and
             reason: "timeout",
         });
     }
-    assert.equal(lifecycle.recentDenials.length, 10);
+    expect(lifecycle.recentDenials.length).toBe(10);
     lifecycle.startTurn();
     for (let i = 0; i < 9; i++) {
         lifecycle.record(action, "context", denied);
         lifecycle.record(action, "context");
     }
     for (let i = 0; i < 50; i++) lifecycle.record(action, "context");
-    assert.equal(
-        lifecycle.record(action, "context", denied).shouldInterrupt,
+    expect(lifecycle.record(action, "context", denied).shouldInterrupt).toBe(
         false,
     );
-    assert.match(reviewFeedback(denied).message, /policy circumvention/);
-    assert.match(
-        reviewFeedback({ ...denied, status: "timed-out" }).message,
+    expect(reviewFeedback(denied).message).toMatch(/policy circumvention/);
+    expect(reviewFeedback({ ...denied, status: "timed-out" }).message).toMatch(
         /not evidence/,
     );
 });
@@ -160,8 +151,8 @@ test("[cancellation] direct user actions preserve caller and session cancellatio
             decision(modelAction, "ask", "review"),
             denied,
         );
-    assert.equal(m.lifecycle.signal.aborted, true);
-    assert.equal(
+    expect(m.lifecycle.signal.aborted).toBe(true);
+    expect(
         (
             await m.admit(
                 userAction,
@@ -169,9 +160,8 @@ test("[cancellation] direct user actions preserve caller and session cancellatio
                 denied,
             )
         ).isAllowed,
-        true,
-    );
-    assert.equal(
+    ).toBe(true);
+    expect(
         (
             await m.admit(
                 modelAction,
@@ -179,21 +169,19 @@ test("[cancellation] direct user actions preserve caller and session cancellatio
                 denied,
             )
         ).isAllowed,
-        false,
-    );
+    ).toBe(false);
     const caller = new AbortController();
     caller.abort();
-    assert.equal(
+    expect(
         (
             await m.admit(userAction, decision(userAction, "allow", "owned"), {
                 ...denied,
                 signal: caller.signal,
             })
         ).isAllowed,
-        false,
-    );
+    ).toBe(false);
     m.reset("another-session");
-    assert.equal(
+    expect(
         (
             await m.admit(
                 userAction,
@@ -201,8 +189,7 @@ test("[cancellation] direct user actions preserve caller and session cancellatio
                 denied,
             )
         ).isAllowed,
-        false,
-    );
+    ).toBe(false);
 });
 test("[grants] exact one-use retry reaches review again while changed inputs and consumed markers do not authorize", async (t) => {
     const f = await fixture(t),
@@ -241,8 +228,8 @@ test("[grants] exact one-use retry reaches review again while changed inputs and
                 context,
             );
     const initial = await invoke(action);
-    assert.equal(initial.isAllowed, false);
-    assert.ok(initial.denialId);
+    expect(initial.isAllowed).toBe(false);
+    expect(initial.denialId).toBeTruthy();
     const current = {
         sessionId: action.sessionId,
         contextId: reviewContext.contextId,
@@ -250,38 +237,35 @@ test("[grants] exact one-use retry reaches review again while changed inputs and
         policyRevision: action.policyRevision,
         permissionDigest: action.permissionDigest,
     };
-    assert.throws(
-        () =>
-            m.lifecycle.authorizeRetry(initial.denialId, {
-                ...current,
-                contextId: "changed",
-            }),
-        /current context/,
-    );
+    expect(() =>
+        m.lifecycle.authorizeRetry(initial.denialId, {
+            ...current,
+            contextId: "changed",
+        }),
+    ).toThrow(/current context/);
     m.lifecycle.authorizeRetry(initial.denialId, current);
-    assert.equal(
+    expect(
         (
             await invoke(
                 f.action("write", { ...action.args, content: "different" }),
             )
         ).isAllowed,
-        false,
-    );
+    ).toBe(false);
     const exact = await invoke(f.action("write", action.args));
-    assert.equal(exact.isAllowed, true);
-    assert.deepEqual(exact.delta.writePaths, [join(f.outside, "sentinel.txt")]);
-    assert.equal(
-        (await invoke(f.action("write", action.args))).isAllowed,
+    expect(exact.isAllowed).toBe(true);
+    expect(exact.delta.writePaths).toStrictEqual([
+        join(f.outside, "sentinel.txt"),
+    ]);
+    expect((await invoke(f.action("write", action.args))).isAllowed).toBe(
         false,
     );
-    assert.equal(
+    expect(
         requests.filter((request) =>
             request.context.items.some(
                 (item) => item.source === "user-confirmation",
             ),
         ).length,
-        1,
-    );
+    ).toBe(1);
     const critical = m.lifecycle.record(action, reviewContext.contextId, {
         status: "denied",
         actionDigest: action.digest,
@@ -294,17 +278,16 @@ test("[grants] exact one-use retry reaches review again while changed inputs and
             rationale: "Critical effect",
         },
     });
-    assert.equal(
+    expect(
         m.lifecycle.authorizeRetry(critical.denialId, current).assessment
             .risk_level,
-        "critical",
-    );
-    assert.ok(
+    ).toBe("critical");
+    expect(
         m.lifecycle.consumeRetry(action, reviewContext.contextId),
         "An earlier critical label must not prevent a fresh assessment",
-    );
+    ).toBeTruthy();
     m.reset("new-session");
-    assert.equal(m.lifecycle.recentDenials.length, 0);
+    expect(m.lifecycle.recentDenials.length).toBe(0);
 });
 test("[queue] concurrent denials interrupt once and cancel a still-running review before it can authorize", async (t) => {
     const f = await fixture(t),
@@ -335,9 +318,9 @@ test("[queue] concurrent denials interrupt once and cancel a still-running revie
     }
     pending[3]('{"outcome":"allow"}');
     const results = await Promise.all(attempts);
-    assert.equal(interrupts, 1);
-    assert.ok(results.every((result) => !result.isAllowed));
-    assert.equal(signals[3].aborted, true);
+    expect(interrupts).toBe(1);
+    expect(results.every((result) => !result.isAllowed)).toBeTruthy();
+    expect(signals[3].aborted).toBe(true);
     await m.settle();
 });
 test("[audit] structured review metadata is bounded and redacted without retaining requests", async (t) => {
@@ -358,11 +341,11 @@ test("[audit] structured review metadata is bounded and redacted without retaini
     });
     await audit.flush();
     const record = JSON.parse((await readFile(audit.path, "utf8")).trim());
-    assert.equal(record.review.status, "denied");
-    assert.ok(record.review.rationale.length <= 1000);
-    assert.ok(!JSON.stringify(record).includes("private-value"));
-    assert.ok(!JSON.stringify(record).includes(f.secret));
-    assert.equal(record.args, undefined);
+    expect(record.review.status).toBe("denied");
+    expect(record.review.rationale.length <= 1000).toBeTruthy();
+    expect(JSON.stringify(record).includes("private-value")).toBeFalsy();
+    expect(JSON.stringify(record).includes(f.secret)).toBeFalsy();
+    expect(record.args).toBe(undefined);
 });
 test("[grants] one-use is consumed once while session rules bind exact inputs/profile/revision/source", async (t) => {
     const f = await fixture(t),
@@ -373,15 +356,14 @@ test("[grants] one-use is consumed once while session rules bind exact inputs/pr
         decision(action, "ask", "review"),
         context("once"),
     );
-    assert.equal(first.isAllowed, true);
-    assert.equal(first.grant.scope, "once");
+    expect(first.isAllowed).toBe(true);
+    expect(first.grant.scope).toBe("once");
     const next = f.action("bash", action.args);
-    assert.equal(
+    expect(
         (await m.admit(next, decision(next, "ask", "review"), context("deny")))
             .isAllowed,
-        false,
-    );
-    assert.equal(
+    ).toBe(false);
+    expect(
         (
             await m.admit(
                 action,
@@ -389,13 +371,11 @@ test("[grants] one-use is consumed once while session rules bind exact inputs/pr
                 context("session"),
             )
         ).isAllowed,
-        true,
-    );
-    assert.equal(
+    ).toBe(true);
+    expect(
         (await m.admit(next, decision(next, "ask", "review"), context("deny")))
             .isAllowed,
-        true,
-    );
+    ).toBe(true);
     for (const extra of [
         { source: "nested" },
         { policyRevision: "changed" },
@@ -403,7 +383,7 @@ test("[grants] one-use is consumed once while session rules bind exact inputs/pr
         { args: { command: "npm install" } },
     ]) {
         const changed = f.action("bash", extra.args ?? action.args, extra);
-        assert.equal(
+        expect(
             (
                 await m.admit(
                     changed,
@@ -411,10 +391,9 @@ test("[grants] one-use is consumed once while session rules bind exact inputs/pr
                     context("deny"),
                 )
             ).isAllowed,
-            false,
-        );
+        ).toBe(false);
     }
-    assert.equal(
+    expect(
         (
             await m.admit(
                 next,
@@ -422,14 +401,12 @@ test("[grants] one-use is consumed once while session rules bind exact inputs/pr
                 context("once"),
             )
         ).isAllowed,
-        false,
-    );
+    ).toBe(false);
     m.reset("new-session");
-    assert.equal(
+    expect(
         (await m.admit(next, decision(next, "ask", "review"), context("once")))
             .isAllowed,
-        false,
-    );
+    ).toBe(false);
 });
 test("[queue] concurrent UI requests serialize and queued cancellation/session replacement cannot cross-authorize", async (t) => {
     const f = await fixture(t),
@@ -463,12 +440,12 @@ test("[queue] concurrent UI requests serialize and queued cancellation/session r
         signal: caller.signal,
     });
     await new Promise((resolve) => setImmediate(resolve));
-    assert.deepEqual(active, [actions[0].toolCallId]);
+    expect(active).toStrictEqual([actions[0].toolCallId]);
     caller.abort();
     responses[0]("once");
-    assert.equal((await one).isAllowed, true);
-    assert.equal((await two).isAllowed, false);
-    assert.equal(active.length, 1);
+    expect((await one).isAllowed).toBe(true);
+    expect((await two).isAllowed).toBe(false);
+    expect(active.length).toBe(1);
     const three = m.admit(actions[0], decision(actions[0], "ask", "review"), {
         provider,
         ui,
@@ -476,7 +453,7 @@ test("[queue] concurrent UI requests serialize and queued cancellation/session r
     });
     await new Promise((resolve) => setImmediate(resolve));
     m.reset("replacement");
-    assert.equal((await three).isAllowed, false);
+    expect((await three).isAllowed).toBe(false);
     await m.settle();
 });
 test("[queue] approval deadline preserves milliseconds at the actual dialog and denies on expiry", async (t) => {
@@ -496,12 +473,12 @@ test("[queue] approval deadline preserves milliseconds at the actual dialog and 
         trustedAuthorization: "",
     });
     await new Promise((resolve) => setImmediate(resolve));
-    assert.equal(finalOptions.timeoutMs, 317);
+    expect(finalOptions.timeoutMs).toBe(317);
     clock.advance(316);
-    assert.equal(finalOptions.signal.aborted, false);
+    expect(finalOptions.signal.aborted).toBe(false);
     clock.advance(1);
-    assert.equal((await pending).isAllowed, false);
-    assert.equal(finalOptions.signal.aborted, true);
+    expect((await pending).isAllowed).toBe(false);
+    expect(finalOptions.signal.aborted).toBe(true);
 });
 test("[persistence] persistent rules require explicit UI selection, atomic save and successful compensation", async (t) => {
     const f = await fixture(t),
@@ -510,16 +487,15 @@ test("[persistence] persistent rules require explicit UI selection, atomic save 
         m = manager({ persistence }),
         action = f.action("bash", { command: "a" });
     await m.initialize();
-    assert.equal(
+    expect(
         (
             await m.admit(action, decision(action, "ask", "review"), {
                 provider,
                 trustedAuthorization: "",
             })
         ).isAllowed,
-        false,
-    );
-    assert.equal(
+    ).toBe(false);
+    expect(
         (
             await m.admit(
                 action,
@@ -527,19 +503,17 @@ test("[persistence] persistent rules require explicit UI selection, atomic save 
                 context("persistent"),
             )
         ).isAllowed,
-        true,
-    );
+    ).toBe(true);
     const saved = await persistence.load();
-    assert.equal(saved.length, 1);
-    assert.equal(saved[0].scope, "persistent");
-    assert.equal(
+    expect(saved.length).toBe(1);
+    expect(saved[0].scope).toBe("persistent");
+    expect(
         (await readdir(f.control)).filter((x) => x.endsWith(".tmp")).length,
-        0,
-    );
+    ).toBe(0);
     const restored = manager({ persistence });
     await restored.initialize();
     restored.reset(action.sessionId);
-    assert.equal(
+    expect(
         (
             await restored.admit(
                 f.action("bash", action.args),
@@ -547,10 +521,9 @@ test("[persistence] persistent rules require explicit UI selection, atomic save 
                 context("deny"),
             )
         ).isAllowed,
-        false,
-    );
+    ).toBe(false);
     const call = f.action("bash", action.args);
-    assert.equal(
+    expect(
         (
             await restored.admit(
                 call,
@@ -558,8 +531,7 @@ test("[persistence] persistent rules require explicit UI selection, atomic save 
                 context("deny"),
             )
         ).isAllowed,
-        true,
-    );
+    ).toBe(true);
     const caller = new AbortController(),
         snapshots = [];
     const failed = manager({
@@ -571,17 +543,16 @@ test("[persistence] persistent rules require explicit UI selection, atomic save 
             },
         },
     });
-    assert.equal(
+    expect(
         (
             await failed.admit(action, decision(action, "ask", "review"), {
                 ...context("persistent"),
                 signal: caller.signal,
             })
         ).isAllowed,
-        false,
-    );
-    assert.equal(snapshots[0].length, 1);
-    assert.equal(snapshots[1].length, 0);
+    ).toBe(false);
+    expect(snapshots[0].length).toBe(1);
+    expect(snapshots[1].length).toBe(0);
     const broken = manager({
         persistence: {
             load: async () => [],
@@ -590,7 +561,7 @@ test("[persistence] persistent rules require explicit UI selection, atomic save 
             },
         },
     });
-    assert.equal(
+    expect(
         (
             await broken.admit(
                 action,
@@ -598,8 +569,7 @@ test("[persistence] persistent rules require explicit UI selection, atomic save 
                 context("persistent"),
             )
         ).isAllowed,
-        false,
-    );
+    ).toBe(false);
 });
 test("[audit] nonempty success/denial/failure population omits content and redacts synthetic markers", async (t) => {
     const f = await fixture(t),
@@ -610,13 +580,12 @@ test("[audit] nonempty success/denial/failure population omits content and redac
         await audit.record(action, "execution", `${outcome} ${f.secret}`);
     await audit.flush();
     const content = await readFile(path, "utf8");
-    assert.equal(content.trim().split("\n").length, 3);
-    assert.ok(!content.includes(f.secret));
-    assert.ok(!content.includes('"args"'));
-    assert.equal(
+    expect(content.trim().split("\n").length).toBe(3);
+    expect(content.includes(f.secret)).toBeFalsy();
+    expect(content.includes('"args"')).toBeFalsy();
+    expect(
         redact(
             "token=private password=secret Bearer abcdef SYNTHETIC_SECRET_MARKER",
         ),
-        "token=[REDACTED] password=[REDACTED] Bearer [REDACTED] [REDACTED]",
-    );
+    ).toBe("token=[REDACTED] password=[REDACTED] Bearer [REDACTED] [REDACTED]");
 });

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Context continuity test for pi-claude-bridge provider.
 // Verifies that switching away from the provider and back correctly
 // preserves conversation context (all messages are flattened into
@@ -13,6 +12,7 @@ console.log("=== session-resume-test.mjs ===");
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { expect, test } from "vitest";
 import { createRpcHarness, requireEnv } from "./lib/rpc-harness.mjs";
 
 const OTHER_PROVIDER = requireEnv("CLAUDE_BRIDGE_TESTING_ALT_PROVIDER");
@@ -49,109 +49,108 @@ async function promptAndWait(message) {
 	return collector.stop();
 }
 
-// Start pi
-await startAndWait();
+test("context survives switching away from the bridge and back, including after an abort", async () => {
+	// Start pi
+	await startAndWait();
 
-try {
-  // Turn 1: Non-provider prompt — establishes context before our provider is used
-  console.log("Turn 1: Non-provider prompt (establish context)...");
-  const text1 = await promptAndWait(`The first word is '${WORD_A}'. Acknowledge and be very brief.`);
-  if (!text1) throw new Error("Turn 1 produced no text");
-  console.log(`  Response: ${text1.slice(0, 80)}`);
+	try {
+		// Turn 1: Non-provider prompt — establishes context before our provider is used
+		console.log("Turn 1: Non-provider prompt (establish context)...");
+		const text1 = await promptAndWait(`The first word is '${WORD_A}'. Acknowledge and be very brief.`);
+		expect(text1, "Turn 1 produced no text").toBeTruthy();
+		console.log(`  Response: ${text1.slice(0, 80)}`);
 
-  // Switch to provider — first provider turn with prior history (Case 2)
-  const [bridgeProvider, bridgeModelId] = BRIDGE_MODEL.split("/");
-  console.log(`Switching to ${BRIDGE_MODEL}...`);
-  await send({ type: "set_model", provider: bridgeProvider, modelId: bridgeModelId });
-
-
-  // Turn 2: First provider turn — should see WORD_A from prior non-provider history
-  console.log("Turn 2: First provider turn with prior history (Case 2)...");
-  const text2 = await promptAndWait(
-    `The second word is '${WORD_B}'. Also, what was the first word? Reply with both words separated by a comma.`
-  );
-  console.log(`  Response: ${text2.slice(0, 80)}`);
-  const lower2 = text2.toLowerCase();
-  if (!lower2.includes(WORD_A)) throw new Error(`Turn 2 response missing '${WORD_A}': ${text2}`);
-  if (!lower2.includes(WORD_B)) throw new Error(`Turn 2 response missing '${WORD_B}': ${text2}`);
-
-  console.log(`Switching to ${OTHER_PROVIDER}/${OTHER_MODEL}...`);
-  await send({ type: "set_model", provider: OTHER_PROVIDER, modelId: OTHER_MODEL });
-
-  // Turn 5: Non-provider prompt — adds context that provider must see on switch-back
-  console.log("Turn 5: Non-provider prompt (creates missed messages)...");
-  const text5 = await promptAndWait(`The third word is '${WORD_C}'. Acknowledge and be very brief.`);
-  if (!text5) throw new Error("Turn 5 produced no text");
-  console.log(`  Response: ${text5.slice(0, 80)}`);
-
-  // Switch back to provider — context includes all prior turns (Case 4)
-  console.log(`Switching back to ${BRIDGE_MODEL}...`);
-  await send({ type: "set_model", provider: bridgeProvider, modelId: bridgeModelId });
+		// Switch to provider — first provider turn with prior history (Case 2)
+		const [bridgeProvider, bridgeModelId] = BRIDGE_MODEL.split("/");
+		console.log(`Switching to ${BRIDGE_MODEL}...`);
+		await send({ type: "set_model", provider: bridgeProvider, modelId: bridgeModelId });
 
 
-  // Turn 6: Provider resumes with missed messages (Case 4)
-  console.log("Turn 6: Provider resume with missed messages (Case 4)...");
-  const text6 = await promptAndWait(
-    "What were all three words? Reply with just the three words separated by commas."
-  );
-  console.log(`  Response: ${text6.slice(0, 80)}`);
-  const lower6 = text6.toLowerCase();
-  if (!lower6.includes(WORD_A)) throw new Error(`Turn 6 response missing '${WORD_A}': ${text6}`);
-  if (!lower6.includes(WORD_B)) throw new Error(`Turn 6 response missing '${WORD_B}': ${text6}`);
-  if (!lower6.includes(WORD_C)) throw new Error(`Turn 6 response missing '${WORD_C}': ${text6}`);
+		// Turn 2: First provider turn — should see WORD_A from prior non-provider history
+		console.log("Turn 2: First provider turn with prior history (Case 2)...");
+		const text2 = await promptAndWait(
+			`The second word is '${WORD_B}'. Also, what was the first word? Reply with both words separated by a comma.`
+		);
+		console.log(`  Response: ${text2.slice(0, 80)}`);
+		const lower2 = text2.toLowerCase();
+		expect(lower2, `Turn 2 response missing '${WORD_A}': ${text2}`).toContain(WORD_A);
+		expect(lower2, `Turn 2 response missing '${WORD_B}': ${text2}`).toContain(WORD_B);
 
-  // Turn 7: Abort mid-stream — session should be invalidated, next turn should recover
-  console.log("Turn 7: Abort mid-stream (session recovery)...");
-  await send({ type: "prompt", message: "Write a detailed 500-word essay about the history of timekeeping." });
-  // Set up idle listener before abort so we don't miss agent_end
-  const idle7 = waitForIdle();
-  await new Promise((r) => setTimeout(r, 2000));
-  await send({ type: "abort" });
-  await idle7;
+		console.log(`Switching to ${OTHER_PROVIDER}/${OTHER_MODEL}...`);
+		await send({ type: "set_model", provider: OTHER_PROVIDER, modelId: OTHER_MODEL });
+
+		// Turn 5: Non-provider prompt — adds context that provider must see on switch-back
+		console.log("Turn 5: Non-provider prompt (creates missed messages)...");
+		const text5 = await promptAndWait(`The third word is '${WORD_C}'. Acknowledge and be very brief.`);
+		expect(text5, "Turn 5 produced no text").toBeTruthy();
+		console.log(`  Response: ${text5.slice(0, 80)}`);
+
+		// Switch back to provider — context includes all prior turns (Case 4)
+		console.log(`Switching back to ${BRIDGE_MODEL}...`);
+		await send({ type: "set_model", provider: bridgeProvider, modelId: bridgeModelId });
 
 
-  // Turn 8: Provider turn after abort — should NOT get "conversation not found"
-  console.log("Turn 8: Provider turn after abort (should recover)...");
-  const text8 = await promptAndWait(
-    "What were all three words? Reply with just the three words separated by commas."
-  );
-  console.log(`  Response: ${text8.slice(0, 80)}`);
-  const lower8 = text8.toLowerCase();
-  if (!lower8.includes(WORD_A)) throw new Error(`Turn 8 response missing '${WORD_A}': ${text8}`);
-  if (!lower8.includes(WORD_B)) throw new Error(`Turn 8 response missing '${WORD_B}': ${text8}`);
-  if (!lower8.includes(WORD_C)) throw new Error(`Turn 8 response missing '${WORD_C}': ${text8}`);
+		// Turn 6: Provider resumes with missed messages (Case 4)
+		console.log("Turn 6: Provider resume with missed messages (Case 4)...");
+		const text6 = await promptAndWait(
+			"What were all three words? Reply with just the three words separated by commas."
+		);
+		console.log(`  Response: ${text6.slice(0, 80)}`);
+		const lower6 = text6.toLowerCase();
+		expect(lower6, `Turn 6 response missing '${WORD_A}': ${text6}`).toContain(WORD_A);
+		expect(lower6, `Turn 6 response missing '${WORD_B}': ${text6}`).toContain(WORD_B);
+		expect(lower6, `Turn 6 response missing '${WORD_C}': ${text6}`).toContain(WORD_C);
 
-  // sessionId stability: sessionId should stay stable across normal
-  // rebuilds (Case 2 → Case 4 → Case 3). It's allowed to rotate exactly
-  // once per abort: the post-abort rebuild takes a fresh UUID on purpose,
-  // to avoid a race with the killed CC subprocess's late interrupt-cleanup
-  // writes (which would otherwise append an orphan record at the same
-  // path and break the parent-uuid chain for the next resume).
-  //
-  // This test exercises one abort (Turn 7), so we expect exactly 2 unique
-  // sessionIds: pre-abort and post-abort.
-  const debugLog = readFileSync(DEBUG_LOG, "utf8");
-  const sessionIds = new Set();
-  const rotatedPostAbort = [];
-  for (const match of debugLog.matchAll(/syncResult: path=(reuse|rebuild) sessionId=([a-f0-9-]+)(?: priors=\d+ (\S+))?/g)) {
-    sessionIds.add(match[2]);
-    if (match[3] === "rotated-post-abort") rotatedPostAbort.push(match[2]);
-  }
-  if (sessionIds.size === 0) throw new Error("no syncResult markers found in debug log");
-  if (sessionIds.size > 2) throw new Error(`expected ≤2 distinct sessionIds (one pre-abort, one post-abort rotation), got ${sessionIds.size}: ${[...sessionIds].join(", ")}`);
-  if (rotatedPostAbort.length !== 1) throw new Error(`expected exactly 1 post-abort rotation, got ${rotatedPostAbort.length}`);
-  console.log(`  sessionIds observed: ${sessionIds.size} (expected 2 due to 1 post-abort rotation)`);
+		// Turn 7: Abort mid-stream — session should be invalidated, next turn should recover
+		console.log("Turn 7: Abort mid-stream (session recovery)...");
+		await send({ type: "prompt", message: "Write a detailed 500-word essay about the history of timekeeping." });
+		// Set up idle listener before abort so we don't miss agent_end
+		const idle7 = waitForIdle();
+		await new Promise((r) => setTimeout(r, 2000));
+		await send({ type: "abort" });
+		await idle7;
 
-  console.log("PASS");
-} catch (e) {
-  process.exitCode = 1;
-  console.log(`FAIL: ${e.message}\n${e.stack}`);
-  console.log(`  RPC log:    ${RPC_LOG}`);
-  console.log(`  Debug log:  ${DEBUG_LOG}`);
-  console.log(`  CC CLI:     ${join(dirname(DEBUG_LOG), "cc-cli-logs")} (look for *-provider-*.log near the failing turn)`);
-} finally {
-  await stop();
-  if (TEST_CWD.startsWith(TEST_CWD_PREFIX) && TEST_CWD.length > TEST_CWD_PREFIX.length) {
-    rmSync(TEST_CWD, { recursive: true, force: true });
-  }
-}
+
+		// Turn 8: Provider turn after abort — should NOT get "conversation not found"
+		console.log("Turn 8: Provider turn after abort (should recover)...");
+		const text8 = await promptAndWait(
+			"What were all three words? Reply with just the three words separated by commas."
+		);
+		console.log(`  Response: ${text8.slice(0, 80)}`);
+		const lower8 = text8.toLowerCase();
+		expect(lower8, `Turn 8 response missing '${WORD_A}': ${text8}`).toContain(WORD_A);
+		expect(lower8, `Turn 8 response missing '${WORD_B}': ${text8}`).toContain(WORD_B);
+		expect(lower8, `Turn 8 response missing '${WORD_C}': ${text8}`).toContain(WORD_C);
+
+		// sessionId stability: sessionId should stay stable across normal
+		// rebuilds (Case 2 → Case 4 → Case 3). It's allowed to rotate exactly
+		// once per abort: the post-abort rebuild takes a fresh UUID on purpose,
+		// to avoid a race with the killed CC subprocess's late interrupt-cleanup
+		// writes (which would otherwise append an orphan record at the same
+		// path and break the parent-uuid chain for the next resume).
+		//
+		// This test exercises one abort (Turn 7), so we expect exactly 2 unique
+		// sessionIds: pre-abort and post-abort.
+		const debugLog = readFileSync(DEBUG_LOG, "utf8");
+		const sessionIds = new Set();
+		const rotatedPostAbort = [];
+		for (const match of debugLog.matchAll(/syncResult: path=(reuse|rebuild) sessionId=([a-f0-9-]+)(?: priors=\d+ (\S+))?/g)) {
+			sessionIds.add(match[2]);
+			if (match[3] === "rotated-post-abort") rotatedPostAbort.push(match[2]);
+		}
+		expect(sessionIds.size, "no syncResult markers found in debug log").toBeGreaterThan(0);
+		expect(sessionIds.size, `expected ≤2 distinct sessionIds (one pre-abort, one post-abort rotation), got ${sessionIds.size}: ${[...sessionIds].join(", ")}`).toBeLessThanOrEqual(2);
+		expect(rotatedPostAbort.length, `expected exactly 1 post-abort rotation, got ${rotatedPostAbort.length}`).toBe(1);
+		console.log(`  sessionIds observed: ${sessionIds.size} (expected 2 due to 1 post-abort rotation)`);
+	} catch (e) {
+		console.log(`  RPC log:    ${RPC_LOG}`);
+		console.log(`  Debug log:  ${DEBUG_LOG}`);
+		console.log(`  CC CLI:     ${join(dirname(DEBUG_LOG), "cc-cli-logs")} (look for *-provider-*.log near the failing turn)`);
+		throw e;
+	} finally {
+		await stop();
+		if (TEST_CWD.startsWith(TEST_CWD_PREFIX) && TEST_CWD.length > TEST_CWD_PREFIX.length) {
+			rmSync(TEST_CWD, { recursive: true, force: true });
+		}
+	}
+});

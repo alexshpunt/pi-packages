@@ -1,6 +1,5 @@
-import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import test from "node:test";
+import { expect, test } from "vitest";
 import {
     decision,
     digest,
@@ -52,30 +51,26 @@ test("[review] only ambiguous actions call a separate tool-free current-model re
             hasUI: false,
             timeoutMs: 183,
         });
-    assert.equal(
-        (await invoke(decision(action, "allow", "literal"))).decision,
+    expect((await invoke(decision(action, "allow", "literal"))).decision).toBe(
         "allow",
     );
-    assert.equal(
+    expect(
         (await invoke(decision(action, "deny", "protected", undefined, true)))
             .decision,
-        "deny",
-    );
-    assert.equal(calls.length, 0);
-    assert.equal(
-        (await invoke(decision(action, "ask", "review"))).decision,
+    ).toBe("deny");
+    expect(calls.length).toBe(0);
+    expect((await invoke(decision(action, "ask", "review"))).decision).toBe(
         "allow",
     );
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].selected, model);
-    assert.deepEqual(calls[0].context.tools, []);
-    assert.equal(calls[0].context.messages.length, 1);
-    assert.equal(calls[0].options.timeoutMs, 183);
-    assert.match(calls[0].context.messages[0].content, /Run project tests/);
-    assert.equal(
+    expect(calls.length).toBe(1);
+    expect(calls[0].selected).toBe(model);
+    expect(calls[0].context.tools).toStrictEqual([]);
+    expect(calls[0].context.messages.length).toBe(1);
+    expect(calls[0].options.timeoutMs).toBe(183);
+    expect(calls[0].context.messages[0].content).toMatch(/Run project tests/);
+    expect(
         JSON.parse(calls[0].context.messages[0].content).untrustedAction.digest,
-        action.digest,
-    );
+    ).toBe(action.digest);
 });
 test("[review] malformed, failed, tool-bearing or permission-widening model replies never authorize", async (t) => {
     const f = await fixture(t),
@@ -92,7 +87,7 @@ test("[review] malformed, failed, tool-bearing or permission-widening model repl
         '{"decision":"allow","reason":4}',
         '{"decision":"allow","reason":"ok"}',
     ]) {
-        assert.equal(
+        expect(
             (
                 await reviewAction({
                     action,
@@ -103,8 +98,7 @@ test("[review] malformed, failed, tool-bearing or permission-widening model repl
                     timeoutMs: 100,
                 })
             ).decision,
-            "deny",
-        );
+        ).toBe("deny");
     }
     const failure = await reviewAction({
         action,
@@ -118,9 +112,9 @@ test("[review] malformed, failed, tool-bearing or permission-widening model repl
         hasUI: true,
         timeoutMs: 100,
     });
-    assert.equal(failure.decision, "deny");
-    assert.equal(failure.result.status, "failed");
-    assert.equal(failure.result.failure, "provider");
+    expect(failure.decision).toBe("deny");
+    expect(failure.result.status).toBe("failed");
+    expect(failure.result.failure).toBe("provider");
     const provider = new PiReviewProvider({
         model: {},
         modelRegistry: {
@@ -132,12 +126,12 @@ test("[review] malformed, failed, tool-bearing or permission-widening model repl
             }),
         },
     });
-    await assert.rejects(
+    await expect(
         provider.complete(
             { systemPrompt: "", data: "" },
             { signal: new AbortController().signal, timeoutMs: 100 },
         ),
-    );
+    ).rejects.toThrow();
 });
 test("[deadlines] configured milliseconds reach the final provider signal and expire at the boundary", async (t) => {
     const f = await fixture(t),
@@ -158,14 +152,14 @@ test("[deadlines] configured milliseconds reach the final provider signal and ex
         timeoutMs: 239,
         clock,
     });
-    assert.equal(finalOptions.timeoutMs, 239);
+    expect(finalOptions.timeoutMs).toBe(239);
     clock.advance(238);
-    assert.equal(finalOptions.signal.aborted, false);
+    expect(finalOptions.signal.aborted).toBe(false);
     clock.advance(1);
-    assert.equal(finalOptions.signal.aborted, true);
+    expect(finalOptions.signal.aborted).toBe(true);
     const reply = await promise;
-    assert.equal(reply.decision, "deny");
-    assert.equal(reply.result.status, "timed-out");
+    expect(reply.decision).toBe("deny");
+    expect(reply.result.status).toBe("timed-out");
 });
 test("[cancellation] caller cancellation reaches the final provider even when it ignores the signal", async (t) => {
     const f = await fixture(t),
@@ -187,10 +181,10 @@ test("[cancellation] caller cancellation reaches the final provider even when it
         timeoutMs: 10000,
     });
     caller.abort(new Error("cancel"));
-    assert.equal(finalSignal.aborted, true);
+    expect(finalSignal.aborted).toBe(true);
     const reply = await promise;
-    assert.equal(reply.decision, "deny");
-    assert.equal(reply.result.status, "aborted");
+    expect(reply.decision).toBe("deny");
+    expect(reply.result.status).toBe("aborted");
 });
 test("[review] pinned short/full assessments and policy retain risk thresholds and distinct failures", async (t) => {
     const f = await fixture(t),
@@ -206,13 +200,12 @@ test("[review] pinned short/full assessments and policy retain risk thresholds a
             hasUI: false,
             timeoutMs: 500,
         };
-    assert.equal(parseAssessment('{"outcome":"allow"}').risk_level, "low");
-    assert.equal(
+    expect(parseAssessment('{"outcome":"allow"}').risk_level).toBe("low");
+    expect(
         parseAssessment('```json\n{"outcome":"deny"}\n```').user_authorization,
-        "unknown",
-    );
+    ).toBe("unknown");
     for (const risk of ["critical", "high"])
-        assert.equal(
+        expect(
             parseAssessment(
                 JSON.stringify({
                     outcome: "allow",
@@ -220,14 +213,13 @@ test("[review] pinned short/full assessments and policy retain risk thresholds a
                     user_authorization: "unknown",
                 }),
             ).outcome,
-            "deny",
-        );
+        ).toBe("deny");
     for (const output of [
         "{}",
         '{"outcome":"allow","grant":"persistent"}',
         '{"outcome":"allow","risk_level":"safe"}',
     ])
-        assert.throws(() => parseAssessment(output));
+        expect(() => parseAssessment(output)).toThrow();
     for (const [field, value] of [
         ["risk_level", ["critical"]],
         ["risk_level", ["high"]],
@@ -242,13 +234,13 @@ test("[review] pinned short/full assessments and policy retain risk thresholds a
             user_authorization: "high",
             [field]: value,
         });
-        assert.throws(() => parseAssessment(output), /schema|assessment/);
+        expect(() => parseAssessment(output)).toThrow(/schema|assessment/);
         const reply = await reviewAction({
             ...options,
             provider: { complete: async () => output },
         });
-        assert.equal(reply.decision, "deny");
-        assert.equal(reply.result.failure, "invalid-output");
+        expect(reply.decision).toBe("deny");
+        expect(reply.result.failure).toBe("invalid-output");
     }
     const approved = await reviewAction({
         ...options,
@@ -257,26 +249,27 @@ test("[review] pinned short/full assessments and policy retain risk thresholds a
                 '{"outcome":"allow","risk_level":"medium","user_authorization":"high","rationale":"Owned narrow write"}',
         },
     });
-    assert.equal(approved.result.status, "approved");
-    assert.equal(approved.result.actionDigest, action.digest);
+    expect(approved.result.status).toBe("approved");
+    expect(approved.result.actionDigest).toBe(action.digest);
     const denied = await reviewAction({
         ...options,
         provider: { complete: async () => '{"outcome":"deny"}' },
     });
-    assert.equal(denied.result.status, "denied");
+    expect(denied.result.status).toBe("denied");
     const malformed = await reviewAction({
         ...options,
         provider: { complete: async () => "not JSON" },
     });
-    assert.equal(malformed.result.failure, "invalid-output");
+    expect(malformed.result.failure).toBe("invalid-output");
     const stale = await reviewAction({
         ...options,
         context: { sessionId: "other" },
         provider: {
-            complete: () => assert.fail("stale context reached provider"),
+            complete: () =>
+                expect.unreachable("stale context reached provider"),
         },
     });
-    assert.equal(stale.result.failure, "context");
+    expect(stale.result.failure).toBe("context");
     const policy = reviewPolicy();
     for (const category of [
         "Data Exfiltration",
@@ -285,12 +278,12 @@ test("[review] pinned short/full assessments and policy retain risk thresholds a
         "Destructive Actions",
         "Post-denial user approval",
     ])
-        assert.ok(policy.text.includes(category));
+        expect(policy.text.includes(category)).toBeTruthy();
     const custom = reviewPolicy("Custom tenant constraints");
-    assert.ok(custom.text.includes("Custom tenant constraints"));
-    assert.ok(!custom.text.includes("### Data Exfiltration"));
-    assert.ok(custom.text.includes("# Outcome Policy"));
-    assert.notEqual(custom.digest, policy.digest);
+    expect(custom.text.includes("Custom tenant constraints")).toBeTruthy();
+    expect(custom.text.includes("### Data Exfiltration")).toBeFalsy();
+    expect(custom.text.includes("# Outcome Policy")).toBeTruthy();
+    expect(custom.digest).not.toBe(policy.digest);
 });
 test("[review] retained authorization survives follow-ups, compaction and branch restoration without trusting tool text or thinking", () => {
     const store = new ReviewContextStore();
@@ -318,31 +311,30 @@ test("[review] retained authorization survives follow-ups, compaction and branch
     });
     store.confirm({ actionDigest: "exact", choice: "once" });
     const context = store.snapshot(10000);
-    assert.equal(
-        context.items.filter((item) => item.source === "user").length,
+    expect(context.items.filter((item) => item.source === "user").length).toBe(
         2,
     );
-    assert.ok(
+    expect(
         context.items.some(
             (item) =>
                 item.source === "agents" && item.trust === "authorization",
         ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         context.items.some(
             (item) =>
                 item.source === "user-confirmation" &&
                 item.trust === "authorization",
         ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         context.items.some(
             (item) =>
                 item.source === "tool-result" && item.trust === "evidence",
         ),
-    );
-    assert.ok(!JSON.stringify(context).includes("HIDDEN_REASONING"));
-    assert.throws(() => store.snapshot(10), /exceed/);
+    ).toBeTruthy();
+    expect(JSON.stringify(context).includes("HIDDEN_REASONING")).toBeFalsy();
+    expect(() => store.snapshot(10)).toThrow(/exceed/);
     store.reset("resumed", {
         getBranch: () => [
             {
@@ -360,15 +352,13 @@ test("[review] retained authorization survives follow-ups, compaction and branch
         ],
     });
     const resumed = store.snapshot(10000);
-    assert.equal(
+    expect(
         resumed.items.filter((item) => item.trust === "authorization").length,
-        1,
-    );
-    assert.equal(
+    ).toBe(1);
+    expect(
         resumed.items.find((item) => item.trust === "authorization").content,
-        "Original scope",
-    );
-    assert.notEqual(resumed.contextId, context.contextId);
+    ).toBe("Original scope");
+    expect(resumed.contextId).not.toBe(context.contextId);
 });
 test("[review] registered model override, bounded read-only tools and final values reach the provider", async () => {
     const calls = [],
@@ -429,36 +419,36 @@ test("[review] registered model override, bounded read-only tools and final valu
             },
         },
     );
-    assert.equal(
+    expect(
         await provider.complete(
             { systemPrompt: "policy", data: "action" },
             { signal, timeoutMs: 5000 },
         ),
-        '{"outcome":"allow"}',
-    );
-    assert.equal(calls[0].selected, model);
-    assert.equal(calls[0].options.maxTokens, 777);
-    assert.equal(calls[0].options.timeoutMs, 5000);
-    assert.equal(inspected[0].signal, signal);
-    assert.deepEqual(
-        calls[0].context.tools.map((tool) => tool.name),
-        ["inspect_file", "inspect_directory"],
-    );
-    assert.ok(
+    ).toBe('{"outcome":"allow"}');
+    expect(calls[0].selected).toBe(model);
+    expect(calls[0].options.maxTokens).toBe(777);
+    expect(calls[0].options.timeoutMs).toBe(5000);
+    expect(inspected[0].signal).toBe(signal);
+    expect(calls[0].context.tools.map((tool) => tool.name)).toStrictEqual([
+        "inspect_file",
+        "inspect_directory",
+    ]);
+    expect(
         JSON.stringify(calls[1].context.messages).includes(
             "owned fixture bytes",
         ),
-    );
-    assert.ok(!JSON.stringify(calls[1].context.messages).includes("HIDDEN"));
-    await assert.rejects(
+    ).toBeTruthy();
+    expect(
+        JSON.stringify(calls[1].context.messages).includes("HIDDEN"),
+    ).toBeFalsy();
+    await expect(
         new PiReviewProvider(
             { model, modelRegistry: registry },
             validateSettings({
                 reviewModel: { provider: "missing", id: "missing" },
             }),
         ).complete({ systemPrompt: "", data: "" }, { signal, timeoutMs: 5000 }),
-        /unavailable/,
-    );
+    ).rejects.toThrow(/unavailable/);
 });
 test("[review] authorization and visible evidence retain chronology and removed runtime instructions lose authority", () => {
     const store = new ReviewContextStore();
@@ -476,11 +466,13 @@ test("[review] authorization and visible evidence retain chronology and removed 
         },
         "extension",
     );
-    assert.deepEqual(
-        store.snapshot(10000).items.map((item) => item.id),
-        ["original", "result:risk", "confirmation", "extension"],
-    );
-    assert.equal(store.snapshot(10000).items.at(-1).trust, "evidence");
+    expect(store.snapshot(10000).items.map((item) => item.id)).toStrictEqual([
+        "original",
+        "result:risk",
+        "confirmation",
+        "extension",
+    ]);
+    expect(store.snapshot(10000).items.at(-1).trust).toBe("evidence");
     store.instructions({
         systemPromptOptions: {
             contextFiles: [],
@@ -490,17 +482,16 @@ test("[review] authorization and visible evidence retain chronology and removed 
     });
     const previous = store.scopeVersion;
     store.instructions({ systemPromptOptions: { contextFiles: [] } });
-    assert.ok(store.scopeVersion > previous);
-    assert.ok(!JSON.stringify(store.snapshot(10000)).includes("Old "));
+    expect(store.scopeVersion > previous).toBeTruthy();
+    expect(JSON.stringify(store.snapshot(10000)).includes("Old ")).toBeFalsy();
     store.toolResult({ text: "large ".repeat(10000) }, "oversized");
     const bounded = store.snapshot(2000);
-    assert.ok(bounded.items.some((item) => item.isTruncated));
-    assert.deepEqual(
+    expect(bounded.items.some((item) => item.isTruncated)).toBeTruthy();
+    expect(
         bounded.items
             .filter((item) => !item.isTruncated)
             .map((item) => item.id),
-        ["original", "result:risk", "confirmation", "extension"],
-    );
+    ).toStrictEqual(["original", "result:risk", "confirmation", "extension"]);
 });
 test("[review] the production model cannot switch to the legacy approval protocol", async (t) => {
     const f = await fixture(t),
@@ -529,8 +520,8 @@ test("[review] the production model cannot switch to the legacy approval protoco
         hasUI: true,
         timeoutMs: 500,
     });
-    assert.equal(reply.decision, "deny");
-    assert.equal(reply.result?.failure, "invalid-output");
+    expect(reply.decision).toBe("deny");
+    expect(reply.result?.failure).toBe("invalid-output");
 });
 test("[context-binding] changed context or permission contents cannot reach the reviewer under an old digest", async (t) => {
     const f = await fixture(t),
@@ -548,7 +539,7 @@ test("[context-binding] changed context or permission contents cannot reach the 
             timeoutMs: 500,
             provider: {
                 complete: () =>
-                    assert.fail("Invalid binding reached the provider"),
+                    expect.unreachable("Invalid binding reached the provider"),
             },
         };
     const forged = {
@@ -563,11 +554,10 @@ test("[context-binding] changed context or permission contents cannot reach the 
             },
         ],
     };
-    assert.equal(
+    expect(
         (await reviewAction({ ...base, context: forged })).result.failure,
-        "context",
-    );
-    assert.equal(
+    ).toBe("context");
+    expect(
         (
             await reviewAction({
                 ...base,
@@ -576,10 +566,9 @@ test("[context-binding] changed context or permission contents cannot reach the 
                 },
             })
         ).result.failure,
-        "context",
-    );
+    ).toBe("context");
     const { digest: identity, ...fields } = context;
-    assert.equal(identity, digest(fields));
+    expect(identity).toBe(digest(fields));
 });
 test("[context-binding] bounded durable evidence retains provenance, truncation, prior assessments and branch-local user consent", async (t) => {
     const f = await fixture(t),
@@ -625,27 +614,27 @@ test("[context-binding] bounded durable evidence retains provenance, truncation,
     restored.reset(action.sessionId, { getBranch: () => entries });
     const items = restored.snapshot(12000).items;
     const output = items.find((item) => item.source === "tool-result");
-    assert.equal(output.isTruncated, true);
-    assert.equal(output.content.isError, true);
-    assert.match(output.content.excerpt, /HEAD|TAIL/);
-    assert.ok(
+    expect(output.isTruncated).toBe(true);
+    expect(output.content.isError).toBe(true);
+    expect(output.content.excerpt).toMatch(/HEAD|TAIL/);
+    expect(
         items.some(
             (item) =>
                 item.source === "assistant" &&
                 item.trust === "evidence" &&
                 item.content.role === "previous-review",
         ),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         items.some(
             (item) =>
                 item.source === "user-confirmation" &&
                 item.trust === "authorization" &&
                 item.content.action.digest === action.digest,
         ),
-    );
+    ).toBeTruthy();
     restored.reset(action.sessionId, { getBranch: () => [] });
-    assert.equal(restored.snapshot(12000).items.length, 0);
+    expect(restored.snapshot(12000).items.length).toBe(0);
 });
 test("[context-binding] dialog observation preserves UI receivers and cancellation and never retains password values or stale answers", async (t) => {
     const f = await fixture(t),
@@ -678,31 +667,29 @@ test("[context-binding] dialog observation preserves UI receivers and cancellati
         controller.signal,
     );
     const previousVersion = store.scopeVersion;
-    assert.equal(
+    expect(
         await observed.ui.confirm("Approve one target?", "Only this target"),
-        true,
-    );
-    assert.equal(observed.ui.notify(), true);
-    assert.ok(
+    ).toBe(true);
+    expect(observed.ui.notify()).toBe(true);
+    expect(
         store.scopeVersion > previousVersion,
         "A new genuine answer must invalidate reviews captured under older authorization",
-    );
+    ).toBeTruthy();
     const options = { signal: controller.signal, timeout: 4321 };
-    assert.equal(
-        await observed.ui.input("Enter API key", "", options),
+    expect(await observed.ui.input("Enter API key", "", options)).toBe(
         "owned-private-password",
     );
-    assert.equal(receivedOptions, options);
-    assert.ok(
-        !JSON.stringify(store.snapshot(10000)).includes(
+    expect(receivedOptions).toBe(options);
+    expect(
+        JSON.stringify(store.snapshot(10000)).includes(
             "owned-private-password",
         ),
-    );
+    ).toBeFalsy();
     const stale = observed.ui.select("Old question", ["Yes"]);
     store.reset("changed");
     finish("Yes");
-    assert.equal(await stale, "Yes");
-    assert.equal(store.snapshot(10000).items.length, 0);
+    expect(await stale).toBe("Yes");
+    expect(store.snapshot(10000).items.length).toBe(0);
     const cancelled = observeToolUserInput(
         context,
         action,
@@ -712,7 +699,7 @@ test("[context-binding] dialog observation preserves UI receivers and cancellati
     controller.abort();
     finish("Yes");
     await cancelled;
-    assert.equal(store.snapshot(10000).items.length, 0);
+    expect(store.snapshot(10000).items.length).toBe(0);
 });
 const captureReview = () => {
     const requests = [];
@@ -747,25 +734,23 @@ test("[review] credential-bearing exact actions reach the reviewer masked and st
         hasUI: false,
         timeoutMs: 1000,
     });
-    assert.equal(reply.decision, "allow");
-    assert.equal(requests.length, 1);
-    assert.ok(!requests[0].data.includes(token.slice(4)));
+    expect(reply.decision).toBe("allow");
+    expect(requests.length).toBe(1);
+    expect(requests[0].data.includes(token.slice(4))).toBeFalsy();
     const data = JSON.parse(requests[0].data);
-    assert.match(
-        data.untrustedAction.args.command,
+    expect(data.untrustedAction.args.command).toMatch(
         /^curl -H "Authorization: /,
     );
-    assert.equal(data.untrustedAction.digest, action.digest);
-    assert.ok(data.redactedActionFields.length > 0);
+    expect(data.untrustedAction.digest).toBe(action.digest);
+    expect(data.redactedActionFields.length > 0).toBeTruthy();
     for (const field of data.redactedActionFields) {
-        assert.deepEqual(field.path, ["args", "command"]);
-        assert.deepEqual(Object.keys(field).sort(), ["path", "ruleId"]);
+        expect(field.path).toStrictEqual(["args", "command"]);
+        expect(Object.keys(field).sort()).toStrictEqual(["path", "ruleId"]);
     }
-    assert.equal(reply.result.actionDigest, action.digest);
-    assert.equal(action.args.command, command);
-    assert.equal(reply.result.policyDigest, reviewPolicy().digest);
-    assert.match(
-        requests[0].systemPrompt,
+    expect(reply.result.actionDigest).toBe(action.digest);
+    expect(action.args.command).toBe(command);
+    expect(reply.result.policyDigest).toBe(reviewPolicy().digest);
+    expect(requests[0].systemPrompt).toMatch(
         /redactedActionFields lists the JSON paths/,
     );
     const clean = f.action("bash", { command: "npm test" }),
@@ -778,9 +763,9 @@ test("[review] credential-bearing exact actions reach the reviewer masked and st
         hasUI: false,
         timeoutMs: 1000,
     });
-    assert.ok(
-        !("redactedActionFields" in JSON.parse(cleanReview.requests[0].data)),
-    );
+    expect(
+        "redactedActionFields" in JSON.parse(cleanReview.requests[0].data),
+    ).toBeFalsy();
 });
 test("[review] a token in the command, a PEM block, a sensitive assignment and an opted-in e-mail address are masked for the reviewer", async (t) => {
     const f = await fixture(t),
@@ -815,13 +800,12 @@ test("[review] a token in the command, a PEM block, a sensitive assignment and a
             context: store.snapshot(settings.reviewContextChars),
             settings,
         });
-        assert.equal(reply.result.actionDigest, action.digest);
+        expect(reply.result.actionDigest).toBe(action.digest);
         const data = requests[0].data;
-        assert.ok(!data.includes(token.slice(4)));
-        assert.ok(!data.includes(pemBody));
-        assert.ok(!data.includes("synthetic-access-value"));
-        assert.equal(
-            data.includes("user@example.com"),
+        expect(data.includes(token.slice(4))).toBeFalsy();
+        expect(data.includes(pemBody)).toBeFalsy();
+        expect(data.includes("synthetic-access-value")).toBeFalsy();
+        expect(data.includes("user@example.com")).toBe(
             piiEntities.length === 0,
         );
     }
@@ -870,11 +854,11 @@ test("[context-binding] identifier-shaped PII leaves session, call, item and dig
         context,
         settings,
     });
-    assert.equal(reply.result.contextDigest, context.digest);
-    assert.ok(!requests[0].data.includes(marker));
+    expect(reply.result.contextDigest).toBe(context.digest);
+    expect(requests[0].data.includes(marker)).toBeFalsy();
     const data = JSON.parse(requests[0].data);
     for (const key of ["sessionId", "contextId", "turnId", "digest"])
-        assert.equal(data.context[key], context[key]);
+        expect(data.context[key]).toBe(context[key]);
     for (const key of [
         "toolCallId",
         "sessionId",
@@ -882,22 +866,21 @@ test("[context-binding] identifier-shaped PII leaves session, call, item and dig
         "permissionDigest",
         "digest",
     ])
-        assert.equal(data.untrustedAction[key], action[key]);
-    assert.deepEqual(
-        data.context.items.map((item) => item.id),
+        expect(data.untrustedAction[key]).toBe(action[key]);
+    expect(data.context.items.map((item) => item.id)).toStrictEqual(
         context.items.map((item) => item.id),
     );
-    assert.equal(data.context.items.length, 3);
+    expect(data.context.items.length).toBe(3);
     for (const item of data.context.items) {
-        assert.equal(item.content.toolCallId, action.toolCallId);
-        assert.equal(item.content.callIdentity, callIdentity);
+        expect(item.content.toolCallId).toBe(action.toolCallId);
+        expect(item.content.callIdentity).toBe(callIdentity);
     }
     const review = data.context.items.find(
         (item) => item.content.role === "previous-review",
     ).content;
-    assert.equal(review.actionDigest, action.digest);
+    expect(review.actionDigest).toBe(action.digest);
     for (const key of ["actionDigest", "contextDigest", "policyDigest"])
-        assert.equal(review.result[key], previous[key]);
+        expect(review.result[key]).toBe(previous[key]);
 });
 test("[review] settings rules, exceptions and the 0.3.0 reviewer patterns mask reviewer data", async (t) => {
     const f = await fixture(t),
@@ -921,9 +904,9 @@ test("[review] settings rules, exceptions and the 0.3.0 reviewer patterns mask r
         settings,
     });
     const data = JSON.parse(requests[0].data);
-    assert.ok(!requests[0].data.includes("ACME_LIVE123"));
-    assert.match(data.untrustedAction.args.command, / ACME_EXAMPLE$/);
-    assert.deepEqual(data.redactedActionFields, [
+    expect(requests[0].data.includes("ACME_LIVE123")).toBeFalsy();
+    expect(data.untrustedAction.args.command).toMatch(/ ACME_EXAMPLE$/);
+    expect(data.redactedActionFields).toStrictEqual([
         { path: ["args", "command"], ruleId: "custom.acme" },
     ]);
     const legacy = safeEvidence(
@@ -936,19 +919,18 @@ test("[review] settings rules, exceptions and the 0.3.0 reviewer patterns mask r
         "SYNTHETIC",
         "sk-12345678",
     ])
-        assert.ok(!legacy.includes(raw), raw);
-    assert.deepEqual(
+        expect(legacy.includes(raw), raw).toBeFalsy();
+    expect(
         safeEvidence({
             Authorization: "Basic synthetic",
             token: 12345,
             password: { nested: "value" },
             args: { authorizationHeader: "kept-by-name" },
         }),
-        {
-            Authorization: "[REDACTED]",
-            token: "[REDACTED]",
-            password: "[REDACTED]",
-            args: { authorizationHeader: "kept-by-name" },
-        },
-    );
+    ).toStrictEqual({
+        Authorization: "[REDACTED]",
+        token: "[REDACTED]",
+        password: "[REDACTED]",
+        args: { authorizationHeader: "kept-by-name" },
+    });
 });

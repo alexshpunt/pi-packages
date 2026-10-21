@@ -20,8 +20,7 @@
  * call to the isolated summary path or add it below with a note on why it is harmless.
  */
 
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -55,7 +54,7 @@ function jsFilesUnder(dir, prefix = "") {
 
 describe("pi streamFn consumers", () => {
 	it("are all ones we have accounted for, in the same places", () => {
-		assert.ok(existsSync(PI_DIST), `pi's dist is not at ${PI_DIST} — its layout changed, so this inventory is blind`);
+		expect(existsSync(PI_DIST), `pi's dist is not at ${PI_DIST} — its layout changed, so this inventory is blind`).toBeTruthy();
 		const found = new Map(
 			jsFilesUnder(PI_DIST)
 				.map(({ rel, full }) => [rel, mentionsOf(readFileSync(full, "utf8"))])
@@ -63,27 +62,19 @@ describe("pi streamFn consumers", () => {
 				.sort(([a], [b]) => a.localeCompare(b)),
 		);
 
-		assert.ok(found.size > 0, `no streamFn consumers found under ${PI_DIST} — did pi's layout change?`);
+		expect(found.size > 0, `no streamFn consumers found under ${PI_DIST} — did pi's layout change?`).toBeTruthy();
 
 		const unexpected = [...found.keys()].filter((rel) => !(rel in HANDLED));
-		assert.deepEqual(
-			unexpected,
-			[],
-			`pi has streamFn consumers this bridge has never considered: ${unexpected.join(", ")}. `
-			+ `Each can route an LLM call through our provider with a system prompt no before_agent_start recorded.`,
-		);
+		expect(unexpected, `pi has streamFn consumers this bridge has never considered: ${unexpected.join(", ")}. `
+		+ `Each can route an LLM call through our provider with a system prompt no before_agent_start recorded.`).toStrictEqual([]);
 
 		// A missing consumer means its routing explanation must be reviewed.
 		const missing = Object.keys(HANDLED).filter((rel) => !found.has(rel));
-		assert.deepEqual(missing, [], `these no longer consume streamFn — is the routing description still correct? ${missing.join(", ")}`);
+		expect(missing, `these no longer consume streamFn — is the routing description still correct? ${missing.join(", ")}`).toStrictEqual([]);
 
 		const drifted = [...found].filter(([rel, n]) => HANDLED[rel].mentions !== n)
 			.map(([rel, n]) => `${rel}: ${HANDLED[rel].mentions} -> ${n}`);
-		assert.deepEqual(
-			drifted,
-			[],
-			`pi changed how often these reference streamFn: ${drifted.join("; ")}. `
-			+ `Read the diff — a new call site inside a file we already trust is the case a filename-only inventory misses — then update the counts.`,
-		);
+		expect(drifted, `pi changed how often these reference streamFn: ${drifted.join("; ")}. `
+		+ `Read the diff — a new call site inside a file we already trust is the case a filename-only inventory misses — then update the counts.`).toStrictEqual([]);
 	});
 });

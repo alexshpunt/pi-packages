@@ -12,7 +12,7 @@ import { StringDecoder } from "node:string_decoder";
 const DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 // Auto-load .env.test so int tests work when invoked directly
-// (`node --import tsx --test tests/int-foo.mjs`) and not just via `npm test`.
+// (`pnpm exec vitest run --config vitest.int.config.mjs tests/int-foo.mjs`) and not just via `npm test`.
 const ENV_FILE = resolve(DIR, ".env.test");
 if (existsSync(ENV_FILE)) process.loadEnvFile(ENV_FILE);
 

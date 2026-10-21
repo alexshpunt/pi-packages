@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
@@ -20,13 +19,12 @@ test("[dependency-security] the extension has no sandbox runtime or bundled prod
         new URL("../../../../pnpm-lock.yaml", import.meta.url),
         "utf8",
     );
-    assert.equal(
-        pkg.dependencies?.["@anthropic-ai/sandbox-runtime"],
-        undefined,
-    );
-    assert.ok(!pkg.bundleDependencies?.length);
+    expect(pkg.dependencies?.["@anthropic-ai/sandbox-runtime"]).toBe(undefined);
+    expect(pkg.bundleDependencies?.length).toBeFalsy();
     // pnpm-lock.yaml keys every resolved package as `name@version`.
-    assert.doesNotMatch(lock, /(^|[\s'"/])(@anthropic-ai\/sandbox-runtime|node-forge)@/m);
+    expect(lock).not.toMatch(
+        /(^|[\s'"/])(@anthropic-ai\/sandbox-runtime|node-forge)@/m,
+    );
 });
 
 test("[dependency-security] Pi brace expansion handles bounded adversarial input without a crash or event-loop stall", async () => {
@@ -53,5 +51,5 @@ test("[dependency-security] Pi brace expansion handles bounded adversarial input
         ["--max-old-space-size=96", "--input-type=module", "-e", program],
         { timeout: 5000, maxBuffer: 16384, env: { PATH: process.env.PATH } },
     );
-    assert.equal(stdout.trim(), "bounded brace inputs completed");
+    expect(stdout.trim()).toBe("bounded brace inputs completed");
 });

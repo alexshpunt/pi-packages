@@ -41,7 +41,7 @@
         "build": "tsc",
         "typecheck": "tsc --noEmit",
         "lint": "biome check .",
-        "test:unit": "node --import ./tests/harness/environment.mjs --test --test-concurrency=1 --test-timeout=120000 \"tests/**/*.test.mjs\"",
+        "test:unit": "vitest run",
         "prepack": "tsc && node ../../scripts/codex/check-package.mjs ."
     },
     "dependencies": {
@@ -60,7 +60,8 @@
         "@repo/typescript-config": "workspace:*",
         "@types/node": "catalog:",
         "pi-ollama-cloud": "0.12.2",
-        "typescript": "catalog:"
+        "typescript": "catalog:",
+        "vitest": "catalog:"
     },
     "engines": {
         "node": ">=22.19.0"

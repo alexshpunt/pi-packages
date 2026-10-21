@@ -23,8 +23,7 @@
 //
 // Requires: ANTHROPIC_API_KEY or CC logged in.
 
-import { test } from "node:test";
-import assert from "node:assert";
+import { expect, test } from "vitest";
 import { randomUUID } from "node:crypto";
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -93,7 +92,7 @@ test("openSession + clear + re-add: CC resolves the replaced content", { timeout
 	seedTextSession(sid, "FOO");
 
 	const r1 = await askToken(sid);
-	assert.match(r1, /foo/i, `expected FOO on first resume, got: ${r1}`);
+	expect(r1, `expected FOO on first resume, got: ${r1}`).toMatch(/foo/i);
 
 	const s2 = openSession({ sessionId: sid, projectPath: CWD, claudeDir: process.env.CLAUDE_CONFIG_DIR });
 	s2.clear();
@@ -102,8 +101,8 @@ test("openSession + clear + re-add: CC resolves the replaced content", { timeout
 	s2.save();
 
 	const r2 = await askToken(sid);
-	assert.match(r2, /bar/i, `expected BAR after clear+replace, got: ${r2}`);
-	assert.doesNotMatch(r2, /foo/i, `stale FOO returned — CC may be caching by UUID: ${r2}`);
+	expect(r2, `expected BAR after clear+replace, got: ${r2}`).toMatch(/bar/i);
+	expect(r2, `stale FOO returned — CC may be caching by UUID: ${r2}`).not.toMatch(/foo/i);
 });
 
 test("deleteSession + createSession({sessionId}): sessionId preserved across full wipe", { timeout: 120_000 }, async () => {
@@ -111,7 +110,7 @@ test("deleteSession + createSession({sessionId}): sessionId preserved across ful
 	seedTextSession(sid, "ALPHA");
 
 	const r1 = await askToken(sid);
-	assert.match(r1, /alpha/i, `expected ALPHA on first resume, got: ${r1}`);
+	expect(r1, `expected ALPHA on first resume, got: ${r1}`).toMatch(/alpha/i);
 
 	deleteSession(sid, CWD, process.env.CLAUDE_CONFIG_DIR);
 	const s2 = createSession({
@@ -124,12 +123,12 @@ test("deleteSession + createSession({sessionId}): sessionId preserved across ful
 	s2.addAssistantMessage([{ type: "text", text: "Got it, the token is BETA." }]);
 	s2.save();
 
-	assert.strictEqual(s2.sessionId, sid, "createSession should preserve sessionId when opts.sessionId is passed");
-	assert.ok(existsSync(s2.jsonlPath), "save() should have recreated the file at the preserved path");
+	expect(s2.sessionId, "createSession should preserve sessionId when opts.sessionId is passed").toBe(sid);
+	expect(existsSync(s2.jsonlPath), "save() should have recreated the file at the preserved path").toBeTruthy();
 
 	const r2 = await askToken(sid);
-	assert.match(r2, /beta/i, `expected BETA after delete+recreate, got: ${r2}`);
-	assert.doesNotMatch(r2, /alpha/i, `stale ALPHA returned after delete+recreate: ${r2}`);
+	expect(r2, `expected BETA after delete+recreate, got: ${r2}`).toMatch(/beta/i);
+	expect(r2, `stale ALPHA returned after delete+recreate: ${r2}`).not.toMatch(/alpha/i);
 });
 
 test("rebuild over CC-written tool_use records resolves cleanly", { timeout: 180_000 }, async () => {
@@ -144,10 +143,7 @@ test("rebuild over CC-written tool_use records resolves cleanly", { timeout: 180
 	}));
 
 	const afterToolUse = countRecords(s1.jsonlPath);
-	assert.ok(
-		afterToolUse.toolUse > 0,
-		`CC did not write tool_use records — test is not exercising the target path. Records: ${JSON.stringify(afterToolUse)}`,
-	);
+	expect(afterToolUse.toolUse > 0, `CC did not write tool_use records — test is not exercising the target path. Records: ${JSON.stringify(afterToolUse)}`).toBeTruthy();
 
 	// Rebuild with preserved sessionId via the same primitive syncSharedSession uses.
 	deleteSession(sid, CWD, process.env.CLAUDE_CONFIG_DIR);
@@ -162,13 +158,13 @@ test("rebuild over CC-written tool_use records resolves cleanly", { timeout: 180
 	s2.save();
 
 	const afterRebuild = countRecords(s2.jsonlPath);
-	assert.strictEqual(afterRebuild.total, 2, `rebuild should leave exactly 2 records, got ${afterRebuild.total}`);
-	assert.strictEqual(afterRebuild.toolUse, 0, `rebuild should wipe tool_use records, got ${afterRebuild.toolUse}`);
-	assert.strictEqual(afterRebuild.toolResult, 0, `rebuild should wipe tool_result records, got ${afterRebuild.toolResult}`);
+	expect(afterRebuild.total, `rebuild should leave exactly 2 records, got ${afterRebuild.total}`).toBe(2);
+	expect(afterRebuild.toolUse, `rebuild should wipe tool_use records, got ${afterRebuild.toolUse}`).toBe(0);
+	expect(afterRebuild.toolResult, `rebuild should wipe tool_result records, got ${afterRebuild.toolResult}`).toBe(0);
 
 	const r2 = await askToken(sid);
-	assert.match(r2, /delta/i, `expected DELTA after rebuild over tool records, got: ${r2}`);
-	assert.doesNotMatch(r2, /gamma/i, `stale GAMMA after rebuild: ${r2}`);
+	expect(r2, `expected DELTA after rebuild over tool records, got: ${r2}`).toMatch(/delta/i);
+	expect(r2, `stale GAMMA after rebuild: ${r2}`).not.toMatch(/gamma/i);
 });
 
 test("deleteSession wipes the companion directory", () => {
@@ -180,11 +176,11 @@ test("deleteSession wipes the companion directory", () => {
 	mkdirSync(join(companionDir, "tool-results"), { recursive: true });
 	const sentinel = join(companionDir, "tool-results", "sentinel.txt");
 	writeFileSync(sentinel, "stale artifact from a previous rebuild");
-	assert.ok(existsSync(sentinel), "pre-check: sentinel should exist");
+	expect(existsSync(sentinel), "pre-check: sentinel should exist").toBeTruthy();
 
 	deleteSession(sid, CWD, process.env.CLAUDE_CONFIG_DIR);
 
-	assert.ok(!existsSync(s1.jsonlPath), "jsonl should be deleted");
-	assert.ok(!existsSync(sentinel), "sentinel inside companion dir should be deleted");
-	assert.ok(!existsSync(companionDir), "companion dir should be deleted");
+	expect(existsSync(s1.jsonlPath), "jsonl should be deleted").toBeFalsy();
+	expect(existsSync(sentinel), "sentinel inside companion dir should be deleted").toBeFalsy();
+	expect(existsSync(companionDir), "companion dir should be deleted").toBeFalsy();
 });

@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -26,11 +25,11 @@ function withTempHome(fn) {
 
 describe("claudeCodeSettings", () => {
 	it("disables auto-memory by default", () => {
-		assert.deepEqual(claudeCodeSettings(), { autoMemoryEnabled: false });
+		expect(claudeCodeSettings()).toStrictEqual({ autoMemoryEnabled: false });
 	});
 
 	it("allows auto-memory to be enabled", () => {
-		assert.deepEqual(claudeCodeSettings({ autoMemoryEnabled: true }), { autoMemoryEnabled: true });
+		expect(claudeCodeSettings({ autoMemoryEnabled: true })).toStrictEqual({ autoMemoryEnabled: true });
 	});
 });
 
@@ -43,9 +42,9 @@ describe("removed tool configuration", () => {
 		for (const enabled of [true, false, null, "true", 1]) {
 			const contents = JSON.stringify({ askClaude: { enabled } });
 			writeFileSync(path, contents);
-			assert.equal(hasRemovedToolEnabled(cwd), enabled === true);
-			assert.equal("askClaude" in loadConfig(cwd), false);
-			assert.equal(readFileSync(path, "utf8"), contents);
+			expect(hasRemovedToolEnabled(cwd)).toBe(enabled === true);
+			expect("askClaude" in loadConfig(cwd)).toBe(false);
+			expect(readFileSync(path, "utf8")).toBe(contents);
 		}
 	}));
 
@@ -55,9 +54,9 @@ describe("removed tool configuration", () => {
 		mkdirSync(dir, { recursive: true });
 		mkdirSync(getAgentDir(), { recursive: true });
 		writeFileSync(join(getAgentDir(), "claude-bridge.json"), JSON.stringify({ askClaude: { enabled: true } }));
-		assert.equal(hasRemovedToolEnabled(cwd), true);
+		expect(hasRemovedToolEnabled(cwd)).toBe(true);
 		writeFileSync(join(dir, "claude-bridge.json"), JSON.stringify({ askClaude: { enabled: false } }));
-		assert.equal(hasRemovedToolEnabled(cwd), false);
+		expect(hasRemovedToolEnabled(cwd)).toBe(false);
 	}));
 });
 
@@ -71,7 +70,7 @@ describe("loadConfig", () => {
 				provider: { plan: "max" },
 			}));
 
-			assert.deepEqual(loadConfig(cwd), {
+			expect(loadConfig(cwd)).toStrictEqual({
 				startupNoticeShown: undefined,
 				provider: { plan: "max" },
 			});
@@ -94,7 +93,7 @@ describe("loadConfig", () => {
 				provider: { plan: "max", autoMemoryEnabled: true },
 			}));
 
-			assert.deepEqual(loadConfig(cwd), {
+			expect(loadConfig(cwd)).toStrictEqual({
 				startupNoticeShown: undefined,
 				provider: { plan: "max", strictMcpConfig: true, autoMemoryEnabled: true },
 			});
@@ -114,12 +113,12 @@ describe("loadConfig", () => {
 				provider: { strictMcpConfig: false },
 			}));
 
-			assert.equal(markStartupNoticeShown(), path);
+			expect(markStartupNoticeShown()).toBe(path);
 			const written = JSON.parse(readFileSync(path, "utf-8"));
-			assert.match(written.startupNoticeShown, /^\d{4}-\d{2}-\d{2}$/);
-			assert.deepEqual(written.customSetting, { enabled: false });
-			assert.deepEqual(written.provider, { strictMcpConfig: false });
-			assert.equal(loadConfig(cwd).startupNoticeShown, written.startupNoticeShown);
+			expect(written.startupNoticeShown).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+			expect(written.customSetting).toStrictEqual({ enabled: false });
+			expect(written.provider).toStrictEqual({ strictMcpConfig: false });
+			expect(loadConfig(cwd).startupNoticeShown).toBe(written.startupNoticeShown);
 		} finally {
 			rmSync(cwd, { recursive: true, force: true });
 		}
@@ -133,15 +132,15 @@ describe("loadConfig", () => {
 		writeFileSync(path, malformed);
 
 		markStartupNoticeShown();
-		assert.equal(readFileSync(path, "utf-8"), malformed, "a typo must not cost the user their config");
+		expect(readFileSync(path, "utf-8"), "a typo must not cost the user their config").toBe(malformed);
 	}));
 
 	it("markStartupNoticeShown creates the config when there is none", () => withTempHome(() => {
 		const cwd = mkdtempSync(join(tmpdir(), "claude-bridge-project-"));
 		try {
-			assert.equal(loadConfig(cwd).startupNoticeShown, undefined);
+			expect(loadConfig(cwd).startupNoticeShown).toBe(undefined);
 			markStartupNoticeShown();
-			assert.match(loadConfig(cwd).startupNoticeShown, /^\d{4}-\d{2}-\d{2}$/);
+			expect(loadConfig(cwd).startupNoticeShown).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 		} finally {
 			rmSync(cwd, { recursive: true, force: true });
 		}
@@ -157,7 +156,7 @@ describe("loadConfig", () => {
 				provider: { plan: "max" },
 			}));
 
-			assert.deepEqual(loadConfig(cwd), {
+			expect(loadConfig(cwd)).toStrictEqual({
 				startupNoticeShown: undefined,
 				provider: { plan: "max" },
 			});

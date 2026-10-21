@@ -9,8 +9,7 @@
  * turn: pi's result came back keyed to the dead id, so the handler waiting on the
  * retry's id was never released and CC stalled until it aborted.
  */
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { QueryContext } from "../src/provider/query-context.js";
 
 const { __test } = await import("../src/index.js");
@@ -53,19 +52,19 @@ describe("tool_use for a tool we do not serve", () => {
 		]);
 
 		const toolCalls = c.turnOutput.content.filter((b) => b.type === "toolCall");
-		assert.deepStrictEqual(toolCalls.map((b) => [b.name, b.id]), [["bash", "toolu_retry"]]);
-		assert.deepStrictEqual(c.turnToolCallIds, ["toolu_retry"]);
-		assert.deepStrictEqual(toolCalls[0].arguments, { command: "ls" });
+		expect(toolCalls.map((b) => [b.name, b.id])).toStrictEqual([["bash", "toolu_retry"]]);
+		expect(c.turnToolCallIds).toStrictEqual(["toolu_retry"]);
+		expect(toolCalls[0].arguments).toStrictEqual({ command: "ls" });
 	});
 
 	it("does not end the pi stream, so the turn continues into the retry", async () => {
 		const c = makeCtx();
 		await consume(c, toolUseTurn("Bash", "toolu_phantom"));
 
-		assert.strictEqual(c.turnSawToolCall, false);
-		assert.deepStrictEqual(c.turnOutput.content, []);
+		expect(c.turnSawToolCall).toBe(false);
+		expect(c.turnOutput.content).toStrictEqual([]);
 		const terminal = c.currentPiStream.events.filter((e) => e.type === "done" || e.type === "end");
-		assert.deepStrictEqual(terminal, []);
+		expect(terminal).toStrictEqual([]);
 	});
 
 	// The assistant-message fallback path (no stream_events for the turn) has to
@@ -81,6 +80,6 @@ describe("tool_use for a tool we do not serve", () => {
 		}]);
 
 		const toolCalls = c.turnOutput.content.filter((b) => b.type === "toolCall");
-		assert.deepStrictEqual(toolCalls.map((b) => [b.name, b.id]), [["bash", "toolu_retry"]]);
+		expect(toolCalls.map((b) => [b.name, b.id])).toStrictEqual([["bash", "toolu_retry"]]);
 	});
 });

@@ -6,8 +6,7 @@
  * and nothing throws: the steer silently degrades to follow-up semantics, which
  * only the (slow, API-dependent) integration test would notice.
  */
-import { describe, it, beforeEach } from "node:test";
-import assert from "node:assert/strict";
+import { beforeEach, describe, expect, it } from "vitest";
 import { QueryContext } from "../src/provider/query-context.js";
 
 const { __test } = await import("../src/index.js");
@@ -59,7 +58,7 @@ describe("deliverToolResults", () => {
 
 		await __test.deliverToolResults(c, [result("call-1"), result("call-2")], steerText, 4);
 
-		assert.deepStrictEqual(rec.order, ["push:actually stop", "ack", "resolve:read", "resolve:bash"]);
+		expect(rec.order).toStrictEqual(["push:actually stop", "ack", "resolve:read", "resolve:bash"]);
 	});
 
 	it("sends the steer with priority next so CC drains it at the tool boundary", async () => {
@@ -70,9 +69,9 @@ describe("deliverToolResults", () => {
 
 		await __test.deliverToolResults(c, [result("call-1")], steerText, 4);
 
-		assert.equal(sent.length, 1);
-		assert.equal(sent[0].priority, "next");
-		assert.deepStrictEqual(sent[0].message.content, steerText);
+		expect(sent.length).toBe(1);
+		expect(sent[0].priority).toBe("next");
+		expect(sent[0].message.content).toStrictEqual(steerText);
 	});
 
 	it("keeps image blocks in the steer", async () => {
@@ -86,7 +85,7 @@ describe("deliverToolResults", () => {
 
 		await __test.deliverToolResults(c, [], withImage, 4);
 
-		assert.deepStrictEqual(sent[0].message.content, withImage);
+		expect(sent[0].message.content).toStrictEqual(withImage);
 	});
 
 	// The caller has already advanced the session cursor past the steer, so a steer
@@ -100,8 +99,8 @@ describe("deliverToolResults", () => {
 
 		await __test.deliverToolResults(c, [result("call-1")], steerText, 4);
 
-		assert.deepStrictEqual(rec.order, ["push:actually stop", "push-rejected", "resolve:read"]);
-		assert.equal(__test.getSharedSession(null).needsRebuild, true);
+		expect(rec.order).toStrictEqual(["push:actually stop", "push-rejected", "resolve:read"]);
+		expect(__test.getSharedSession(null).needsRebuild).toBe(true);
 	});
 
 	it("marks the session for rebuild when there is no prompt stream", async () => {
@@ -111,7 +110,7 @@ describe("deliverToolResults", () => {
 
 		await __test.deliverToolResults(c, [], steerText, 4);
 
-		assert.equal(__test.getSharedSession(null).needsRebuild, true);
+		expect(__test.getSharedSession(null).needsRebuild).toBe(true);
 	});
 
 	it("queues a result whose handler has not arrived yet", async () => {
@@ -119,8 +118,8 @@ describe("deliverToolResults", () => {
 
 		await __test.deliverToolResults(c, [result("call-late")], null, 4);
 
-		assert.equal(c.pendingResults.get("call-late").toolCallId, "call-late");
-		assert.equal(c.pendingToolCalls.size, 0);
+		expect(c.pendingResults.get("call-late").toolCallId).toBe("call-late");
+		expect(c.pendingToolCalls.size).toBe(0);
 	});
 
 	it("pairs results to handlers by tool_use id, not arrival order", async () => {
@@ -131,6 +130,6 @@ describe("deliverToolResults", () => {
 
 		await __test.deliverToolResults(c, [result("call-2"), result("call-1")], null, 4);
 
-		assert.deepStrictEqual(rec.order, ["resolve:bash", "resolve:read"]);
+		expect(rec.order).toStrictEqual(["resolve:bash", "resolve:read"]);
 	});
 });

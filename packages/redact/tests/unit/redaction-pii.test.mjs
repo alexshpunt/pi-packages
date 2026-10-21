@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import test from "node:test";
+import { expect, test } from "vitest";
 import {
     createRedactor,
     isSupportedPiiEntity,
@@ -30,7 +29,7 @@ const entities = listSupportedPiiEntities();
 const rules = compilePiiRules(entities);
 const ruleFor = (entity) => {
     const rule = rules.find((candidate) => candidate.entity === entity);
-    assert.ok(rule, entity);
+    expect(rule, entity).toBeTruthy();
     return rule;
 };
 const utf8 = (text) => Buffer.from(text, "utf8");
@@ -64,19 +63,17 @@ test("[pii] data assets match the byte-for-byte catalog copies", async () => {
             "680006e721a0d7ed4ea3b13d4cb80a0cd2877b3e01128f52276e58f0e120e774",
         ],
     ])
-        assert.equal(sha256(text), expected, name);
-    assert.equal(entities.length, 90);
-    assert.deepEqual(
-        [...entities],
+        expect(sha256(text), name).toBe(expected);
+    expect(entities.length).toBe(90);
+    expect([...entities]).toStrictEqual(
         JSON.parse(CATALOG_JSON).map((entry) => entry.entity),
     );
-    assert.ok(entities.every(isSupportedPiiEntity));
-    assert.ok(
+    expect(entities.every(isSupportedPiiEntity)).toBeTruthy();
+    expect(
         !isSupportedPiiEntity("EMAIL") &&
             !isSupportedPiiEntity("email_address"),
-    );
-    assert.equal(
-        sha256(await readFile(fixture("pii-cases.jsonl"))),
+    ).toBeTruthy();
+    expect(sha256(await readFile(fixture("pii-cases.jsonl")))).toBe(
         "0a4707ab0032227e249b00bfc0429ca55f6fac15fc88aca1fb94d0ddc9520a58",
     );
 });
@@ -87,7 +84,7 @@ test("[pii] large normal source has no PII candidates", () => {
         input += `  total += ${line} % 7; // public-row-${String(line).padStart(5, "0")}\n`;
     let total = 0;
     for (const rule of rules) total += rule.detect(input, true).length;
-    assert.equal(total, 0);
+    expect(total).toBe(0);
 });
 
 test("[pii] large mixed source scanning preserves ranges", () => {
@@ -111,19 +108,19 @@ test("[pii] large mixed source scanning preserves ranges", () => {
     for (const rule of rules) {
         const ranges = rule.detect(input, true);
         count += ranges.length;
-        assert.ok(
+        expect(
             ranges.every(
                 ([start, end]) =>
                     isOnCodePointBoundary(input, start) &&
                     isOnCodePointBoundary(input, end),
             ),
             rule.entity,
-        );
+        ).toBeTruthy();
         const masked = maskRanges(input, ranges);
-        assert.ok(masked.length <= input.length);
-        assert.equal(masked.split("\n").length, input.split("\n").length);
+        expect(masked.length <= input.length).toBeTruthy();
+        expect(masked.split("\n").length).toBe(input.split("\n").length);
     }
-    assert.ok(count >= 900, `only ${count} candidates`);
+    expect(count >= 900, `only ${count} candidates`).toBeTruthy();
 });
 
 test("[pii] repeated candidates preserve all original ranges", () => {
@@ -163,8 +160,8 @@ test("[pii] repeated candidates preserve all original ranges", () => {
                     );
                 checked++;
             }
-    assert.ok(checked > 0);
-    assert.deepEqual(failures, []);
+    expect(checked > 0).toBeTruthy();
+    expect(failures).toStrictEqual([]);
 });
 
 test("[pii] all PII rules preserve normal code identifiers", () => {
@@ -174,7 +171,7 @@ test("[pii] all PII rules preserve normal code identifiers", () => {
     for (const rule of rules)
         for (const [start, end] of rule.detect(input, true))
             matches.push(`${rule.entity}: ${input.slice(start, end)}`);
-    assert.deepEqual(matches, []);
+    expect(matches).toStrictEqual([]);
 });
 
 test("[pii] context is limited to the related value", () => {
@@ -187,22 +184,21 @@ test("[pii] context is limited to the related value", () => {
     const expected =
         "export const postalCode = '*****'; const timeoutMs = 20000;\nconst memberId = '[REDACTED]'; const digest = 'sha256';\nconst postcode =\n  '*****';\nconst memberIdReference = sha256;\nconst member = ******;\nconst country = 'DE';\nconst timeout = 30000;\nconst website = '[REDACTED]'; const response = request.contentType;\nconst url = '[REDACTED]';\n";
     const output = redactor.redactText(source, { filePath: "safe.ts" });
-    assert.equal(output, expected);
+    expect(output).toBe(expected);
     const { value } = redactor.redactJson(
         { content: [{ type: "text", text: output }] },
         { stringScope: "line", textContent: "context-free" },
     );
-    assert.equal(value.content[0].text, expected);
+    expect(value.content[0].text).toBe(expected);
 });
 
 test("[pii] URL requires complete host labels and preserves source quotes", () => {
     const rule = ruleFor("URL");
-    assert.deepEqual(
+    expect(
         rule.find(
             "request.contentType; output.is_redact_enabled; template.companyName",
         ),
-        [],
-    );
+    ).toStrictEqual([]);
     for (const suffix of [
         "company",
         "community",
@@ -213,18 +209,16 @@ test("[pii] URL requires complete host labels and preserves source quotes", () =
     ]) {
         const value = `https://example.${suffix}`;
         const input = `const url = '${value}';`;
-        assert.deepEqual(
-            rule.detect(input, true),
-            [[13, 13 + value.length]],
-            input,
-        );
+        expect(rule.detect(input, true), input).toStrictEqual([
+            [13, 13 + value.length],
+        ]);
     }
 });
 
 test("[pii] a rejected IBAN prefix does not swallow the next value", () => {
     const value = "BE68539007547034";
     const input = `X${value} ${value}`;
-    assert.deepEqual(ruleFor("IBAN_CODE").find(input), [
+    expect(ruleFor("IBAN_CODE").find(input)).toStrictEqual([
         [value.length + 2, input.length],
     ]);
 });
@@ -240,10 +234,8 @@ test("[pii] candidate localization preserves Unicode boundaries", () => {
         ["\0", "\0", true],
     ]) {
         const input = `${prefix}021234568${suffix}`;
-        assert.deepEqual(
-            rule.find(input),
+        expect(rule.find(input), JSON.stringify(input)).toStrictEqual(
             isExpected ? [[prefix.length, prefix.length + 9]] : [],
-            JSON.stringify(input),
         );
     }
 });
@@ -259,19 +251,16 @@ test("[pii] context labels do not borrow from variable references", () => {
     ]) {
         const input = `const ${label} = '${value}';`;
         const start = input.indexOf(value);
-        assert.deepEqual(
-            ruleFor(entity).detect(input, true),
-            [[start, start + value.length]],
-            entity,
-        );
+        expect(ruleFor(entity).detect(input, true), entity).toStrictEqual([
+            [start, start + value.length],
+        ]);
     }
-    assert.deepEqual(
+    expect(
         ruleFor("DE_PLZ").detect(
             "const timeoutMs = postalCode.length + 10000;",
             true,
         ),
-        [],
-    );
+    ).toStrictEqual([]);
 });
 
 test("[pii] mutated Unicode candidates never break output ranges", () => {
@@ -290,47 +279,44 @@ test("[pii] mutated Unicode candidates never break output ranges", () => {
                     replacement +
                     example.text.slice(offset);
                 const ranges = rule.find(input);
-                assert.ok(
+                expect(
                     ranges.every(
                         ([start, end]) =>
                             isOnCodePointBoundary(input, start) &&
                             isOnCodePointBoundary(input, end),
                     ),
                     rule.entity,
-                );
+                ).toBeTruthy();
                 const masked = maskRanges(input, ranges);
-                assert.ok(masked.length <= input.length);
-                assert.equal(
-                    masked.split("\n").length,
+                expect(masked.length <= input.length).toBeTruthy();
+                expect(masked.split("\n").length).toBe(
                     input.split("\n").length,
                 );
-                assert.equal(
-                    masked.split("\r").length,
+                expect(masked.split("\r").length).toBe(
                     input.split("\r").length,
                 );
                 checked++;
             }
         }
     }
-    assert.ok(checked > 1000);
+    expect(checked > 1000).toBeTruthy();
 });
 
 test("[pii] Unicode e-mail labels preserve combining characters", () => {
     const value = "u@café.com";
     const text = `연락처: ${value}`;
     const found = ruleFor("EMAIL_ADDRESS").find(text);
-    assert.equal(found.length, 1);
-    assert.equal(text.slice(...found[0]), value);
+    expect(found.length).toBe(1);
+    expect(text.slice(...found[0])).toBe(value);
 });
 
 test("[pii] decimal digit validation keeps original ranges", () => {
     const value = "4١١١١١١١١١١١١١١١";
     const text = `🌍 بيانات '${value}' public`;
     const found = ruleFor("CREDIT_CARD").find(text);
-    assert.equal(found.length, 1);
-    assert.equal(text.slice(...found[0]), value);
-    assert.equal(
-        maskRanges(text, found),
+    expect(found.length).toBe(1);
+    expect(text.slice(...found[0])).toBe(value);
+    expect(maskRanges(text, found)).toBe(
         `🌍 بيانات '${REDACTION_MARKER}' public`,
     );
 });
@@ -350,29 +336,25 @@ test("[pii] healthcare field adapters require their own label", () => {
         const rule = ruleFor(entity);
         const input = `const ${label} = '${value}';`;
         const start = input.indexOf(value);
-        assert.deepEqual(rule.detect(input, true), [
+        expect(rule.detect(input, true)).toStrictEqual([
             [start, start + value.length],
         ]);
-        assert.deepEqual(
+        expect(
             rule.detect(input, false),
-            [],
             `formatted output must not infer ${entity} labels`,
-        );
-        assert.deepEqual(
+        ).toStrictEqual([]);
+        expect(
             rule.detect(`const itemCount = '${value}';`, true),
-            [],
-        );
-        assert.deepEqual(
+        ).toStrictEqual([]);
+        expect(
             rule.detect(`const ${label}Count = '${value}';`, true),
-            [],
-        );
-        assert.deepEqual(
+        ).toStrictEqual([]);
+        expect(
             rule.detect(
                 `const ${label} = other; const itemCount = '${value}';`,
                 true,
             ),
-            [],
-        );
+        ).toStrictEqual([]);
     }
 });
 
@@ -388,10 +370,9 @@ test("[pii] application fixture fields match their selected entity", async () =>
     const failures = [];
     let checked = 0;
     for (const span of spans) {
-        assert.equal(
+        expect(
             span.text.slice(span.column, span.column + span.value.length),
-            span.value,
-        );
+        ).toBe(span.value);
         const actual = ruleFor(span.entity).detect(span.text, true);
         if (
             !actual.some(
@@ -405,34 +386,31 @@ test("[pii] application fixture fields match their selected entity", async () =>
             );
         checked++;
     }
-    assert.equal(checked, 4500);
-    assert.deepEqual(failures, []);
+    expect(checked).toBe(4500);
+    expect(failures).toStrictEqual([]);
 });
 
 test("[pii] every catalog entity has Presidio cases", () => {
     for (const entity of entities)
-        assert.ok(
+        expect(
             cases.some((candidate) => candidate.entity === entity),
             `no cases for ${entity}`,
-        );
-    assert.equal(cases.length, 1653);
-    assert.equal(
-        cases.filter((candidate) => candidate.expected_len > 0).length,
+        ).toBeTruthy();
+    expect(cases.length).toBe(1653);
+    expect(cases.filter((candidate) => candidate.expected_len > 0).length).toBe(
         993,
     );
-    assert.equal(
+    expect(
         cases.filter((candidate) => candidate.expected_len === 0).length,
-        660,
-    );
+    ).toBe(660);
 });
 
 for (const example of cases)
     test(`[pii] cases.jsonl ${example.entity} ${example.source}`, () => {
         const actual = ruleFor(example.entity).find(example.text);
-        assert.equal(actual.length, example.expected_len);
+        expect(actual.length).toBe(example.expected_len);
         if (example.ranges)
-            assert.deepEqual(
-                actual,
+            expect(actual).toStrictEqual(
                 example.ranges.map(([start, end]) => [
                     utf16Index(example.text, start),
                     utf16Index(example.text, end),
@@ -449,13 +427,11 @@ test("[pii] every entity preserves coordinates after a Unicode prefix", () => {
         );
         const original = rule.find(example.text);
         const shifted = rule.find(`${prefix}${example.text}`);
-        assert.deepEqual(
-            shifted,
+        expect(shifted, rule.entity).toStrictEqual(
             original.map(([start, end]) => [
                 start + prefix.length,
                 end + prefix.length,
             ]),
-            rule.entity,
         );
     }
 });
@@ -468,11 +444,11 @@ test("[pii] selection and exceptions reach all redaction stages", () => {
     const defaults = createRedactor().redactText(input, {
         filePath: "data.ts",
     });
-    assert.ok(
+    expect(
         defaults.includes("4111111111111111") &&
             defaults.includes("info@presidio.site"),
-    );
-    assert.ok(!defaults.includes("hidden-password"));
+    ).toBeTruthy();
+    expect(defaults.includes("hidden-password")).toBeFalsy();
     const redactor = createRedactor({
         piiEntities: ["CREDIT_CARD", "EMAIL_ADDRESS"],
         exceptions: [
@@ -480,22 +456,22 @@ test("[pii] selection and exceptions reach all redaction stages", () => {
         ],
     });
     const output = redactor.redactText(input, { filePath: "data.ts" });
-    assert.ok(
+    expect(
         !output.includes("4111111111111111") &&
             !output.includes("hidden-password"),
-    );
-    assert.ok(output.includes("info@presidio.site"));
+    ).toBeTruthy();
+    expect(output.includes("info@presidio.site")).toBeTruthy();
     const { value } = redactor.redactJson(
         { content: [{ type: "text", text: output }], number: 4111111111111111 },
         { stringScope: "line", textContent: "context-free" },
     );
-    assert.equal(value.number, 4111111111111111);
-    assert.ok(value.content[0].text.includes("info@presidio.site"));
-    assert.ok(
-        !redactor
+    expect(value.number).toBe(4111111111111111);
+    expect(value.content[0].text.includes("info@presidio.site")).toBeTruthy();
+    expect(
+        redactor
             .redactText("password='info@presidio.site'")
             .includes("info@presidio.site"),
-    );
+    ).toBeFalsy();
 });
 
 // Repository and global configuration layering is not part of the library; the
@@ -505,26 +481,23 @@ test("[pii] PII configuration uses exact names and per-key fallback", () => {
         piiEntities: ["UNSUPPORTED"],
         sensitiveFields: ["account"],
     });
-    assert.deepEqual(invalid.config.piiEntities, []);
-    assert.deepEqual(invalid.config.sensitiveFields, ["account"]);
-    assert.deepEqual(
-        invalid.issues.map(({ key, index }) => [key, index]),
-        [["piiEntities", 0]],
-    );
-    assert.ok(
-        !JSON.stringify(
+    expect(invalid.config.piiEntities).toStrictEqual([]);
+    expect(invalid.config.sensitiveFields).toStrictEqual(["account"]);
+    expect(invalid.issues.map(({ key, index }) => [key, index])).toStrictEqual([
+        ["piiEntities", 0],
+    ]);
+    expect(
+        JSON.stringify(
             normalizeRedactionConfig({ piiEntities: ["EMAIL"] }).issues,
         ).includes("EMAIL"),
-    );
-    assert.deepEqual(
+    ).toBeFalsy();
+    expect(
         normalizeRedactionConfig({ piiEntities: ["CREDIT_CARD"] }).config
             .piiEntities,
-        ["CREDIT_CARD"],
-    );
-    assert.deepEqual(
+    ).toStrictEqual(["CREDIT_CARD"]);
+    expect(
         normalizeRedactionConfig({ piiEntities: [] }).config.piiEntities,
-        [],
-    );
+    ).toStrictEqual([]);
 });
 
 test("[pii] pattern boundaries preserve adjacent values and labels", () => {
@@ -532,38 +505,39 @@ test("[pii] pattern boundaries preserve adjacent values and labels", () => {
         ruleFor(entity)
             .find(text)
             .map((range) => text.slice(...range));
-    assert.deepEqual(
+    expect(
         values("KR_RRN", "name='900101-1234567', other='900101-3234567'"),
-        ["900101-1234567", "900101-3234567"],
-    );
-    assert.deepEqual(
+    ).toStrictEqual(["900101-1234567", "900101-3234567"]);
+    expect(
         values("US_PRESCRIPTION_NUMBER", "Rx #1234567; Rx #7654321"),
-        ["1234567", "7654321"],
-    );
-    assert.deepEqual(ruleFor("CA_SIN").find("046-454 286"), []);
-    assert.deepEqual(ruleFor("MAC_ADDRESS").find("00:1A-2B:3C:4D:5E"), []);
+    ).toStrictEqual(["1234567", "7654321"]);
+    expect(ruleFor("CA_SIN").find("046-454 286")).toStrictEqual([]);
+    expect(ruleFor("MAC_ADDRESS").find("00:1A-2B:3C:4D:5E")).toStrictEqual([]);
 });
 
 test("[pii] PII stays off by default and returns before loading the catalog", () => {
-    assert.equal(createPiiDetector([]), undefined);
+    expect(createPiiDetector([])).toBe(undefined);
     const text =
         "card 4111 1111 1111 1111 mail user@example.com token ghp_" +
         "a".repeat(36);
     const withoutPii = createRedactor();
     const withEmptyPii = createRedactor({ piiEntities: [] });
-    assert.equal(withEmptyPii.redactText(text), withoutPii.redactText(text));
-    assert.ok(withoutPii.redactText(text).includes("4111 1111 1111 1111"));
+    expect(withEmptyPii.redactText(text)).toBe(withoutPii.redactText(text));
+    expect(
+        withoutPii.redactText(text).includes("4111 1111 1111 1111"),
+    ).toBeTruthy();
     const enabled = createRedactor({
         piiEntities: ["CREDIT_CARD", "EMAIL_ADDRESS"],
     });
     const scan = enabled.scan(text);
-    assert.deepEqual(
+    expect(
         [
             ...new Set(scan.detections.map((detection) => detection.ruleId)),
         ].sort(),
-        ["pii.credit-card", "pii.email-address", "token.github"],
-    );
-    assert.ok(scan.detections.every((detection) => !("value" in detection)));
+    ).toStrictEqual(["pii.credit-card", "pii.email-address", "token.github"]);
+    expect(
+        scan.detections.every((detection) => !("value" in detection)),
+    ).toBeTruthy();
 });
 
 test("[linear-time] the e-mail candidate search matches its reference translation", () => {
@@ -571,10 +545,10 @@ test("[linear-time] the e-mail candidate search matches its reference translatio
         (definition) => definition.entity === "EMAIL_ADDRESS",
     ).patterns[0].regex;
     const accelerated = createCandidateSearch(expression);
-    assert.ok(
+    expect(
         accelerated,
         "the catalog pattern no longer selects its accelerator",
-    );
+    ).toBeTruthy();
     const reference = new RegExp(
         translateRustRegex(expression.replaceAll("\\b", ""), true),
         "uisg",
@@ -618,14 +592,12 @@ test("[linear-time] the e-mail candidate search matches its reference translatio
             reference.lastIndex = cursor;
             const expected = reference.exec(text)?.index;
             if (expected !== undefined) matched++;
-            assert.equal(
-                search(cursor),
+            expect(search(cursor), `${JSON.stringify(text)} at ${cursor}`).toBe(
                 expected,
-                `${JSON.stringify(text)} at ${cursor}`,
             );
         }
     }
-    assert.ok(matched > 1_000, `only ${matched} matching cursors`);
+    expect(matched > 1_000, `only ${matched} matching cursors`).toBeTruthy();
 });
 
 test("[linear-time] PII patterns grow less than 8x from 256 KiB to 1 MiB", () => {
@@ -666,10 +638,10 @@ test("[linear-time] PII patterns grow less than 8x from 256 KiB to 1 MiB", () =>
                 ratio(rule, smallInput, largeInput, 2) < 8
                     ? 0
                     : ratio(rule, smallInput, largeInput, 5);
-            assert.ok(
+            expect(
                 growth < 8,
                 `${rule.entity} on ${JSON.stringify(fragment)}: ${growth.toFixed(1)}x`,
-            );
+            ).toBeTruthy();
         }
     }
 });

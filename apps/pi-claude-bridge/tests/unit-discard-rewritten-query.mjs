@@ -20,8 +20,7 @@
  * markRebuildForSession arms and discards only the rewriting session's queries,
  * and its teardown marks touch only that session's mirror.
  */
-import { describe, it, beforeEach } from "node:test";
-import assert from "node:assert/strict";
+import { beforeEach, describe, expect, it } from "vitest";
 import { QueryContext } from "../src/provider/query-context.js";
 
 const { __test } = await import("../src/index.js");
@@ -63,12 +62,11 @@ describe("markRebuildForSession", () => {
 	it("records the rewrite before any Claude Code session exists", () => {
 		// The mirror is assigned when a query *completes*, so a session can have
 		// none for a whole first turn — and a first turn is long enough to compact.
-		assert.equal(getSharedSession("pi-parent"), null, "precondition: nothing has completed yet");
+		expect(getSharedSession("pi-parent"), "precondition: nothing has completed yet").toBe(null);
 
 		markRebuildForSession("pi-parent", "session_compact:threshold");
 
-		assert.ok(historyRewrittenBySession.has("pi-parent"),
-			"recorded only on the session, the first turn's parked query survives the compaction");
+		expect(historyRewrittenBySession.has("pi-parent"), "recorded only on the session, the first turn's parked query survives the compaction").toBeTruthy();
 	});
 
 	it("arms only the parked queries of the rewriting pi session", () => {
@@ -78,10 +76,8 @@ describe("markRebuildForSession", () => {
 		markRebuildForSession("pi-parent", "session_compact:threshold");
 		armStaleContexts();
 
-		assert.equal(c.historyStale, true,
-			"the parent's query really was built from the history pi just rewrote");
-		assert.equal(sub.c.historyStale, false,
-			"the subagent parked inside the parent's tool call — its conversation was never rewritten");
+		expect(c.historyStale, "the parent's query really was built from the history pi just rewrote").toBe(true);
+		expect(sub.c.historyStale, "the subagent parked inside the parent's tool call — its conversation was never rewritten").toBe(false);
 	});
 
 	it("arms nothing when the rewrite cannot be attributed", () => {
@@ -90,8 +86,7 @@ describe("markRebuildForSession", () => {
 		markRebuildForSession(null, "session_compact:manual");
 		armStaleContexts();
 
-		assert.equal(c.historyStale, false,
-			"conservative: killing a live query on an unattributed rewrite needs proof");
+		expect(c.historyStale, "conservative: killing a live query on an unattributed rewrite needs proof").toBe(false);
 	});
 
 	it("forces the next sync down the rebuild path for the owning session's conversation", () => {
@@ -100,21 +95,17 @@ describe("markRebuildForSession", () => {
 		setSharedSession("pi-b", { sessionId: "def", cursor: 2, cwd: "/tmp", needsRebuild: false, piSessionId: "pi-b" });
 
 		markRebuildForSession("pi-b", "session_compact:threshold");
-		assert.equal(getSharedSession("pi-a").needsRebuild, false,
-			"a subagent's compaction must not rebuild the conversation it never touched");
-		assert.equal(getSharedSession("pi-b").needsRebuild, true,
-			"--resume would replay a history pi no longer has");
+		expect(getSharedSession("pi-a").needsRebuild, "a subagent's compaction must not rebuild the conversation it never touched").toBe(false);
+		expect(getSharedSession("pi-b").needsRebuild, "--resume would replay a history pi no longer has").toBe(true);
 
 		markRebuildForSession(null, "session_compact:served");
 		// An unattributed rewrite marks the "(none)" bucket — the only mirror a
 		// direct caller without a session id can be serving.
-		assert.equal(getSharedSession("pi-a").needsRebuild, false,
-			"the parent's mirror is untouched by an unattributed rewrite");
+		expect(getSharedSession("pi-a").needsRebuild, "the parent's mirror is untouched by an unattributed rewrite").toBe(false);
 		// The discard set is keyed differently from the mirror on purpose: its
 		// readers all guard on a real piSessionId, so a "(none)" entry here could
 		// never be matched or consumed — only leaked.
-		assert.ok(!historyRewrittenBySession.has("(none)"),
-			"a null mark records no set entry: no reader could match or consume one");
+		expect(historyRewrittenBySession.has("(none)"), "a null mark records no set entry: no reader could match or consume one").toBeFalsy();
 	});
 
 	it("arms the discarding session's replacement after a second rewrite (mid-turn double compaction)", () => {
@@ -126,16 +117,15 @@ describe("markRebuildForSession", () => {
 		markRebuildForSession("pi-parent", "session_compact:threshold");
 		armStaleContexts();
 		discardRewrittenQuery(c);
-		assert.equal(c.historyStale, true, "the discard's own query is stale by construction");
+		expect(c.historyStale, "the discard's own query is stale by construction").toBe(true);
 
 		const replacement = parkedQuery("call_2", "pi-parent");
 		markRebuildForSession("pi-parent", "session_compact:threshold");
 		armStaleContexts();
 
-		assert.equal(replacement.c.historyStale, true,
-			"a history rewritten under the replacement's predecessor makes this one stale too");
+		expect(replacement.c.historyStale, "a history rewritten under the replacement's predecessor makes this one stale too").toBe(true);
 		discardRewrittenQuery(replacement.c);
-		assert.equal(historyRewrittenBySession.has("pi-parent"), false, "and consumes the mark again");
+		expect(historyRewrittenBySession.has("pi-parent"), "and consumes the mark again").toBe(false);
 		void c;
 	});
 });
@@ -143,14 +133,13 @@ describe("markRebuildForSession", () => {
 describe("discardRewrittenQuery", () => {
 	it("stops the parked query being a routing target for the turn's result", () => {
 		const { c } = parkedQuery();
-		assert.equal(contextForToolResults(toolResults), c, "precondition: the result routes to the parked query");
+		expect(contextForToolResults(toolResults), "precondition: the result routes to the parked query").toBe(c);
 
 		discardRewrittenQuery(c);
 
-		assert.equal(contextForToolResults(toolResults), undefined,
-			"a result routed here would answer over the conversation pi just discarded");
-		assert.equal(c.activeQuery, null);
-		assert.equal(activeQueryContexts.has(c), false, "routing matches ids only against contexts in this set");
+		expect(contextForToolResults(toolResults), "a result routed here would answer over the conversation pi just discarded").toBe(undefined);
+		expect(c.activeQuery).toBe(null);
+		expect(activeQueryContexts.has(c), "routing matches ids only against contexts in this set").toBe(false);
 	});
 
 	it("settles everything awaiting the subprocess before killing it", () => {
@@ -160,22 +149,21 @@ describe("discardRewrittenQuery", () => {
 
 		const released = events.findIndex((e) => e.startsWith("release:"));
 		const killed = events.indexOf("interrupt");
-		assert.ok(released !== -1, "a handler left awaiting a dead subprocess wedges pi's turn behind it");
-		assert.ok(killed !== -1 && released < killed, "handlers have to be released before the CLI goes");
-		assert.ok(events.includes("close"), "interrupt alone lets the current API call finish");
-		assert.ok(events.some((e) => e.startsWith("fail:")), "the parked ack has nothing left to resume it");
-		assert.equal(c.promptStream, null);
-		assert.equal(c.pendingToolCalls.size, 0);
+		expect(released !== -1, "a handler left awaiting a dead subprocess wedges pi's turn behind it").toBeTruthy();
+		expect(killed !== -1 && released < killed, "handlers have to be released before the CLI goes").toBeTruthy();
+		expect(events.includes("close"), "interrupt alone lets the current API call finish").toBeTruthy();
+		expect(events.some((e) => e.startsWith("fail:")), "the parked ack has nothing left to resume it").toBeTruthy();
+		expect(c.promptStream).toBe(null);
+		expect(c.pendingToolCalls.size).toBe(0);
 	});
 
 	it("marks the query abandoned so its completion cannot overwrite the rebuild", () => {
 		const { c, sdkQuery } = parkedQuery();
-		assert.equal(isQueryAbandoned(sdkQuery), false);
+		expect(isQueryAbandoned(sdkQuery)).toBe(false);
 
 		discardRewrittenQuery(c);
 
-		assert.equal(isQueryAbandoned(sdkQuery), true,
-			"its completion handler would otherwise capture the stale session id over the rebuilt one");
+		expect(isQueryAbandoned(sdkQuery), "its completion handler would otherwise capture the stale session id over the rebuilt one").toBe(true);
 	});
 
 	it("consumes the mark for its pi session, leaving sibling sessions armed", () => {
@@ -184,12 +172,12 @@ describe("discardRewrittenQuery", () => {
 		markRebuildForSession("pi-c", "session_compact:threshold");
 		markRebuildForSession("pi-b", "session_compact:threshold");
 		armStaleContexts();
-		assert.ok(historyRewrittenBySession.has("pi-b"), "precondition: armed");
+		expect(historyRewrittenBySession.has("pi-b"), "precondition: armed").toBeTruthy();
 
 		discardRewrittenQuery(c);
 
-		assert.equal(historyRewrittenBySession.has("pi-b"), false, "served");
-		assert.ok(historyRewrittenBySession.has("pi-c"), "a sibling pi session's rewrite is not ours to consume");
+		expect(historyRewrittenBySession.has("pi-b"), "served").toBe(false);
+		expect(historyRewrittenBySession.has("pi-c"), "a sibling pi session's rewrite is not ours to consume").toBeTruthy();
 		void other;
 	});
 
@@ -203,8 +191,8 @@ describe("discardRewrittenQuery", () => {
 		// rebuild is the very next thing that happens — the abort path's reasoning,
 		// with the race made tighter. Another session's mirror is never touched.
 		const s = getSharedSession("pi-parent");
-		assert.equal(s.forceRotate, true);
-		assert.equal(s.needsRebuild, true);
+		expect(s.forceRotate).toBe(true);
+		expect(s.needsRebuild).toBe(true);
 	});
 
 	it("leaves a foreign session's mirror untouched when the foreign query discards", () => {
@@ -218,9 +206,9 @@ describe("discardRewrittenQuery", () => {
 		discardRewrittenQuery(c);
 
 		const s = getSharedSession("pi-parent");
-		assert.equal(s.needsRebuild, false, "the child's rebuild must not force the parent's next sync");
-		assert.equal(s.forceRotate, undefined, "nor rotate it: the parent conversation is intact");
-		assert.equal(getSharedSession("pi-b"), null, "the child never had a mirror to rotate");
+		expect(s.needsRebuild, "the child's rebuild must not force the parent's next sync").toBe(false);
+		expect(s.forceRotate, "nor rotate it: the parent conversation is intact").toBe(undefined);
+		expect(getSharedSession("pi-b"), "the child never had a mirror to rotate").toBe(null);
 	});
 
 	it("is safe on a context whose query already ended", () => {
@@ -229,8 +217,8 @@ describe("discardRewrittenQuery", () => {
 
 		discardRewrittenQuery(c);
 
-		assert.equal(c.activeQuery, null);
-		assert.equal(activeQueryContexts.has(c), false);
+		expect(c.activeQuery).toBe(null);
+		expect(activeQueryContexts.has(c)).toBe(false);
 	});
 });
 
@@ -239,20 +227,19 @@ describe("per-session mirrors", () => {
 		setSharedSession("pi-a", { sessionId: "cc-a", cursor: 4, cwd: "/tmp", piSessionId: "pi-a" });
 		setSharedSession("pi-b", { sessionId: "cc-b", cursor: 1, cwd: "/tmp", piSessionId: "pi-b" });
 
-		assert.equal(getSharedSession("pi-a").sessionId, "cc-a");
-		assert.equal(getSharedSession("pi-b").sessionId, "cc-b");
-		assert.equal(getSharedSession("pi-c"), null, "a session with no mirror has none");
+		expect(getSharedSession("pi-a").sessionId).toBe("cc-a");
+		expect(getSharedSession("pi-b").sessionId).toBe("cc-b");
+		expect(getSharedSession("pi-c"), "a session with no mirror has none").toBe(null);
 
 		resetSharedSession("pi-b");
-		assert.equal(getSharedSession("pi-b"), null, "reset clears only the keyed mirror");
-		assert.equal(getSharedSession("pi-a").sessionId, "cc-a", "a sibling survives the reset");
+		expect(getSharedSession("pi-b"), "reset clears only the keyed mirror").toBe(null);
+		expect(getSharedSession("pi-a").sessionId, "a sibling survives the reset").toBe("cc-a");
 	});
 
 	it("shares one bucket for unattributed callers", () => {
 		setSharedSession(null, { sessionId: "cc-none", cursor: 2, cwd: "/tmp", piSessionId: undefined });
 
-		assert.equal(getSharedSession(null).sessionId, "cc-none");
-		assert.equal(getSharedSession("pi-a"), null,
-			"an attributed session never touches the unattributed bucket");
+		expect(getSharedSession(null).sessionId).toBe("cc-none");
+		expect(getSharedSession("pi-a"), "an attributed session never touches the unattributed bucket").toBe(null);
 	});
 });

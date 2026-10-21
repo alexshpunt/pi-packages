@@ -1,5 +1,4 @@
-import { it } from "node:test";
-import assert from "node:assert/strict";
+import { expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -43,14 +42,14 @@ it("records only changed CC ids and keeps minimal custom data out of model conte
 	mirror.setSessionStateFor(piId, state(first, workspace.cwd));
 	mirror.setSessionStateFor(piId, state(first, workspace.cwd, 10));
 	mirror.setSessionStateFor(piId, null);
-	assert.equal(links(manager).length, 1);
-	assert.deepEqual(links(manager)[0].data, { schemaVersion: 1, ccSessionId: first, cwd: realpathSync(workspace.cwd) });
+	expect(links(manager).length).toBe(1);
+	expect(links(manager)[0].data).toStrictEqual({ schemaVersion: 1, ccSessionId: first, cwd: realpathSync(workspace.cwd) });
 	mirror.setSessionStateFor(piId, state(second, workspace.cwd));
-	assert.equal(links(manager).length, 2);
+	expect(links(manager).length).toBe(2);
 	const modelContext = JSON.stringify(manager.buildSessionContext().messages);
-	assert.equal(modelContext.includes(SESSION_LINK_TYPE), false);
-	assert.equal(modelContext.includes(first), false);
-	assert.equal(modelContext.includes(second), false);
+	expect(modelContext.includes(SESSION_LINK_TYPE)).toBe(false);
+	expect(modelContext.includes(first)).toBe(false);
+	expect(modelContext.includes(second)).toBe(false);
 }));
 
 it("restores the last connection on the active branch, not an abandoned newer branch", () => withSessions(({ workspace, manager, mirror, bind, debug }) => {
@@ -64,10 +63,10 @@ it("restores the last connection on the active branch, not an abandoned newer br
 	mirror.setSessionStateFor(manager.getSessionId(), state(sessions[1].sessionId, workspace.cwd));
 	const secondLeaf = manager.getLeafId();
 	manager.branch(firstLeaf); bind();
-	assert.equal(lookupSessionLink(manager.getSessionId(), workspace.cwd, debug), sessions[0].sessionId);
-	assert.equal(manager.getEntries().filter(entry => entry.customType === SESSION_LINK_TYPE).length, 2);
+	expect(lookupSessionLink(manager.getSessionId(), workspace.cwd, debug)).toBe(sessions[0].sessionId);
+	expect(manager.getEntries().filter(entry => entry.customType === SESSION_LINK_TYPE).length).toBe(2);
 	manager.branch(secondLeaf); bind();
-	assert.equal(lookupSessionLink(manager.getSessionId(), workspace.cwd, debug), sessions[1].sessionId);
+	expect(lookupSessionLink(manager.getSessionId(), workspace.cwd, debug)).toBe(sessions[1].sessionId);
 }));
 
 it("ignores unsupported, corrupt, foreign-cwd and missing latest links without reviving an older one", () => withSessions(({ workspace, manager, mirror, debug }) => {
@@ -80,14 +79,14 @@ it("ignores unsupported, corrupt, foreign-cwd and missing latest links without r
 		{ schemaVersion: 1, ccSessionId: source.sessionId, cwd: join(workspace.cwd, "different") },
 		{ schemaVersion: 1, ccSessionId: randomUUID(), cwd: workspace.cwd }]) {
 		manager.branch(validLeaf); manager.appendCustomEntry(SESSION_LINK_TYPE, data);
-		assert.equal(lookupSessionLink(manager.getSessionId(), workspace.cwd, debug), undefined);
+		expect(lookupSessionLink(manager.getSessionId(), workspace.cwd, debug)).toBe(undefined);
 	}
 	manager.branch(validLeaf);
 	const backup = join(workspace.root, "source-backup.jsonl");
 	writeFileSync(backup, readFileSync(source.jsonlPath));
 	// A session-file symlink must not be followed even if its target is readable.
 	rmSync(source.jsonlPath); symlinkSync(backup, source.jsonlPath);
-	assert.equal(lookupSessionLink(manager.getSessionId(), workspace.cwd, debug), undefined);
+	expect(lookupSessionLink(manager.getSessionId(), workspace.cwd, debug)).toBe(undefined);
 }));
 
 
@@ -96,24 +95,24 @@ it("a shared provider mirror uses each child's appendEntry handle, not its paren
 	const parentCC = randomUUID(), childCC = randomUUID();
 	mirror.setSessionStateFor(manager.getSessionId(), state(parentCC, workspace.cwd));
 	mirror.setSessionStateFor(child.getSessionId(), state(childCC, workspace.cwd));
-	assert.equal(writes.get(manager.getSessionId()).length, 1);
-	assert.equal(writes.get(child.getSessionId()).length, 1);
-	assert.equal(links(manager)[0].data.ccSessionId, parentCC);
-	assert.equal(links(child)[0].data.ccSessionId, childCC);
-	assert.ok(logs.some(line => line.includes(`writer=${child.getSessionId()}`) && line.includes(childCC)));
+	expect(writes.get(manager.getSessionId()).length).toBe(1);
+	expect(writes.get(child.getSessionId()).length).toBe(1);
+	expect(links(manager)[0].data.ccSessionId).toBe(parentCC);
+	expect(links(child)[0].data.ccSessionId).toBe(childCC);
+	expect(logs.some(line => line.includes(`writer=${child.getSessionId()}`) && line.includes(childCC))).toBeTruthy();
 	mirror.setSessionStateFor(null, state(randomUUID(), workspace.cwd));
 	mirror.setSessionStateFor("unregistered", state(randomUUID(), workspace.cwd));
-	assert.equal(writes.get(manager.getSessionId()).length, 1);
+	expect(writes.get(manager.getSessionId()).length).toBe(1);
 }));
 
 it("stale release callbacks cannot unregister a new writer and shutdown removes the current writer", () => withSessions(({ workspace, manager, bind, mirror, writes }) => {
 	const oldRelease = bind(), newRelease = bind();
 	oldRelease();
 	mirror.setSessionStateFor(manager.getSessionId(), state(randomUUID(), workspace.cwd));
-	assert.equal(writes.get(manager.getSessionId()).length, 1);
+	expect(writes.get(manager.getSessionId()).length).toBe(1);
 	newRelease();
 	mirror.setSessionStateFor(manager.getSessionId(), state(randomUUID(), workspace.cwd));
-	assert.equal(writes.get(manager.getSessionId()).length, 1);
+	expect(writes.get(manager.getSessionId()).length).toBe(1);
 }));
 
 it("does not write through a context whose session changed, and isolates storage failures", () => withSessions(({ workspace, manager, debug, mirror }) => {
@@ -124,12 +123,12 @@ it("does not write through a context whose session changed, and isolates storage
 	try {
 		const original = currentId;
 		mirror.setSessionStateFor(original, state(randomUUID(), workspace.cwd));
-		assert.equal(calls, 1);
-		assert.ok(mirror.sessionStateFor(original));
+		expect(calls).toBe(1);
+		expect(mirror.sessionStateFor(original)).toBeTruthy();
 		currentId = randomUUID();
 		mirror.setSessionStateFor(original, state(randomUUID(), workspace.cwd));
-		assert.equal(calls, 1);
-		assert.equal(lookupSessionLink(original, workspace.cwd, debug), undefined);
+		expect(calls).toBe(1);
+		expect(lookupSessionLink(original, workspace.cwd, debug)).toBe(undefined);
 	} finally { release(); }
 }));
 
@@ -143,16 +142,16 @@ it("rebuilds with a new UUID from a persisted link without modifying the source 
 	const oldBytes = readFileSync(source.jsonlPath);
 	const harness = createHarness(workspace);
 	try {
-		assert.equal(harness.runtime.sessionStateFor(manager.getSessionId()), null);
+		expect(harness.runtime.sessionStateFor(manager.getSessionId())).toBe(null);
 		const result = harness.runtime.syncSharedSession([fixtureUser(prompt),
 			{ role: "assistant", provider: "claude-bridge", model: harness.model.id, content: [{ type: "text", text: "done" }], timestamp: 1 }, fixtureUser("continue")],
 			workspace.cwd, undefined, harness.model.id, manager.getSessionId());
-		assert.notEqual(result.sessionId, source.sessionId);
-		assert.deepEqual(readFileSync(source.jsonlPath), oldBytes);
+		expect(result.sessionId).not.toBe(source.sessionId);
+		expect(readFileSync(source.jsonlPath)).toStrictEqual(oldBytes);
 		const rebuilt = openSession({ sessionId: result.sessionId, projectPath: workspace.cwd, claudeDir: process.env.CLAUDE_CONFIG_DIR });
-		assert.equal(rebuilt.attachments.length, 1);
-		assert.equal(rebuilt.attachments[0].attachment.content.file.content, "original snapshot");
-		assert.equal(links(manager).at(-1).data.ccSessionId, result.sessionId);
+		expect(rebuilt.attachments.length).toBe(1);
+		expect(rebuilt.attachments[0].attachment.content.file.content).toBe("original snapshot");
+		expect(links(manager).at(-1).data.ccSessionId).toBe(result.sessionId);
 	} finally { await harness.close(); }
 }));
 
@@ -164,11 +163,11 @@ it("falls back to a fresh rebuild when the branch link points to a missing file"
 		const synced = harness.runtime.syncSharedSession([fixtureUser("previous"),
 			{ role: "assistant", provider: "claude-bridge", model: harness.model.id, content: [{ type: "text", text: "answer" }], timestamp: 1 }, fixtureUser("next")],
 			workspace.cwd, undefined, harness.model.id, manager.getSessionId());
-		assert.notEqual(synced.sessionId, missing);
+		expect(synced.sessionId).not.toBe(missing);
 		const session = openSession({ sessionId: synced.sessionId, projectPath: workspace.cwd, claudeDir: process.env.CLAUDE_CONFIG_DIR });
-		assert.equal(session.messages.length, 2);
-		assert.equal(session.attachments.length, 0);
-		assert.equal(links(manager).at(-1).data.ccSessionId, synced.sessionId);
+		expect(session.messages.length).toBe(2);
+		expect(session.attachments.length).toBe(0);
+		expect(links(manager).at(-1).data.ccSessionId).toBe(synced.sessionId);
 	} finally { await harness.close(); }
 }));
 
@@ -183,12 +182,12 @@ it("binds on session_start/tree and releases on session_shutdown through product
 	const root = manager.getLeafId(), ccId = randomUUID();
 	emit("session_start", { reason: "resume" });
 	runtime.setSessionStateFor(manager.getSessionId(), state(ccId, workspace.cwd));
-	assert.equal(links(manager).length, 1);
+	expect(links(manager).length).toBe(1);
 	manager.branch(root); emit("session_tree");
 	runtime.setSessionStateFor(manager.getSessionId(), state(ccId, workspace.cwd));
-	assert.equal(links(manager).length, 1);
-	assert.equal(manager.getEntries().filter(entry => entry.customType === SESSION_LINK_TYPE).length, 2);
+	expect(links(manager).length).toBe(1);
+	expect(manager.getEntries().filter(entry => entry.customType === SESSION_LINK_TYPE).length).toBe(2);
 	emit("session_shutdown");
 	runtime.setSessionStateFor(manager.getSessionId(), state(randomUUID(), workspace.cwd));
-	assert.equal(links(manager).length, 1);
+	expect(links(manager).length).toBe(1);
 }));

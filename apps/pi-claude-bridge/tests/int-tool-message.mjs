@@ -3,8 +3,7 @@
 // Uses pi in RPC mode with the bridge + SlowTool test extension.
 // Exercises how the bridge handles messages arriving during tool execution.
 
-import { describe, it, before, after, afterEach } from "node:test";
-import assert from "node:assert/strict";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { getProjectDir } from "cc-session-io";
 import { createRpcHarness } from "./lib/rpc-harness.mjs";
@@ -29,11 +28,11 @@ describe("tool-message integration", () => {
 	 *  abbreviated, which is enough to pick the file out of the project dir. */
 	function sessionIdFrom(log) {
 		const ids = [...log.matchAll(/query done, session=([0-9a-f]+)/g)].map((m) => m[1]);
-		assert.ok(ids.length > 0, "no session id in debug log — the query never completed");
+		expect(ids.length > 0, "no session id in debug log — the query never completed").toBeTruthy();
 		const prefix = ids[ids.length - 1];
 		const dir = getProjectDir(harness.DIR);
 		const file = readdirSync(dir).find((f) => f.startsWith(prefix) && f.endsWith(".jsonl"));
-		assert.ok(file, `no session file for ${prefix} in ${dir}`);
+		expect(file, `no session file for ${prefix} in ${dir}`).toBeTruthy();
 		return `${dir}/${file}`;
 	}
 
@@ -44,7 +43,7 @@ describe("tool-message integration", () => {
 
 	// --- Lifecycle ---
 
-	before(async () => {
+	beforeAll(async () => {
 		await startAndWait();
 	});
 
@@ -54,7 +53,7 @@ describe("tool-message integration", () => {
 		}
 	});
 
-	after(async () => {
+	afterAll(async () => {
 		await stop();
 		console.log(`  RPC log: ${RPC_LOG}`);
 		console.log(`  Debug log: ${DEBUG_LOG}`);
@@ -66,7 +65,7 @@ describe("tool-message integration", () => {
 		const text = await promptAndWait(
 			"Call SlowTool with seconds=1. Then repeat exactly what it returned, nothing else."
 		);
-		assert.match(text.toLowerCase(), /slowtool completed/);
+		expect(text.toLowerCase()).toMatch(/slowtool completed/);
 	});
 
 	it("followUp during tool execution delivers after tool completes", { timeout: TEST_TIMEOUT }, async () => {
@@ -84,7 +83,7 @@ describe("tool-message integration", () => {
 		});
 		await waitForEvent("agent_end");
 		const text = collector.stop();
-		assert.match(text.toLowerCase(), /slowtool completed/);
+		expect(text.toLowerCase()).toMatch(/slowtool completed/);
 	});
 
 	it("steer during tool execution still delivers tool result", { timeout: 15_000 }, async () => {
@@ -104,7 +103,7 @@ describe("tool-message integration", () => {
 		});
 		await waitForEvent("agent_end");
 		const text = collector.stop();
-		assert.match(text.toLowerCase(), /slowtool completed/);
+		expect(text.toLowerCase()).toMatch(/slowtool completed/);
 	});
 
 	it("parallel tool calls with steer delivers all results", { timeout: TEST_TIMEOUT }, async () => {
@@ -125,7 +124,7 @@ describe("tool-message integration", () => {
 		const text = collector.stop();
 		// All three tools should have their results in the response
 		const matches = (text.match(/slowtool completed/gi) || []).length;
-		assert.ok(matches >= 3, `Expected 3 SlowTool results, found ${matches}: ${text.slice(0, 300)}`);
+		expect(matches >= 3, `Expected 3 SlowTool results, found ${matches}: ${text.slice(0, 300)}`).toBeTruthy();
 		// Delivery only forwards a steer when the trailing message is a user message.
 		// Pi injects drained steers between tool results too (see extract-tool-results),
 		// and in that shape the steer would be dropped and the cursor advanced past it,
@@ -135,9 +134,8 @@ describe("tool-message integration", () => {
 		// guidance tells the model to distrust (verbatim refusal seen on 2.1.280). Assert
 		// the transport fact instead: the steer reached CC's session at all.
 		const records = readSessionRecords(sessionIdFrom(logSince(mark)));
-		assert.ok(records.some((r) => JSON.stringify(r.attachment ?? "").includes("PAPAYA")
-				|| JSON.stringify(r.message?.content ?? "").includes("PAPAYA")),
-			`steer never reached CC's session — dropped between the parallel tool results`);
+		expect(records.some((r) => JSON.stringify(r.attachment ?? "").includes("PAPAYA")
+				|| JSON.stringify(r.message?.content ?? "").includes("PAPAYA")), `steer never reached CC's session — dropped between the parallel tool results`).toBeTruthy();
 	});
 
 	it("steer during text response (no tool call) completes both turns", { timeout: TEST_TIMEOUT }, async () => {
@@ -162,7 +160,7 @@ describe("tool-message integration", () => {
 		});
 		await waitForEvent("agent_end");
 		const text = collector.stop();
-		assert.match(text.toLowerCase(), /pineapple/);
+		expect(text.toLowerCase()).toMatch(/pineapple/);
 	});
 
 	it("steer during tool execution is visible to assistant", { timeout: 20_000 }, async () => {
@@ -190,9 +188,8 @@ describe("tool-message integration", () => {
 		// own prompt-injection guidance tells the model to distrust that (verbatim
 		// refusal observed, and the echo assert flakes as a result).
 		const records = readSessionRecords(sessionIdFrom(logSince(mark)));
-		assert.ok(records.some((r) => JSON.stringify(r.attachment ?? "").includes("MANGO")
-				|| JSON.stringify(r.message?.content ?? "").includes("MANGO")),
-			"steer during tool execution never reached CC's session — dropped at delivery");
+		expect(records.some((r) => JSON.stringify(r.attachment ?? "").includes("MANGO")
+				|| JSON.stringify(r.message?.content ?? "").includes("MANGO")), "steer during tool execution never reached CC's session — dropped at delivery").toBeTruthy();
 	});
 
 	it("steer is drained at the tool boundary, mid-turn", { timeout: 90_000 }, async () => {
@@ -221,16 +218,14 @@ describe("tool-message integration", () => {
 		const records = readSessionRecords(sessionIdFrom(logSince(mark)));
 		const steerAt = records.findIndex((r) => r.attachment?.type === "queued_command"
 			&& JSON.stringify(r.attachment.prompt ?? "").includes("Do not call SlowTool again"));
-		assert.notEqual(steerAt, -1, "steer never reached CC as a queued command — it was replayed as a follow-up");
+		expect(steerAt, "steer never reached CC as a queued command — it was replayed as a follow-up").not.toBe(-1);
 
 		const toolResultAt = records.findLastIndex((r, i) => i < steerAt
 			&& JSON.stringify(r.message?.content ?? "").includes('"tool_result"'));
-		assert.notEqual(toolResultAt, -1, "no tool result before the steer — test did not reach a tool boundary");
+		expect(toolResultAt, "no tool result before the steer — test did not reach a tool boundary").not.toBe(-1);
 		const between = records.slice(toolResultAt + 1, steerAt).filter((r) => r.type === "assistant");
-		assert.equal(between.length, 0,
-			`steer was drained after the turn continued (${between.length} assistant message(s) between tool result and steer) — it lost the stdin race`);
-		assert.ok(records.slice(steerAt).some((r) => r.type === "assistant"),
-			"CC never responded after draining the steer");
+		expect(between.length, `steer was drained after the turn continued (${between.length} assistant message(s) between tool result and steer) — it lost the stdin race`).toBe(0);
+		expect(records.slice(steerAt).some((r) => r.type === "assistant"), "CC never responded after draining the steer").toBeTruthy();
 
 		// Corroboration retired: CC 2.1.280 delivers a drained steer as a
 		// <system-reminder> concatenated into the tool_result content, and its own
@@ -273,9 +268,9 @@ describe("tool-message integration", () => {
 		const text = collector.stop();
 		const log = logSince(mark);
 
-		assert.match(text.toLowerCase(), /kiwi/);
-		assert.doesNotMatch(log, /steer written to CC stdin/, "text-only steer was pushed into the active query's input stream");
-		assert.doesNotMatch(log, /steer push rejected/, "text-only steer reached the push path at all");
+		expect(text.toLowerCase()).toMatch(/kiwi/);
+		expect(log, "text-only steer was pushed into the active query's input stream").not.toMatch(/steer written to CC stdin/);
+		expect(log, "text-only steer reached the push path at all").not.toMatch(/steer push rejected/);
 	});
 
 	it("abort during tool execution recovers cleanly", { timeout: TEST_TIMEOUT }, async () => {
@@ -289,6 +284,6 @@ describe("tool-message integration", () => {
 		await idle;
 		// Next prompt should work without hanging
 		const text = await promptAndWait("Reply with just the word 'recovered'.");
-		assert.match(text.toLowerCase(), /recovered/);
+		expect(text.toLowerCase()).toMatch(/recovered/);
 	});
 });

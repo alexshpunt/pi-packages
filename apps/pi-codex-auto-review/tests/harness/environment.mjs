@@ -1,5 +1,6 @@
-// Runs before Pi imports in each isolated test process.
+// Vitest setup file: runs before Pi imports in each isolated test process.
 // Provider discovery only sees synthetic configuration explicitly supplied by fixtures.
+// Vitest's own worker variables (`VITEST*`) stay so the runner keeps working.
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,14 +14,13 @@ const keep = new Set([
     "TZ",
     "TERM",
     "TMPDIR",
-    "NODE_TEST_CONTEXT",
     "NODE_CHANNEL_FD",
     "NODE_CHANNEL_SERIALIZATION_MODE",
     "PI_GUARD_RUN_DIR",
     "PI_GUARD_KERNEL_ARCH",
 ]);
 for (const key of Object.keys(process.env))
-    if (!keep.has(key)) delete process.env[key];
+    if (!keep.has(key) && !key.startsWith("VITEST")) delete process.env[key];
 // Exercise the ambient temporary-root contract without scanning unrelated host worktrees.
 const suiteTmp = mkdtempSync(join(parentTmp, "pi-guard-suite-"));
 process.env.TMPDIR = suiteTmp;

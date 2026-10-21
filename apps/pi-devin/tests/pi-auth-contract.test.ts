@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import {
   createModels, InMemoryCredentialStore,
   type Credential, type OAuthCredential, type Provider,
@@ -41,28 +40,28 @@ test("Pi 1.3 public OAuth: resolving expires=0 is bounded and an explicit validi
   const result = await f.models.login("devin-contract", "oauth", {
     notify: () => {}, prompt: async () => { throw new Error("No real interaction"); },
   });
-  assert.deepEqual(result, credential);
-  assert.equal(f.models.getProvider("devin-contract")?.auth.apiKey, undefined);
-  assert.equal((await f.models.checkAuth("devin-contract"))?.type, "oauth");
-  assert.equal(refreshes, 0);
+  expect(result).toStrictEqual(credential);
+  expect(f.models.getProvider("devin-contract")?.auth.apiKey).toBe(undefined);
+  expect((await f.models.checkAuth("devin-contract"))?.type).toBe("oauth");
+  expect(refreshes).toBe(0);
   for (const auth of await Promise.all([1, 2, 3].map(() => f.models.getAuth("devin-contract")))) {
-    assert.equal(auth?.auth.apiKey, credential.access);
+    expect(auth?.auth.apiKey).toBe(credential.access);
   }
-  assert.equal(refreshes, 3);
-  assert.equal(f.mutations(), 4); // login 1 + explicit auth resolution 3; no background loop.
-  assert.deepEqual(await f.storage.read("devin-contract"), credential);
-  await assert.rejects(f.models.getAuth("devin-contract", { minOAuthValidityMs: 1 }), /expires too soon/);
-  assert.equal(refreshes, 4);
-  assert.equal(f.mutations(), 5);
+  expect(refreshes).toBe(3);
+  expect(f.mutations()).toBe(4); // login 1 + explicit auth resolution 3; no background loop.
+  expect(await f.storage.read("devin-contract")).toStrictEqual(credential);
+  await expect(f.models.getAuth("devin-contract", { minOAuthValidityMs: 1 })).rejects.toThrow(/expires too soon/);
+  expect(refreshes).toBe(4);
+  expect(f.mutations()).toBe(5);
   await f.models.refresh({ allowNetwork: false });
-  assert.deepEqual(f.phases, [false]);
-  assert.equal(refreshes, 4);
+  expect(f.phases).toStrictEqual([false]);
+  expect(refreshes).toBe(4);
   await f.models.refresh({ allowNetwork: true });
-  assert.deepEqual(f.phases, [false, false, true]);
-  assert.equal(refreshes, 5);
+  expect(f.phases).toStrictEqual([false, false, true]);
+  expect(refreshes).toBe(5);
   await f.models.logout("devin-contract");
-  assert.equal(await f.models.getAuth("devin-contract"), undefined);
-  assert.equal(refreshes, 5);
+  expect(await f.models.getAuth("devin-contract")).toBe(undefined);
+  expect(refreshes).toBe(5);
 });
 
 test("a refresh started by Pi completes and saves with its own signal after caller cancellation and is serialized with logout", async () => {
@@ -76,11 +75,11 @@ test("a refresh started by Pi completes and saves with its own signal after call
   const auth = f.models.getAuth("devin-contract", { signal: controller.signal });
   await started;
   controller.abort(new DOMException("cancel", "AbortError"));
-  await assert.rejects(auth, { name: "AbortError" });
-  assert.equal(refreshSignal!.aborted, false); // Host's 15000ms signal, not an overwritten caller signal.
+  await expect(auth).rejects.toThrow(expect.objectContaining({ name: "AbortError" }));
+  expect(refreshSignal!.aborted).toBe(false); // Host's 15000ms signal, not an overwritten caller signal.
   const logout = f.models.logout("devin-contract");
   finish();
   await logout;
-  assert.equal(f.mutations(), 1);
-  assert.equal(await f.storage.read("devin-contract"), undefined);
+  expect(f.mutations()).toBe(1);
+  expect(await f.storage.read("devin-contract")).toBe(undefined);
 });

@@ -1,5 +1,4 @@
-import { it } from "node:test";
-import assert from "node:assert/strict";
+import { expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -33,15 +32,15 @@ it("uses actual user results, never api-request-blob or sidechain copies", () =>
 	const content = [image(), marker(join(results, "image.png"))];
 	const copy = [image(), marker(join(results, "wrong.png"))];
 	const carried = collectCarriedToolResults([null, 1, record("i", content), record("i", copy, { type: "api-request-blob" }), record("i", copy, { isSidechain: true })]);
-	assert.equal(carried.size, 1);
+	expect(carried.size).toBe(1);
 	const messages = converted("i", [image()]);
-	assert.deepEqual(applyCarriedToolResults(messages, carried, root), ["i"]);
-	assert.deepEqual(messages[0].content[0].content, content);
+	expect(applyCarriedToolResults(messages, carried, root)).toStrictEqual(["i"]);
+	expect(messages[0].content[0].content).toStrictEqual(content);
 }));
 
 it("lets a later ordinary result supersede an earlier carried form of the same id", () => withFixture(({ results }) => {
 	const carried = collectCarriedToolResults([record("i", [image(), marker(join(results, "image.png"))]), record("i", "later ordinary result")]);
-	assert.equal(carried.has("i"), false);
+	expect(carried.has("i")).toBe(false);
 }));
 
 it("lazily reads only relevant saved results and retains the live oversized notice", () => withFixture(({ root, results }) => {
@@ -50,12 +49,12 @@ it("lazily reads only relevant saved results and retains the live oversized noti
 	writeFileSync(path, body);
 	const native = notice(path);
 	const carried = collectCarriedToolResults([record("large", native), record("unused", notice(join(results, "missing.txt")))]);
-	assert.equal(carried.size, 2, "collecting descriptors must not depend on opening unused files");
+	expect(carried.size, "collecting descriptors must not depend on opening unused files").toBe(2);
 	const messages = converted("large", [text(body)]);
-	assert.deepEqual(applyCarriedToolResults(messages, carried, root), ["large"]);
-	assert.equal(messages[0].content[0].content, native);
-	assert.equal(messages[0].content[0].tool_use_id, "large");
-	assert.equal(Object.hasOwn(messages[0].content[0], "is_error"), false);
+	expect(applyCarriedToolResults(messages, carried, root)).toStrictEqual(["large"]);
+	expect(messages[0].content[0].content).toBe(native);
+	expect(messages[0].content[0].tool_use_id).toBe("large");
+	expect(Object.hasOwn(messages[0].content[0], "is_error")).toBe(false);
 }));
 
 it("matches saved JSON MCP image/text blocks against converted Anthropic blocks", () => withFixture(({ root, results }) => {
@@ -63,8 +62,8 @@ it("matches saved JSON MCP image/text blocks against converted Anthropic blocks"
 	writeFileSync(path, JSON.stringify([text("full"), { type: "image", data: VERIFICATION_PNG_BASE64, mimeType: "image/png" }]));
 	const native = `<persisted-output>\nOutput too large (32 KB). Full output saved to: ${path}\n\nPreview\n</persisted-output>`;
 	const messages = converted("json", [text("full"), image()]);
-	assert.deepEqual(applyCarriedToolResults(messages, collectCarriedToolResults([record("json", native)]), root), ["json"]);
-	assert.equal(messages[0].content[0].content, native);
+	expect(applyCarriedToolResults(messages, collectCarriedToolResults([record("json", native)]), root)).toStrictEqual(["json"]);
+	expect(messages[0].content[0].content).toBe(native);
 }));
 
 it("does not replace Pi's edited text or changed error state", () => withFixture(({ root, results }) => {
@@ -74,8 +73,8 @@ it("does not replace Pi's edited text or changed error state", () => withFixture
 	for (const [body, isError] of [["edited", false], ["original", true]]) {
 		const messages = converted("t", [text(body)], isError);
 		const before = structuredClone(messages);
-		assert.deepEqual(applyCarriedToolResults(messages, carried, root), []);
-		assert.deepEqual(messages, before);
+		expect(applyCarriedToolResults(messages, carried, root)).toStrictEqual([]);
+		expect(messages).toStrictEqual(before);
 	}
 }));
 
@@ -85,25 +84,25 @@ it("preserves image markers only while the image's bytes and MIME type still mat
 	const native = [text("caption"), image(), marker(path)];
 	const carried = collectCarriedToolResults([record("i", native)]);
 	const messages = converted("i", [text("caption"), image()]);
-	assert.deepEqual(applyCarriedToolResults(messages, carried, root), ["i"]);
-	assert.deepEqual(messages[0].content[0].content, native);
+	expect(applyCarriedToolResults(messages, carried, root)).toStrictEqual(["i"]);
+	expect(messages[0].content[0].content).toStrictEqual(native);
 	for (const patch of [{ data: "CHANGED" }, { media_type: "image/jpeg" }]) {
 		const changed = image(); Object.assign(changed.source, patch);
 		const edited = converted("i", [text("caption"), changed]);
 		const before = structuredClone(edited);
-		assert.deepEqual(applyCarriedToolResults(edited, carried, root), []);
-		assert.deepEqual(edited, before);
+		expect(applyCarriedToolResults(edited, carried, root)).toStrictEqual([]);
+		expect(edited).toStrictEqual(before);
 	}
 	rmSync(path);
-	assert.deepEqual(applyCarriedToolResults(converted("i", [text("caption"), image()]), carried, root), ["i"], "inline data is complete even when an image copy is missing");
+	expect(applyCarriedToolResults(converted("i", [text("caption"), image()]), carried, root), "inline data is complete even when an image copy is missing").toStrictEqual(["i"]);
 }));
 
 it("does not confuse ordinary marker-looking Pi text with generated image metadata", () => withFixture(({ root, results }) => {
 	const ordinary = text("[Image: source: literal user text]");
 	const native = [image(), marker(join(results, "image.png")), ordinary];
 	const carried = collectCarriedToolResults([record("i", native)]);
-	assert.deepEqual(applyCarriedToolResults(converted("i", [image(), ordinary]), carried, root), ["i"]);
-	assert.deepEqual(applyCarriedToolResults(converted("i", [image()]), carried, root), [], "removing Pi text must win over the older native content");
+	expect(applyCarriedToolResults(converted("i", [image(), ordinary]), carried, root)).toStrictEqual(["i"]);
+	expect(applyCarriedToolResults(converted("i", [image()]), carried, root), "removing Pi text must win over the older native content").toStrictEqual([]);
 }));
 
 it("falls back for missing files, invalid JSON and unsupported saved block types", () => withFixture(({ root, results }) => {
@@ -111,8 +110,8 @@ it("falls back for missing files, invalid JSON and unsupported saved block types
 	for (const value of [undefined, "not JSON", "{}", '[{"type":"resource"}]']) {
 		if (value === undefined) rmSync(path, { force: true }); else writeFileSync(path, value);
 		const messages = converted("t", "Pi result");
-		assert.deepEqual(applyCarriedToolResults(messages, collectCarriedToolResults([record("t", notice(path))]), root), []);
-		assert.equal(messages[0].content[0].content, "Pi result");
+		expect(applyCarriedToolResults(messages, collectCarriedToolResults([record("t", notice(path))]), root)).toStrictEqual([]);
+		expect(messages[0].content[0].content).toBe("Pi result");
 	}
 }));
 
@@ -120,9 +119,9 @@ it("rejects other projects, non-tool directories and relative paths", () => with
 	const outside = join(temporary, "other", sessionId, "tool-results", "data.txt");
 	mkdirSync(dirname(outside), { recursive: true }); writeFileSync(outside, "outside");
 	const metadata = join(root, sessionId, "metadata.txt"); writeFileSync(metadata, "metadata");
-	for (const path of [outside, metadata, "relative.txt", join(results, "..", "metadata.txt")]) assert.equal(readSavedOutput(root, path), undefined);
+	for (const path of [outside, metadata, "relative.txt", join(results, "..", "metadata.txt")]) expect(readSavedOutput(root, path)).toBe(undefined);
 	const messages = converted("i", [image()]);
-	assert.deepEqual(applyCarriedToolResults(messages, collectCarriedToolResults([record("i", [image(), marker(outside)])]), root), []);
+	expect(applyCarriedToolResults(messages, collectCarriedToolResults([record("i", [image(), marker(outside)])]), root)).toStrictEqual([]);
 }));
 
 it("rejects symlinks at the file, tool-results, session and project boundaries", () => {
@@ -134,7 +133,7 @@ it("rejects symlinks at the file, tool-results, session and project boundaries",
 		const from = level === "file" ? local : level === "results" ? results : level === "session" ? dirname(results) : root;
 		const target = level === "file" ? join(targetResults, "data.txt") : level === "results" ? targetResults : level === "session" ? dirname(targetResults) : targetRoot;
 		rmSync(from, { recursive: true, force: true }); symlinkSync(target, from);
-		assert.equal(readSavedOutput(root, local), undefined, level);
+		expect(readSavedOutput(root, local), level).toBe(undefined);
 	});
 });
 
@@ -143,12 +142,12 @@ it("reads the exact 32 MiB boundary, rejects one byte more and rejects directori
 	const limit = 32 * 1024 * 1024;
 	writeFileSync(path, Buffer.alloc(limit, 0x61));
 	const output = readSavedOutput(root, path);
-	assert.equal(output.length, limit);
-	assert.equal(output[0], "a"); assert.equal(output.at(-1), "a");
+	expect(output.length).toBe(limit);
+	expect(output[0]).toBe("a"); expect(output.at(-1)).toBe("a");
 	appendFileSync(path, "b");
-	assert.equal(readSavedOutput(root, path), undefined);
+	expect(readSavedOutput(root, path)).toBe(undefined);
 	const directory = join(results, "directory"); mkdirSync(directory);
-	assert.equal(readSavedOutput(root, directory), undefined);
+	expect(readSavedOutput(root, directory)).toBe(undefined);
 }));
 
 it("clears auxiliary state without following companion or result-directory symlinks", () => withFixture(({ temporary, root, sessionId, results }) => {
@@ -157,12 +156,12 @@ it("clears auxiliary state without following companion or result-directory symli
 	writeFileSync(path, "old");
 	rmSync(results, { recursive: true }); symlinkSync(outside, results);
 	deleteSessionKeepingToolResults(path);
-	assert.equal(existsSync(path), false); assert.equal(existsSync(results), false);
-	assert.equal(readFileSync(join(outside, "keep"), "utf8"), "keep");
+	expect(existsSync(path)).toBe(false); expect(existsSync(results)).toBe(false);
+	expect(readFileSync(join(outside, "keep"), "utf8")).toBe("keep");
 	rmSync(dirname(results), { recursive: true }); symlinkSync(outside, dirname(results));
 	writeFileSync(path, "old"); deleteSessionKeepingToolResults(path);
-	assert.equal(existsSync(dirname(results)), false);
-	assert.equal(readFileSync(join(outside, "keep"), "utf8"), "keep");
+	expect(existsSync(dirname(results))).toBe(false);
+	expect(readFileSync(join(outside, "keep"), "utf8")).toBe("keep");
 }));
 
 for (const shouldRotate of [false, true]) it(`production sync preserves image and large-result content/files with rotation=${shouldRotate}`, async () => {
@@ -192,18 +191,18 @@ for (const shouldRotate of [false, true]) it(`production sync preserves image an
 			const oldBytes = readFileSync(seeded.jsonlPath);
 			harness.runtime.setSessionStateFor(workspace.sessionId, { sessionId: oldId, cwd: workspace.cwd, cursor: 0, needsRebuild: true, forceRotate: shouldRotate });
 			const synced = harness.runtime.syncSharedSession([...prior, fixtureUser("after")], workspace.cwd, undefined, harness.model.id, workspace.sessionId);
-			assert.equal(synced.sessionId === oldId, !shouldRotate);
+			expect(synced.sessionId === oldId).toBe(!shouldRotate);
 			const rebuilt = openSession({ sessionId: synced.sessionId, projectPath: workspace.cwd, claudeDir: process.env.CLAUDE_CONFIG_DIR });
 			const blocks = rebuilt.messages.flatMap(record => Array.isArray(record.message.content) ? record.message.content.filter(block => block.type === "tool_result") : []);
-			assert.deepEqual(blocks.map(block => block.tool_use_id), ["image", "large"]);
-			assert.deepEqual(blocks[0].content, nativeImage); assert.equal(blocks[1].content, nativeLarge);
-			assert.deepEqual(Object.keys(blocks[0]), ["tool_use_id", "type", "content"]);
-			assert.deepEqual(readFileSync(imagePath), Buffer.from(VERIFICATION_PNG_BASE64, "base64"));
-			assert.equal(readFileSync(largePath, "utf8"), prior[3].content[0].text);
-			assert.equal(existsSync(auxiliary), shouldRotate);
-			assert.equal(rebuilt.records.some(record => record.type === "api-request-blob"), false);
-			assert.ok(rebuilt.messages.filter(record => record.type === "assistant").every(record => record.message.id.startsWith("msg_syn_") && record.requestId.startsWith("req_syn_")));
-			if (shouldRotate) assert.deepEqual(readFileSync(seeded.jsonlPath), oldBytes);
+			expect(blocks.map(block => block.tool_use_id)).toStrictEqual(["image", "large"]);
+			expect(blocks[0].content).toStrictEqual(nativeImage); expect(blocks[1].content).toBe(nativeLarge);
+			expect(Object.keys(blocks[0])).toStrictEqual(["tool_use_id", "type", "content"]);
+			expect(readFileSync(imagePath)).toStrictEqual(Buffer.from(VERIFICATION_PNG_BASE64, "base64"));
+			expect(readFileSync(largePath, "utf8")).toBe(prior[3].content[0].text);
+			expect(existsSync(auxiliary)).toBe(shouldRotate);
+			expect(rebuilt.records.some(record => record.type === "api-request-blob")).toBe(false);
+			expect(rebuilt.messages.filter(record => record.type === "assistant").every(record => record.message.id.startsWith("msg_syn_") && record.requestId.startsWith("req_syn_"))).toBeTruthy();
+			if (shouldRotate) expect(readFileSync(seeded.jsonlPath)).toStrictEqual(oldBytes);
 		} finally { await harness.close(); }
 	});
 });

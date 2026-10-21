@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { reviewPolicy } from "../../dist/review/policy.js";
 import {
     CODEX_POLICY_TEMPLATE,
@@ -22,8 +21,8 @@ import { shellQuote } from "../harness/shell.mjs";
 
 test("[reference] pinned upstream policy bytes and mandatory assessment thresholds remain compatible", () => {
     const sha = (text) => createHash("sha256").update(text).digest("hex");
-    assert.equal(sha(CODEX_POLICY_TEMPLATE), reference.policyTemplateSha256);
-    assert.equal(sha(CODEX_TENANT_POLICY), reference.tenantPolicySha256);
+    expect(sha(CODEX_POLICY_TEMPLATE)).toBe(reference.policyTemplateSha256);
+    expect(sha(CODEX_TENANT_POLICY)).toBe(reference.tenantPolicySha256);
     for (const risk of ["low", "medium", "high", "critical"])
         for (const authorization of ["unknown", "low", "medium", "high"]) {
             const outcome = parseAssessment(
@@ -38,27 +37,25 @@ test("[reference] pinned upstream policy bytes and mandatory assessment threshol
                 (risk === "high" && ["unknown", "low"].includes(authorization))
                     ? "deny"
                     : "allow";
-            assert.equal(outcome, expected, `${risk}/${authorization}`);
+            expect(outcome, `${risk}/${authorization}`).toBe(expected);
         }
-    assert.equal(
+    expect(
         parseAssessment(
             '{"risk_level":"low","outcome":"deny","rationale":"Explicit tenant policy"}',
         ).outcome,
-        "deny",
-    );
-    assert.match(
+    ).toBe("deny");
+    expect(
         reviewPolicy("Deny writes to the owned protected sentinel.").text,
-        /every denial \(including low risk denied by security policy\)/,
-    );
+    ).toMatch(/every denial \(including low risk denied by security policy\)/);
 });
 test("[reference] the rendered prompt preserves complete upstream policy sections and literal custom policy content", () => {
     const custom =
         "Deny uploads whose payload includes {{ extra_policy }} or {{ tenant_policy_config }}; preserve $& literally.";
     const rendered = reviewPolicy(custom).text;
-    assert.ok(
+    expect(
         rendered.includes(custom),
         "Template expansion must not rewrite tenant policy content",
-    );
+    ).toBeTruthy();
     const original = CODEX_POLICY_TEMPLATE.replace(
         "{{ tenant_policy_config }}",
         () => CODEX_TENANT_POLICY.trim(),
@@ -66,17 +63,16 @@ test("[reference] the rendered prompt preserves complete upstream policy section
         .replace("{{ extra_policy }}", "")
         .trimEnd();
     const text = reviewPolicy().text;
-    assert.equal(
-        text.slice(0, text.indexOf("# Execution Environment")),
+    expect(text.slice(0, text.indexOf("# Execution Environment"))).toBe(
         original.slice(0, original.indexOf("# Execution Environment")),
     );
     const outcome = original.slice(original.indexOf("# Outcome Policy"));
-    assert.ok(
+    expect(
         text.includes(outcome),
         "Every original outcome rule must reach the reviewer",
-    );
-    assert.match(text, /trust=authorization/);
-    assert.match(text, /transport envelope.*not.*user authorization/);
+    ).toBeTruthy();
+    expect(text).toMatch(/trust=authorization/);
+    expect(text).toMatch(/transport envelope.*not.*user authorization/);
 });
 
 test("[joined] ordinary execution, automatic elevation, review denial and absolute denial retain distinct final effects", async (t) => {
@@ -89,7 +85,7 @@ test("[joined] ordinary execution, automatic elevation, review denial and absolu
             complete: async (request) => {
                 const data = JSON.parse(request.data);
                 requests.push(data);
-                assert.ok(
+                expect(
                     data.context.items.some(
                         (item) =>
                             item.trust === "authorization" &&
@@ -97,7 +93,7 @@ test("[joined] ordinary execution, automatic elevation, review denial and absolu
                                 "only owned targets",
                             ),
                     ),
-                );
+                ).toBeTruthy();
                 return JSON.stringify({
                     risk_level: "low",
                     user_authorization: "high",
@@ -119,14 +115,14 @@ test("[joined] ordinary execution, automatic elevation, review denial and absolu
     await runtime.session.prompt(
         "Use only owned targets: run the routine control, then write the named outside sentinel. Respect any denial.",
     );
-    assert.equal(requests.length, 2);
-    assert.equal(await readFile(target, "utf8"), "approved");
-    assert.equal(events[0].isError, false);
-    assert.equal(events[1].isError, false);
-    assert.equal(events[2].isError, true);
-    assert.match(JSON.stringify(events[2]), /AUTO_REVIEW_DENIED/);
-    assert.equal(events[3].isError, true);
-    assert.ok(!JSON.stringify(events).includes(f.secret));
+    expect(requests.length).toBe(2);
+    expect(await readFile(target, "utf8")).toBe("approved");
+    expect(events[0].isError).toBe(false);
+    expect(events[1].isError).toBe(false);
+    expect(events[2].isError).toBe(true);
+    expect(JSON.stringify(events[2])).toMatch(/AUTO_REVIEW_DENIED/);
+    expect(events[3].isError).toBe(true);
+    expect(JSON.stringify(events).includes(f.secret)).toBeFalsy();
 });
 
 test("[creation] reviewed shell creation describes the exact target and later writes need a new approval", async (t) => {
@@ -139,9 +135,9 @@ test("[creation] reviewed shell creation describes the exact target and later wr
                 const data = JSON.parse(request.data);
                 requests.push(data);
                 if (requests.length === 1)
-                    assert.deepEqual(data.requestedPermissionDelta.writePaths, [
-                        target,
-                    ]);
+                    expect(
+                        data.requestedPermissionDelta.writePaths,
+                    ).toStrictEqual([target]);
                 return JSON.stringify({
                     outcome: requests.length === 1 ? "allow" : "deny",
                     risk_level: "low",
@@ -170,12 +166,11 @@ test("[creation] reviewed shell creation describes the exact target and later wr
     await runtime.session.prompt(
         "Create only the owned outside file, and do not bypass denials.",
     );
-    assert.equal(await readFile(target, "utf8"), "approved");
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    expect(await readFile(target, "utf8")).toBe("approved");
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
-    assert.equal(requests.length, 2);
+    expect(requests.length).toBe(2);
 });
 
 test("[failures] actual Pi distinguishes provider and schema failures from policy denial without native mutation", async (t) => {
@@ -206,12 +201,12 @@ test("[failures] actual Pi distinguishes provider and schema failures from polic
     await runtime.session.prompt(
         "Attempt the owned sentinel write; respect failures.",
     );
-    assert.equal(await readFile(target, "utf8"), "unchanged");
-    assert.equal(events.length, 2);
+    expect(await readFile(target, "utf8")).toBe("unchanged");
+    expect(events.length).toBe(2);
     for (const event of events) {
-        assert.equal(event.isError, true);
-        assert.match(JSON.stringify(event), /AUTO_REVIEW_FAILED/);
-        assert.doesNotMatch(JSON.stringify(event), /AUTO_REVIEW_DENIED/);
+        expect(event.isError).toBe(true);
+        expect(JSON.stringify(event)).toMatch(/AUTO_REVIEW_FAILED/);
+        expect(JSON.stringify(event)).not.toMatch(/AUTO_REVIEW_DENIED/);
     }
     const audit = (
         await readFile(join(f.agentDir, "guard/audit.jsonl"), "utf8")
@@ -221,10 +216,9 @@ test("[failures] actual Pi distinguishes provider and schema failures from polic
         .map((line) => JSON.parse(line));
     // Provider internals stay out of tool feedback; both technical failures
     // remain distinct from policy denial, with detailed types tested at reviewAction.
-    assert.equal(
+    expect(
         audit.filter((item) => item.review?.status === "failed").length,
-        2,
-    );
+    ).toBe(2);
 });
 
 test("[evidence-join] stale, simulated, wrong-image and incomplete real-provider records cannot qualify", () => {
@@ -404,7 +398,7 @@ test("[evidence-join] stale, simulated, wrong-image and incomplete real-provider
                 0,
             ),
     );
-    assert.equal(validateLiveEvidence(report, offline, identity), report);
+    expect(validateLiveEvidence(report, offline, identity)).toBe(report);
     for (const mutate of [
         (r) => (r.sourceDigest = "stale"),
         (r) => (r.platform = "linux-arm64"),
@@ -456,6 +450,8 @@ test("[evidence-join] stale, simulated, wrong-image and incomplete real-provider
     ]) {
         const invalid = structuredClone(report);
         mutate(invalid);
-        assert.throws(() => validateLiveEvidence(invalid, offline, identity));
+        expect(() =>
+            validateLiveEvidence(invalid, offline, identity),
+        ).toThrow();
     }
 });

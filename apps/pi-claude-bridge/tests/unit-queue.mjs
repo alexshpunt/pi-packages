@@ -13,8 +13,7 @@
  * id from a positional cursor into `turnToolCallIds` (fixed in fc2efeb6), which
  * mispaired as soon as Claude's call order diverged from its emission order.
  */
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { QueryContext } from "../src/provider/query-context.js";
 import { extractAllToolResults } from "../src/extract-tool-results.js";
 import { makePromptStream } from "../src/prompt-stream.js";
@@ -78,12 +77,12 @@ describe("tool result queue", () => {
 		const { c, callTool } = await startQuery(["toolu_1"]);
 
 		await deliver(c, result("toolu_1", "early", true));
-		assert.deepEqual([...c.pendingResults.keys()], ["toolu_1"]);
+		expect([...c.pendingResults.keys()]).toStrictEqual(["toolu_1"]);
 
 		const response = await callTool("alpha", "toolu_1");
-		assert.equal(replyText(response), "early");
-		assert.equal(response.result.isError, true);
-		assert.equal(c.pendingResults.size, 0);
+		expect(replyText(response)).toBe("early");
+		expect(response.result.isError).toBe(true);
+		expect(c.pendingResults.size).toBe(0);
 	});
 
 	it("parks a handler that arrives before its result, then releases it", async () => {
@@ -91,14 +90,14 @@ describe("tool result queue", () => {
 
 		const call = callTool("alpha", "toolu_1");
 		await tick();
-		assert.deepEqual([...c.pendingToolCalls.keys()], ["toolu_1"]);
-		assert.equal(c.pendingToolCalls.get("toolu_1").toolName, "alpha");
+		expect([...c.pendingToolCalls.keys()]).toStrictEqual(["toolu_1"]);
+		expect(c.pendingToolCalls.get("toolu_1").toolName).toBe("alpha");
 
 		await deliver(c, result("toolu_1", "late", false));
 		const response = await call;
-		assert.equal(replyText(response), "late");
-		assert.equal(response.result.isError, false);
-		assert.equal(c.pendingToolCalls.size, 0);
+		expect(replyText(response)).toBe("late");
+		expect(response.result.isError).toBe(false);
+		expect(c.pendingToolCalls.size).toBe(0);
 	});
 
 	// The regression fc2efeb6 fixed: Claude calls the tools in one order, pi
@@ -112,39 +111,39 @@ describe("tool result queue", () => {
 		const first = callTool("alpha", "toolu_1");
 		const second = callTool("beta", "toolu_2");
 		await tick();
-		assert.equal(c.pendingToolCalls.size, 3);
+		expect(c.pendingToolCalls.size).toBe(3);
 
 		await deliver(c, result("toolu_2", "r2"), result("toolu_3", "r3"), result("toolu_1", "r1"));
 
-		assert.equal(replyText(await first), "r1");
-		assert.equal(replyText(await second), "r2");
-		assert.equal(replyText(await third), "r3");
-		assert.equal(c.pendingToolCalls.size, 0);
-		assert.equal(c.pendingResults.size, 0);
+		expect(replyText(await first)).toBe("r1");
+		expect(replyText(await second)).toBe("r2");
+		expect(replyText(await third)).toBe("r3");
+		expect(c.pendingToolCalls.size).toBe(0);
+		expect(c.pendingResults.size).toBe(0);
 	});
 
 	// The invariant the two maps exist to keep: an id is waiting in at most one.
 	it("moves an id between the maps without ever holding it in both", async () => {
 		const { c, callTool } = await startQuery(["toolu_1", "toolu_2"]);
 		const assertDisjoint = () => {
-			for (const id of c.pendingToolCalls.keys()) assert.ok(!c.pendingResults.has(id), `${id} is in both maps`);
+			for (const id of c.pendingToolCalls.keys()) expect(c.pendingResults.has(id), `${id} is in both maps`).toBeFalsy();
 		};
 
 		const one = callTool("alpha", "toolu_1"); // parks
 		await tick();
 		assertDisjoint();
 		await deliver(c, result("toolu_1", "r1")); // releases it rather than queueing
-		assert.equal(replyText(await one), "r1");
-		assert.equal(c.pendingResults.size, 0);
+		expect(replyText(await one)).toBe("r1");
+		expect(c.pendingResults.size).toBe(0);
 
 		await deliver(c, result("toolu_2", "r2")); // queues — no handler yet
-		assert.deepEqual([...c.pendingResults.keys()], ["toolu_2"]);
+		expect([...c.pendingResults.keys()]).toStrictEqual(["toolu_2"]);
 		assertDisjoint();
 
 		const two = await callTool("beta", "toolu_2"); // claims it from the queue
-		assert.equal(replyText(two), "r2");
-		assert.equal(c.pendingResults.size, 0);
-		assert.equal(c.pendingToolCalls.size, 0);
+		expect(replyText(two)).toBe("r2");
+		expect(c.pendingResults.size).toBe(0);
+		expect(c.pendingToolCalls.size).toBe(0);
 	});
 
 	it("leaves only the unanswered handler parked when a result never arrives", async () => {
@@ -155,8 +154,8 @@ describe("tool result queue", () => {
 
 		await deliver(c, result("toolu_1", "r1"));
 
-		assert.equal(replyText(await answered), "r1");
-		assert.deepEqual([...c.pendingToolCalls.keys()], ["toolu_2"]);
+		expect(replyText(await answered)).toBe("r1");
+		expect([...c.pendingToolCalls.keys()]).toStrictEqual(["toolu_2"]);
 	});
 });
 
@@ -173,10 +172,10 @@ describe("abandoning a query", () => {
 
 		c.releasePendingToolCalls("Query ended");
 
-		assert.equal(replyText(await one), "Query ended");
-		assert.equal(replyText(await two), "Query ended");
-		assert.equal(c.pendingToolCalls.size, 0);
-		assert.equal(c.pendingResults.size, 0, "a result nobody claimed must not outlive its query");
+		expect(replyText(await one)).toBe("Query ended");
+		expect(replyText(await two)).toBe("Query ended");
+		expect(c.pendingToolCalls.size).toBe(0);
+		expect(c.pendingResults.size, "a result nobody claimed must not outlive its query").toBe(0);
 	});
 
 	// The abort race: the user aborts while delivery is parked on the steer's
@@ -195,13 +194,13 @@ describe("abandoning a query", () => {
 		c.promptStream = makePromptStream();
 		const delivery = __test.deliverToolResults(c, [result("toolu_1", "r1")], [{ type: "text", text: "stop" }], 4);
 		await tick();
-		assert.equal(c.pendingToolCalls.size, 1, "delivery must still be parked on the ack");
+		expect(c.pendingToolCalls.size, "delivery must still be parked on the ack").toBe(1);
 
 		__test.drainForAbort(c, c.promptStream);
 
 		await delivery; // resolves rather than throwing: the steer is lost, not the turn
-		assert.equal(replyText(await call), "Operation aborted");
-		assert.equal(c.pendingToolCalls.size, 0);
+		expect(replyText(await call)).toBe("Operation aborted");
+		expect(c.pendingToolCalls.size).toBe(0);
 	});
 });
 
@@ -220,8 +219,8 @@ describe("extracting a turn's tool results from pi's context", () => {
 			toolResult("toolu_3", "turn 2b"),
 		]);
 
-		assert.deepEqual(texts(results), ["turn 2a", "turn 2b"]);
-		assert.equal(stopIdx, 3);
+		expect(texts(results)).toStrictEqual(["turn 2a", "turn 2b"]);
+		expect(stopIdx).toBe(3);
 	});
 
 	// pi injects user messages (steer, followUp, orchestrator context) while the
@@ -239,8 +238,8 @@ describe("extracting a turn's tool results from pi's context", () => {
 			{ role: "user", content: "steer after the last result" },
 		]);
 
-		assert.deepEqual(texts(results), ["r1", "r2", "r3"]);
-		assert.deepEqual(results.map((r) => r.isError), [undefined, true, undefined]);
+		expect(texts(results)).toStrictEqual(["r1", "r2", "r3"]);
+		expect(results.map((r) => r.isError)).toStrictEqual([undefined, true, undefined]);
 	});
 
 	it("finds nothing when the turn's tools have not reported yet", () => {
@@ -250,8 +249,8 @@ describe("extracting a turn's tool results from pi's context", () => {
 			{ role: "user", content: "steer into the void" },
 		];
 
-		assert.equal(extractAllToolResults(noResultsYet).results.length, 0);
-		assert.equal(extractAllToolResults([]).results.length, 0);
+		expect(extractAllToolResults(noResultsYet).results.length).toBe(0);
+		expect(extractAllToolResults([]).results.length).toBe(0);
 	});
 });
 
@@ -273,8 +272,8 @@ describe("delivering an extracted turn to its handlers", () => {
 		]);
 		await __test.deliverToolResults(c, results, null, 5);
 
-		assert.equal(replyText(await alpha), "read the file");
-		assert.equal(replyText(await beta), "ran the command");
-		assert.equal(c.pendingToolCalls.size, 0, "every handler for the turn must be released");
+		expect(replyText(await alpha)).toBe("read the file");
+		expect(replyText(await beta)).toBe("ran the command");
+		expect(c.pendingToolCalls.size, "every handler for the turn must be released").toBe(0);
 	});
 });

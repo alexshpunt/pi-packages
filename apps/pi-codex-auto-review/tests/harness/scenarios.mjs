@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+import { expect } from "vitest";
 import { planStream } from "./pi.mjs";
 
 // Adapted to Pi's public stream seam from Codex rust-v0.160.0:
@@ -36,39 +36,37 @@ export async function replayScenario(session, steps) {
             signal: options?.signal,
         });
         try {
-            assert.ok(
+            expect(
                 index < steps.length,
                 `Unexpected main-model request ${index + 1}`,
-            );
+            ).toBeTruthy();
             const previousCalls = steps
                 .slice(0, index)
                 .reduce((count, step) => count + (step.calls?.length ?? 0), 0);
-            assert.equal(
+            expect(
                 results.length,
-                previousCalls,
                 "Every preceding call must produce a tool result",
-            );
+            ).toBe(previousCalls);
             for (const result of results) {
                 const output = context.messages.find(
                     (message) =>
                         message.role === "toolResult" &&
                         message.toolCallId === result.toolCallId,
                 );
-                assert.ok(
+                expect(
                     output,
                     `Tool output ${result.toolCallId} must reach the next main-model request`,
-                );
-                assert.equal(output.isError, result.isError);
+                ).toBeTruthy();
+                expect(output.isError).toBe(result.isError);
                 const text = (content) =>
                     content
                         .filter((item) => item.type === "text")
                         .map((item) => item.text)
                         .join("\n");
-                assert.equal(
+                expect(
                     text(output.content),
-                    text(result.result.content),
                     `Tool output ${result.toolCallId} must retain its complete text for the next model request`,
-                );
+                ).toBe(text(result.result.content));
             }
             await steps[index].inspect?.({
                 model,
@@ -89,21 +87,17 @@ export async function replayScenario(session, steps) {
         results,
         dispose,
         assertComplete({ isCancelled = false } = {}) {
-            assert.deepEqual(
+            expect(
                 failures,
-                [],
                 "Script assertions must not be swallowed as provider failures",
-            );
-            assert.equal(
+            ).toStrictEqual([]);
+            expect(
                 requests.length,
-                steps.length,
                 "Every scripted main-model response must be consumed",
-            );
+            ).toBe(steps.length);
             if (!isCancelled)
-                assert.equal(
-                    results.length,
+                expect(results.length, "Every scripted tool must settle").toBe(
                     callIds.length,
-                    "Every scripted tool must settle",
                 );
         },
     };
@@ -119,10 +113,10 @@ export function replayReviews(replies) {
                 const index = requests.length;
                 requests.push(request);
                 try {
-                    assert.ok(
+                    expect(
                         index < replies.length,
                         `Unexpected reviewer request ${index + 1}`,
-                    );
+                    ).toBeTruthy();
                     const reply = replies[index];
                     if (reply instanceof Error) throw reply;
                     const value =
@@ -139,16 +133,14 @@ export function replayReviews(replies) {
             },
         },
         assertComplete() {
-            assert.deepEqual(
+            expect(
                 failures,
-                [],
                 "Reviewer script assertions must remain visible to the test",
-            );
-            assert.equal(
+            ).toStrictEqual([]);
+            expect(
                 requests.length,
-                replies.length,
                 "Every scripted reviewer response must be consumed",
-            );
+            ).toBe(replies.length);
         },
     };
 }

@@ -1,12 +1,12 @@
 /**
- * Unit-suite preload: isolate tests from the developer's real HOME/pi/claude state.
+ * Unit-suite setup file: isolate tests from the developer's real HOME/pi/claude state.
  *
  * Must run before test files import src modules — src/log-paths.ts resolves
  * paths lazily now, but keep the preload so tests never touch real HOME state
  * even when they forget to swap env themselves.
  *
- * Wiring this as `node --import ./tests/lib/setup.mjs` guarantees it runs first
- * in every test child process. tests/unit-debug-path.mjs asserts it took effect.
+ * Wiring this as Vitest's `setupFiles` (vitest.config.mjs) guarantees it runs first
+ * in every isolated test file. tests/unit-debug-path.mjs asserts it took effect.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

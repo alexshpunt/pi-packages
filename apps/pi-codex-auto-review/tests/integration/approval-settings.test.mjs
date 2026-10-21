@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { access, mkdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { stripVTControlCharacters } from "node:util";
 import { initTheme, SessionManager } from "@earendil-works/pi-coding-agent";
 import { createGuardExtension } from "../../dist/index.js";
@@ -43,7 +42,7 @@ async function setup(t, options = {}) {
         appendEntry: () => {},
     };
     await extension.factory(api);
-    t.after(() => extension.assertReady().close());
+    t.onTestFinished(() => extension.assertReady().close());
     const sessionManager = SessionManager.inMemory(f.workspace);
     const context = {
         cwd: f.workspace,
@@ -101,21 +100,19 @@ async function setup(t, options = {}) {
 test("[approval-settings] approve configures user or model review and the selected route reaches the original write tool", async (t) => {
     const f = await setup(t),
         target = join(f.outside, "sentinel.txt");
-    assert.deepEqual([...f.commands.keys()], ["approve", "approve-model"]);
+    expect([...f.commands.keys()]).toStrictEqual(["approve", "approve-model"]);
     f.context.ui.select = async (title, choices) =>
         title.startsWith("Approval mode")
             ? modeChoice(choices, "Ask for approval")
             : choices[0];
     await f.commands.get("approve").handler("", f.context);
-    assert.equal(
-        f.extension.assertReady().options.settings.approvalsReviewer,
+    expect(f.extension.assertReady().options.settings.approvalsReviewer).toBe(
         "user",
     );
-    assert.equal(
+    expect(
         JSON.parse(await readFile(f.settingsPath, "utf8")).approvalsReviewer,
-        "user",
-    );
-    assert.equal((await stat(f.settingsPath)).mode & 0o777, 0o600);
+    ).toBe("user");
+    expect((await stat(f.settingsPath)).mode & 0o777).toBe(0o600);
     await f.tools
         .get("write")
         .execute(
@@ -125,8 +122,8 @@ test("[approval-settings] approve configures user or model review and the select
             undefined,
             f.context,
         );
-    assert.equal(await readFile(target, "utf8"), "user-approved");
-    assert.equal(f.requests.length, 0);
+    expect(await readFile(target, "utf8")).toBe("user-approved");
+    expect(f.requests.length).toBe(0);
     f.context.ui.select = async (_title, choices) =>
         modeChoice(choices, "Approve for me");
     await f.commands.get("approve").handler("", f.context);
@@ -139,8 +136,8 @@ test("[approval-settings] approve configures user or model review and the select
             undefined,
             f.context,
         );
-    assert.equal(await readFile(target, "utf8"), "model-approved");
-    assert.equal(f.requests.length, 1);
+    expect(await readFile(target, "utf8")).toBe("model-approved");
+    expect(f.requests.length).toBe(1);
 });
 test("[approval-settings] the searchable picker selects only the auxiliary reviewer and follows the main model when cleared", async (t) => {
     const f = await setup(t),
@@ -150,16 +147,20 @@ test("[approval-settings] the searchable picker selects only the auxiliary revie
     f.context.ui.custom = (factory) =>
         new Promise((resolve) => {
             const picker = factory(undefined, undefined, undefined, resolve);
-            assert.ok(picker.render(90).join("\n").includes("Auxiliary model"));
+            expect(
+                picker.render(90).join("\n").includes("Auxiliary model"),
+            ).toBeTruthy();
             for (const character of "Auxiliary") picker.handleInput(character);
             picker.handleInput("\r");
         });
     await f.commands.get("approve-model").handler("", f.context);
-    assert.deepEqual(f.extension.assertReady().options.settings.reviewModel, {
+    expect(
+        f.extension.assertReady().options.settings.reviewModel,
+    ).toStrictEqual({
         provider: "fixture",
         id: "auxiliary",
     });
-    assert.equal(f.context.model, main);
+    expect(f.context.model).toBe(main);
     await f.tools
         .get("write")
         .execute(
@@ -169,12 +170,12 @@ test("[approval-settings] the searchable picker selects only the auxiliary revie
             undefined,
             f.context,
         );
-    assert.equal(f.requests.at(-1).selected, auxiliary);
-    assert.equal(await readFile(target, "utf8"), "auxiliary-reviewed");
+    expect(f.requests.at(-1).selected).toBe(auxiliary);
+    expect(await readFile(target, "utf8")).toBe("auxiliary-reviewed");
     f.context.mode = "rpc";
     f.context.ui.select = async (_title, choices) => choices[0];
     await f.commands.get("approve-model").handler("", f.context);
-    assert.equal(f.extension.assertReady().options.settings.reviewModel, null);
+    expect(f.extension.assertReady().options.settings.reviewModel).toBe(null);
     await f.tools
         .get("write")
         .execute(
@@ -184,8 +185,8 @@ test("[approval-settings] the searchable picker selects only the auxiliary revie
             undefined,
             f.context,
         );
-    assert.equal(f.requests.at(-1).selected, main);
-    assert.equal(await readFile(target, "utf8"), "main-reviewed");
+    expect(f.requests.at(-1).selected).toBe(main);
+    expect(await readFile(target, "utf8")).toBe("main-reviewed");
 });
 test("[approval-settings] Escape and unavailable UI preserve settings without saving or executing anything", async (t) => {
     const f = await setup(t);
@@ -198,16 +199,18 @@ test("[approval-settings] Escape and unavailable UI preserve settings without sa
             ),
         );
     await f.commands.get("approve-model").handler("", f.context);
-    await assert.rejects(access(f.settingsPath));
-    assert.equal(f.requests.length, 0);
+    await expect(access(f.settingsPath)).rejects.toThrow();
+    expect(f.requests.length).toBe(0);
     const withoutUI = { ...f.context, hasUI: false };
-    await assert.rejects(
+    await expect(
         f.commands.get("approve").handler("", withoutUI),
-        (error) => error.code === "APPROVAL_UI_UNAVAILABLE",
+    ).rejects.toThrow(
+        expect.toSatisfy((error) => error.code === "APPROVAL_UI_UNAVAILABLE"),
     );
-    await assert.rejects(
+    await expect(
         f.commands.get("approve-model").handler("", withoutUI),
-        (error) => error.code === "APPROVAL_UI_UNAVAILABLE",
+    ).rejects.toThrow(
+        expect.toSatisfy((error) => error.code === "APPROVAL_UI_UNAVAILABLE"),
     );
 });
 test("[approval-settings] reload restores both selections and the persisted model remains selected in the picker", async (t) => {
@@ -220,11 +223,12 @@ test("[approval-settings] reload restores both selections and the persisted mode
     await f.commands.get("approve-model").handler("", f.context);
     const before = await readFile(f.settingsPath, "utf8");
     await f.extension.factory(f.api);
-    assert.equal(
-        f.extension.assertReady().options.settings.approvalsReviewer,
+    expect(f.extension.assertReady().options.settings.approvalsReviewer).toBe(
         "user",
     );
-    assert.deepEqual(f.extension.assertReady().options.settings.reviewModel, {
+    expect(
+        f.extension.assertReady().options.settings.reviewModel,
+    ).toStrictEqual({
         id: "auxiliary",
         provider: "fixture",
     });
@@ -234,7 +238,7 @@ test("[approval-settings] reload restores both selections and the persisted mode
             factory(undefined, undefined, undefined, resolve).handleInput("\r"),
         );
     await f.commands.get("approve-model").handler("", f.context);
-    assert.equal(await readFile(f.settingsPath, "utf8"), before);
+    expect(await readFile(f.settingsPath, "utf8")).toBe(before);
 });
 test("[approval-settings] concurrent choices preserve each other and a failed save leaves the runtime unchanged", async (t) => {
     const f = await setup(t);
@@ -247,8 +251,8 @@ test("[approval-settings] concurrent choices preserve each other and a failed sa
         f.commands.get("approve-model").handler("", f.context),
     ]);
     const saved = JSON.parse(await readFile(f.settingsPath, "utf8"));
-    assert.equal(saved.approvalsReviewer, "user");
-    assert.deepEqual(saved.reviewModel, {
+    expect(saved.approvalsReviewer).toBe("user");
+    expect(saved.reviewModel).toStrictEqual({
         id: "auxiliary",
         provider: "fixture",
     });
@@ -256,13 +260,12 @@ test("[approval-settings] concurrent choices preserve each other and a failed sa
     await mkdir(broken.settingsPath, { recursive: true });
     broken.context.ui.select = async (_title, choices) =>
         modeChoice(choices, "Ask for approval");
-    await assert.rejects(
+    await expect(
         broken.commands.get("approve").handler("", broken.context),
-    );
-    assert.equal(
+    ).rejects.toThrow();
+    expect(
         broken.extension.assertReady().options.settings.approvalsReviewer,
-        "auto_review",
-    );
+    ).toBe("auto_review");
 });
 test("[approval-settings] settings changes cancel a pending old-model approval before its late allow can write", async (t) => {
     let started, finish;
@@ -285,14 +288,14 @@ test("[approval-settings] settings changes cancel a pending old-model approval b
             undefined,
             f.context,
         );
-    const rejected = assert.rejects(pending);
+    const rejected = expect(pending).rejects.toThrow();
     await waiting;
     f.context.ui.select = async (_title, choices) =>
         modeChoice(choices, "Ask for approval");
     await f.commands.get("approve").handler("", f.context);
     finish('{"outcome":"allow"}');
     await rejected;
-    assert.equal(await readFile(target, "utf8"), "unchanged");
+    expect(await readFile(target, "utf8")).toBe("unchanged");
 });
 test("[approval-settings] the actual mode picker renders Codex descriptions and all command UI in English", async (t) => {
     const f = await setup(t);
@@ -300,7 +303,9 @@ test("[approval-settings] the actual mode picker renders Codex descriptions and 
     f.context.mode = "tui";
     f.context.ui.select = async (title, choices) => {
         for (const description of Object.values(approvalDescriptions))
-            assert.ok([title, ...choices].join("\n").includes(description));
+            expect(
+                [title, ...choices].join("\n").includes(description),
+            ).toBeTruthy();
         return modeChoice(choices, "Ask for approval");
     };
     f.context.ui.custom = (factory) =>
@@ -310,24 +315,21 @@ test("[approval-settings] the actual mode picker renders Codex descriptions and 
                 picker.render(120).join("\n"),
             );
             for (const description of Object.values(approvalDescriptions))
-                assert.ok(screen.includes(description), screen);
-            assert.doesNotMatch(screen, /[가-힣]/);
+                expect(screen.includes(description), screen).toBeTruthy();
+            expect(screen).not.toMatch(/[가-힣]/);
             picker.handleInput("\x1b[B");
             picker.handleInput("\r");
         });
     await f.commands.get("approve").handler("", f.context);
-    assert.equal(
-        f.extension.assertReady().options.settings.approvalsReviewer,
+    expect(f.extension.assertReady().options.settings.approvalsReviewer).toBe(
         "user",
     );
-    assert.doesNotMatch(
+    expect(
         [...f.commands.values()]
             .map((command) => command.description)
             .join("\n"),
-        /[가-힣]/,
-    );
-    assert.doesNotMatch(
-        f.notifications.map(([text]) => text).join("\n"),
+    ).not.toMatch(/[가-힣]/);
+    expect(f.notifications.map(([text]) => text).join("\n")).not.toMatch(
         /[가-힣]/,
     );
     f.context.ui.custom = (factory) =>
@@ -336,15 +338,14 @@ test("[approval-settings] the actual mode picker renders Codex descriptions and 
             const screen = stripVTControlCharacters(
                 picker.render(36).join(" "),
             ).replace(/\s+/g, " ");
-            assert.ok(
+            expect(
                 screen.includes(approvalDescriptions["Ask for approval"]),
                 screen,
-            );
+            ).toBeTruthy();
             picker.handleInput("\x1b");
         });
     await f.commands.get("approve").handler("", f.context);
-    assert.equal(
-        f.extension.assertReady().options.settings.approvalsReviewer,
+    expect(f.extension.assertReady().options.settings.approvalsReviewer).toBe(
         "user",
     );
 });
@@ -358,9 +359,9 @@ test("[approval-settings] both model pickers honor the live scope and reject a s
     ];
     f.context.ui.select = async (title, choices) => {
         screens.push({ title, choices });
-        assert.equal(choices.length, 2);
-        assert.ok(choices[0].startsWith("Use current Pi model"));
-        assert.ok(choices[1].includes("fixture/auxiliary"));
+        expect(choices.length).toBe(2);
+        expect(choices[0].startsWith("Use current Pi model")).toBeTruthy();
+        expect(choices[1].includes("fixture/auxiliary")).toBeTruthy();
         return choices[1];
     };
     await f.commands.get("approve-model").handler("", f.context);
@@ -373,32 +374,33 @@ test("[approval-settings] both model pickers honor the live scope and reject a s
             const screen = stripVTControlCharacters(
                 picker.render(100).join("\n"),
             );
-            assert.ok(screen.includes("Auxiliary model"));
-            assert.ok(!screen.includes("Main model"));
-            assert.doesNotMatch(screen, /[가-힣]/);
+            expect(screen.includes("Auxiliary model")).toBeTruthy();
+            expect(screen.includes("Main model")).toBeFalsy();
+            expect(screen).not.toMatch(/[가-힣]/);
             f.context.scopedModels = [{ model: main }];
             picker.handleInput("\r");
         });
-    await assert.rejects(
+    await expect(
         f.commands.get("approve-model").handler("", f.context),
-        (error) => error.code === "MODEL_UNAVAILABLE",
+    ).rejects.toThrow(
+        expect.toSatisfy((error) => error.code === "MODEL_UNAVAILABLE"),
     );
-    assert.equal(await readFile(f.settingsPath, "utf8"), before);
+    expect(await readFile(f.settingsPath, "utf8")).toBe(before);
     f.context.mode = "rpc";
     f.context.scopedModels = [{ model: { ...main, id: "unavailable" } }];
     f.context.ui.select = async (_title, choices) => {
-        assert.equal(choices.length, 1);
+        expect(choices.length).toBe(1);
         return undefined;
     };
     await f.commands.get("approve-model").handler("", f.context);
     f.context.scopedModels = [];
     f.context.ui.select = async (_title, choices) => {
-        assert.equal(choices.length, 3);
+        expect(choices.length).toBe(3);
         return undefined;
     };
     await f.commands.get("approve-model").handler("", f.context);
-    assert.equal(await readFile(f.settingsPath, "utf8"), before);
-    assert.doesNotMatch(JSON.stringify(screens), /[가-힣]/);
+    expect(await readFile(f.settingsPath, "utf8")).toBe(before);
+    expect(JSON.stringify(screens)).not.toMatch(/[가-힣]/);
 });
 test("[approval-settings] Pi session scope selection reaches the auxiliary reviewer and preserves allow and deny effects", async (t) => {
     const f = await fixture(t),
@@ -457,19 +459,19 @@ test("[approval-settings] Pi session scope selection reaches the auxiliary revie
         },
     });
     await runtime.session.prompt("/approve-model");
-    assert.equal(choicesSeen.length, 1);
-    assert.equal(choicesSeen[0].choices.length, 2);
-    assert.ok(
-        !choicesSeen[0].choices.some((choice) =>
+    expect(choicesSeen.length).toBe(1);
+    expect(choicesSeen[0].choices.length).toBe(2);
+    expect(
+        choicesSeen[0].choices.some((choice) =>
             choice.includes("Excluded model"),
         ),
-    );
+    ).toBeFalsy();
     const target = join(f.outside, "sentinel.txt");
     await planStream(runtime.session, [
         [{ name: "write", args: { path: target, content: "approved" } }],
     ]);
     await runtime.session.prompt("Write only the owned outside sentinel.");
-    assert.equal(await readFile(target, "utf8"), "approved");
+    expect(await readFile(target, "utf8")).toBe("approved");
     shouldAllow = false;
     await planStream(runtime.session, [
         [{ name: "write", args: { path: target, content: "denied" } }],
@@ -477,10 +479,12 @@ test("[approval-settings] Pi session scope selection reaches the auxiliary revie
     await runtime.session.prompt(
         "Repeat the owned fixture with the denial control.",
     );
-    assert.equal(await readFile(target, "utf8"), "approved");
-    assert.equal(requests.length, 2);
-    assert.ok(requests.every((item) => item.model.id === "scoped-reviewer"));
-    assert.equal(runtime.session.model.id, FAKE_MODEL.id);
+    expect(await readFile(target, "utf8")).toBe("approved");
+    expect(requests.length).toBe(2);
+    expect(
+        requests.every((item) => item.model.id === "scoped-reviewer"),
+    ).toBeTruthy();
+    expect(runtime.session.model.id).toBe(FAKE_MODEL.id);
 });
 test("[approval-settings] approve retry reconnects the exact denial to fresh review without a reusable grant", async (t) => {
     const requests = [],
@@ -510,40 +514,40 @@ test("[approval-settings] approve retry reconnects the exact denial to fresh rev
             path: join(f.outside, "sentinel.txt"),
             content: "confirmed once",
         };
-    await assert.rejects(
+    await expect(
         tool.execute("initial", args, undefined, undefined, f.context),
-        (error) => error.code === "AUTO_REVIEW_DENIED",
+    ).rejects.toThrow(
+        expect.toSatisfy((error) => error.code === "AUTO_REVIEW_DENIED"),
     );
     f.context.ui.select = async (title, choices) => {
-        assert.match(title, /denied action/);
-        assert.match(choices[0], /exact overwrite/);
+        expect(title).toMatch(/denied action/);
+        expect(choices[0]).toMatch(/exact overwrite/);
         return choices[0];
     };
     await f.commands.get("approve").handler("retry", f.context);
-    assert.equal(sent.length, 1);
-    assert.ok(
+    expect(sent.length).toBe(1);
+    expect(
         sent[0].text.includes(JSON.stringify(args).slice(1, -1).split(",")[0]),
-    );
-    assert.equal(sent[0].options.expandPromptTemplates, false);
-    assert.equal(
-        f.extension.assertReady().options.settings.approvalsReviewer,
+    ).toBeTruthy();
+    expect(sent[0].options.expandPromptTemplates).toBe(false);
+    expect(f.extension.assertReady().options.settings.approvalsReviewer).toBe(
         "auto_review",
     );
     await tool.execute("retry", args, undefined, undefined, f.context);
-    assert.equal(await readFile(args.path, "utf8"), "confirmed once");
-    await assert.rejects(
+    expect(await readFile(args.path, "utf8")).toBe("confirmed once");
+    await expect(
         tool.execute("consumed", args, undefined, undefined, f.context),
-        (error) => error.code === "AUTO_REVIEW_DENIED",
+    ).rejects.toThrow(
+        expect.toSatisfy((error) => error.code === "AUTO_REVIEW_DENIED"),
     );
-    assert.equal(requests.length, 3);
-    assert.equal(
+    expect(requests.length).toBe(3);
+    expect(
         requests.filter((request) =>
             request.context.items.some(
                 (item) => item.content?.type === "exact-action-retry-approval",
             ),
         ).length,
-        1,
-    );
+    ).toBe(1);
 });
 test("[approval-settings] the actual Pi retry command preserves its one-use marker through extension-generated input", async (t) => {
     const f = await fixture(t),
@@ -571,7 +575,7 @@ test("[approval-settings] the actual Pi retry command preserves its one-use mark
         mode: "rpc",
         uiContext: {
             select: async (title, choices) => {
-                assert.match(title, /denied action/);
+                expect(title).toMatch(/denied action/);
                 return choices[0];
             },
             notify() {},
@@ -589,7 +593,7 @@ test("[approval-settings] the actual Pi retry command preserves its one-use mark
     ];
     await planStream(runtime.session, step);
     await runtime.session.prompt("Perform the named overwrite if approved.");
-    assert.equal(await readFile(target, "utf8"), "unchanged");
+    expect(await readFile(target, "utf8")).toBe("unchanged");
     let finish;
     const settled = new Promise((resolve) => (finish = resolve));
     const unsubscribe = runtime.session.subscribe((event) => {
@@ -604,20 +608,20 @@ test("[approval-settings] the actual Pi retry command preserves its one-use mark
         clearTimeout(timeout);
         unsubscribe();
     }
-    assert.equal(await readFile(target, "utf8"), "retried through Pi");
-    assert.equal(requests.length, 2);
-    assert.ok(
+    expect(await readFile(target, "utf8")).toBe("retried through Pi");
+    expect(requests.length).toBe(2);
+    expect(
         requests[1].context.items.some(
             (item) => item.content?.type === "exact-action-retry-approval",
         ),
-    );
-    assert.ok(
-        !requests[1].context.items.some(
+    ).toBeTruthy();
+    expect(
+        requests[1].context.items.some(
             (item) =>
                 item.source === "user" &&
                 String(item.content).includes("controller holds a one-use"),
         ),
-    );
+    ).toBeFalsy();
 });
 test("[approval-settings] a past critical denial can be reassessed but a fresh critical assessment still prevents execution", async (t) => {
     let hasCorrectedRisk = true;
@@ -650,37 +654,37 @@ test("[approval-settings] a past critical denial can be reassessed but a fresh c
             path: join(f.outside, "sentinel.txt"),
             content: "approved after reassessment",
         };
-    await assert.rejects(
+    await expect(
         tool.execute("initial-critical", args, undefined, undefined, f.context),
-        (error) => error.code === "AUTO_REVIEW_DENIED",
+    ).rejects.toThrow(
+        expect.toSatisfy((error) => error.code === "AUTO_REVIEW_DENIED"),
     );
-    assert.equal(
+    expect(
         f.extension.assertReady().approvals.lifecycle.recentDenials[0]
             .assessment.risk_level,
-        "critical",
-    );
+    ).toBe("critical");
     await f.commands.get("approve").handler("retry", f.context);
     await tool.execute("risk-corrected", args, undefined, undefined, f.context);
-    assert.equal(
-        await readFile(args.path, "utf8"),
+    expect(await readFile(args.path, "utf8")).toBe(
         "approved after reassessment",
     );
     hasCorrectedRisk = false;
     const next = { ...args, content: "must remain blocked" };
-    await assert.rejects(
+    await expect(
         tool.execute("another-critical", next, undefined, undefined, f.context),
-        (error) => error.code === "AUTO_REVIEW_DENIED",
+    ).rejects.toThrow(
+        expect.toSatisfy((error) => error.code === "AUTO_REVIEW_DENIED"),
     );
     await f.commands.get("approve").handler("retry", f.context);
-    await assert.rejects(
+    await expect(
         tool.execute("still-critical", next, undefined, undefined, f.context),
-        (error) => error.code === "AUTO_REVIEW_DENIED",
+    ).rejects.toThrow(
+        expect.toSatisfy((error) => error.code === "AUTO_REVIEW_DENIED"),
     );
-    assert.equal(
-        await readFile(args.path, "utf8"),
+    expect(await readFile(args.path, "utf8")).toBe(
         "approved after reassessment",
     );
-    assert.equal(requests.length, 4);
+    expect(requests.length).toBe(4);
 });
 test("[approval-settings] a genuine later user prompt authorizes fresh Pi review after a critical denial without a retry command", async (t) => {
     const f = await fixture(t),
@@ -699,7 +703,7 @@ test("[approval-settings] a genuine later user prompt authorizes fresh Pi review
                         item.content === approval,
                 );
                 if (confirmed >= 0) {
-                    assert.ok(
+                    expect(
                         data.context.items
                             .slice(0, confirmed)
                             .some(
@@ -709,14 +713,14 @@ test("[approval-settings] a genuine later user prompt authorizes fresh Pi review
                                         "AUTO_REVIEW_DENIED",
                                     ),
                             ),
-                    );
-                    assert.ok(
-                        !data.context.items.some(
+                    ).toBeTruthy();
+                    expect(
+                        data.context.items.some(
                             (item) =>
                                 item.content?.type ===
                                 "exact-action-retry-approval",
                         ),
-                    );
+                    ).toBeFalsy();
                 }
                 return JSON.stringify({
                     outcome: confirmed >= 0 ? "allow" : "deny",
@@ -742,9 +746,9 @@ test("[approval-settings] a genuine later user prompt authorizes fresh Pi review
     await runtime.session.prompt(
         "Inspect the task. Do not overwrite the outside file.",
     );
-    assert.equal(await readFile(target, "utf8"), "unchanged");
+    expect(await readFile(target, "utf8")).toBe("unchanged");
     await planStream(runtime.session, step);
     await runtime.session.prompt(approval);
-    assert.equal(await readFile(target, "utf8"), "confirmed-by-user");
-    assert.equal(requests.length, 2);
+    expect(await readFile(target, "utf8")).toBe("confirmed-by-user");
+    expect(requests.length).toBe(2);
 });

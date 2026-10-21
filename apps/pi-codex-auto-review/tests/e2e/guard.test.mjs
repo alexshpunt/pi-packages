@@ -1,4 +1,3 @@
-import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import {
     access,
@@ -10,7 +9,7 @@ import {
 } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join, resolve } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { EMPTY_DELTA } from "../../dist/contracts.js";
@@ -47,23 +46,21 @@ test("[workflow] model work succeeds while adversarial interpreter and protected
         [{ name: "read", args: { path: join(f.control, "protected.txt") } }],
     ]);
     await runtime.session.prompt("Perform owned fixture work.");
-    assert.equal(
-        await readFile(join(f.workspace, "allowed.txt"), "utf8"),
+    expect(await readFile(join(f.workspace, "allowed.txt"), "utf8")).toBe(
         "allowed",
     );
-    assert.equal(await readFile(target, "utf8"), "unchanged");
-    assert.equal(
-        await readFile(join(f.control, "protected.txt"), "utf8"),
+    expect(await readFile(target, "utf8")).toBe("unchanged");
+    expect(await readFile(join(f.control, "protected.txt"), "utf8")).toBe(
         f.secret,
     );
     const results = events.filter((e) => e.type === "tool_execution_end");
-    assert.equal(results.length, 3);
-    assert.equal(results[0].isError, false);
-    assert.equal(results[1].isError, true);
-    assert.equal(results[2].isError, true);
-    assert.ok(
+    expect(results.length).toBe(3);
+    expect(results[0].isError).toBe(false);
+    expect(results[1].isError).toBe(true);
+    expect(results[2].isError).toBe(true);
+    expect(
         results.every((e) => !JSON.stringify(e.result).includes(f.secret)),
-    );
+    ).toBeTruthy();
 });
 test("[workflow] one-use UI approval covers edit helpers and cannot authorize another logical call", async (t) => {
     const f = await fixture(t),
@@ -99,18 +96,17 @@ test("[workflow] one-use UI approval covers edit helpers and cannot authorize an
         [{ name: "write", args: { path: target, content: "second" } }],
     ]);
     await runtime.session.prompt("Approve only the first action.");
-    assert.equal(prompts, 2);
-    assert.equal(await readFile(target, "utf8"), "approved");
+    expect(prompts).toBe(2);
+    expect(await readFile(target, "utf8")).toBe("approved");
 });
 test("[workflow] SDK shell approval and invalid settings on reload cannot activate an unreviewed fallback", async (t) => {
     const f = await fixture(t),
         runtime = await guardedFixture(t, f);
-    assert.equal(
+    expect(
         (await runtime.session.executeBash("printf protected-sdk")).output,
-        "protected-sdk",
-    );
+    ).toBe("protected-sdk");
     let unsafe = false;
-    await assert.rejects(
+    await expect(
         runtime.session.executeBash("printf unsafe", undefined, {
             operations: {
                 exec: async () => {
@@ -119,23 +115,22 @@ test("[workflow] SDK shell approval and invalid settings on reload cannot activa
                 },
             },
         }),
-        /guarded shell/,
-    );
-    assert.equal(unsafe, false);
+    ).rejects.toThrow(/guarded shell/);
+    expect(unsafe).toBe(false);
     await mkdir(join(f.agentDir, "guard"), { recursive: true });
     await writeFile(join(f.agentDir, "guard/settings.json"), "{invalid");
-    await assert.rejects(runtime.session.reload(), /failed to load|not ready/);
-    await assert.rejects(
+    await expect(runtime.session.reload()).rejects.toThrow(
+        /failed to load|not ready/,
+    );
+    await expect(
         runtime.session.executeBash(
             `echo escape > '${join(f.workspace, "reload.txt")}'`,
         ),
-        /failed to load|not ready/,
-    );
-    await assert.rejects(
+    ).rejects.toThrow(/failed to load|not ready/);
+    await expect(
         runtime.session.prompt("After failed reload."),
-        /failed to load|not ready/,
-    );
-    await assert.rejects(access(join(f.workspace, "reload.txt")));
+    ).rejects.toThrow(/failed to load|not ready/);
+    await expect(access(join(f.workspace, "reload.txt"))).rejects.toThrow();
 });
 test("[workflow] malformed risk enums fail closed at the actual Pi write and reach the next model request", async (t) => {
     const f = await fixture(t),
@@ -171,38 +166,37 @@ test("[workflow] malformed risk enums fail closed at the actual Pi write and rea
     await runtime.session.prompt(
         "Check malformed review output against the owned sentinel.",
     );
-    assert.equal(reviews, 2);
-    assert.equal(await readFile(target, "utf8"), "unchanged");
+    expect(reviews).toBe(2);
+    expect(await readFile(target, "utf8")).toBe("unchanged");
     const results = events.filter(
         (event) => event.type === "tool_execution_end",
     );
-    assert.equal(results.length, 2);
-    assert.ok(
+    expect(results.length).toBe(2);
+    expect(
         results.every(
             (event) =>
                 event.isError &&
                 JSON.stringify(event.result).includes("AUTO_REVIEW_FAILED"),
         ),
-    );
-    assert.equal(requests.length, 3);
-    assert.ok(
+    ).toBeTruthy();
+    expect(requests.length).toBe(3);
+    expect(
         requests[1].some(
             (message) =>
                 message.role === "toolResult" &&
                 JSON.stringify(message).includes("AUTO_REVIEW_FAILED"),
         ),
-    );
+    ).toBeTruthy();
     const audit = (
         await readFile(join(f.agentDir, "guard/audit.jsonl"), "utf8")
     )
         .trim()
         .split("\n")
         .map(JSON.parse);
-    assert.equal(
-        audit.filter((row) => row.review?.status === "failed").length,
+    expect(audit.filter((row) => row.review?.status === "failed").length).toBe(
         2,
     );
-    assert.ok(!audit.some((row) => row.outcome === "approved"));
+    expect(audit.some((row) => row.outcome === "approved")).toBeFalsy();
 });
 test("[workflow] quoted review rationale is redacted without breaking approved execution or JSON audit", async (t) => {
     const f = await fixture(t),
@@ -223,16 +217,16 @@ test("[workflow] quoted review rationale is redacted without breaking approved e
         [{ name: "write", args: { path: target, content: "approved" } }],
     ]);
     await runtime.session.prompt("Update only the owned sentinel.");
-    assert.equal(await readFile(target, "utf8"), "approved");
+    expect(await readFile(target, "utf8")).toBe("approved");
     const text = await readFile(join(f.agentDir, "guard/audit.jsonl"), "utf8"),
         rows = text.trim().split("\n").map(JSON.parse);
-    assert.ok(rows.some((row) => row.review?.status === "approved"));
-    assert.ok(!text.includes(secret));
-    assert.ok(
+    expect(rows.some((row) => row.review?.status === "approved")).toBeTruthy();
+    expect(text.includes(secret)).toBeFalsy();
+    expect(
         rows.some(
             (row) => row.event === "execution" && row.outcome === "settled",
         ),
-    );
+    ).toBeTruthy();
 });
 test("[workflow] denial circuit stops the model but a later direct user shell has its own cancellation lifetime", async (t) => {
     const f = await fixture(t),
@@ -260,24 +254,25 @@ test("[workflow] denial circuit stops the model but a later direct user shell ha
         ]),
     );
     await runtime.session.prompt("Exercise denial limits with owned targets.");
-    assert.equal(reviews, 3);
+    expect(reviews).toBe(3);
     for (let index = 0; index < 4; index++)
-        await assert.rejects(access(join(f.outside, `denied-${index}.txt`)));
+        await expect(
+            access(join(f.outside, `denied-${index}.txt`)),
+        ).rejects.toThrow();
     const result = await runtime.session.executeBash(
         "printf direct-user-after-denial",
     );
-    assert.equal(result.exitCode, 0);
-    assert.equal(result.output, "direct-user-after-denial");
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toBe("direct-user-after-denial");
     const results = events.filter(
         (event) => event.type === "tool_execution_end",
     );
-    assert.ok(results.every((event) => event.isError));
-    assert.equal(
+    expect(results.every((event) => event.isError)).toBeTruthy();
+    expect(
         results.filter((event) =>
             JSON.stringify(event.result).includes("AUTO_REVIEW_DENIED"),
         ).length,
-        3,
-    );
+    ).toBe(3);
 });
 test("[workflow] trusted project MCP configuration cannot be rewritten by model tools or interpreters before reload", async (t) => {
     const f = await fixture(t),
@@ -327,9 +322,9 @@ test("[workflow] trusted project MCP configuration cannot be rewritten by model 
     await runtime.session.prompt(
         "Wait for configured MCP startup after reload.",
     );
-    assert.equal(await readFile(target, "utf8"), "unchanged");
-    assert.equal(await readFile(path, "utf8"), '{"mcpServers":{}}');
-    assert.equal(reviews, 2);
+    expect(await readFile(target, "utf8")).toBe("unchanged");
+    expect(await readFile(path, "utf8")).toBe('{"mcpServers":{}}');
+    expect(reviews).toBe(2);
     await rm(directory, { recursive: true });
     await runtime.session.reload();
     const createConfig = `const fs=require('fs');fs.mkdirSync(${JSON.stringify(directory)},{recursive:true});fs.writeFileSync(${JSON.stringify(path)},${JSON.stringify(injected)});`;
@@ -352,8 +347,8 @@ test("[workflow] trusted project MCP configuration cannot be rewritten by model 
     await runtime.session.prompt(
         "Check startup after refused configuration creation.",
     );
-    assert.equal(await readFile(target, "utf8"), "unchanged");
-    await assert.rejects(access(path));
+    expect(await readFile(target, "utf8")).toBe("unchanged");
+    await expect(access(path)).rejects.toThrow();
     await mkdir(directory, { recursive: true });
     await writeFile(path, injected);
     await runtime.session.reload();
@@ -361,11 +356,10 @@ test("[workflow] trusted project MCP configuration cannot be rewritten by model 
     await runtime.session.prompt(
         "Load the explicitly edited MCP configuration.",
     );
-    assert.equal(
+    expect(
         await readFile(target, "utf8"),
-        "started-by-project-config",
         "An explicit host-side configuration update still loads",
-    );
+    ).toBe("started-by-project-config");
 });
 test("[workflow] trusted extension entrypoint and sibling modules cannot be replaced before reload", async (t) => {
     const f = await fixture(t),
@@ -382,7 +376,9 @@ test("[workflow] trusted extension entrypoint and sibling modules cannot be repl
         trustedExtensionPaths: [entry],
         provider: {
             complete: () =>
-                assert.fail("Trusted code mutation must not reach approval"),
+                expect.unreachable(
+                    "Trusted code mutation must not reach approval",
+                ),
         },
     });
     const injected = `import {writeFileSync} from "node:fs";writeFileSync(${JSON.stringify(target)},"unreviewed-controller-effect");export default ()=>{};`;
@@ -400,10 +396,9 @@ test("[workflow] trusted extension entrypoint and sibling modules cannot be repl
     ]);
     await runtime.session.prompt("Do not replace trusted provider code.");
     await runtime.session.reload();
-    assert.equal(await readFile(target, "utf8"), "unchanged");
-    assert.equal(await readFile(entry, "utf8"), original);
-    assert.equal(
-        await readFile(helper, "utf8"),
+    expect(await readFile(target, "utf8")).toBe("unchanged");
+    expect(await readFile(entry, "utf8")).toBe(original);
+    expect(await readFile(helper, "utf8")).toBe(
         'export const value="trusted";',
     );
 });
@@ -438,7 +433,8 @@ test("[workflow] real MCP node_repl/js follows explicit prompt approval and neve
             }),
         },
         provider: {
-            complete: () => assert.fail("User review cannot call the model"),
+            complete: () =>
+                expect.unreachable("User review cannot call the model"),
         },
     });
     const invoke = async (value) => {
@@ -450,7 +446,7 @@ test("[workflow] real MCP node_repl/js follows explicit prompt approval and neve
         );
     };
     await invoke("no-ui");
-    assert.equal(await readFile(target, "utf8"), "unchanged");
+    expect(await readFile(target, "utf8")).toBe("unchanged");
     let prompts = 0;
     await runtime.session.bindExtensions({
         mode: "rpc",
@@ -465,20 +461,19 @@ test("[workflow] real MCP node_repl/js follows explicit prompt approval and neve
         },
     });
     await invoke("denied");
-    assert.equal(await readFile(target, "utf8"), "unchanged");
+    expect(await readFile(target, "utf8")).toBe("unchanged");
     await invoke("approved");
-    assert.equal(await readFile(target, "utf8"), "approved");
-    assert.equal(prompts, 2);
+    expect(await readFile(target, "utf8")).toBe("approved");
+    expect(prompts).toBe(2);
     await runtime.dispose();
     const processes = (await readFile(processLog, "utf8"))
         .trim()
         .split("\n")
         .map(JSON.parse);
-    assert.equal(processes.length, 2);
+    expect(processes.length).toBe(2);
     for (const { pid } of processes)
-        assert.throws(
-            () => process.kill(pid, 0),
-            (error) => error.code === "ESRCH",
+        expect(() => process.kill(pid, 0)).toThrow(
+            expect.toSatisfy((error) => error.code === "ESRCH"),
         );
 });
 test("[workflow] literal metacharacters remain exact review evidence and owned filenames stay usable", async (t) => {
@@ -493,11 +488,10 @@ test("[workflow] literal metacharacters remain exact review evidence and owned f
         provider: {
             complete: async (request) => {
                 reviews++;
-                assert.deepEqual(
+                expect(
                     JSON.parse(request.data).requestedPermissionDelta
                         .writePaths,
-                    [literal],
-                );
+                ).toStrictEqual([literal]);
                 return '{"outcome":"deny","risk_level":"low","user_authorization":"high"}';
             },
         },
@@ -528,20 +522,21 @@ test("[workflow] literal metacharacters remain exact review evidence and owned f
     await runtime.session.prompt(
         "Use only literal path permissions for the owned fixture.",
     );
-    assert.equal(await readFile(literal, "utf8"), "literal-original");
-    assert.equal(await readFile(sibling, "utf8"), "sibling-original");
-    assert.equal(reviews, 1);
-    assert.equal(
+    expect(await readFile(literal, "utf8")).toBe("literal-original");
+    expect(await readFile(sibling, "utf8")).toBe("sibling-original");
+    expect(reviews).toBe(1);
+    expect(
         await readFile(join(f.workspace, "[route]/literal-*.txt"), "utf8"),
-        "literal-workspace-effect",
-    );
+    ).toBe("literal-workspace-effect");
     const results = events.filter(
         (event) => event.type === "tool_execution_end",
     );
-    assert.equal(results.length, 2);
-    assert.equal(results[0].isError, true);
-    assert.equal(results[1].isError, false);
-    assert.ok(JSON.stringify(results[0].result).includes("AUTO_REVIEW_DENIED"));
+    expect(results.length).toBe(2);
+    expect(results[0].isError).toBe(true);
+    expect(results[1].isError).toBe(false);
+    expect(
+        JSON.stringify(results[0].result).includes("AUTO_REVIEW_DENIED"),
+    ).toBeTruthy();
 });
 test("[workflow] real CLI loads an explicit provider and selects the same model for execution and review", async (t) => {
     const f = await fixture(t),
@@ -600,54 +595,56 @@ test("[workflow] real CLI loads an explicit provider and selects the same model 
                 event.type === "tool_execution_end" ||
                 (event.type === "message_end" && event.message?.errorMessage),
         );
-    assert.equal(
+    expect(
         await readFile(target, "utf8"),
-        "cli-approved-effect",
         `${JSON.stringify(diagnostic)}\n${result.stderr}`,
-    );
+    ).toBe("cli-approved-effect");
     const calls = (await readFile(trace, "utf8"))
         .trim()
         .split("\n")
         .map(JSON.parse);
-    assert.deepEqual(
-        calls.map((call) => call.isReview),
-        [false, true, false],
-    );
-    assert.equal(calls[1].maxTokens, 777);
-    assert.ok(
+    expect(calls.map((call) => call.isReview)).toStrictEqual([
+        false,
+        true,
+        false,
+    ]);
+    expect(calls[1].maxTokens).toBe(777);
+    expect(
         calls.every(
             (call) =>
                 call.provider === "owned-cli" && call.model === "owned-model",
         ),
-    );
-    assert.match(result.stdout, /owned-cli-complete/);
+    ).toBeTruthy();
+    expect(result.stdout).toMatch(/owned-cli-complete/);
     const audit = (
         await readFile(join(f.agentDir, "guard/audit.jsonl"), "utf8")
     )
         .trim()
         .split("\n")
         .map(JSON.parse);
-    assert.ok(audit.some((row) => row.review?.status === "approved"));
-    assert.ok(
+    expect(audit.some((row) => row.review?.status === "approved")).toBeTruthy();
+    expect(
         audit.some(
             (row) => row.event === "execution" && row.outcome === "settled",
         ),
-    );
-    await assert.rejects(
+    ).toBeTruthy();
+    await expect(
         exec(
             process.execPath,
             [...args.slice(0, -1), "--model", "missing-model", "Do not run."],
             { cwd: repository, env, timeout: 60000, maxBuffer: 2_000_000 },
         ),
-        (error) =>
-            error.code === 1 &&
-            error.stderr.includes("Registered model not found"),
+    ).rejects.toThrow(
+        expect.toSatisfy(
+            (error) =>
+                error.code === 1 &&
+                error.stderr.includes("Registered model not found"),
+        ),
     );
-    assert.equal(
+    expect(
         (await readFile(trace, "utf8")).trim().split("\n").length,
-        3,
         "An unavailable selection must not call another model",
-    );
+    ).toBe(3);
 });
 test("[workflow] live CLI observer counts actual HTTP main and reviewer calls without replacing provider responses", async (t) => {
     const f = await fixture(t),
@@ -669,10 +666,10 @@ test("[workflow] live CLI observer counts actual HTTP main and reviewer calls wi
                 );
             if (isReview) reviewCalls++;
             else mainCalls++;
-            assert.ok(
+            expect(
                 mainCalls <= 2 && reviewCalls <= 1,
                 "Unexpected extra HTTP model request",
-            );
+            ).toBeTruthy();
             requests.push({
                 isReview,
                 maxTokens: payload.max_tokens ?? payload.max_completion_tokens,
@@ -731,7 +728,7 @@ test("[workflow] live CLI observer counts actual HTTP main and reviewer calls wi
         }
     });
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-    t.after(async () => {
+    t.onTestFinished(async () => {
         server.closeAllConnections();
         await new Promise((resolve) => server.close(resolve));
     });
@@ -809,22 +806,24 @@ test("[workflow] live CLI observer counts actual HTTP main and reviewer calls wi
         ],
         { cwd: repository, env, timeout: 60000, maxBuffer: 2_000_000 },
     );
-    assert.equal(serverError, undefined);
-    assert.equal(await readFile(target, "utf8"), "http-observed-effect");
+    expect(serverError).toBe(undefined);
+    expect(await readFile(target, "utf8")).toBe("http-observed-effect");
     const calls = (await readFile(trace, "utf8"))
         .trim()
         .split("\n")
         .map(JSON.parse);
-    assert.deepEqual(
-        calls.map((call) => call.isReview),
-        [false, true, false],
-    );
-    assert.deepEqual(
-        requests.map((request) => request.isReview),
-        [false, true, false],
-    );
-    assert.equal(requests[1].maxTokens, 777);
-    assert.ok(
+    expect(calls.map((call) => call.isReview)).toStrictEqual([
+        false,
+        true,
+        false,
+    ]);
+    expect(requests.map((request) => request.isReview)).toStrictEqual([
+        false,
+        true,
+        false,
+    ]);
+    expect(requests[1].maxTokens).toBe(777);
+    expect(
         requests
             .filter((request) => !request.isReview)
             .every(
@@ -833,9 +832,9 @@ test("[workflow] live CLI observer counts actual HTTP main and reviewer calls wi
                     request.maxTokens > 0 &&
                     request.maxTokens <= 4096,
             ),
-    );
-    assert.match(child.stdout, /owned-http-complete/);
-    assert.ok(!child.stdout.includes(env.OLLAMA_API_KEY));
+    ).toBeTruthy();
+    expect(child.stdout).toMatch(/owned-http-complete/);
+    expect(child.stdout.includes(env.OLLAMA_API_KEY)).toBeFalsy();
 });
 test("[workflow] trusted Pi skills prompts and themes reach the session while project trust and extension isolation remain effective", async (t) => {
     const f = await fixture(t),
@@ -885,24 +884,24 @@ test("[workflow] trusted Pi skills prompts and themes reach the session while pr
             isProjectTrusted: true,
         }),
         loader = trusted.services.resourceLoader;
-    assert.ok(
+    expect(
         loader
             .getSkills()
             .skills.some((skill) => skill.name === "owned-global"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         loader
             .getSkills()
             .skills.some((skill) => skill.name === "owned-project"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         loader
             .getPrompts()
             .prompts.some((prompt) => prompt.name === "owned-prompt"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         loader.getThemes().themes.some((theme) => theme.name === "owned-theme"),
-    );
+    ).toBeTruthy();
     const requests = [];
     await planStream(trusted.session, []);
     const stream = trusted.session.agent.streamFunction;
@@ -913,17 +912,16 @@ test("[workflow] trusted Pi skills prompts and themes reach the session while pr
     await trusted.session.prompt("/owned-prompt final-consumer", {
         expandPromptTemplates: true,
     });
-    assert.ok(
+    expect(
         JSON.stringify(requests[0]).includes("owned-project"),
         JSON.stringify({ keys: Object.keys(requests[0]) }),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         JSON.stringify(requests[0].messages).includes(
             "Owned expanded prompt final-consumer",
         ),
-    );
-    assert.equal(
-        await readFile(join(f.outside, "sentinel.txt"), "utf8"),
+    ).toBeTruthy();
+    expect(await readFile(join(f.outside, "sentinel.txt"), "utf8")).toBe(
         "unchanged",
     );
     const untrusted = await guardedFixture(t, f, {
@@ -931,26 +929,26 @@ test("[workflow] trusted Pi skills prompts and themes reach the session while pr
             isProjectTrusted: false,
         }),
         untrustedLoader = untrusted.services.resourceLoader;
-    assert.ok(
+    expect(
         untrustedLoader
             .getSkills()
             .skills.some((skill) => skill.name === "owned-global"),
-    );
-    assert.ok(
-        !untrustedLoader
+    ).toBeTruthy();
+    expect(
+        untrustedLoader
             .getSkills()
             .skills.some((skill) => skill.name === "owned-project"),
-    );
-    assert.ok(
-        !untrustedLoader
+    ).toBeFalsy();
+    expect(
+        untrustedLoader
             .getPrompts()
             .prompts.some((prompt) => prompt.name === "owned-prompt"),
-    );
-    assert.ok(
-        !untrustedLoader
+    ).toBeFalsy();
+    expect(
+        untrustedLoader
             .getThemes()
             .themes.some((theme) => theme.name === "owned-theme"),
-    );
+    ).toBeFalsy();
 });
 test("[package] npm tarball loads the default factory through public Pi APIs without bundled sandbox assets", async (t) => {
     const f = await fixture(t),
@@ -987,38 +985,38 @@ test("[package] npm tarball loads the default factory through public Pi APIs wit
             )
         ).stdout,
     )[0];
-    assert.ok(
+    expect(
         packed.files.some((file) => file.path === "dist/tools/executor.js"),
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         packed.files.some((file) => file.path === "dist/approval-commands.js"),
-    );
-    assert.ok(
-        !packed.files.some(
+    ).toBeTruthy();
+    expect(
+        packed.files.some(
             (file) =>
                 file.path.startsWith("dist/sandbox/") ||
                 file.path.startsWith("node_modules/"),
         ),
-    );
-    assert.ok(
+    ).toBeFalsy();
+    expect(
         packed.files.some(
             (file) => file.path === "dist/policy/rules-worker.js",
         ),
-    );
-    assert.ok(
-        !packed.files.some(
+    ).toBeTruthy();
+    expect(
+        packed.files.some(
             (file) =>
                 file.path.startsWith("dist/native/") ||
                 file.path.endsWith(".node"),
         ),
-    );
-    assert.ok(
-        !packed.files.some(
+    ).toBeFalsy();
+    expect(
+        packed.files.some(
             (file) =>
                 /^(src|test|tmp|vendor)\//.test(file.path) ||
                 /^node_modules\/@earendil-works\//.test(file.path),
         ),
-    );
+    ).toBeFalsy();
     await exec(
         "tar",
         ["-xzf", join(artifacts, packed.filename), "-C", consumer],
@@ -1047,11 +1045,11 @@ test("[package] npm tarball loads the default factory through public Pi APIs wit
             ).stdout,
         )[0],
         redactDirectory = join(consumer, "package/node_modules/@buyong/redact");
-    assert.ok(
+    expect(
         redactPacked.files.some(
             (file) => file.path === "dist/pii/data/catalog.js",
         ) && redactPacked.files.some((file) => file.path === "NOTICE"),
-    );
+    ).toBeTruthy();
     await mkdir(redactDirectory, { recursive: true });
     await exec(
         "tar",
@@ -1126,10 +1124,9 @@ try {
             { cause: error },
         );
     });
-    assert.match(executed.stdout, /"factoryLoaded":true/);
-    assert.match(executed.stdout, /"officialMcp":true/);
-    assert.equal(
-        await readFile(join(f.workspace, "packed.txt"), "utf8"),
+    expect(executed.stdout).toMatch(/"factoryLoaded":true/);
+    expect(executed.stdout).toMatch(/"officialMcp":true/);
+    expect(await readFile(join(f.workspace, "packed.txt"), "utf8")).toBe(
         "packed-effect",
     );
     await symlink(
@@ -1141,13 +1138,13 @@ try {
         [join(consumer, "package/dist/cli.js"), "--help"],
         { cwd: f.workspace, env, timeout: 10000 },
     );
-    assert.match(help.stdout, /^Usage: pi-codex-auto-review /);
-    assert.doesNotMatch(help.stdout, /[가-힣]/);
+    expect(help.stdout).toMatch(/^Usage: pi-codex-auto-review /);
+    expect(help.stdout).not.toMatch(/[가-힣]/);
 });
 test("[cleanup] nonempty owned audit population is scanned and native resources settle before disposal", async (t) => {
     const population = await readFile(auditPopulationPath, "utf8");
-    assert.ok(population.trim().split("\n").length > 0);
-    assert.ok(!/SYNTHETIC_GUARD_SECRET_[a-z0-9-]+/i.test(population));
+    expect(population.trim().split("\n").length > 0).toBeTruthy();
+    expect(/SYNTHETIC_GUARD_SECRET_[a-z0-9-]+/i.test(population)).toBeFalsy();
     const f = await fixture(t),
         executor = new PiExecutor();
     await executor.execute(
@@ -1162,16 +1159,15 @@ test("[cleanup] nonempty owned audit population is scanned and native resources 
         EMPTY_DELTA,
     );
     await executor.close();
-    await assert.rejects(
+    await expect(
         executor.execute(
             { kind: "shell", command: "printf no", cwd: f.workspace },
             f.profile,
             EMPTY_DELTA,
         ),
-    );
-    assert.equal(executor.activeInvocationCount, 0);
-    assert.equal(
-        await readFile(join(f.workspace, "cleanup.txt"), "utf8"),
+    ).rejects.toThrow();
+    expect(executor.activeInvocationCount).toBe(0);
+    expect(await readFile(join(f.workspace, "cleanup.txt"), "utf8")).toBe(
         "done",
     );
 });

@@ -4,8 +4,7 @@
  * (resolveOrDerive) and the sendability guard (projectPromptCapture). No query starts
  * and no stream is left claimed, so the next turn is unaffected.
  */
-import { describe, it, beforeEach, afterEach } from "node:test";
-import assert from "node:assert/strict";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -47,19 +46,19 @@ afterEach(() => __test.setQuery(null));
 describe("a prompt the bridge refuses", () => {
 	it("fails the turn on the stream when no capture accounts for the prompt", async () => {
 		const result = await turn("a system prompt no capture boundary recorded").result();
-		assert.equal(result.stopReason, "error");
-		assert.match(result.errorMessage, /prompt-capture: no capture/);
-		assert.equal(queries, 0);
-		assert.equal(__test.activeQueryContexts.size, 0);
-		assert.ok(existsSync(join(agentDir, "claude-bridge-diag.log")));
+		expect(result.stopReason).toBe("error");
+		expect(result.errorMessage).toMatch(/prompt-capture: no capture/);
+		expect(queries).toBe(0);
+		expect(__test.activeQueryContexts.size).toBe(0);
+		expect(existsSync(join(agentDir, "claude-bridge-diag.log"))).toBeTruthy();
 	});
 
 	it("fails the turn on the stream when the sendability guard refuses the capture", async () => {
 		const prompt = `${PI_PREAMBLE}, recorded with pi's harness in its custom prompt.`;
 		__test.promptCaptures.record(prompt, { custom: prompt, contextFiles: [], skills: [] });
 		const result = await turn(prompt).result();
-		assert.equal(result.stopReason, "error");
-		assert.match(result.errorMessage, /prompt-capture: refusing to send this prompt/);
-		assert.equal(queries, 0);
+		expect(result.stopReason).toBe("error");
+		expect(result.errorMessage).toMatch(/prompt-capture: refusing to send this prompt/);
+		expect(queries).toBe(0);
 	});
 });

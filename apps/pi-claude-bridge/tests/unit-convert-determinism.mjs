@@ -10,8 +10,7 @@
 //      mutation re-caches everything after it on the next rebuild — and means
 //      the same pi message converted differently depending on what followed.
 
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { repairToolPairing } from "cc-session-io";
@@ -22,7 +21,7 @@ import { settledPrefixes, transcript } from "../diag/lib/write-path.mjs";
 
 function assertPrefix(shorter, longer, label) {
 	for (let i = 0; i < shorter.length; i++) {
-		assert.equal(longer[i], shorter[i], `${label}: record ${i} of ${shorter.length} diverged`);
+		expect(longer[i], `${label}: record ${i} of ${shorter.length} diverged`).toBe(shorter[i]);
 	}
 }
 
@@ -66,11 +65,11 @@ const exotic = [
 
 describe("conversion is deterministic", () => {
 	it("a real 310-message session converts identically twice", () => {
-		assert.deepEqual(transcript(corpus), transcript(corpus));
+		expect(transcript(corpus)).toStrictEqual(transcript(corpus));
 	});
 
 	it("parallel calls, images, errors and thinking blocks convert identically twice", () => {
-		assert.deepEqual(transcript(exotic), transcript(exotic));
+		expect(transcript(exotic)).toStrictEqual(transcript(exotic));
 	});
 });
 
@@ -80,7 +79,7 @@ describe("rebuilds extend the transcript instead of rewriting it", () => {
 	it("every settled prefix of a real session is a prefix of the full rebuild", () => {
 		const full = transcript(corpus);
 		const lengths = settledPrefixes(corpus);
-		assert.ok(lengths.length > 100, `expected many settled prefixes, got ${lengths.length}`);
+		expect(lengths.length > 100, `expected many settled prefixes, got ${lengths.length}`).toBeTruthy();
 		for (const n of lengths) assertPrefix(transcript(corpus.slice(0, n)), full, `history[0..${n}]`);
 	});
 
@@ -99,7 +98,7 @@ describe("rebuilds extend the transcript instead of rewriting it", () => {
 // the transcript the debug log reports.
 it("repairToolPairing is idempotent", () => {
 	const once = repairToolPairing(convertPiMessages(corpus).anthropicMessages);
-	assert.deepEqual(repairToolPairing(once), once);
+	expect(repairToolPairing(once)).toStrictEqual(once);
 });
 
 // Prefix stability is satisfiable by a conversion that loses content
@@ -111,7 +110,7 @@ it("a real session round-trips with every tool result intact", () => {
 		.filter((b) => b.type === "tool_result");
 	const expected = corpus.filter((m) => m.role === "toolResult");
 
-	assert.equal(blocks.length, expected.length);
-	assert.deepEqual(blocks.map((b) => b.tool_use_id), expected.map((m) => m.toolCallId));
-	assert.deepEqual(blocks.filter((b) => String(b.content).includes("no tool result recorded")), []);
+	expect(blocks.length).toBe(expected.length);
+	expect(blocks.map((b) => b.tool_use_id)).toStrictEqual(expected.map((m) => m.toolCallId));
+	expect(blocks.filter((b) => String(b.content).includes("no tool result recorded"))).toStrictEqual([]);
 });

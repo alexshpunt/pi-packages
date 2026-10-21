@@ -1,5 +1,4 @@
-import { describe, it, afterEach } from "node:test";
-import assert from "node:assert/strict";
+import { afterEach, describe, expect, it } from "vitest";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -16,7 +15,7 @@ describe("extractUserPromptBlocks", () => {
 			{ role: "user", content: "(attachment preview: [#image 1])" },
 		]);
 
-		assert.deepEqual(blocks, [
+		expect(blocks).toStrictEqual([
 			{ type: "text", text: "describe this" },
 			{ type: "image", source: { type: "base64", media_type: "image/png", data: "aW1hZ2U=" } },
 			{ type: "text", text: "(attachment preview: [#image 1])" },
@@ -30,7 +29,7 @@ describe("extractUserPromptBlocks", () => {
 			{ role: "user", content: "next turn" },
 		]);
 
-		assert.equal(blocks, null);
+		expect(blocks).toBe(null);
 	});
 
 	// Data-less image blocks occur in the wild; the skip guard has to run before
@@ -44,7 +43,7 @@ describe("extractUserPromptBlocks", () => {
 			] },
 		]);
 
-		assert.deepEqual(blocks, [
+		expect(blocks).toStrictEqual([
 			{ type: "text", text: "look" },
 			{ type: "image", source: { type: "base64", media_type: "image/png", data: "aW1hZ2U=" } },
 		]);
@@ -53,10 +52,7 @@ describe("extractUserPromptBlocks", () => {
 	// Off-type content is a contract violation, so it should fail loudly — and
 	// name the shape, since the culprit is usually another extension.
 	it("throws a legible error on off-type content", () => {
-		assert.throws(
-			() => __test.extractUserPromptBlocks([{ role: "user", content: undefined }]),
-			/content must be a string or block array, got undefined/,
-		);
+		expect(() => __test.extractUserPromptBlocks([{ role: "user", content: undefined }])).toThrow(/content must be a string or block array, got undefined/);
 	});
 });
 
@@ -87,13 +83,13 @@ describe("history/prompt split", () => {
 			// readdir rather than fs.globSync — the latter is Node 22+, and engines allows 20.
 			const projectsDir = join(claudeDir, "projects");
 			const [projectDir] = readdirSync(projectsDir);
-			assert.ok(projectDir, "syncSharedSession should have written a session file");
+			expect(projectDir, "syncSharedSession should have written a session file").toBeTruthy();
 			const history = readFileSync(join(projectsDir, projectDir, `${sessionId}.jsonl`), "utf8");
 			const prompt = JSON.stringify(__test.extractUserPromptBlocks(messages));
 
-			assert.match(prompt, /describe this/, "the image-bearing message belongs in the prompt");
-			assert.doesNotMatch(history, /describe this/, "and must not also be replayed as history");
-			assert.match(history, /earlier question/, "genuinely prior turns still become history");
+			expect(prompt, "the image-bearing message belongs in the prompt").toMatch(/describe this/);
+			expect(history, "and must not also be replayed as history").not.toMatch(/describe this/);
+			expect(history, "genuinely prior turns still become history").toMatch(/earlier question/);
 		} finally {
 			// Assigning undefined would set the literal string "undefined".
 			if (prevConfigDir === undefined) delete process.env.CLAUDE_CONFIG_DIR;

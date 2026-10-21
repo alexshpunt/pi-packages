@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { access, chmod, mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { EMPTY_DELTA } from "../../dist/contracts.js";
 import { PiExecutor } from "../../dist/tools/executor.js";
 import { fixture } from "../harness/fixtures.mjs";
@@ -10,7 +9,7 @@ import { shellQuote } from "../harness/shell.mjs";
 async function setup(t) {
     const f = await fixture(t),
         executor = new PiExecutor();
-    t.after(() => executor.close());
+    t.onTestFinished(() => executor.close());
     return { ...f, executor };
 }
 test("[execution] Pi tools perform write, edit and read using the normal SDK filesystem queue", async (t) => {
@@ -39,10 +38,10 @@ test("[execution] Pi tools perform write, edit and read using the normal SDK fil
         f.profile,
         EMPTY_DELTA,
     );
-    assert.equal(await readFile(path, "utf8"), "changed");
-    assert.match(result.content[0].text, /changed/);
-    assert.equal(f.executor.activeInvocationCount, 0);
-    assert.equal(f.executor.qualify, undefined);
+    expect(await readFile(path, "utf8")).toBe("changed");
+    expect(result.content[0].text).toMatch(/changed/);
+    expect(f.executor.activeInvocationCount).toBe(0);
+    expect(f.executor.qualify).toBe(undefined);
 });
 test("[execution] shell cwd, caller environment, output and nonzero status reach Pi unchanged", async (t) => {
     const f = await setup(t),
@@ -60,10 +59,10 @@ test("[execution] shell cwd, caller environment, output and nonzero status reach
             onData: (chunk) => output.push(chunk),
         },
     );
-    assert.equal(result.exitCode, 7);
+    expect(result.exitCode).toBe(7);
     const text = Buffer.concat(output).toString();
-    assert.ok(text.includes(f.workspace));
-    assert.ok(text.includes("caller-value"));
+    expect(text.includes(f.workspace)).toBeTruthy();
+    expect(text.includes("caller-value")).toBeTruthy();
 });
 test("[execution] the executor uses the supplied SDK delegate once and exposes the linked caller cancellation", async (t) => {
     const f = await setup(t),
@@ -91,10 +90,10 @@ test("[execution] the executor uses the supplied SDK delegate once and exposes t
             },
         },
     );
-    assert.equal(calls, 1);
-    assert.equal(result.content[0].text, "original SDK result");
+    expect(calls).toBe(1);
+    expect(result.content[0].text).toBe("original SDK result");
     caller.abort();
-    assert.equal(received.aborted, true);
+    expect(received.aborted).toBe(true);
 });
 test("[execution] starting a shell does not enumerate an unrelated unlistable directory", async (t) => {
     const f = await setup(t),
@@ -109,8 +108,8 @@ test("[execution] starting a shell does not enumerate an unrelated unlistable di
             EMPTY_DELTA,
             { onData: (chunk) => output.push(chunk) },
         );
-        assert.equal(result.exitCode, 0);
-        assert.equal(Buffer.concat(output).toString(), "ready");
+        expect(result.exitCode).toBe(0);
+        expect(Buffer.concat(output).toString()).toBe("ready");
     } finally {
         await chmod(opaque, 0o700);
     }
@@ -132,11 +131,11 @@ test("[cancellation] SDK caller cancellation and a seconds deadline prevent dela
         EMPTY_DELTA,
         { signal: caller.signal, onData: () => ready() },
     );
-    const rejected = assert.rejects(pending, /aborted/);
+    const rejected = expect(pending).rejects.toThrow(/aborted/);
     await started;
     caller.abort();
     await rejected;
-    await assert.rejects(
+    await expect(
         f.executor.execute(
             {
                 kind: "shell",
@@ -147,11 +146,10 @@ test("[cancellation] SDK caller cancellation and a seconds deadline prevent dela
             EMPTY_DELTA,
             { timeoutSeconds: 0.1 },
         ),
-        /timeout/,
-    );
+    ).rejects.toThrow(/timeout/);
     await new Promise((resolve) => setTimeout(resolve, 550));
-    await assert.rejects(access(cancelled));
-    await assert.rejects(access(timed));
+    await expect(access(cancelled)).rejects.toThrow();
+    await expect(access(timed)).rejects.toThrow();
 });
 test("[cancellation] close settles a running SDK shell and rejects subsequent execution", async (t) => {
     const f = await setup(t);
@@ -163,16 +161,16 @@ test("[cancellation] close settles a running SDK shell and rejects subsequent ex
         EMPTY_DELTA,
         { onData: () => ready() },
     );
-    const rejected = assert.rejects(pending, /aborted/);
+    const rejected = expect(pending).rejects.toThrow(/aborted/);
     await started;
     await f.executor.close();
     await rejected;
-    assert.equal(f.executor.activeInvocationCount, 0);
-    await assert.rejects(
+    expect(f.executor.activeInvocationCount).toBe(0);
+    await expect(
         f.executor.execute(
             { kind: "shell", command: "printf must-not-run", cwd: f.workspace },
             f.profile,
             EMPTY_DELTA,
         ),
-    );
+    ).rejects.toThrow();
 });

@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import { userMessage } from "../src/core/inference/chat.ts";
 import { installationId } from "../src/cli/initialization.ts";
 import { loadSession, lockSession, openSession, saveSession, takeStep } from "../src/cli/session-store.ts";
@@ -14,28 +13,28 @@ test("session atomic save, resume, step continuity, duplicate locks and private 
   try {
     const { state, release } = await openSession("swe-2-medium");
     try {
-      assert.match(state.id, /^[a-z]+-[a-z]+$/);
-      assert.notEqual(state.cascadeId, state.trajectoryId);
+      expect(state.id).toMatch(/^[a-z]+-[a-z]+$/);
+      expect(state.cascadeId).not.toBe(state.trajectoryId);
       state.messages.push(userMessage("persisted"));
       state.ownerHash = "owner";
-      assert.equal(takeStep(state), 0);
+      expect(takeStep(state)).toBe(0);
       await saveSession(state);
-      await assert.rejects(lockSession(state.id, false), /in use/);
-      assert.equal((await stat(join(directory, "sessions", state.id + ".json"))).mode & 0o777, 0o600);
-      assert.equal((await stat(join(directory, "sessions"))).mode & 0o777, 0o700);
+      await expect(lockSession(state.id, false)).rejects.toThrow(/in use/);
+      expect((await stat(join(directory, "sessions", state.id + ".json"))).mode & 0o777).toBe(0o600);
+      expect((await stat(join(directory, "sessions"))).mode & 0o777).toBe(0o700);
     } finally { await release(); }
     const resumed = await openSession("ignored-new-default", state.id);
     try {
-      assert.deepEqual(resumed.state, state);
-      assert.equal(takeStep(resumed.state), 1);
+      expect(resumed.state).toStrictEqual(state);
+      expect(takeStep(resumed.state)).toBe(1);
       await saveSession(resumed.state);
     } finally { await resumed.release(); }
-    assert.equal((await loadSession(state.id)).nextStepIndex, 2);
-    await assert.rejects(loadSession("../credentials"), /Invalid session ID/);
+    expect((await loadSession(state.id)).nextStepIndex).toBe(2);
+    await expect(loadSession("../credentials")).rejects.toThrow(/Invalid session ID/);
     const ids = await Promise.all([installationId(), installationId()]);
-    assert.equal(ids[0], ids[1]);
-    assert.equal(ids[0], await installationId());
-    assert.equal((await stat(join(directory, "installation-id"))).mode & 0o777, 0o600);
+    expect(ids[0]).toBe(ids[1]);
+    expect(ids[0]).toBe(await installationId());
+    expect((await stat(join(directory, "installation-id"))).mode & 0o777).toBe(0o600);
   } finally {
     if (previous === undefined) delete process.env.DEVIN_POC_STATE_DIR; else process.env.DEVIN_POC_STATE_DIR = previous;
     await rm(directory, { recursive: true, force: true });

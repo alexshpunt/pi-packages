@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import {
   createAssistantMessageEventStream, InMemoryCredentialStore, InMemoryModelsStore,
   type AssistantMessage, type Model, type Provider, type SimpleStreamOptions, type TranscriptContext,
@@ -60,7 +59,7 @@ async function fixture(options: {
     systemPrompt: "Offline lifecycle fixture", extensionFactories: [options.observe],
   });
   await loader.reload();
-  assert.deepEqual(loader.getExtensions().errors, []);
+  expect(loader.getExtensions().errors).toStrictEqual([]);
   const manager = SessionManager.inMemory(directory); options.seed?.(manager);
   const { session } = await createAgentSession({ cwd: directory, agentDir: join(directory, "agent"), modelRuntime: runtime, model,
     thinkingLevel: "off", settingsManager: settings, sessionManager: manager, resourceLoader: loader,
@@ -93,11 +92,11 @@ test("real public agent: tool follow-ups and retries fall between one before_age
   });
   try {
     await host.session.prompt("offline add");
-    assert.equal(calls, 3); assert.equal(executions, 1);
-    assert.deepEqual(events, ["before", "start", "end", "start", "end", "settled"]);
-    assert.deepEqual(requests.map((request) => request.toolResults), [0, 1, 1]);
-    assert.equal(new Set(requests.map((request) => request.sessionId)).size, 1);
-    assert.equal(requests.every((request) => request.timeoutMs === 300000), true);
+    expect(calls).toBe(3); expect(executions).toBe(1);
+    expect(events).toStrictEqual(["before", "start", "end", "start", "end", "settled"]);
+    expect(requests.map((request) => request.toolResults)).toStrictEqual([0, 1, 1]);
+    expect(new Set(requests.map((request) => request.sessionId)).size).toBe(1);
+    expect(requests.every((request) => request.timeoutMs === 300000)).toBe(true);
   } finally { await host.close(); }
 });
 
@@ -120,8 +119,8 @@ test("real public agent: threshold compaction before start requests before befor
   });
   try {
     await host.session.prompt("Continue");
-    assert.equal(calls, 2);
-    assert.deepEqual(events, ["compact:threshold", "request", "compacted:threshold", "before", "request", "settled"]);
-    assert.equal(host.manager.getBranch().some((entry) => entry.type === "compaction"), true);
+    expect(calls).toBe(2);
+    expect(events).toStrictEqual(["compact:threshold", "request", "compacted:threshold", "before", "request", "settled"]);
+    expect(host.manager.getBranch().some((entry) => entry.type === "compaction")).toBe(true);
   } finally { await host.close(); }
 });

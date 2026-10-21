@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { expect, test, vi } from "vitest";
 import { normalizeContext, type AssistantMessageEvent, type Context } from "@earendil-works/pi-ai";
 import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
 import { encodeFrame } from "../src/core/protocol/transport.ts";
@@ -14,22 +13,22 @@ async function collect(stream: ReturnType<Awaited<ReturnType<typeof providerFixt
   return { events, result: await stream.result() };
 }
 function balanced(events: AssistantMessageEvent[]) {
-  assert.equal(events[0].type, "start");
-  assert.equal(events.filter((event) => event.type === "done" || event.type === "error").length, 1);
-  for (const kind of ["text", "thinking", "toolcall"]) assert.equal(events.filter((event) => event.type === kind + "_start").length, events.filter((event) => event.type === kind + "_end").length);
+  expect(events[0].type).toBe("start");
+  expect(events.filter((event) => event.type === "done" || event.type === "error").length).toBe(1);
+  for (const kind of ["text", "thinking", "toolcall"]) expect(events.filter((event) => event.type === kind + "_start").length).toBe(events.filter((event) => event.type === kind + "_end").length);
 }
 
 test("provider UID, payload replacement, headers, signatures and usage provenance are checked in the final request/response", async () => {
   const order: string[] = [];
   const fixture = await providerFixture({ chat: (request, index) => {
     order.push("request");
-    assert.equal(request.body.chatModelUid, index === 1 ? "swe-2-high" : "swe-2-medium");
-    assert.equal(request.body.prompt, "hook prompt");
-    assert.equal((request.body.configuration as JsonObject).maxTokens, "5000");
-    assert.equal(request.body.clientSessionId, "caller-session");
-    assert.equal(request.headers.get("x-scope"), "header-value");
-    assert.equal(request.headers.get("accept-encoding"), null);
-    assert.equal(JSON.stringify(request.body).includes("No skills are configured"), false);
+    expect(request.body.chatModelUid).toBe(index === 1 ? "swe-2-high" : "swe-2-medium");
+    expect(request.body.prompt).toBe("hook prompt");
+    expect((request.body.configuration as JsonObject).maxTokens).toBe("5000");
+    expect(request.body.clientSessionId).toBe("caller-session");
+    expect(request.headers.get("x-scope")).toBe("header-value");
+    expect(request.headers.get("accept-encoding")).toBe(null);
+    expect(JSON.stringify(request.body).includes("No skills are configured")).toBe(false);
     return streamResponse([
       { messageId: "reply-id", deltaThinking: "thinking", deltaSignature: "opaque-native-signature", deltaSignatureType: "fixture-signature", thinkingId: "thinking-id" },
       { deltaText: "hello 😀", actualModelUid: "response-other-uid" },
@@ -45,15 +44,15 @@ test("provider UID, payload replacement, headers, signatures and usage provenanc
       onResponse: async () => { await Promise.resolve(); order.push("response"); },
       onProviderStreamEvent: async (value) => { await Promise.resolve(); order.push("frame"); (value as JsonObject).deltaText = "observer must not alter content"; },
     });
-    assert.equal(typeof stream[Symbol.asyncIterator], "function");
+    expect(typeof stream[Symbol.asyncIterator]).toBe("function");
     const { events, result } = await collect(stream); balanced(events);
-    assert.deepEqual(order.slice(0, 4), ["payload", "request", "response", "frame"]);
-    assert.equal(result.content.find((block) => block.type === "text")?.text, "hello 😀");
-    assert.equal(result.providerThinkingLevel, "swe-2-high");
-    assert.equal(result.responseModel, "response-other-uid");
-    assert.equal(result.responseId, "reply-id");
-    assert.equal(result.usage.totalTokens, 14);
-    assert.deepEqual(result.diagnostics?.[0].details, { requestedUID: "swe-2-high", responseUID: "response-other-uid", usageUID: "usage-other-uid", costsUnknown: true, usageReported: true });
+    expect(order.slice(0, 4)).toStrictEqual(["payload", "request", "response", "frame"]);
+    expect(result.content.find((block) => block.type === "text")?.text).toBe("hello 😀");
+    expect(result.providerThinkingLevel).toBe("swe-2-high");
+    expect(result.responseModel).toBe("response-other-uid");
+    expect(result.responseId).toBe("reply-id");
+    expect(result.usage.totalTokens).toBe(14);
+    expect(result.diagnostics?.[0].details).toStrictEqual({ requestedUID: "swe-2-high", responseUID: "response-other-uid", usageUID: "usage-other-uid", costsUnknown: true, usageReported: true });
     const next = normalizeContext({ ...context(), messages: [...context().messages, result, { role: "user", content: "next", timestamp: 2 }] });
     // The second response uses the same fixture, but history consumption is checked with a different request UID.
     await collect(fixture.provider.streamSimple(fixture.model, next, { apiKey: providerCredential.sessionToken, reasoning: "medium", maxTokens: 6000, sessionId: "caller-session",
@@ -62,10 +61,10 @@ test("provider UID, payload replacement, headers, signatures and usage provenanc
     }));
     const prompts = fixture.requests.filter((request) => request.method === CHAT_METHOD)[1].body.chatMessagePrompts as JsonObject[];
     const assistant = prompts.find((prompt) => prompt.source === "CHAT_MESSAGE_SOURCE_SYSTEM")!;
-    assert.equal(assistant.modelUid, "swe-2-high");
-    assert.equal(assistant.signature, "opaque-native-signature"); assert.equal(assistant.signatureType, "fixture-signature");
-    assert.equal(assistant.thinkingId, "thinking-id"); assert.equal(assistant.thinking, "thinking");
-    assert.equal(fixture.fingerprintCollections(), 1);
+    expect(assistant.modelUid).toBe("swe-2-high");
+    expect(assistant.signature).toBe("opaque-native-signature"); expect(assistant.signatureType).toBe("fixture-signature");
+    expect(assistant.thinkingId).toBe("thinking-id"); expect(assistant.thinking).toBe("thinking");
+    expect(fixture.fingerprintCollections()).toBe(1);
   } finally { fixture.provider.shutdown(); }
 });
 
@@ -83,13 +82,13 @@ test("current system/tool changes and user and tool-result images are kept in th
   try {
     await collect(fixture.provider.streamSimple(fixture.model, history, { apiKey: providerCredential.sessionToken, reasoning: "medium", cacheRetention: "none" }));
     const body = fixture.requests.find((request) => request.method === CHAT_METHOD)!.body;
-    assert.match(body.prompt as string, /old/); assert.match(body.prompt as string, /new instruction/);
-    assert.deepEqual((body.tools as JsonObject[]).map((tool) => tool.name), ["current"]);
+    expect(body.prompt as string).toMatch(/old/); expect(body.prompt as string).toMatch(/new instruction/);
+    expect((body.tools as JsonObject[]).map((tool) => tool.name)).toStrictEqual(["current"]);
     const prompts = body.chatMessagePrompts as JsonObject[];
-    assert.equal((prompts[0].images as JsonObject[])[0].base64Data, image.data);
-    assert.equal((prompts[2].images as JsonObject[])[0].base64Data, image.data);
-    assert.equal((prompts[1].toolCalls as JsonObject[])[0].id, "keep-tool-id"); assert.equal(prompts[2].toolCallId, "keep-tool-id");
-    assert.equal(prompts.every((prompt) => prompt.promptCacheOptions === undefined), true);
+    expect((prompts[0].images as JsonObject[])[0].base64Data).toBe(image.data);
+    expect((prompts[2].images as JsonObject[])[0].base64Data).toBe(image.data);
+    expect((prompts[1].toolCalls as JsonObject[])[0].id).toBe("keep-tool-id"); expect(prompts[2].toolCallId).toBe("keep-tool-id");
+    expect(prompts.every((prompt) => prompt.promptCacheOptions === undefined)).toBe(true);
   } finally { fixture.provider.shutdown(); }
 });
 
@@ -101,7 +100,7 @@ test("a failed partial tool and a truncated stream do not become success and con
     const fixture = await providerFixture({ chat: () => response });
     try {
       const { events, result } = await collect(fixture.provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
-      balanced(events); assert.equal(result.stopReason, "error"); assert.equal(fixture.chatCalls(), 1);
+      balanced(events); expect(result.stopReason).toBe("error"); expect(fixture.chatCalls()).toBe(1);
     } finally { fixture.provider.shutdown(); }
   }
 });
@@ -113,32 +112,32 @@ test("the fixed 8-call budget is not reset at host retry boundaries and blocks b
     for (let i = 0; i < 9; i++) {
       if (i) fixture.provider.lifecycle.agentStarted();
       const { result } = await collect(fixture.provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
-      assert.equal(result.stopReason, "error");
-      if (i === 8) assert.match(result.errorMessage!, /all 8 Devin model HTTP requests/);
+      expect(result.stopReason).toBe("error");
+      if (i === 8) expect(result.errorMessage!).toMatch(/all 8 Devin model HTTP requests/);
     }
-    assert.equal(fixture.chatCalls(), 8);
-    const state = fixture.provider.lifecycle.snapshot(); assert.equal(state.execution?.used, 8);
+    expect(fixture.chatCalls()).toBe(8);
+    const state = fixture.provider.lifecycle.snapshot(); expect(state.execution?.used).toBe(8);
     const bodies = fixture.requests.filter((request) => request.method === CHAT_METHOD).map((request) => request.body);
-    assert.equal(new Set(bodies.map((body) => body.executionId)).size, 1);
-    assert.equal(new Set(bodies.map((body) => body.cascadeId)).size, 1);
-    assert.equal((bodies[0].trajectoryReference as JsonObject).stepType, "CORTEX_STEP_TYPE_USER_INPUT");
-    assert.equal((bodies[1].trajectoryReference as JsonObject).stepType, undefined);
+    expect(new Set(bodies.map((body) => body.executionId)).size).toBe(1);
+    expect(new Set(bodies.map((body) => body.cascadeId)).size).toBe(1);
+    expect((bodies[0].trajectoryReference as JsonObject).stepType).toBe("CORTEX_STEP_TYPE_USER_INPUT");
+    expect((bodies[1].trajectoryReference as JsonObject).stepType).toBe(undefined);
   } finally { fixture.provider.shutdown(); }
 });
 
 for (const timeoutMs of [undefined, 5000]) test(`provider ${timeoutMs ?? "default 90000"}ms limit ends the final fetch signal`, async (context) => {
-  context.mock.timers.enable({ apis: ["setTimeout"] });
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] }); context.onTestFinished(() => { vi.useRealTimers(); });
   let finalSignal!: AbortSignal;
   const expected = timeoutMs ?? 90000;
   const fixture = await providerFixture({ chat: (request) => {
     finalSignal = request.signal;
-    context.mock.timers.tick(expected - 1); assert.equal(finalSignal.aborted, false);
-    context.mock.timers.tick(1); assert.equal(finalSignal.aborted, true);
+    vi.advanceTimersByTime(expected - 1); expect(finalSignal.aborted).toBe(false);
+    vi.advanceTimersByTime(1); expect(finalSignal.aborted).toBe(true);
     return new Promise(() => {});
   } });
   try {
     const { result } = await collect(fixture.provider.streamSimple(fixture.model, normalizeContext({ messages: [{ role: "user", content: "timeout", timestamp: 1 }] }), { apiKey: providerCredential.sessionToken, reasoning: "medium", timeoutMs }));
-    assert.equal(result.stopReason, "error"); assert.match(result.errorMessage!, new RegExp(String(expected)));
+    expect(result.stopReason).toBe("error"); expect(result.errorMessage!).toMatch(new RegExp(String(expected)));
   } finally { fixture.provider.shutdown(); }
 });
 
@@ -149,7 +148,7 @@ test("even an uncooperative provider event observer ends on caller cancel and ma
       apiKey: providerCredential.sessionToken, reasoning: "medium", signal: controller.signal,
       onProviderStreamEvent: () => { controller.abort(); return new Promise(() => {}); },
     }));
-    balanced(events); assert.equal(result.stopReason, "aborted"); assert.equal(fixture.chatCalls(), 1);
+    balanced(events); expect(result.stopReason).toBe("aborted"); expect(fixture.chatCalls()).toBe(1);
   } finally { fixture.provider.shutdown(); }
 });
 
@@ -159,12 +158,12 @@ test("payload identity changes and missing permission fail before the inference 
     const result = await fixture.provider.streamSimple(fixture.model, normalizeContext(context()), {
       apiKey: providerCredential.sessionToken, reasoning: "medium", onPayload: (value) => ({ ...(value as JsonObject), cascadeId: "replacement" }),
     }).result();
-    assert.equal(result.stopReason, "error"); assert.equal(fixture.chatCalls(), 0);
+    expect(result.stopReason).toBe("error"); expect(fixture.chatCalls()).toBe(0);
   } finally { fixture.provider.shutdown(); }
   const denied = await providerFixture({ status: { userStatus: { userId: "offline-user-id", planStatus: { planInfo: { devinInfo: { canUseCli: false } } } } } });
   try {
     const result = await denied.provider.streamSimple(denied.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }).result();
-    assert.equal(result.stopReason, "error"); assert.match(result.errorMessage!, /may use the CLI/); assert.equal(denied.chatCalls(), 0);
+    expect(result.stopReason).toBe("error"); expect(result.errorMessage!).toMatch(/may use the CLI/); expect(denied.chatCalls()).toBe(0);
   } finally { denied.provider.shutdown(); }
 });
 
@@ -181,7 +180,7 @@ test("prompt cache: by default only user and tool results are marked EPHEMERAL, 
   const plain = await providerFixture();
   try {
     await collect(plain.provider.streamSimple(plain.model, history, { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
-    assert.deepEqual(marks(plain.requests.find((request) => request.method === CHAT_METHOD)!.body), expected);
+    expect(marks(plain.requests.find((request) => request.method === CHAT_METHOD)!.body)).toStrictEqual(expected);
     const before = plain.requests.length;
     const previousEnv = process.env.PI_CACHE_RETENTION;
     try {
@@ -189,24 +188,24 @@ test("prompt cache: by default only user and tool results are marked EPHEMERAL, 
       // Like Pi's built-in providers, retention is decided by option → provider env → process env.
       for (const options of [{ cacheRetention: "long" as const }, { env: { PI_CACHE_RETENTION: "long" } }, {}]) {
         const rejected = await plain.provider.streamSimple(plain.model, history, { apiKey: providerCredential.sessionToken, reasoning: "medium", ...options }).result();
-        assert.equal(rejected.stopReason, "error"); assert.match(rejected.errorMessage!, /Long cache lifetime is not confirmed/);
+        expect(rejected.stopReason).toBe("error"); expect(rejected.errorMessage!).toMatch(/Long cache lifetime is not confirmed/);
       }
-      assert.equal(plain.requests.length, before);
+      expect(plain.requests.length).toBe(before);
       const caller = await plain.provider.streamSimple(plain.model, history, { apiKey: providerCredential.sessionToken, reasoning: "medium", cacheRetention: "short" }).result();
-      assert.equal(caller.stopReason, "stop", caller.errorMessage ?? "unexpected finish");
-      assert.deepEqual(marks(plain.requests.filter((request) => request.method === CHAT_METHOD).at(-1)!.body), expected);
+      expect(caller.stopReason, caller.errorMessage ?? "unexpected finish").toBe("stop");
+      expect(marks(plain.requests.filter((request) => request.method === CHAT_METHOD).at(-1)!.body)).toStrictEqual(expected);
     } finally {
       if (previousEnv === undefined) delete process.env.PI_CACHE_RETENTION; else process.env.PI_CACHE_RETENTION = previousEnv;
     }
   } finally { plain.provider.shutdown(); }
   const extended = await providerFixture({ catalog: extendedCacheCatalog });
   try {
-    assert.match(extended.model.id, /^gpt-5.6-sol/);
+    expect(extended.model.id).toMatch(/^gpt-5.6-sol/);
     const accepted = await extended.provider.streamSimple(extended.model, history, { apiKey: providerCredential.sessionToken, reasoning: "medium", cacheRetention: "long" }).result();
-    assert.equal(accepted.stopReason, "stop", accepted.errorMessage ?? "unexpected finish");
+    expect(accepted.stopReason, accepted.errorMessage ?? "unexpected finish").toBe("stop");
     const body = extended.requests.find((request) => request.method === CHAT_METHOD)!.body;
-    assert.equal(body.chatModelUid, "gpt-5-6-sol-medium");
-    assert.deepEqual(marks(body), expected);
-    assert.equal("systemPromptCacheOptions" in body, false);
+    expect(body.chatModelUid).toBe("gpt-5-6-sol-medium");
+    expect(marks(body)).toStrictEqual(expected);
+    expect("systemPromptCacheOptions" in body).toBe(false);
   } finally { extended.provider.shutdown(); }
 });

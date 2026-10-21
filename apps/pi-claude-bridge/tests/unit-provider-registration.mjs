@@ -12,8 +12,7 @@
  * claude-bridge/* dispatch fails with "Model not found".
  */
 
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -51,8 +50,8 @@ function registryWith(provider) {
 describe("provider registration across module instances", () => {
 	it("first instance registers at activation", () => {
 		const { registered } = activateWithMockPi();
-		assert.equal(registered.length, 1, "exactly one activation-time registration");
-		assert.equal(registered[0].name, PROVIDER_ID);
+		expect(registered.length, "exactly one activation-time registration").toBe(1);
+		expect(registered[0].name).toBe(PROVIDER_ID);
 	});
 
 	it("later instance registers at session_start when its registry lacks the provider (#91)", async () => {
@@ -60,16 +59,16 @@ describe("provider registration across module instances", () => {
 		// the decision moves to session_start with the session's own registry.
 		const { default: activateFresh } = await import("../src/index.js?own-registry-child");
 		const { registered, emit } = activateWithMockPi(activateFresh);
-		assert.equal(registered.length, 0, "no activation-time registration for a later instance");
+		expect(registered.length, "no activation-time registration for a later instance").toBe(0);
 
 		emit("session_start", {}, {
 			cwd: process.cwd(),
 			sessionManager: { getSessionId: () => "own-registry-child" },
 			modelRegistry: registryWith("other-provider"),
 		});
-		assert.equal(registered.length, 1, "session_start registers into the empty registry");
-		assert.equal(registered[0].name, PROVIDER_ID);
-		assert.ok(registered[0].config.streamSimple, "the registration carries this instance's stream fn");
+		expect(registered.length, "session_start registers into the empty registry").toBe(1);
+		expect(registered[0].name).toBe(PROVIDER_ID);
+		expect(registered[0].config.streamSimple, "the registration carries this instance's stream fn").toBeTruthy();
 	});
 
 	it("later instance does not re-register when the registry already has the provider", async () => {
@@ -83,11 +82,11 @@ describe("provider registration across module instances", () => {
 			modelRegistry: registryWith(PROVIDER_ID),
 		};
 		emit("session_start", {}, context);
-		assert.equal(registered.length, 0, "no overwrite of the parent's registration");
+		expect(registered.length, "no overwrite of the parent's registration").toBe(0);
 
 		// Repeated session starts stay idempotent.
 		emit("session_start", {}, context);
-		assert.equal(registered.length, 0, "still no registration on a later session_start");
+		expect(registered.length, "still no registration on a later session_start").toBe(0);
 	});
 });
 
@@ -108,7 +107,7 @@ async function withLegacyNoticeConfig(config, run) {
 	});
 	try {
 		await run({ context, notices });
-		assert.equal(readFileSync(path, "utf8"), contents, "notice must not persist state in config");
+		expect(readFileSync(path, "utf8"), "notice must not persist state in config").toBe(contents);
 	} finally {
 		if (previous === undefined) delete globalThis[key];
 		else globalThis[key] = previous;
@@ -122,9 +121,9 @@ describe("native summary hooks", () => {
 		for (const event of ["session_before_compact", "session_before_tree"]) {
 			const signal = new AbortController().signal;
 			const registered = handlers.get(event);
-			assert.equal(registered.length, 1, "only the ownership observer may remain");
-			assert.equal(registered[0]({ signal }, { sessionManager: { getSessionId: () => "summary-owner" } }), undefined);
-			assert.equal(summarySessionFor(signal), "summary-owner");
+			expect(registered.length, "only the ownership observer may remain").toBe(1);
+			expect(registered[0]({ signal }, { sessionManager: { getSessionId: () => "summary-owner" } })).toBe(undefined);
+			expect(summarySessionFor(signal)).toBe("summary-owner");
 		}
 	});
 });
@@ -137,22 +136,22 @@ describe("removed tool notice", () => {
 			first.emit("session_start", {}, context("tui"));
 			const { default: reloaded } = await import("../src/index.js?removed-tool-notice");
 			activateWithMockPi(reloaded).emit("session_start", {}, context("tui"));
-			assert.equal(notices.length, 1);
-			assert.match(notices[0][0], /AskClaude has been removed/);
+			expect(notices.length).toBe(1);
+			expect(notices[0][0]).toMatch(/AskClaude has been removed/);
 		}));
 
 	it("does not consume the notice in RPC, JSON or print mode", () =>
 		withLegacyNoticeConfig({ askClaude: { enabled: true } }, ({ context, notices }) => {
 			const extension = activateWithMockPi();
 			for (const mode of ["rpc", "json", "print"]) extension.emit("session_start", {}, context(mode));
-			assert.equal(notices.length, 0);
+			expect(notices.length).toBe(0);
 			extension.emit("session_start", {}, context("tui"));
-			assert.equal(notices.length, 1);
+			expect(notices.length).toBe(1);
 		}));
 
 	it("stays silent without the removed setting", () =>
 		withLegacyNoticeConfig({}, ({ context, notices }) => {
 			activateWithMockPi().emit("session_start", {}, context("tui"));
-			assert.equal(notices.length, 0);
+			expect(notices.length).toBe(0);
 		}));
 });

@@ -18,8 +18,7 @@
 //
 // Requires: Claude Code subscription login.
 
-import { after, test } from "node:test";
-import assert from "node:assert";
+import { afterAll, expect, test } from "vitest";
 import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -29,7 +28,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { collectCarriedAttachments, placeCarriedAttachments } from "../src/attachments.js";
 
 const CWD = mkdtempSync(join(tmpdir(), "cc-attachment-project-"));
-after(() => rmSync(CWD, { recursive: true, force: true }));
+afterAll(() => rmSync(CWD, { recursive: true, force: true }));
 const MODEL = "claude-haiku-5-5";
 // Nothing can infer this from the filename, the prompt, or the file on disk —
 // it exists only in the attachment payload the rebuild has to carry.
@@ -95,12 +94,12 @@ async function ask(sid) {
 		},
 	})) {
 		if (m.type === "system" && m.subtype === "init") {
-			assert.equal(m.apiKeySource, "none", "attachment checks require subscription authentication");
-			assert.deepEqual(m.tools, [], "attachment checks must not expose tools");
+			expect(m.apiKeySource, "attachment checks require subscription authentication").toBe("none");
+			expect(m.tools, "attachment checks must not expose tools").toEqual([]);
 		}
 		if (m.type === "assistant") {
 			for (const block of m.message?.content ?? []) {
-				assert.notEqual(block.type, "tool_use", "the model must answer from the resumed transcript alone");
+				expect(block.type, "the model must answer from the resumed transcript alone").not.toBe("tool_use");
 				if (block.type === "text") out += block.text;
 			}
 		}
@@ -116,20 +115,19 @@ test("an @file attachment survives a rebuild and reaches Claude", { timeout: 180
 	try {
 		const attachment = attachmentFor(dir);
 		const seeded = seedWithAttachment(sid, attachment);
-		assert.equal(seeded.attachments.length, 1, "seed did not write the attachment");
+		expect(seeded.attachments.length, "seed did not write the attachment").toBe(1);
 
 		const carried = collectCarriedAttachments(
 			openSession({ sessionId: sid, projectPath: CWD, claudeDir: process.env.CLAUDE_CONFIG_DIR }).records,
 		);
-		assert.equal(carried.length, 1, "collectCarriedAttachments did not find the attachment");
+		expect(carried.length, "collectCarriedAttachments did not find the attachment").toBe(1);
 
 		const { session, placed } = rebuild(sid, carried);
-		assert.equal(placed.skipped.length, 0, `placement skipped: ${placed.skipped.join("; ")}`);
-		assert.equal(session.attachments.length, 1, "rebuilt session has no attachment");
+		expect(placed.skipped.length, `placement skipped: ${placed.skipped.join("; ")}`).toBe(0);
+		expect(session.attachments.length, "rebuilt session has no attachment").toBe(1);
 
 		const answer = await ask(sid);
-		assert.match(answer, new RegExp(TOKEN, "i"),
-			`Claude could not see the carried attachment. Answer: ${answer}`);
+		expect(answer, `Claude could not see the carried attachment. Answer: ${answer}`).toMatch(new RegExp(TOKEN, "i"));
 	} finally {
 		deleteSession(sid, CWD, process.env.CLAUDE_CONFIG_DIR);
 		rmSync(dir, { recursive: true, force: true });
@@ -142,11 +140,10 @@ test("control: without the carry, the same rebuild loses it", { timeout: 180_000
 	try {
 		seedWithAttachment(sid, attachmentFor(dir));
 		const { session } = rebuild(sid, []);
-		assert.equal(session.attachments.length, 0, "control rebuild should carry nothing");
+		expect(session.attachments.length, "control rebuild should carry nothing").toBe(0);
 
 		const answer = await ask(sid);
-		assert.doesNotMatch(answer, new RegExp(TOKEN, "i"),
-			`Control produced the token without the attachment — the positive test proves nothing. Answer: ${answer}`);
+		expect(answer, `Control produced the token without the attachment — the positive test proves nothing. Answer: ${answer}`).not.toMatch(new RegExp(TOKEN, "i"));
 	} finally {
 		deleteSession(sid, CWD, process.env.CLAUDE_CONFIG_DIR);
 		rmSync(dir, { recursive: true, force: true });

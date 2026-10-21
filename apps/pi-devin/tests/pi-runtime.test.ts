@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { expect, test, vi } from "vitest";
 import { InMemoryCredentialStore, InMemoryModelsStore, type AssistantMessage } from "@earendil-works/pi-ai";
 import { createAgentSessionRuntime, createAgentSessionServices, createAgentSessionFromServices, ModelRuntime, SessionManager, SettingsManager, type CreateAgentSessionRuntimeFactory, type AgentSession, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { registerDevinExtension } from "../src/pi/extension.ts";
@@ -47,7 +46,7 @@ async function runtimeFixture(options: Parameters<typeof providerFixture>[0] & {
   };
   runtime.setRebindSession(bind); await bind(runtime.session);
   const refreshed = await runtime.session.modelRuntime.refresh({ providers: ["devin"], allowNetwork: true, force: true });
-  assert.equal(refreshed.aborted, false); assert.equal(refreshed.errors.size, 0);
+  expect(refreshed.aborted).toBe(false); expect(refreshed.errors.size).toBe(0);
   await runtime.session.setModel(runtime.session.modelRuntime.getModel("devin", fixture.model.id)!);
   return { ...fixture, runtime, credentials, errors, events, registrations,
     current: () => registrations.at(-1)!.provider,
@@ -69,53 +68,53 @@ test("real session runtime fork/resume/reload/tree and account switch boundaries
     const originalFile = f.runtime.session.sessionFile!, original = f.current().lifecycle.snapshot();
     const originalProvider = f.current();
     const firstUser = f.runtime.session.sessionManager.getBranch().find((entry) => entry.type === "message" && entry.message.role === "user")!;
-    assert.equal((await f.runtime.fork(firstUser.id, { position: "at" })).cancelled, false);
+    expect((await f.runtime.fork(firstUser.id, { position: "at" })).cancelled).toBe(false);
     await f.runtime.session.prompt("fork");
-    assert.notEqual(f.current().lifecycle.snapshot().cascadeId, original.cascadeId);
-    assert.notEqual(f.current(), originalProvider);
-    assert.equal((await f.runtime.switchSession(originalFile)).cancelled, false);
+    expect(f.current().lifecycle.snapshot().cascadeId).not.toBe(original.cascadeId);
+    expect(f.current()).not.toBe(originalProvider);
+    expect((await f.runtime.switchSession(originalFile)).cancelled).toBe(false);
     await f.runtime.session.prompt("resumed");
-    assert.equal(f.current().lifecycle.snapshot().cascadeId, original.cascadeId);
-    assert.equal(f.current().lifecycle.snapshot().nextStepIndex, 3);
+    expect(f.current().lifecycle.snapshot().cascadeId).toBe(original.cascadeId);
+    expect(f.current().lifecycle.snapshot().nextStepIndex).toBe(3);
     const beforeReload = f.current(); await f.runtime.session.reload(); await f.registrations.at(-1)!.ready;
-    assert.notEqual(f.current(), beforeReload);
-    assert.equal(f.runtime.session.modelRuntime.getProviders().filter((provider) => provider.id === "devin").length, 1);
+    expect(f.current()).not.toBe(beforeReload);
+    expect(f.runtime.session.modelRuntime.getProviders().filter((provider) => provider.id === "devin").length).toBe(1);
     await f.runtime.session.prompt("reloaded");
-    assert.equal(f.current().lifecycle.snapshot().nextStepIndex, 4);
+    expect(f.current().lifecycle.snapshot().nextStepIndex).toBe(4);
     const firstAnswer = f.runtime.session.sessionManager.getBranch().find((entry) => entry.type === "message" && entry.message.role === "assistant")!;
-    assert.equal((await f.runtime.session.navigateTree(firstAnswer.id, { summarize: false })).cancelled, false);
+    expect((await f.runtime.session.navigateTree(firstAnswer.id, { summarize: false })).cancelled).toBe(false);
     await f.runtime.session.prompt("tree");
     const tree = f.current().lifecycle.snapshot();
-    assert.equal(tree.cascadeId, original.cascadeId); assert.notEqual(tree.trajectoryId, original.trajectoryId); assert.equal(tree.nextStepIndex, 1);
+    expect(tree.cascadeId).toBe(original.cascadeId); expect(tree.trajectoryId).not.toBe(original.trajectoryId); expect(tree.nextStepIndex).toBe(1);
     const count = f.chatCalls();
     (status.userStatus as JsonObject).userId = "another-offline-user";
     await f.credentials.modify("devin", async () => ({ ...providerHostCredential, access: "another-fake-token" }));
-    const refreshed = await f.runtime.session.modelRuntime.refresh({ providers: ["devin"], allowNetwork: true, force: true }); assert.equal(refreshed.errors.size, 0);
+    const refreshed = await f.runtime.session.modelRuntime.refresh({ providers: ["devin"], allowNetwork: true, force: true }); expect(refreshed.errors.size).toBe(0);
     await f.runtime.session.setModel(f.runtime.session.modelRuntime.getModel("devin", f.model.id)!);
     await f.runtime.session.prompt("must not share history");
-    assert.equal(f.chatCalls(), count);
+    expect(f.chatCalls()).toBe(count);
     const last = f.runtime.session.messages.at(-1) as AssistantMessage;
-    assert.equal(last.stopReason, "error"); assert.match(last.errorMessage!, /different Devin account/);
+    expect(last.stopReason).toBe("error"); expect(last.errorMessage!).toMatch(/different Devin account/);
     await f.runtime.newSession(); await f.runtime.session.prompt("fresh account session");
-    assert.equal(f.chatCalls(), count + 1);
-    assert.deepEqual(f.errors, []);
-    assert.ok(f.events.includes("shutdown:reload"));
+    expect(f.chatCalls()).toBe(count + 1);
+    expect(f.errors).toStrictEqual([]);
+    expect(f.events.includes("shutdown:reload")).toBeTruthy();
   } finally { await f.close(); }
 });
 
 for (const timeoutMs of [undefined, 5000]) test(`public Pi timeout ${timeoutMs ?? 300000}ms applies to the final HTTP signal`, async (context) => {
   const expected = timeoutMs ?? 300000;
   const f = await runtimeFixture({ settings: { retry: { enabled: false, ...(timeoutMs ? { provider: { timeoutMs } } : {}) } }, chat: (request) => {
-    context.mock.timers.tick(expected - 1); assert.equal(request.signal.aborted, false);
-    context.mock.timers.tick(1); assert.equal(request.signal.aborted, true);
+    vi.advanceTimersByTime(expected - 1); expect(request.signal.aborted).toBe(false);
+    vi.advanceTimersByTime(1); expect(request.signal.aborted).toBe(true);
     return new Promise(() => {});
   } });
-  context.mock.timers.enable({ apis: ["setTimeout"] });
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   try {
     await f.runtime.session.prompt("timeout");
     const result = f.runtime.session.messages.at(-1) as AssistantMessage;
-    assert.equal(result.stopReason, "error"); assert.match(result.errorMessage!, new RegExp(String(expected))); assert.equal(f.chatCalls(), 1);
-  } finally { context.mock.timers.reset(); await f.close(); }
+    expect(result.stopReason).toBe("error"); expect(result.errorMessage!).toMatch(new RegExp(String(expected))); expect(f.chatCalls()).toBe(1);
+  } finally { vi.useRealTimers(); await f.close(); }
 });
 
 test("threshold compaction, the compression send fallback and the follow-up inference share one budget", async () => {
@@ -127,15 +126,15 @@ test("threshold compaction, the compression send fallback and the follow-up infe
     await f.runtime.session.setModel({ ...f.runtime.session.model!, contextWindow: 10000 });
     await f.runtime.session.prompt("next");
     const requests = f.requests.filter((request) => request.method === CHAT_METHOD);
-    assert.equal(requests.length, 3, JSON.stringify({ events: f.events, contextWindow: f.runtime.session.model?.contextWindow, last: f.runtime.session.messages.at(-1) }));
-    assert.equal(requests[0].headers.get("connect-content-encoding"), "gzip"); assert.equal(requests[1].headers.get("connect-content-encoding"), null);
-    assert.deepEqual(requests[0].body, requests[1].body);
-    assert.equal(requests[0].body.executionId, undefined); assert.ok(requests[2].body.executionId);
-    assert.equal(new Set(requests.map((request) => request.body.cascadeId)).size, 1);
-    assert.equal(f.current().lifecycle.snapshot().execution!.used, 3);
-    assert.ok(f.events.indexOf("compact:threshold") < f.events.indexOf("before"));
-    assert.equal(f.runtime.session.getLastAssistantText(), "summary or answer");
-    assert.deepEqual(f.errors, []);
+    expect(requests.length, JSON.stringify({ events: f.events, contextWindow: f.runtime.session.model?.contextWindow, last: f.runtime.session.messages.at(-1) })).toBe(3);
+    expect(requests[0].headers.get("connect-content-encoding")).toBe("gzip"); expect(requests[1].headers.get("connect-content-encoding")).toBe(null);
+    expect(requests[0].body).toStrictEqual(requests[1].body);
+    expect(requests[0].body.executionId).toBe(undefined); expect(requests[2].body.executionId).toBeTruthy();
+    expect(new Set(requests.map((request) => request.body.cascadeId)).size).toBe(1);
+    expect(f.current().lifecycle.snapshot().execution!.used).toBe(3);
+    expect(f.events.indexOf("compact:threshold") < f.events.indexOf("before")).toBeTruthy();
+    expect(f.runtime.session.getLastAssistantText()).toBe("summary or answer");
+    expect(f.errors).toStrictEqual([]);
   } finally { await f.close(); }
 });
 
@@ -146,16 +145,16 @@ test("overflow auto-compaction uses the same run budget; manual compaction gets 
   try {
     await f.runtime.session.setModel({ ...f.runtime.session.model!, contextWindow: 10000 });
     await f.runtime.session.prompt("overflow");
-    assert.ok(f.events.includes("compact:overflow"), JSON.stringify({ events: f.events, contextWindow: f.runtime.session.model?.contextWindow, last: f.runtime.session.messages.at(-1) }));
+    expect(f.events.includes("compact:overflow"), JSON.stringify({ events: f.events, contextWindow: f.runtime.session.model?.contextWindow, last: f.runtime.session.messages.at(-1) })).toBeTruthy();
     const requests = f.requests.filter((request) => request.method === CHAT_METHOD);
-    assert.deepEqual(requests.map((request) => request.body.executionId === undefined), [false, true, true, false]);
-    assert.equal(requests[0].body.executionId, requests[3].body.executionId);
-    const original = f.current().lifecycle.snapshot().execution!; assert.equal(original.used, 4); assert.equal(original.settled, true);
+    expect(requests.map((request) => request.body.executionId === undefined)).toStrictEqual([false, true, true, false]);
+    expect(requests[0].body.executionId).toBe(requests[3].body.executionId);
+    const original = f.current().lifecycle.snapshot().execution!; expect(original.used).toBe(4); expect(original.settled).toBe(true);
     await f.runtime.session.prompt("more history");
     await f.runtime.session.compact("manual summary");
     const manual = f.current().lifecycle.snapshot().execution!;
-    assert.equal(manual.used, 2); assert.equal(manual.settled, true); assert.notEqual(manual.id, original.id);
-    assert.ok(f.events.includes("compact:manual")); assert.deepEqual(f.errors, []);
+    expect(manual.used).toBe(2); expect(manual.settled).toBe(true); expect(manual.id).not.toBe(original.id);
+    expect(f.events.includes("compact:manual")).toBeTruthy(); expect(f.errors).toStrictEqual([]);
   } finally { await f.close(); }
 });
 
@@ -168,10 +167,10 @@ test("when a pre-start compaction fallback uses up the budget, the main inferenc
   try {
     await f.runtime.session.setModel({ ...f.runtime.session.model!, contextWindow: 10000 });
     await f.runtime.session.prompt("cannot bypass budget");
-    assert.equal(f.chatCalls(), 2);
+    expect(f.chatCalls()).toBe(2);
     const result = f.runtime.session.messages.at(-1) as AssistantMessage;
-    assert.equal(result.stopReason, "error"); assert.match(result.errorMessage!, /all 2 Devin model HTTP requests/);
-    assert.equal(f.current().lifecycle.snapshot().execution!.used, 2);
+    expect(result.stopReason).toBe("error"); expect(result.errorMessage!).toMatch(/all 2 Devin model HTTP requests/);
+    expect(f.current().lifecycle.snapshot().execution!.used).toBe(2);
   } finally { await f.close(); }
 });
 
@@ -179,12 +178,12 @@ for (const mode of ["tui", "json", "rpc"] as const) test(`public SDK ${mode} bin
   const f = await runtimeFixture({ mode });
   try {
     await f.runtime.session.prompt("mode check");
-    assert.equal((f.runtime.session.messages.at(-1) as AssistantMessage).stopReason, "stop");
+    expect((f.runtime.session.messages.at(-1) as AssistantMessage).stopReason).toBe("stop");
     await f.runtime.session.modelRuntime.logout("devin");
     const before = f.requests.length;
     const result = await f.runtime.session.modelRuntime.completeSimple(f.model, { messages: [{ role: "user", content: "no credentials", timestamp: 1 }] });
-    assert.equal(result.stopReason, "error"); assert.equal(f.requests.length, before);
-    assert.deepEqual(f.errors, []);
+    expect(result.stopReason).toBe("error"); expect(f.requests.length).toBe(before);
+    expect(f.errors).toStrictEqual([]);
   } finally { await f.close(); }
 });
 
@@ -194,11 +193,11 @@ test("cache warming: Devin models expose no TTL, so no warming request is made i
     try {
       await f.runtime.session.prompt("warm?");
       const chats = f.requests.filter((request) => request.method === CHAT_METHOD).length;
-      assert.equal(chats, 1);
+      expect(chats).toBe(1);
       const status = f.runtime.session.cacheWarmingStatus!;
-      assert.deepEqual([status.state, status.state === "inactive" ? status.reason : ""], ["inactive", "cache lifetime unavailable"]);
+      expect([status.state, status.state === "inactive" ? status.reason : ""]).toStrictEqual(["inactive", "cache lifetime unavailable"]);
       await new Promise((resolve) => setTimeout(resolve, 50));
-      assert.equal(f.requests.filter((request) => request.method === CHAT_METHOD).length, chats);
+      expect(f.requests.filter((request) => request.method === CHAT_METHOD).length).toBe(chats);
     } finally { await f.close(); }
   }
 });
@@ -211,7 +210,7 @@ test("the cache_warming_decision handler stops warming only for Devin models", (
   try {
     const decide = handlers.get("cache_warming_decision")!;
     const event = { type: "cache_warming_decision", action: "warm", warmCost: 0, missCost: 0, continuationProbability: 1 };
-    assert.deepEqual(decide(event, { model: { provider: "devin" } }), { action: "stop" });
-    assert.equal(decide(event, { model: { provider: "anthropic" } }), undefined);
+    expect(decide(event, { model: { provider: "devin" } })).toStrictEqual({ action: "stop" });
+    expect(decide(event, { model: { provider: "anthropic" } })).toBe(undefined);
   } finally { provider.shutdown(); }
 });

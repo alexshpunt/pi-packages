@@ -126,7 +126,7 @@ async function main(): Promise<number> {
 	try {
 		integration = await withWorkspace(true, async workspace => {
 			const app = workspace.cwd;
-			for (const file of ["package.json", "tsconfig.json", "LICENSE"]) cpSync(join(APP_DIR, file), join(app, file));
+			for (const file of ["package.json", "tsconfig.json", "vitest.int.config.mjs", "LICENSE"]) cpSync(join(APP_DIR, file), join(app, file));
 			for (const dir of ["src", "node_modules"]) symlinkSync(join(APP_DIR, dir), join(app, dir), "dir");
 			cpSync(join(APP_DIR, "tests"), join(app, "tests"), { recursive: true });
 			if (existsSync(join(app, ".env.test"))) throw new VerificationError("env-test-reached-temporary-app");
@@ -135,7 +135,7 @@ async function main(): Promise<number> {
 			timeoutCommand = shell.timeoutCommand;
 			for (const file of shellTests) steps.push(runStep(file.replace(/\.sh$/, ""), "bash", [`tests/${file}`], app, { ...env, PATH: shell.path }, logDir));
 			if (nodeTests.length) steps.push(runStep("node-integrations", process.execPath,
-				["--import", "tsx", "--test", "--test-concurrency=1", ...nodeTests.map(file => `tests/${file}`)], app, env, logDir));
+				[join(app, "node_modules/vitest/vitest.mjs"), "run", "--config", "vitest.int.config.mjs", "--no-file-parallelism", ...nodeTests.map(file => `tests/${file}`)], app, env, logDir));
 			const debugLogs = readdirSync(logDir).filter(name => name.endsWith("-debug.log"));
 			steps.push(runStep("deadlock-logs", process.execPath, ["tests/lib/check-deadlock-logs.mjs", logDir], app, env, logDir));
 			return {

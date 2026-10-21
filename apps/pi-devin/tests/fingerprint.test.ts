@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { createDecipheriv, createHash } from "node:crypto";
 import type { NetworkInterfaceInfo } from "node:os";
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import { DevinClient } from "../src/core/client.ts";
 import { chatRequest, streamChat, userMessage } from "../src/core/inference/chat.ts";
 import { collectDeviceIdentity, type DeviceSystem } from "../src/core/protocol/device.ts";
@@ -44,17 +43,17 @@ function decrypt(value: string): string {
 
 test("native fingerprint layout: MAC/serial/user SHA-512 and authenticated AES-GCM", () => {
   const hash = hashDeviceIdentity(identity);
-  assert.equal(hash, createHash("sha512").update(identity.serial + identity.username).digest("hex"));
-  assert.equal(hashDeviceIdentity({ ...identity, macs: ["ignored-for-valid-serial"] }), hash);
-  assert.equal(hashDeviceIdentity({ serial: "", macs: ["aa", "bb"], username: "unknown" }), createHash("sha512").update("aa,bbunknown").digest("hex"));
+  expect(hash).toBe(createHash("sha512").update(identity.serial + identity.username).digest("hex"));
+  expect(hashDeviceIdentity({ ...identity, macs: ["ignored-for-valid-serial"] })).toBe(hash);
+  expect(hashDeviceIdentity({ serial: "", macs: ["aa", "bb"], username: "unknown" })).toBe(createHash("sha512").update("aa,bbunknown").digest("hex"));
   const timestamp = 1_792_281_600_123_456_789n;
   const value = encodeFingerprint({ deviceFingerprint: hash, sessionToken: credential.sessionToken, timestampNanoseconds: timestamp, nonce: Buffer.alloc(12, 7) });
-  assert.equal(decrypt(value), `${hash}|${credential.sessionToken}|${timestamp}`);
-  assert.equal(value.length, (12 + Buffer.byteLength(`${hash}|${credential.sessionToken}|${timestamp}`) + 16) * 2);
-  assert.throws(() => decrypt(value.slice(0, -2) + (value.endsWith("00") ? "01" : "00")));
-  assert.throws(() => encodeFingerprint({ deviceFingerprint: "a", sessionToken: credential.sessionToken }), /device identifier/);
-  assert.throws(() => encodeFingerprint({ deviceFingerprint: hash, sessionToken: "invalid|token" }), /session token/);
-  assert.ok(Math.abs(Number(unixNanoseconds() / 1_000_000n) - Date.now()) < 1000);
+  expect(decrypt(value)).toBe(`${hash}|${credential.sessionToken}|${timestamp}`);
+  expect(value.length).toBe((12 + Buffer.byteLength(`${hash}|${credential.sessionToken}|${timestamp}`) + 16) * 2);
+  expect(() => decrypt(value.slice(0, -2) + (value.endsWith("00") ? "01" : "00"))).toThrow();
+  expect(() => encodeFingerprint({ deviceFingerprint: "a", sessionToken: credential.sessionToken })).toThrow(/device identifier/);
+  expect(() => encodeFingerprint({ deviceFingerprint: hash, sessionToken: "invalid|token" })).toThrow(/session token/);
+  expect(Math.abs(Number(unixNanoseconds() / 1_000_000n) - Date.now()) < 1000).toBeTruthy();
 });
 
 test("the device is looked up once, a nonce is made per request and reaches the final protobuf consumer", async () => {
@@ -65,25 +64,25 @@ test("the device is looked up once, a nonce is made per request and reaches the 
     const body = requestBody(STATUS_METHOD, init!);
     const metadata = body.metadata as Record<string, string>;
     values.push(metadata.f);
-    assert.equal(decrypt(metadata.f), `${provider.device()}|${credential.sessionToken}|123456789`);
+    expect(decrypt(metadata.f)).toBe(`${provider.device()}|${credential.sessionToken}|123456789`);
     return unaryResponse(STATUS_METHOD, {});
   } });
   for (let index = 0; index < 2; index++) await client.unary(STATUS_METHOD, { metadata: { apiKey: credential.sessionToken, f: provider.create() } });
-  assert.equal(collections, 1);
-  assert.notEqual(values[0], values[1]);
+  expect(collections).toBe(1);
+  expect(values[0]).not.toBe(values[1]);
 });
 
 test("non-darwin collection is not rejected by OS name and uses only real inputs and the native missing-value rules", () => {
   for (const platform of ["linux", "win32", "freebsd"] as const) {
     const { system, commands } = fakeSystem(platform);
-    assert.deepEqual(collectDeviceIdentity(system), { serial: "", macs: ["0a:00:00:00:00:01", "0a:00:00:00:00:02"], username: "fake-user" });
-    assert.deepEqual(commands, []); // The macOS-only ioreg/ifconfig commands are not run.
+    expect(collectDeviceIdentity(system)).toStrictEqual({ serial: "", macs: ["0a:00:00:00:00:01", "0a:00:00:00:00:02"], username: "fake-user" });
+    expect(commands).toStrictEqual([]); // The macOS-only ioreg/ifconfig commands are not run.
   }
   const failed = fakeSystem("linux", {
     networkInterfaces: () => { throw new Error("interfaces unavailable"); },
     username: () => { throw new Error("getpwuid unavailable"); },
   });
-  assert.deepEqual(collectDeviceIdentity(failed.system), { serial: "", macs: [], username: "unknown" });
+  expect(collectDeviceIdentity(failed.system)).toStrictEqual({ serial: "", macs: [], username: "unknown" });
 });
 
 test("macOS collection uses the same ioreg serial as native and, for short serials, only the ifconfig MAC", () => {
@@ -92,14 +91,14 @@ test("macOS collection uses the same ioreg serial as native and, for short seria
   const commands: string[] = [];
   const full: DeviceSystem = { platform: "darwin", networkInterfaces: noInterfaces, username: () => "mac-user",
     run: (file) => { commands.push(file); return file === "/usr/sbin/ioreg" ? ioreg("FAKE-SERIAL-1") : ""; } };
-  assert.deepEqual(collectDeviceIdentity(full), { serial: "FAKE-SERIAL-1", macs: [], username: "mac-user" });
-  assert.deepEqual(commands, ["/usr/sbin/ioreg"]);
+  expect(collectDeviceIdentity(full)).toStrictEqual({ serial: "FAKE-SERIAL-1", macs: [], username: "mac-user" });
+  expect(commands).toStrictEqual(["/usr/sbin/ioreg"]);
   commands.length = 0;
   const short: DeviceSystem = { ...full,
     run: (file) => { commands.push(file); return file === "/usr/sbin/ioreg" ? ioreg("AB") : "0a:00:00:00:00:03\n"; } };
-  assert.deepEqual(collectDeviceIdentity(short), { serial: "AB", macs: ["0a:00:00:00:00:03"], username: "mac-user" });
-  assert.deepEqual(commands, ["/usr/sbin/ioreg", "/bin/sh"]);
-  assert.deepEqual(collectDeviceIdentity({ ...full, run: () => { throw new Error("ioreg unavailable"); } }), { serial: "", macs: [], username: "mac-user" });
+  expect(collectDeviceIdentity(short)).toStrictEqual({ serial: "AB", macs: ["0a:00:00:00:00:03"], username: "mac-user" });
+  expect(commands).toStrictEqual(["/usr/sbin/ioreg", "/bin/sh"]);
+  expect(collectDeviceIdentity({ ...full, run: () => { throw new Error("ioreg unavailable"); } })).toStrictEqual({ serial: "", macs: [], username: "mac-user" });
 });
 
 test("a fingerprint from the non-darwin default collector reaches the final status, catalog and chat payloads", async () => {
@@ -120,15 +119,15 @@ test("a fingerprint from the non-darwin default collector reaches the final stat
   await client.catalog();
   const result = await streamChat(client.transport, chatRequest({ metadata: client.metadata(), model: "swe-2-medium",
     messages: [userMessage("hello")], systemPrompt: "system", maxTokens: 16, cascadeId: "cascade", trajectoryId: "trajectory" }));
-  assert.equal(result.message.prompt, "portable");
-  assert.deepEqual(seen.map((request) => request.method), [STATUS_METHOD, MODELS_METHOD, CHAT_METHOD]);
+  expect(result.message.prompt).toBe("portable");
+  expect(seen.map((request) => request.method)).toStrictEqual([STATUS_METHOD, MODELS_METHOD, CHAT_METHOD]);
   for (const { metadata } of seen) {
     const [device, token, timestamp] = decrypt(metadata.f as string).split("|");
-    assert.equal(device, expectedDevice);
-    assert.equal(token, credential.sessionToken);
-    assert.match(timestamp, /^\d+$/);
+    expect(device).toBe(expectedDevice);
+    expect(token).toBe(credential.sessionToken);
+    expect(timestamp).toMatch(/^\d+$/);
   }
-  assert.equal(new Set(seen.map((request) => request.metadata.f)).size, 3);
+  expect(new Set(seen.map((request) => request.metadata.f)).size).toBe(3);
 });
 
 test("errors hide the fingerprint ciphertext, its uppercase form and the API token", async () => {
@@ -138,6 +137,6 @@ test("errors hide the fingerprint ciphertext, its uppercase form and the API tok
     calls++;
     return Response.json({ code: "invalid_argument", message: `${credential.sessionToken} ${value} ${value.toUpperCase()}` }, { status: 400 });
   } });
-  await assert.rejects(client.unary(STATUS_METHOD, { metadata: { apiKey: credential.sessionToken, f: value } }), (error: Error) => error.message === "invalid_argument: [REDACTED] [REDACTED] [REDACTED]");
-  assert.equal(calls, 1);
+  await expect(client.unary(STATUS_METHOD, { metadata: { apiKey: credential.sessionToken, f: value } })).rejects.toThrow(expect.toSatisfy((error: Error) => error.message === "invalid_argument: [REDACTED] [REDACTED] [REDACTED]"));
+  expect(calls).toBe(1);
 });

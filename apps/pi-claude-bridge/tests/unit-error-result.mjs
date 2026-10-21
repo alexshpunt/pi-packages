@@ -5,8 +5,7 @@
  * live against the installed SDK in tests/int-cc-contracts.mjs. Without this the
  * turn finalizes as a normal stop and the failure never reaches pi.
  */
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { QueryContext } from "../src/provider/query-context.js";
 
 const { __test } = await import("../src/index.js");
@@ -41,23 +40,23 @@ const errorResult = {
 // accept an errored result as a valid summary, writing "Prompt is too long" into history.
 describe("resultErrorText", () => {
 	it("treats is_error on a success-shaped result as a failure", () => {
-		assert.strictEqual(__test.resultErrorText(errorResult), errorResult.result);
+		expect(__test.resultErrorText(errorResult)).toBe(errorResult.result);
 	});
 
 	it("returns undefined for a genuine success", () => {
-		assert.strictEqual(__test.resultErrorText({ type: "result", subtype: "success", is_error: false, result: "a summary" }), undefined);
+		expect(__test.resultErrorText({ type: "result", subtype: "success", is_error: false, result: "a summary" })).toBe(undefined);
 	});
 
 	it("joins errors[] for the dedicated error subtypes", () => {
-		assert.strictEqual(__test.resultErrorText({ type: "result", subtype: "error_during_execution", errors: ["boom", "bang"] }), "boom\nbang");
+		expect(__test.resultErrorText({ type: "result", subtype: "error_during_execution", errors: ["boom", "bang"] })).toBe("boom\nbang");
 	});
 
 	it("never returns an empty message for a failure", () => {
-		assert.ok(__test.resultErrorText({ type: "result", subtype: "success", is_error: true, result: "" }));
-		assert.ok(__test.resultErrorText({ type: "result", subtype: "error_max_budget_usd" }));
+		expect(__test.resultErrorText({ type: "result", subtype: "success", is_error: true, result: "" })).toBeTruthy();
+		expect(__test.resultErrorText({ type: "result", subtype: "error_max_budget_usd" })).toBeTruthy();
 		// errors[] is typed string[], with no promise of being non-empty; joining an
 		// empty one marks the turn errored with nothing to show the user.
-		assert.ok(__test.resultErrorText({ type: "result", subtype: "error_during_execution", errors: [] }));
+		expect(__test.resultErrorText({ type: "result", subtype: "error_during_execution", errors: [] })).toBeTruthy();
 	});
 });
 
@@ -83,23 +82,23 @@ describe("a rate-limited failure", () => {
 		const c = makeCtx();
 		await consume(c, [rejection, limitResult]);
 
-		assert.match(c.turnOutput.errorMessage, RETRYABLE);
-		assert.doesNotMatch(c.turnOutput.errorMessage, TOOL_FAILURE_PREFIX);
-		assert.ok(c.turnOutput.errorMessage.includes(limitResult.result), "keeps Claude Code's own wording");
-		assert.ok(c.turnOutput.errorMessage.includes("five_hour"));
+		expect(c.turnOutput.errorMessage).toMatch(RETRYABLE);
+		expect(c.turnOutput.errorMessage).not.toMatch(TOOL_FAILURE_PREFIX);
+		expect(c.turnOutput.errorMessage.includes(limitResult.result), "keeps Claude Code's own wording").toBeTruthy();
+		expect(c.turnOutput.errorMessage.includes("five_hour")).toBeTruthy();
 	});
 
 	it("labels only the failure it caused, not a later one", async () => {
 		const c = makeCtx();
 		await consume(c, [rejection, limitResult, errorResult]);
 
-		assert.strictEqual(c.turnOutput.errorMessage, errorResult.result);
+		expect(c.turnOutput.errorMessage).toBe(errorResult.result);
 	});
 
 	it("leaves an unrelated failure alone", async () => {
 		const c = makeCtx();
 		await consume(c, [errorResult]);
-		assert.strictEqual(c.turnOutput.errorMessage, errorResult.result);
+		expect(c.turnOutput.errorMessage).toBe(errorResult.result);
 	});
 });
 
@@ -108,15 +107,15 @@ describe("error results", () => {
 		const c = makeCtx();
 		await consume(c, [errorResult]);
 
-		assert.strictEqual(c.turnOutput.stopReason, "error");
-		assert.strictEqual(c.turnOutput.errorMessage, errorResult.result);
+		expect(c.turnOutput.stopReason).toBe("error");
+		expect(c.turnOutput.errorMessage).toBe(errorResult.result);
 
 		const stream = c.currentPiStream;
 		__test.finalizeCurrentStream(c, c.turnOutput.stopReason);
 		const terminal = stream.events.at(-2);
-		assert.strictEqual(terminal.type, "error");
-		assert.strictEqual(terminal.reason, "error");
-		assert.strictEqual(terminal.error.errorMessage, errorResult.result);
+		expect(terminal.type).toBe("error");
+		expect(terminal.reason).toBe("error");
+		expect(terminal.error.errorMessage).toBe(errorResult.result);
 	});
 
 	it("does not re-emit text the synthetic assistant message already delivered", async () => {
@@ -127,7 +126,7 @@ describe("error results", () => {
 		]);
 
 		const texts = c.turnOutput.content.filter((b) => b.type === "text");
-		assert.deepStrictEqual(texts.map((b) => b.text), [errorResult.result]);
+		expect(texts.map((b) => b.text)).toStrictEqual([errorResult.result]);
 	});
 
 	// A consumer that fails over only before output commits, such as
@@ -146,14 +145,11 @@ describe("error results", () => {
 		__test.finalizeCurrentStream(c, c.turnOutput.stopReason);
 
 		const beforeTerminal = stream.events.slice(0, -2);
-		assert.ok(
-			beforeTerminal.every((e) => e.type === "start" || e.type.startsWith("thinking_")),
-			`synthetic report must not commit output, got: ${stream.events.map((e) => e.type).join(",")}`,
-		);
-		assert.strictEqual(stream.events.at(-2).type, "error");
-		assert.strictEqual(stream.events.at(-2).error.errorMessage, errorResult.result);
+		expect(beforeTerminal.every((e) => e.type === "start" || e.type.startsWith("thinking_")), `synthetic report must not commit output, got: ${stream.events.map((e) => e.type).join(",")}`).toBeTruthy();
+		expect(stream.events.at(-2).type).toBe("error");
+		expect(stream.events.at(-2).error.errorMessage).toBe(errorResult.result);
 		// The wording still reaches pi's transcript as the failed turn's content.
-		assert.deepStrictEqual(c.turnOutput.content, [{ type: "text", text: errorResult.result }]);
+		expect(c.turnOutput.content).toStrictEqual([{ type: "text", text: errorResult.result }]);
 	});
 
 	// A stalled stream whose non-streaming retry also fails: the synthetic failure
@@ -177,22 +173,22 @@ describe("error results", () => {
 			errorResult,
 		]);
 
-		assert.deepStrictEqual(c.turnOutput.content, [{ type: "text", text: errorResult.result }]);
-		assert.strictEqual(c.turnSawToolCall, false);
-		assert.strictEqual(c.turnStreamOpen, false);
+		expect(c.turnOutput.content).toStrictEqual([{ type: "text", text: errorResult.result }]);
+		expect(c.turnSawToolCall).toBe(false);
+		expect(c.turnStreamOpen).toBe(false);
 	});
 
 	it("still streams and finalizes a successful result normally", async () => {
 		const c = makeCtx();
 		await consume(c, [{ type: "result", subtype: "success", is_error: false, result: "done" }]);
 
-		assert.strictEqual(c.turnOutput.stopReason, "stop");
-		assert.strictEqual(c.turnOutput.errorMessage, undefined);
-		assert.deepStrictEqual(c.turnOutput.content, [{ type: "text", text: "done" }]);
+		expect(c.turnOutput.stopReason).toBe("stop");
+		expect(c.turnOutput.errorMessage).toBe(undefined);
+		expect(c.turnOutput.content).toStrictEqual([{ type: "text", text: "done" }]);
 
 		const stream = c.currentPiStream;
 		__test.finalizeCurrentStream(c, c.turnOutput.stopReason);
-		assert.strictEqual(stream.events.at(-2).type, "done");
+		expect(stream.events.at(-2).type).toBe("done");
 	});
 
 	// A turn that ended on a tool call has already closed its pi stream, and the
@@ -205,15 +201,15 @@ describe("error results", () => {
 
 		await consume(c, [errorResult]);
 
-		assert.strictEqual(c.turnOutput.stopReason, "error");
-		assert.strictEqual(c.turnOutput.errorMessage, errorResult.result);
+		expect(c.turnOutput.stopReason).toBe("error");
+		expect(c.turnOutput.errorMessage).toBe(errorResult.result);
 	});
 
 	it("reports the dedicated error subtypes", async () => {
 		const c = makeCtx();
 		await consume(c, [{ type: "result", subtype: "error_max_turns", is_error: true, errors: ["hit the cap"] }]);
 
-		assert.strictEqual(c.turnOutput.stopReason, "error");
-		assert.strictEqual(c.turnOutput.errorMessage, "hit the cap");
+		expect(c.turnOutput.stopReason).toBe("error");
+		expect(c.turnOutput.errorMessage).toBe("hit the cap");
 	});
 });

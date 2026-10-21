@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { expect, test, vi } from "vitest";
 import { normalizeContext, type OAuthCredential } from "@earendil-works/pi-ai";
 import { createDevinProvider } from "../src/pi/provider.ts";
 import { chatResponseCodec } from "../src/core/protocol/protobuf.ts";
@@ -15,16 +14,16 @@ function gate<T>() { let resolve!: (value: T) => void; const promise = new Promi
 test("the body is not read before onResponse completes and the payload UID replacement is kept", async () => {
   let hasObservedResponse = false, reads = 0;
   const fixture = await providerFixture({ chat: (request) => {
-    assert.equal(request.body.chatModelUid, "swe-2-max");
+    expect(request.body.chatModelUid).toBe("swe-2-max");
     const bytes = Buffer.concat([...finalFrames("replacement").map((frame) => encodeFrame(chatResponseCodec.encode(frame))), encodeFrame(Buffer.from("{}"), 2)]);
-    return new Response(new ReadableStream({ pull(controller) { assert.equal(hasObservedResponse, true); reads++; controller.enqueue(bytes); controller.close(); } }, { highWaterMark: 0 }), { headers: { "content-type": "application/connect+proto" } });
+    return new Response(new ReadableStream({ pull(controller) { expect(hasObservedResponse).toBe(true); reads++; controller.enqueue(bytes); controller.close(); } }, { highWaterMark: 0 }), { headers: { "content-type": "application/connect+proto" } });
   } });
   try {
     const result = await fixture.provider.streamSimple(fixture.model, context(), { ...options,
       onPayload: (payload) => ({ ...(payload as JsonObject), chatModelUid: "swe-2-max" }),
-      onResponse: async () => { assert.equal(reads, 0); await Promise.resolve(); hasObservedResponse = true; },
+      onResponse: async () => { expect(reads).toBe(0); await Promise.resolve(); hasObservedResponse = true; },
     }).result();
-    assert.equal(result.stopReason, "stop", result.errorMessage ?? ""); assert.equal(result.providerThinkingLevel, "swe-2-max"); assert.equal(reads, 1);
+    expect(result.stopReason, result.errorMessage ?? "").toBe("stop"); expect(result.providerThinkingLevel).toBe("swe-2-max"); expect(reads).toBe(1);
   } finally { fixture.provider.shutdown(); }
 });
 
@@ -39,9 +38,9 @@ test("a response hook failure strips tokens, fingerprints and headers and does n
       onResponse: () => { throw new Error(`${providerCredential.sessionToken} ${fingerprint} fake-sensitive-header`); },
     });
     const result = await Promise.race([stream.result(), new Promise<undefined>((resolve) => setImmediate(() => resolve(undefined)))]);
-    assert.ok(result, "an uncooperative cleanup blocked the response from ending"); assert.equal(result.stopReason, "error"); assert.equal(cancels, 1);
+    expect(result, "an uncooperative cleanup blocked the response from ending").toBeTruthy(); if (!result) throw new Error("unreachable"); expect(result.stopReason).toBe("error"); expect(cancels).toBe(1);
     const serialized = JSON.stringify(result);
-    for (const secret of [providerCredential.sessionToken, fingerprint, "fake-sensitive-header"]) assert.equal(serialized.includes(secret), false);
+    for (const secret of [providerCredential.sessionToken, fingerprint, "fake-sensitive-header"]) expect(serialized.includes(secret)).toBe(false);
   } finally { fixture.provider.shutdown(); }
 });
 
@@ -54,17 +53,17 @@ test("a frame observer failure stops the open reader and does not wait for an un
   try {
     const stream = fixture.provider.streamSimple(fixture.model, context(), { ...options, onProviderStreamEvent: () => { throw new Error("observer failed"); } });
     const result = await Promise.race([stream.result(), new Promise<undefined>((resolve) => setImmediate(() => resolve(undefined)))]);
-    assert.ok(result); assert.equal(result.stopReason, "error"); assert.equal(cancels, 1);
+    expect(result).toBeTruthy(); if (!result) throw new Error("unreachable"); expect(result.stopReason).toBe("error"); expect(cancels).toBe(1);
   } finally { fixture.provider.shutdown(); }
 });
 
 test("even an uncooperative payload hook ends within the RPC deadline", async (context) => {
-  context.mock.timers.enable({ apis: ["setTimeout"] }); const fixture = await providerFixture();
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] }); context.onTestFinished(() => { vi.useRealTimers(); }); const fixture = await providerFixture();
   try {
     const result = await fixture.provider.streamSimple(fixture.model, normalizeContext({ messages: [] }), { ...options, timeoutMs: 5000,
-      onPayload: () => { context.mock.timers.tick(5000); return new Promise(() => {}); },
+      onPayload: () => { vi.advanceTimersByTime(5000); return new Promise(() => {}); },
     }).result();
-    assert.equal(result.stopReason, "error"); assert.match(result.errorMessage!, /5000/); assert.equal(fixture.chatCalls(), 0);
+    expect(result.stopReason).toBe("error"); expect(result.errorMessage!).toMatch(/5000/); expect(fixture.chatCalls()).toBe(0);
   } finally { fixture.provider.shutdown(); }
 });
 
@@ -75,7 +74,7 @@ test("server redaction clears the final text/thinking/tool payload and does not 
   ]) });
   try {
     const result = await fixture.provider.streamSimple(fixture.model, context(), options).result();
-    assert.equal(result.stopReason, "error"); assert.equal(JSON.stringify(result).includes("private"), false);
+    expect(result.stopReason).toBe("error"); expect(JSON.stringify(result).includes("private")).toBe(false);
   } finally { fixture.provider.shutdown(); }
 });
 
@@ -87,11 +86,11 @@ test("a 401 blocks waiting requests of the same run and later direct calls", asy
     const first = fixture.provider.streamSimple(fixture.model, context(), options), second = fixture.provider.streamSimple(fixture.model, context(), options);
     await started.promise; response.resolve(Response.json({}, { status: 401 }));
     const results = await Promise.all([first.result(), second.result()]);
-    assert.equal(results.every((result) => result.stopReason === "error"), true); assert.equal(fixture.chatCalls(), 1);
+    expect(results.every((result) => result.stopReason === "error")).toBe(true); expect(fixture.chatCalls()).toBe(1);
     fixture.provider.lifecycle.finish(); fixture.provider.lifecycle.begin("agent");
     const before = fixture.requests.length;
     const rejected = await fixture.provider.streamSimple(fixture.model, context(), options).result();
-    assert.equal(rejected.stopReason, "error"); assert.match(rejected.errorMessage!, /login/); assert.equal(fixture.requests.length, before);
+    expect(rejected.stopReason).toBe("error"); expect(rejected.errorMessage!).toMatch(/login/); expect(fixture.requests.length).toBe(before);
   } finally { fixture.provider.shutdown(); }
 });
 
@@ -114,23 +113,23 @@ test("a late 401 from an older auth generation does not cancel runs after a new 
     const model = provider.getModels().find((model) => model.id === "swe-2")!;
     const stream = provider.streamSimple(model, context(), { ...options, apiKey: credential.access });
     await chatStarted.promise;
-    const rejection = assert.rejects(refresh, /authentication|401/); oldStatus.resolve(Response.json({}, { status: 401 })); await rejection;
-    assert.equal(chatSignal.aborted, false);
+    const rejection = expect(refresh).rejects.toThrow(/authentication|401/); oldStatus.resolve(Response.json({}, { status: 401 })); await rejection;
+    expect(chatSignal.aborted).toBe(false);
     chatResponse.resolve(streamResponse(finalFrames()));
-    assert.equal((await stream.result()).stopReason, "stop");
-    assert.equal((await provider.auth.oauth!.toAuth(credential)).apiKey, credential.access);
+    expect((await stream.result()).stopReason).toBe("stop");
+    expect((await provider.auth.oauth!.toAuth(credential)).apiKey).toBe(credential.access);
   } finally { provider.shutdown(); }
 });
 
 test("thinking redaction clears only the final thinking and keeps the raw stream length stop", async () => {
   const fixture = await providerFixture({ chat: (request) => {
-    assert.equal(request.body.chatModelUid, "swe-2-medium");
-    assert.equal((request.body.configuration as JsonObject).maxTokens, "5");
+    expect(request.body.chatModelUid).toBe("swe-2-medium");
+    expect((request.body.configuration as JsonObject).maxTokens).toBe("5");
     return streamResponse([{ deltaThinking: "hidden thought", deltaText: "visible" }, { thinkingRedacted: true }, { stopReason: "STOP_REASON_MAX_TOKENS" }]);
   } });
   try {
     const result = await fixture.provider.stream(fixture.model, context(), { apiKey: providerCredential.sessionToken, maxTokens: 5 }).result();
-    assert.equal(result.stopReason, "length"); assert.equal(JSON.stringify(result).includes("hidden thought"), false);
-    assert.equal(result.content.find((block) => block.type === "text")?.text, "visible");
+    expect(result.stopReason).toBe("length"); expect(JSON.stringify(result).includes("hidden thought")).toBe(false);
+    expect(result.content.find((block) => block.type === "text")?.text).toBe("visible");
   } finally { fixture.provider.shutdown(); }
 });

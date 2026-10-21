@@ -9,8 +9,7 @@
  * waited in the MCP handler for results that never came, and the turn sat on
  * "Working" until the user aborted it.
  */
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { QueryContext } from "../src/provider/query-context.js";
 
 const { __test } = await import("../src/index.js");
@@ -63,22 +62,22 @@ describe("non-streaming fallback after a stalled stream", () => {
 		await consume(c, [...stalledStream("msg_dead"), fallbackMessage("msg_fallback")]);
 
 		const toolCalls = c.turnOutput.content.filter((b) => b.type === "toolCall");
-		assert.deepStrictEqual(toolCalls.map((b) => b.id), ["toolu_a", "toolu_b"]);
-		assert.deepStrictEqual(c.turnToolCallIds, ["toolu_a", "toolu_b"]);
-		assert.strictEqual(c.turnOutput.stopReason, "toolUse");
-		assert.strictEqual(c.currentPiStream, null);
-		assert.deepStrictEqual(stream.events.at(-2)?.type, "done");
-		assert.deepStrictEqual(stream.events.at(-1)?.type, "end");
+		expect(toolCalls.map((b) => b.id)).toStrictEqual(["toolu_a", "toolu_b"]);
+		expect(c.turnToolCallIds).toStrictEqual(["toolu_a", "toolu_b"]);
+		expect(c.turnOutput.stopReason).toBe("toolUse");
+		expect(c.currentPiStream).toBe(null);
+		expect(stream.events.at(-2)?.type).toStrictEqual("done");
+		expect(stream.events.at(-1)?.type).toStrictEqual("end");
 	});
 
 	it("drops the dead stream's partial blocks instead of replaying them", async () => {
 		const c = makeCtx();
 		await consume(c, [...stalledStream("msg_dead"), fallbackMessage("msg_fallback")]);
 
-		assert.deepStrictEqual(c.turnOutput.content.map((b) => b.type), ["thinking", "text", "toolCall", "toolCall"]);
-		assert.strictEqual(c.turnOutput.content[0].thinking, "Let me look at both.");
-		assert.strictEqual(c.turnOutput.content[0].thinkingSignature, "sig");
-		assert.ok(!c.turnOutput.content.some((b) => b.id === "toolu_dead"));
+		expect(c.turnOutput.content.map((b) => b.type)).toStrictEqual(["thinking", "text", "toolCall", "toolCall"]);
+		expect(c.turnOutput.content[0].thinking).toBe("Let me look at both.");
+		expect(c.turnOutput.content[0].thinkingSignature).toBe("sig");
+		expect(c.turnOutput.content.some((b) => b.id === "toolu_dead")).toBeFalsy();
 	});
 
 	it("drops the dead stream when Claude Code retries it as a new stream", async () => {
@@ -92,8 +91,8 @@ describe("non-streaming fallback after a stalled stream", () => {
 			streamEvent({ type: "message_stop" }),
 		]);
 
-		assert.deepStrictEqual(c.turnOutput.content.map((b) => [b.type, b.id]), [["toolCall", "toolu_retry"]]);
-		assert.strictEqual(c.turnOutput.stopReason, "toolUse");
+		expect(c.turnOutput.content.map((b) => [b.type, b.id])).toStrictEqual([["toolCall", "toolu_retry"]]);
+		expect(c.turnOutput.stopReason).toBe("toolUse");
 	});
 
 	it("still skips the assistant message that repeats a completed stream", async () => {
@@ -107,6 +106,6 @@ describe("non-streaming fallback after a stalled stream", () => {
 			streamEvent({ type: "message_stop" }),
 		]);
 
-		assert.deepStrictEqual(c.turnOutput.content.map((b) => b.text), ["hi"]);
+		expect(c.turnOutput.content.map((b) => b.text)).toStrictEqual(["hi"]);
 	});
 });

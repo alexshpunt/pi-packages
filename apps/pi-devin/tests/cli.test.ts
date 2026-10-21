@@ -1,11 +1,10 @@
-import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import { saveCredential } from "../src/cli/credentials.ts";
 import { CHAT_METHOD, chatResponseCodec, unaryCodecs } from "../src/core/protocol/protobuf.ts";
 import { encodeFrame } from "../src/core/protocol/transport.ts";
@@ -35,7 +34,7 @@ test("CLI image → real HTTP request, session resume in a new process, account 
       if (path.startsWith("/v3/")) { res.writeHead(200, { "content-type": "application/json" }).end("{}"); return; }
       const parts: Buffer[] = []; for await (const part of req) parts.push(Buffer.from(part));
       const body = Buffer.concat(parts); const method = path.slice(1);
-      assert.equal(req.headers.authorization, `Basic ${credential.sessionToken}-${credential.sessionToken}`);
+      expect(req.headers.authorization).toBe(`Basic ${credential.sessionToken}-${credential.sessionToken}`);
       const decoded = requestBody(method, { body: new Uint8Array(body) });
       if (method === CHAT_METHOD) {
         chats.push(decoded);
@@ -59,7 +58,7 @@ test("CLI image → real HTTP request, session resume in a new process, account 
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   try {
-    const address = server.address(); assert.ok(address && typeof address !== "string");
+    const address = server.address(); expect(address && typeof address !== "string").toBeTruthy(); if (!address || typeof address === "string") throw new Error("unreachable");
     base = `http://127.0.0.1:${address.port}`;
     await saveCredential({ ...credential, apiServerURL: base }, join(directory, "credentials.json"));
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jK9sAAAAASUVORK5CYII=", "base64");
@@ -67,29 +66,29 @@ test("CLI image → real HTTP request, session resume in a new process, account 
     const output = join(directory, "report.json");
     const flags = ["chat", "--allow-model-calls", "--no-title", "--no-analytics", "--max-tokens", "5000", "--json"];
     const first = await run(directory, [...flags, "--model", "SWE 2 MEDIUM", "--image", image, "--output", output]);
-    assert.equal(first.code, 0, first.stdout + first.stderr);
+    expect(first.code, first.stdout + first.stderr).toBe(0);
     const report = JSON.parse(await readFile(output, "utf8"));
-    assert.equal(report.imageCount, 1); assert.equal(report.modelCalls, 1);
-    assert.equal(chats[0].chatModelUid, "swe-2-medium");
-    assert.equal(Number(object(chats[0].configuration, "config").maxTokens), 5000);
-    assert.deepEqual((chats[0].chatMessagePrompts as JsonObject[])[1].images, [{ mimeType: "image/png", base64Data: png.toString("base64") }]);
-    assert.ok(!first.stdout.includes(png.toString("base64")));
+    expect(report.imageCount).toBe(1); expect(report.modelCalls).toBe(1);
+    expect(chats[0].chatModelUid).toBe("swe-2-medium");
+    expect(Number(object(chats[0].configuration, "config").maxTokens)).toBe(5000);
+    expect((chats[0].chatMessagePrompts as JsonObject[])[1].images).toStrictEqual([{ mimeType: "image/png", base64Data: png.toString("base64") }]);
+    expect(first.stdout.includes(png.toString("base64"))).toBeFalsy();
     const second = await run(directory, [...flags, "--resume", report.sessionId, "--model", "swe-2-high", "--prompt", "continue"]);
-    assert.equal(second.code, 0, second.stdout + second.stderr);
-    assert.equal(chats.length, 2);
-    assert.equal(chats[1].chatModelUid, "swe-2-high");
-    assert.equal((chats[1].chatMessagePrompts as JsonObject[])[3].modelUid, "swe-2-medium");
-    assert.equal(chats[1].cascadeId, chats[0].cascadeId);
-    assert.equal(chats[1].clientSessionId, chats[0].clientSessionId);
-    assert.notEqual(chats[1].executionId, chats[0].executionId);
-    assert.equal(object(chats[1].trajectoryReference, "trajectory").stepIndex, 1);
-    assert.equal((chats[1].chatMessagePrompts as JsonObject[]).length, 5);
+    expect(second.code, second.stdout + second.stderr).toBe(0);
+    expect(chats.length).toBe(2);
+    expect(chats[1].chatModelUid).toBe("swe-2-high");
+    expect((chats[1].chatMessagePrompts as JsonObject[])[3].modelUid).toBe("swe-2-medium");
+    expect(chats[1].cascadeId).toBe(chats[0].cascadeId);
+    expect(chats[1].clientSessionId).toBe(chats[0].clientSessionId);
+    expect(chats[1].executionId).not.toBe(chats[0].executionId);
+    expect(object(chats[1].trajectoryReference, "trajectory").stepIndex).toBe(1);
+    expect((chats[1].chatMessagePrompts as JsonObject[]).length).toBe(5);
     isDifferentUser = true;
     const rejected = await run(directory, [...flags, "--resume", report.sessionId, "--prompt", "do not send"]);
-    assert.equal(rejected.code, 1);
-    assert.match(rejected.stdout, /different account/);
-    assert.equal(chats.length, 2);
-    assert.deepEqual(serverErrors, []);
+    expect(rejected.code).toBe(1);
+    expect(rejected.stdout).toMatch(/different account/);
+    expect(chats.length).toBe(2);
+    expect(serverErrors).toStrictEqual([]);
   } finally {
     server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(directory, { recursive: true, force: true });
@@ -122,7 +121,7 @@ test("CLI auth/permission/429 classification, initialization and analytics event
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   try {
-    const address = server.address(); assert.ok(address && typeof address !== "string");
+    const address = server.address(); expect(address && typeof address !== "string").toBeTruthy(); if (!address || typeof address === "string") throw new Error("unreachable");
     base = `http://127.0.0.1:${address.port}`;
     const file = join(directory, "credentials.json");
     await saveCredential({ ...credential, apiServerURL: base }, file);
@@ -146,26 +145,26 @@ test("CLI auth/permission/429 classification, initialization and analytics event
         if (failure.method !== analyticsMethod) flags.push("--no-analytics");
       }
       const result = await run(directory, flags);
-      assert.equal(result.code, 1, result.stdout + result.stderr);
+      expect(result.code, result.stdout + result.stderr).toBe(1);
       const events = result.stdout.trim().split("\n").map((line) => JSON.parse(line) as JsonObject);
       const error = events.find((event) => event.event === "error");
-      assert.ok(error, result.stdout);
-      assert.equal(error.category, failure.category, result.stdout);
-      assert.equal(error.requiresLogin, failure.category === "authentication" ? true : undefined);
-      if (failure.category === "authentication") assert.match(String(error.message), /login/);
-      if (failure.status === 429) assert.equal(error.retryAfterMs, 2000);
-      assert.equal(paths.at(-1), failure.method);
-      assert.equal(paths.filter((path) => path === CHAT_METHOD).length, failure.method === CHAT_METHOD ? 1 : 0);
-      assert.equal(await readFile(file, "utf8"), original);
+      expect(error, result.stdout).toBeTruthy(); if (!error) throw new Error("unreachable");
+      expect(error.category, result.stdout).toBe(failure.category);
+      expect(error.requiresLogin).toBe(failure.category === "authentication" ? true : undefined);
+      if (failure.category === "authentication") expect(String(error.message)).toMatch(/login/);
+      if (failure.status === 429) expect(error.retryAfterMs).toBe(2000);
+      expect(paths.at(-1)).toBe(failure.method);
+      expect(paths.filter((path) => path === CHAT_METHOD).length).toBe(failure.method === CHAT_METHOD ? 1 : 0);
+      expect(await readFile(file, "utf8")).toBe(original);
     }
     failure = { method: CHAT_METHOD, status: 429, category: "error", command: "chat" }; paths = [];
     const bounded = await run(directory, ["chat", "--allow-model-calls", "--json", "--prompt", "offline retry budget",
       "--no-title", "--no-analytics", "--max-model-calls", "1"]);
-    assert.equal(bounded.code, 1);
-    assert.match(bounded.stdout, /inference request limit/);
-    assert.equal(paths.filter(path => path === CHAT_METHOD).length, 1);
-    assert.equal(await readFile(file, "utf8"), original);
-    assert.deepEqual(serverErrors, []);
+    expect(bounded.code).toBe(1);
+    expect(bounded.stdout).toMatch(/inference request limit/);
+    expect(paths.filter(path => path === CHAT_METHOD).length).toBe(1);
+    expect(await readFile(file, "utf8")).toBe(original);
+    expect(serverErrors).toStrictEqual([]);
   } finally {
     server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(directory, { recursive: true, force: true });

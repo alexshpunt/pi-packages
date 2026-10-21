@@ -14,8 +14,7 @@
 //
 // Requires: ANTHROPIC_API_KEY or CC logged in.
 
-import { test } from "node:test";
-import assert from "node:assert";
+import { expect, test } from "vitest";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createSession, repairToolPairing } from "cc-session-io";
@@ -58,11 +57,10 @@ test("a rebuilt parallel tool call keeps every result on disk", { timeout: 30_00
 	const session = seedRebuiltSession(randomUUID());
 	const results = toolResultBlocks(session.jsonlPath);
 
-	assert.equal(results.length, TOKENS.length, `expected ${TOKENS.length} tool_result blocks, got ${results.length}`);
+	expect(results.length, `expected ${TOKENS.length} tool_result blocks, got ${results.length}`).toBe(TOKENS.length);
 	for (const [index, token] of TOKENS.entries()) {
-		assert.equal(results[index].tool_use_id, `toolu_par${index}`, "each result must retain its matching call id");
-		assert.deepEqual(results[index].content, [{ type: "text", text: `The token in this file is ${token}.` }],
-			`${token} must retain the live MCP block shape in its own result`);
+		expect(results[index].tool_use_id, "each result must retain its matching call id").toBe(`toolu_par${index}`);
+		expect(results[index].content, `${token} must retain the live MCP block shape in its own result`).toEqual([{ type: "text", text: `The token in this file is ${token}.` }]);
 	}
 });
 
@@ -81,6 +79,6 @@ test("CC resumes it and Claude can read all three results back", { timeout: 120_
 	}
 
 	for (const token of TOKENS) {
-		assert.match(answer, new RegExp(token, "i"), `Claude could not see ${token} after the rebuild — answer: ${answer.trim()}`);
+		expect(answer, `Claude could not see ${token} after the rebuild — answer: ${answer.trim()}`).toMatch(new RegExp(token, "i"));
 	}
 });

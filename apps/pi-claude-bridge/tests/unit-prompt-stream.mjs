@@ -7,8 +7,7 @@
  * The ack contract only holds against that shape, so the tests exercise it
  * rather than a bare `for await`.
  */
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { makePromptStream, userMessage } from "../src/prompt-stream.js";
 
 const text = (msg) => msg.message.content[0].text;
@@ -35,12 +34,12 @@ describe("makePromptStream", () => {
 		// Write is in flight but not finished — the ack must not have resolved,
 		// or a caller could release a tool result before the steer hits stdin.
 		await new Promise((r) => setTimeout(r, 10));
-		assert.deepStrictEqual(written, ["steer"]);
-		assert.equal(acked, false, "ack resolved before the write completed");
+		expect(written).toStrictEqual(["steer"]);
+		expect(acked, "ack resolved before the write completed").toBe(false);
 
 		releaseWrite();
 		await ack;
-		assert.equal(acked, true);
+		expect(acked).toBe(true);
 
 		ps.end();
 		await pumping;
@@ -56,16 +55,16 @@ describe("makePromptStream", () => {
 		ps.end();
 		await pumping;
 
-		assert.deepStrictEqual(written, ["first", "second"]);
+		expect(written).toStrictEqual(["first", "second"]);
 	});
 
 	it("carries priority through to the SDK message", () => {
 		const msg = userMessage([{ type: "text", text: "steer" }], "next");
-		assert.equal(msg.priority, "next");
-		assert.equal(msg.parent_tool_use_id, null);
+		expect(msg.priority).toBe("next");
+		expect(msg.parent_tool_use_id).toBe(null);
 		// uuid is deliberately omitted — no dedup needed, and it would trigger a
 		// session lookup in CC's stdin loop.
-		assert.equal(msg.uuid, undefined);
+		expect(msg.uuid).toBe(undefined);
 	});
 
 	it("rejects a push after end instead of hanging", async () => {
@@ -76,7 +75,7 @@ describe("makePromptStream", () => {
 
 		// A steer racing end-of-turn must fail fast — an unsettled ack would wedge
 		// tool-result delivery forever.
-		await assert.rejects(ps.push(userMessage([{ type: "text", text: "late" }])), /closed/);
+		await expect(ps.push(userMessage([{ type: "text", text: "late" }]))).rejects.toThrow(/closed/);
 	});
 
 	it("fail settles queued and in-flight acks", async () => {
@@ -89,9 +88,9 @@ describe("makePromptStream", () => {
 		const queued = ps.push(userMessage([{ type: "text", text: "queued" }]));
 
 		ps.fail(new Error("query ended"));
-		await assert.rejects(inflight, /query ended/);
-		await assert.rejects(queued, /query ended/);
-		await assert.rejects(ps.push(userMessage([{ type: "text", text: "after" }])), /query ended/);
+		await expect(inflight).rejects.toThrow(/query ended/);
+		await expect(queued).rejects.toThrow(/query ended/);
+		await expect(ps.push(userMessage([{ type: "text", text: "after" }]))).rejects.toThrow(/query ended/);
 		void pumping;
 	});
 
@@ -103,7 +102,7 @@ describe("makePromptStream", () => {
 			for await (const _msg of ps.stream) break;
 		})();
 
-		await assert.rejects(ps.push(userMessage([{ type: "text", text: "abandoned" }])), /closed/);
+		await expect(ps.push(userMessage([{ type: "text", text: "abandoned" }]))).rejects.toThrow(/closed/);
 		await pumping;
 	});
 
@@ -112,24 +111,21 @@ describe("makePromptStream", () => {
 		const pumping = (async () => {
 			for await (const _msg of ps.stream) break;
 		})();
-		await assert.rejects(ps.push(userMessage([{ type: "text", text: "abandoned" }])), /closed/);
+		await expect(ps.push(userMessage([{ type: "text", text: "abandoned" }]))).rejects.toThrow(/closed/);
 		await pumping;
 
 		// Nothing is left to drain the queue, so this has to reject rather than
 		// park — a parked ack wedges tool-result delivery forever.
-		await assert.rejects(
-			Promise.race([
-				ps.push(userMessage([{ type: "text", text: "later" }])),
-				new Promise((_, r) => setTimeout(() => r(new Error("push hung")), 200)),
-			]),
-			/closed/,
-		);
+		await expect(Promise.race([
+			ps.push(userMessage([{ type: "text", text: "later" }])),
+			new Promise((_, r) => setTimeout(() => r(new Error("push hung")), 200)),
+		])).rejects.toThrow(/closed/);
 	});
 
 	it("keeps the first failure rather than the last", async () => {
 		const ps = makePromptStream();
 		// fail() propagates into the generator, so the pump rejects too.
-		const pumping = assert.rejects(pump(ps.stream, () => {}), /CLI exited with code 1/);
+		const pumping = expect(pump(ps.stream, () => {})).rejects.toThrow(/CLI exited with code 1/);
 		const queued = ps.push(userMessage([{ type: "text", text: "queued" }]));
 
 		// The provider's catch reports the real cause, then its finally fails the
@@ -137,8 +133,8 @@ describe("makePromptStream", () => {
 		ps.fail(new Error("CLI exited with code 1"));
 		ps.fail(new Error("query ended"));
 
-		await assert.rejects(queued, /CLI exited with code 1/);
-		await assert.rejects(ps.push(userMessage([{ type: "text", text: "after" }])), /CLI exited with code 1/);
+		await expect(queued).rejects.toThrow(/CLI exited with code 1/);
+		await expect(ps.push(userMessage([{ type: "text", text: "after" }]))).rejects.toThrow(/CLI exited with code 1/);
 		await pumping;
 	});
 });

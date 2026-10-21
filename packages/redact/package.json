@@ -34,7 +34,7 @@
         "build": "tsc",
         "typecheck": "tsc --noEmit",
         "lint": "biome check .",
-        "test:unit": "node --test \"tests/**/*.test.mjs\"",
+        "test:unit": "vitest run",
         "generate:pii-data": "node scripts/generate-pii-data.mjs",
         "verify:rust-differential": "node scripts/rust-differential/run.mjs",
         "prepack": "tsc && node ../../scripts/codex/check-package.mjs ."
@@ -43,7 +43,8 @@
         "@biomejs/biome": "catalog:",
         "@repo/typescript-config": "workspace:*",
         "@types/node": "catalog:",
-        "typescript": "catalog:"
+        "typescript": "catalog:",
+        "vitest": "catalog:"
     },
     "engines": {
         "node": ">=22.19.0"

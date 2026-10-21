@@ -1,8 +1,7 @@
 /**
  * Regression tests for syncSharedSession's session reuse decisions.
  */
-import { describe, it, afterEach } from "node:test";
-import assert from "node:assert/strict";
+import { afterEach, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -31,9 +30,9 @@ describe("syncSharedSession", () => {
 				{ role: "user", content: "Hello", timestamp: Date.now() },
 			], cwd);
 
-			assert.equal(result.sessionId, null, "a fresh session with only prompt state as priors is a clean start");
-			assert.equal(result.preserveSharedSession, undefined);
-			assert.equal(__test.getSharedSession(null), null, "a clean start must not create a session state");
+			expect(result.sessionId, "a fresh session with only prompt state as priors is a clean start").toBe(null);
+			expect(result.preserveSharedSession).toBe(undefined);
+			expect(__test.getSharedSession(null), "a clean start must not create a session state").toBe(null);
 		} finally {
 			rmSync(cwd, { recursive: true, force: true });
 		}
@@ -60,14 +59,10 @@ describe("syncSharedSession", () => {
 				{ role: "user", content: "Next", timestamp: Date.now() },
 			], cwd);
 
-			assert.equal(result.sessionId, sessionId, "2 priors at cursor 2 must resume, not rebuild");
-			assert.equal(__test.getSharedSession(null)?.cursor, 2, "cursor counts non-system messages only");
+			expect(result.sessionId, "2 priors at cursor 2 must resume, not rebuild").toBe(sessionId);
+			expect(__test.getSharedSession(null)?.cursor, "cursor counts non-system messages only").toBe(2);
 			const session = openSession({ sessionId, projectPath: cwd });
-			assert.deepEqual(
-				session.messages.map((m) => m.type),
-				["user", "assistant"],
-				"the resumed session file must hold the non-system history",
-			);
+			expect(session.messages.map((m) => m.type), "the resumed session file must hold the non-system history").toStrictEqual(["user", "assistant"]);
 		} finally {
 			deleteSession(sessionId, cwd);
 			rmSync(cwd, { recursive: true, force: true });
@@ -98,17 +93,9 @@ describe("syncSharedSession", () => {
 				},
 			], cwd);
 
-			assert.equal(
-				result.sessionId,
-				null,
-				"a reentrant context shorter than the cursor must start a fresh Claude Code session instead of resuming the parent's",
-			);
-			assert.equal(
-				result.preserveSharedSession,
-				true,
-				"the fresh session must not replace the parent's when it completes",
-			);
-			assert.deepEqual(__test.getSharedSession(null), mainSession);
+			expect(result.sessionId, "a reentrant context shorter than the cursor must start a fresh Claude Code session instead of resuming the parent's").toBe(null);
+			expect(result.preserveSharedSession, "the fresh session must not replace the parent's when it completes").toBe(true);
+			expect(__test.getSharedSession(null)).toStrictEqual(mainSession);
 		} finally {
 			rmSync(cwd, { recursive: true, force: true });
 		}
@@ -151,12 +138,8 @@ describe("syncSharedSession", () => {
 				{ role: "user", content: "Now what did it say?", timestamp: Date.now() },
 			], cwd);
 
-			assert.equal(
-				openSession({ sessionId, projectPath: cwd }).attachments.length,
-				1,
-				"the rebuild did not carry the attachment, so this proves nothing about the count",
-			);
-			assert.deepEqual(notices, []);
+			expect(openSession({ sessionId, projectPath: cwd }).attachments.length, "the rebuild did not carry the attachment, so this proves nothing about the count").toBe(1);
+			expect(notices).toStrictEqual([]);
 		} finally {
 			deleteSession(sessionId, cwd);
 			rmSync(cwd, { recursive: true, force: true });
@@ -180,10 +163,10 @@ describe("syncSharedSession", () => {
 			return { stopReason: result.stopReason, queryCount: captures.length, model: captures[1].options.model, sameId: captures[1].options.resume === id,
 				importedModel: imported.messages.find(record => record.type === "assistant").message.model };
 		});
-		assert.equal(observed.stopReason, "stop");
-		assert.equal(observed.queryCount, 2);
-		assert.equal(observed.sameId, true);
-		assert.equal(observed.model, "claude-opus-4-5");
-		assert.equal(observed.importedModel, "claude-opus-4-5");
+		expect(observed.stopReason).toBe("stop");
+		expect(observed.queryCount).toBe(2);
+		expect(observed.sameId).toBe(true);
+		expect(observed.model).toBe("claude-opus-4-5");
+		expect(observed.importedModel).toBe("claude-opus-4-5");
 	});
 });

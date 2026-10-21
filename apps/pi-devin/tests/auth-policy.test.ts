@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import { runConversation } from "../src/cli/conversation.ts";
 import { DevinClient } from "../src/core/client.ts";
 import { initializeClient } from "../src/cli/initialization.ts";
@@ -24,14 +23,14 @@ test("a 401 on the initial status call blocks later calls and is kept apart from
   const client = new DevinClient(local, { fingerprint: fingerprint(), fetch: async () => {
     calls++; return Response.json({}, { status: 401 });
   } });
-  await assert.rejects(initializeClient(client), requiresLogin);
-  assert.equal(client.transport.isAuthenticationInvalid, true);
-  await assert.rejects(client.models(), requiresLogin);
-  await assert.rejects(client.status(), requiresLogin);
-  assert.equal(calls, 1);
+  await expect(initializeClient(client)).rejects.toThrow(expect.toSatisfy(requiresLogin));
+  expect(client.transport.isAuthenticationInvalid).toBe(true);
+  await expect(client.models()).rejects.toThrow(expect.toSatisfy(requiresLogin));
+  await expect(client.status()).rejects.toThrow(expect.toSatisfy(requiresLogin));
+  expect(calls).toBe(1);
   const fresh = new DevinClient(local, { fingerprint: fingerprint(), fetch: async () => unaryResponse(STATUS_METHOD, statusResponse()) });
-  assert.equal((await fresh.status()).canUseCli, true);
-  assert.equal(fresh.transport.isAuthenticationInvalid, false);
+  expect((await fresh.status()).canUseCli).toBe(true);
+  expect(fresh.transport.isAuthenticationInvalid).toBe(false);
 });
 
 for (const failingPath of [
@@ -47,12 +46,12 @@ for (const failingPath of [
     const method = path.slice(1);
     return unaryResponse(method, method === STATUS_METHOD ? statusResponse(local.apiServerURL) : method === MODELS_METHOD ? modelResponse() : {});
   } });
-  await assert.rejects(initializeClient(client), requiresLogin);
-  assert.equal(paths.at(-1), failingPath);
-  assert.equal(client.transport.isAuthenticationInvalid, true);
+  await expect(initializeClient(client)).rejects.toThrow(expect.toSatisfy(requiresLogin));
+  expect(paths.at(-1)).toBe(failingPath);
+  expect(client.transport.isAuthenticationInvalid).toBe(true);
   const count = paths.length;
-  await assert.rejects(client.models(), requiresLogin);
-  assert.equal(paths.length, count);
+  await expect(client.models()).rejects.toThrow(expect.toSatisfy(requiresLogin));
+  expect(paths.length).toBe(count);
 });
 
 test("a 401 header alone does not wait for an endless error body", { timeout: 1000 }, async () => {
@@ -60,9 +59,9 @@ test("a 401 header alone does not wait for an endless error body", { timeout: 10
   const client = new ConnectClient({ baseURL: local.apiServerURL, token: "offline-secret", timeoutMs: 100,
     fetch: async () => new Response(new ReadableStream({ cancel() { isCancelled = true; return new Promise(() => {}); } }), { status: 401 }),
   });
-  await assert.rejects(client.unary(STATUS_METHOD, {}), requiresLogin);
-  assert.equal(isCancelled, true);
-  assert.equal(client.isAuthenticationInvalid, true);
+  await expect(client.unary(STATUS_METHOD, {})).rejects.toThrow(expect.toSatisfy(requiresLogin));
+  expect(isCancelled).toBe(true);
+  expect(client.isAuthenticationInvalid).toBe(true);
 });
 
 test("Unauthenticated in a partial stream asks for re-login and blocks follow-up requests", async () => {
@@ -72,15 +71,15 @@ test("Unauthenticated in a partial stream asks for re-login and blocks follow-up
     calls++; return errorStreamResponse("unauthenticated", token, [{ deltaText: "partial" }]);
   } });
   const stream = client.stream(CHAT_METHOD, {});
-  assert.equal((await stream.next()).value?.data.deltaText, "partial");
-  await assert.rejects(stream.next(), (error: unknown) => {
-    assert.ok(requiresLogin(error));
-    assert.ok(!(error as Error).message.includes(token));
-    assert.deepEqual(failureDetails(error), { category: "authentication", code: "unauthenticated", requiresLogin: true });
+  expect((await stream.next()).value?.data.deltaText).toBe("partial");
+  await expect(stream.next()).rejects.toThrow(expect.toSatisfy((error: unknown) => {
+    expect(requiresLogin(error)).toBeTruthy();
+    expect((error as Error).message.includes(token)).toBeFalsy();
+    expect(failureDetails(error)).toStrictEqual({ category: "authentication", code: "unauthenticated", requiresLogin: true });
     return true;
-  });
-  await assert.rejects(consume(client), requiresLogin);
-  assert.equal(calls, 1);
+  }));
+  await expect(consume(client)).rejects.toThrow(expect.toSatisfy(requiresLogin));
+  expect(calls).toBe(1);
 });
 
 test("an auth failure in another call also stops an uncooperative stream in progress", { timeout: 1000 }, async () => {
@@ -95,11 +94,11 @@ test("an auth failure in another call also stops an uncooperative stream in prog
   } });
   const stream = client.stream(CHAT_METHOD, {});
   await stream.next();
-  const rejected = assert.rejects(stream.next(), requiresLogin);
-  await assert.rejects(client.getJSON(local.apiServerURL, "/v3/self"), requiresLogin);
+  const rejected = expect(stream.next()).rejects.toThrow(expect.toSatisfy(requiresLogin));
+  await expect(client.getJSON(local.apiServerURL, "/v3/self")).rejects.toThrow(expect.toSatisfy(requiresLogin));
   await rejected;
-  assert.equal(isCancelled, true);
-  assert.equal(calls, 2);
+  expect(isCancelled).toBe(true);
+  expect(calls).toBe(2);
 });
 
 test("after a 401 on the title request, already received tool calls are not executed", async () => {
@@ -111,12 +110,12 @@ test("after a 401 on the title request, already received tool calls are not exec
     if (body.chatModelUid === "swe-1-6-fast") return new Promise<Response>((resolve) => { resolveTitle = resolve; });
     return streamResponse([{ deltaToolCalls: [{ id: "not-executed", name: "add", argumentsJson: '{"a":1,"b":2}' }] }, { stopReason: "STOP_REASON_FUNCTION_CALL" }]);
   } });
-  await assert.rejects(runConversation(client, createSession(model.id), [model], {
+  await expect(runConversation(client, createSession(model.id), [model], {
     prompt: "add numbers", onResult: () => resolveTitle(Response.json({}, { status: 401 })),
     tools: [{ ...addTool, execute: async () => { toolExecutions++; return "3"; } }],
-  }), requiresLogin);
-  assert.equal(toolExecutions, 0);
-  assert.deepEqual(requests, [model.id, "swe-1-6-fast"]);
+  })).rejects.toThrow(expect.toSatisfy(requiresLogin));
+  expect(toolExecutions).toBe(0);
+  expect(requests).toStrictEqual([model.id, "swe-1-6-fast"]);
 });
 
 for (const [status, kind] of [[403, "permission"], [429, "rate_limit"], [500, "rpc"]] as const) {
@@ -127,16 +126,16 @@ for (const [status, kind] of [[403, "permission"], [429, "rate_limit"], [500, "r
       return calls === 1 ? Response.json({ code: "unauthenticated", message: "not an authentication status" }, { status, headers: { "retry-after": "2" } })
         : unaryResponse(STATUS_METHOD, statusResponse());
     } });
-    await assert.rejects(client.unary(STATUS_METHOD, {}), (error: unknown) => {
-      assert.ok(error instanceof RPCError); assert.equal(error.kind, kind);
-      assert.equal(error.retryAfterMs, status === 429 ? 2000 : undefined);
-      assert.equal(failureDetails(error).requiresLogin, undefined);
+    await expect(client.unary(STATUS_METHOD, {})).rejects.toThrow(expect.toSatisfy((error: unknown) => {
+      expect(error instanceof RPCError).toBeTruthy(); if (!(error instanceof RPCError)) throw new Error("unreachable"); expect(error.kind).toBe(kind);
+      expect(error.retryAfterMs).toBe(status === 429 ? 2000 : undefined);
+      expect(failureDetails(error).requiresLogin).toBe(undefined);
       return true;
-    });
-    assert.equal(calls, 1);
-    assert.equal(client.isAuthenticationInvalid, false);
+    }));
+    expect(calls).toBe(1);
+    expect(client.isAuthenticationInvalid).toBe(false);
     await client.unary(STATUS_METHOD, {});
-    assert.equal(calls, 2);
+    expect(calls).toBe(2);
   });
 }
 
@@ -146,9 +145,9 @@ for (const [code, kind] of [["permission_denied", "permission"], ["resource_exha
     const client = new ConnectClient({ baseURL: local.apiServerURL, token: "offline-secret", fetch: async () => {
       calls++; return errorStreamResponse(code, "offline error");
     } });
-    await assert.rejects(consume(client, { prompt: "x".repeat(9000) }), (error: unknown) => error instanceof RPCError && error.kind === kind);
-    assert.equal(client.isAuthenticationInvalid, false);
-    assert.equal(calls, 1);
+    await expect(consume(client, { prompt: "x".repeat(9000) })).rejects.toThrow(expect.toSatisfy((error: unknown) => error instanceof RPCError && error.kind === kind));
+    expect(client.isAuthenticationInvalid).toBe(false);
+    expect(calls).toBe(1);
   });
 }
 
@@ -157,11 +156,11 @@ test("a connection failure leads to neither auth invalidation nor automatic retr
   const client = new ConnectClient({ baseURL: local.apiServerURL, token: "offline-secret", fetch: async () => {
     calls++; throw Object.assign(new Error("offline connection reset"), { code: "ECONNRESET" });
   } });
-  await assert.rejects(client.unary(STATUS_METHOD, {}), (error: unknown) => {
-    assert.deepEqual(failureDetails(error), { category: "network", code: "ECONNRESET" }); return true;
-  });
-  assert.equal(calls, 1);
-  assert.equal(client.isAuthenticationInvalid, false);
+  await expect(client.unary(STATUS_METHOD, {})).rejects.toThrow(expect.toSatisfy((error: unknown) => {
+    expect(failureDetails(error)).toStrictEqual({ category: "network", code: "ECONNRESET" }); return true;
+  }));
+  expect(calls).toBe(1);
+  expect(client.isAuthenticationInvalid).toBe(false);
 });
 
 test("HTTP 429 Retry-After dates or bad values are only hints and trigger no automatic retry", async () => {
@@ -170,14 +169,14 @@ test("HTTP 429 Retry-After dates or bad values are only hints and trigger no aut
     const client = new ConnectClient({ baseURL: local.apiServerURL, fetch: async () => {
       calls++; return Response.json({}, { status: 429, headers: { "retry-after": header } });
     } });
-    await assert.rejects(consume(client, { prompt: "x".repeat(9000) }), (error: unknown) => {
-      assert.ok(error instanceof RPCError); assert.equal(error.kind, "rate_limit");
-      if (header === "2") assert.equal(error.retryAfterMs, 2000);
-      else if (header.includes("GMT")) assert.ok(error.retryAfterMs! > 0 && error.retryAfterMs! <= 30_000);
-      else assert.equal(error.retryAfterMs, undefined);
+    await expect(consume(client, { prompt: "x".repeat(9000) })).rejects.toThrow(expect.toSatisfy((error: unknown) => {
+      expect(error instanceof RPCError).toBeTruthy(); if (!(error instanceof RPCError)) throw new Error("unreachable"); expect(error.kind).toBe("rate_limit");
+      if (header === "2") expect(error.retryAfterMs).toBe(2000);
+      else if (header.includes("GMT")) expect(error.retryAfterMs! > 0 && error.retryAfterMs! <= 30_000).toBeTruthy();
+      else expect(error.retryAfterMs).toBe(undefined);
       return true;
-    });
-    assert.equal(calls, 1);
+    }));
+    expect(calls).toBe(1);
   }
 });
 
@@ -188,11 +187,11 @@ for (const operation of ["unary", "stream", "rest"] as const) test(`the pre-resp
     fetch: () => new Promise<Response>((resolve) => { resolveResponse = resolve; }),
   });
   const pending = operation === "unary" ? client.unary(STATUS_METHOD, {}) : operation === "stream" ? consume(client) : client.getJSON(local.apiServerURL, "/v3/self");
-  await assert.rejects(pending, (error: Error) => error.name === "TimeoutError");
-  assert.equal(client.isAuthenticationInvalid, false);
+  await expect(pending).rejects.toThrow(expect.toSatisfy((error: Error) => error.name === "TimeoutError"));
+  expect(client.isAuthenticationInvalid).toBe(false);
   resolveResponse(new Response(new ReadableStream({ cancel() { isLateBodyCancelled = true; } })));
   await Promise.resolve();
-  assert.equal(isLateBodyCancelled, true);
+  expect(isLateBodyCancelled).toBe(true);
 });
 
 test("a response body timeout and an endless cancel still end within the overall deadline", { timeout: 1000 }, async () => {
@@ -204,8 +203,8 @@ test("a response body timeout and an endless cancel still end within the overall
     }), { headers: { "content-type": "application/connect+proto" } }) });
     const stream = client.stream(CHAT_METHOD, {});
     await stream.next();
-    await assert.rejects(isEarlyReturn ? stream.return(undefined) : stream.next(), (error: Error) => error.name === "TimeoutError");
-    assert.equal(isCancelled, true);
+    await expect(isEarlyReturn ? stream.return(undefined) : stream.next()).rejects.toThrow(expect.toSatisfy((error: Error) => error.name === "TimeoutError"));
+    expect(isCancelled).toBe(true);
   }
 });
 
@@ -217,10 +216,10 @@ test("the 415 resend shares the same overall deadline and caller cancel signal",
     if (signals.length === 1) { await new Promise((resolve) => setTimeout(resolve, 15)); return Response.json({}, { status: 415 }); }
     return new Promise<Response>(() => {});
   } });
-  await assert.rejects(async () => { for await (const _ of client.stream(CHAT_METHOD, { prompt: "x".repeat(9000) }, caller.signal)) {} }, (error: Error) => error.name === "TimeoutError");
-  assert.equal(signals.length, 2);
-  assert.equal(signals[0], signals[1]);
-  assert.equal(caller.signal.aborted, false);
+  await expect(async () => { for await (const _ of client.stream(CHAT_METHOD, { prompt: "x".repeat(9000) }, caller.signal)) {} }).rejects.toThrow(expect.toSatisfy((error: Error) => error.name === "TimeoutError"));
+  expect(signals.length).toBe(2);
+  expect(signals[0]).toBe(signals[1]);
+  expect(caller.signal.aborted).toBe(false);
 });
 
 test("caller cancellation is not overwritten by a timeout and the timer of a finished request is released", async () => {
@@ -228,12 +227,12 @@ test("caller cancellation is not overwritten by a timeout and the timer of a fin
   const cancelled = new ConnectClient({ baseURL: local.apiServerURL, timeoutMs: 5000, fetch: () => new Promise<Response>(() => {}) });
   const pending = cancelled.unary(STATUS_METHOD, {}, caller.signal);
   caller.abort(new DOMException("caller stop", "AbortError"));
-  await assert.rejects(pending, (error: Error) => error.name === "AbortError" && error.message === "caller stop");
+  await expect(pending).rejects.toThrow(expect.toSatisfy((error: Error) => error.name === "AbortError" && error.message === "caller stop"));
   let receivedSignal!: AbortSignal;
   const completed = new ConnectClient({ baseURL: local.apiServerURL, timeoutMs: 30, fetch: async (_url, init) => {
     receivedSignal = init!.signal!; return unaryResponse(STATUS_METHOD, statusResponse());
   } });
   await completed.unary(STATUS_METHOD, {});
   await new Promise((resolve) => setTimeout(resolve, 50));
-  assert.equal(receivedSignal.aborted, false);
+  expect(receivedSignal.aborted).toBe(false);
 });

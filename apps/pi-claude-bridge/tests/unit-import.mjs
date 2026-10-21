@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 // Unit tests for pi→Anthropic message conversion (convert.ts).
 
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -25,8 +24,8 @@ describe("tool ID sanitization", () => {
 			{ role: "toolResult", toolCallId: "functions.bash:0", content: "file.txt" },
 		];
 		const result = convert(msgs);
-		assert.equal(result[0].content[0].id, "functions_bash_0");
-		assert.equal(result[1].content[0].tool_use_id, "functions_bash_0");
+		expect(result[0].content[0].id).toBe("functions_bash_0");
+		expect(result[1].content[0].tool_use_id).toBe("functions_bash_0");
 	});
 
 	it("IDs with spaces and special chars", () => {
@@ -35,8 +34,8 @@ describe("tool ID sanitization", () => {
 			{ role: "toolResult", toolCallId: "tool call#1@foo", content: "ok" },
 		];
 		const result = convert(msgs);
-		assert.equal(result[0].content[0].id, "tool_call_1_foo");
-		assert.equal(result[1].content[0].tool_use_id, "tool_call_1_foo");
+		expect(result[0].content[0].id).toBe("tool_call_1_foo");
+		expect(result[1].content[0].tool_use_id).toBe("tool_call_1_foo");
 	});
 
 	it("already-valid Anthropic IDs pass through unchanged", () => {
@@ -45,8 +44,8 @@ describe("tool ID sanitization", () => {
 			{ role: "toolResult", toolCallId: "toolu_abc123-XYZ", content: "data" },
 		];
 		const result = convert(msgs);
-		assert.equal(result[0].content[0].id, "toolu_abc123-XYZ");
-		assert.equal(result[1].content[0].tool_use_id, "toolu_abc123-XYZ");
+		expect(result[0].content[0].id).toBe("toolu_abc123-XYZ");
+		expect(result[1].content[0].tool_use_id).toBe("toolu_abc123-XYZ");
 	});
 
 	it("tool_use and tool_result IDs stay paired after sanitization", () => {
@@ -60,7 +59,7 @@ describe("tool ID sanitization", () => {
 		for (let i = 0; i < ids.length; i++) {
 			const useId = result[i * 2].content[0].id;
 			const resultId = result[i * 2 + 1].content[0].tool_use_id;
-			assert.equal(useId, resultId, `pair ${i}: tool_use=${useId} tool_result=${resultId}`);
+			expect(useId, `pair ${i}: tool_use=${useId} tool_result=${resultId}`).toBe(resultId);
 		}
 	});
 });
@@ -74,9 +73,9 @@ describe("empty text block filtering", () => {
 			]},
 		];
 		const result = convert(msgs);
-		assert.equal(result.length, 1);
-		assert.equal(result[0].content.length, 1);
-		assert.equal(result[0].content[0].type, "tool_use");
+		expect(result.length).toBe(1);
+		expect(result[0].content.length).toBe(1);
+		expect(result[0].content[0].type).toBe("tool_use");
 	});
 
 	it("assistant with only empty text → placeholder", () => {
@@ -84,8 +83,8 @@ describe("empty text block filtering", () => {
 			{ role: "assistant", content: [{ type: "text", text: "" }] },
 		];
 		const result = convert(msgs);
-		assert.equal(result.length, 1);
-		assert.equal(result[0].content[0].text, "[incompatible content omitted]");
+		expect(result.length).toBe(1);
+		expect(result[0].content[0].text).toBe("[incompatible content omitted]");
 	});
 
 	it("assistant with non-empty text → preserved", () => {
@@ -93,8 +92,8 @@ describe("empty text block filtering", () => {
 			{ role: "assistant", content: [{ type: "text", text: "Hello world" }] },
 		];
 		const result = convert(msgs);
-		assert.equal(result.length, 1);
-		assert.equal(result[0].content[0].text, "Hello world");
+		expect(result.length).toBe(1);
+		expect(result[0].content[0].text).toBe("Hello world");
 	});
 
 	it("assistant with multiple text blocks, some empty", () => {
@@ -106,9 +105,9 @@ describe("empty text block filtering", () => {
 			]},
 		];
 		const result = convert(msgs);
-		assert.equal(result.length, 1);
-		assert.equal(result[0].content.length, 1);
-		assert.equal(result[0].content[0].text, "real content");
+		expect(result.length).toBe(1);
+		expect(result[0].content.length).toBe(1);
+		expect(result[0].content[0].text).toBe("real content");
 	});
 });
 
@@ -121,9 +120,9 @@ describe("thinking block filtering", () => {
 			]},
 		];
 		const result = convert(msgs);
-		assert.equal(result.length, 1);
-		assert.equal(result[0].content.length, 1);
-		assert.equal(result[0].content[0].type, "text");
+		expect(result.length).toBe(1);
+		expect(result[0].content.length).toBe(1);
+		expect(result[0].content[0].type).toBe("text");
 	});
 
 	it("Anthropic provider thinking with signature preserved", () => {
@@ -134,9 +133,9 @@ describe("thinking block filtering", () => {
 			]},
 		];
 		const result = convert(msgs);
-		assert.equal(result[0].content.length, 2);
-		assert.equal(result[0].content[0].type, "thinking");
-		assert.equal(result[0].content[0].signature, "sig123");
+		expect(result[0].content.length).toBe(2);
+		expect(result[0].content[0].type).toBe("thinking");
+		expect(result[0].content[0].signature).toBe("sig123");
 	});
 
 	// A signature minted by another provider isn't ours to replay into Claude
@@ -149,7 +148,7 @@ describe("thinking block filtering", () => {
 			]},
 		];
 		const result = convert(msgs);
-		assert.deepEqual(result[0].content, [{ type: "text", text: "done" }]);
+		expect(result[0].content).toStrictEqual([{ type: "text", text: "done" }]);
 	});
 
 	it("Anthropic provider thinking WITHOUT signature → dropped", () => {
@@ -160,8 +159,8 @@ describe("thinking block filtering", () => {
 			]},
 		];
 		const result = convert(msgs);
-		assert.equal(result[0].content.length, 1);
-		assert.equal(result[0].content[0].type, "text");
+		expect(result[0].content.length).toBe(1);
+		expect(result[0].content[0].type).toBe("text");
 	});
 
 	it("assistant with only thinking (non-Anthropic) → placeholder", () => {
@@ -171,8 +170,8 @@ describe("thinking block filtering", () => {
 			]},
 		];
 		const result = convert(msgs);
-		assert.equal(result.length, 1);
-		assert.equal(result[0].content[0].text, "[incompatible content omitted]");
+		expect(result.length).toBe(1);
+		expect(result[0].content[0].text).toBe("[incompatible content omitted]");
 	});
 });
 
@@ -182,18 +181,18 @@ describe("message structure", () => {
 			{ role: "toolResult", toolCallId: "id1", content: "result text", isError: false },
 		];
 		const result = convert(msgs);
-		assert.equal(result[0].role, "user");
-		assert.equal(result[0].content[0].type, "tool_result");
-		assert.equal(result[0].content[0].tool_use_id, "id1");
-		assert.deepEqual(result[0].content[0].content, textBlocks("result text"));
-		assert.equal(Object.hasOwn(result[0].content[0], "is_error"), false);
+		expect(result[0].role).toBe("user");
+		expect(result[0].content[0].type).toBe("tool_result");
+		expect(result[0].content[0].tool_use_id).toBe("id1");
+		expect(result[0].content[0].content).toStrictEqual(textBlocks("result text"));
+		expect(Object.hasOwn(result[0].content[0], "is_error")).toBe(false);
 	});
 
 	it("toolResult with isError=true", () => {
 		const msgs = [
 			{ role: "toolResult", toolCallId: "id1", content: "oh no", isError: true },
 		];
-		assert.equal(convert(msgs)[0].content[0].is_error, true);
+		expect(convert(msgs)[0].content[0].is_error).toBe(true);
 	});
 
 	// Claude Code puts every result for one assistant turn in a single user
@@ -208,11 +207,10 @@ describe("message structure", () => {
 			{ role: "toolResult", toolCallId: "t2", content: "content b" },
 		];
 		const result = convert(msgs);
-		assert.equal(result.length, 2);
-		assert.equal(result[0].content.length, 2);
-		assert.equal(result[1].role, "user");
-		assert.deepEqual(result[1].content.map((b) => [b.tool_use_id, b.content]),
-			[["t1", textBlocks("content a")], ["t2", textBlocks("content b")]]);
+		expect(result.length).toBe(2);
+		expect(result[0].content.length).toBe(2);
+		expect(result[1].role).toBe("user");
+		expect(result[1].content.map((b) => [b.tool_use_id, b.content])).toStrictEqual([["t1", textBlocks("content a")], ["t2", textBlocks("content b")]]);
 	});
 
 	it("does not merge results across an intervening user message", () => {
@@ -223,8 +221,7 @@ describe("message structure", () => {
 			{ role: "assistant", content: [{ type: "toolCall", id: "t2", name: "read", arguments: {} }] },
 			{ role: "toolResult", toolCallId: "t2", content: "b" },
 		];
-		assert.deepEqual(convert(msgs).map((m) => m.role),
-			["assistant", "user", "user", "assistant", "user"]);
+		expect(convert(msgs).map((m) => m.role)).toStrictEqual(["assistant", "user", "user", "assistant", "user"]);
 	});
 
 	it("mixed conversation: user → assistant(tool) → toolResult → assistant(text)", () => {
@@ -237,33 +234,33 @@ describe("message structure", () => {
 			{ role: "assistant", content: [{ type: "text", text: "The file says hello world." }] },
 		];
 		const result = convert(msgs);
-		assert.equal(result.length, 4);
-		assert.equal(result[0].role, "user");
-		assert.equal(result[0].content, "read file.txt");
-		assert.equal(result[1].role, "assistant");
-		assert.equal(result[1].content[0].type, "tool_use");
-		assert.equal(result[1].content[0].name, "mcp__custom-tools__read");
-		assert.equal(result[2].role, "user");
-		assert.equal(result[2].content[0].type, "tool_result");
-		assert.equal(result[3].role, "assistant");
-		assert.equal(result[3].content[0].text, "The file says hello world.");
+		expect(result.length).toBe(4);
+		expect(result[0].role).toBe("user");
+		expect(result[0].content).toBe("read file.txt");
+		expect(result[1].role).toBe("assistant");
+		expect(result[1].content[0].type).toBe("tool_use");
+		expect(result[1].content[0].name).toBe("mcp__custom-tools__read");
+		expect(result[2].role).toBe("user");
+		expect(result[2].content[0].type).toBe("tool_result");
+		expect(result[3].role).toBe("assistant");
+		expect(result[3].content[0].text).toBe("The file says hello world.");
 	});
 
 	it("user string content", () => {
-		assert.equal(convert([{ role: "user", content: "hello" }])[0].content, "hello");
+		expect(convert([{ role: "user", content: "hello" }])[0].content).toBe("hello");
 	});
 
 	it("user empty string → [empty]", () => {
-		assert.equal(convert([{ role: "user", content: "" }])[0].content, "[empty]");
+		expect(convert([{ role: "user", content: "" }])[0].content).toBe("[empty]");
 	});
 
 	it("user with array content containing text blocks", () => {
 		const result = convert([{ role: "user", content: [{ type: "text", text: "hi" }] }]);
-		assert.deepEqual(result[0].content, [{ type: "text", text: "hi" }]);
+		expect(result[0].content).toStrictEqual([{ type: "text", text: "hi" }]);
 	});
 
 	it("user with empty text blocks in array → [image] fallback", () => {
-		assert.equal(convert([{ role: "user", content: [{ type: "text", text: "" }] }])[0].content, "[image]");
+		expect(convert([{ role: "user", content: [{ type: "text", text: "" }] }])[0].content).toBe("[image]");
 	});
 
 	// With a tool map the query runs `tools: []`, so no name in the transcript may
@@ -279,16 +276,15 @@ describe("message structure", () => {
 				{ type: "toolCall", id: "c", name: "LegacyTool", arguments: {} },
 			]},
 		];
-		assert.deepEqual(convert(msgs, served)[0].content.map((b) => b.name),
-			["mcp__custom-tools__read", "mcp__custom-tools__bash", "mcp__custom-tools__LegacyTool"]);
+		expect(convert(msgs, served)[0].content.map((b) => b.name)).toStrictEqual(["mcp__custom-tools__read", "mcp__custom-tools__bash", "mcp__custom-tools__LegacyTool"]);
 	});
 
 	it("tool name mapping: an SDK name in pi history is a double mapping, not a tool", () => {
 		const msgs = [
 			{ role: "assistant", content: [{ type: "toolCall", id: "a", name: "mcp__custom-tools__bash", arguments: {} }] },
 		];
-		assert.throws(() => convert(msgs), /already an SDK tool name/);
-		assert.throws(() => convert(msgs, new Map()), /already an SDK tool name/);
+		expect(() => convert(msgs)).toThrow(/already an SDK tool name/);
+		expect(() => convert(msgs, new Map())).toThrow(/already an SDK tool name/);
 	});
 
 	it("tool name mapping: pi names use MCP even without a served-tool map", () => {
@@ -299,8 +295,8 @@ describe("message structure", () => {
 			]},
 		];
 		const result = convert(msgs);
-		assert.equal(result[0].content[0].name, "mcp__custom-tools__read");
-		assert.equal(result[0].content[1].name, "mcp__custom-tools__bash");
+		expect(result[0].content[0].name).toBe("mcp__custom-tools__read");
+		expect(result[0].content[1].name).toBe("mcp__custom-tools__bash");
 	});
 
 	it("toolResult with array content preserves separate text blocks", () => {
@@ -310,7 +306,7 @@ describe("message structure", () => {
 				{ type: "text", text: "line 2" },
 			]},
 		];
-		assert.deepEqual(convert(msgs)[0].content[0].content, [...textBlocks("line 1"), ...textBlocks("line 2")]);
+		expect(convert(msgs)[0].content[0].content).toStrictEqual([...textBlocks("line 1"), ...textBlocks("line 2")]);
 	});
 
 	// Claude Code stores screenshots as image blocks inside tool_result.content;
@@ -323,7 +319,7 @@ describe("message structure", () => {
 			]},
 		];
 		const result = convert(msgs)[0].content[0].content;
-		assert.deepEqual(result, [
+		expect(result).toStrictEqual([
 			{ type: "text", text: "captured" },
 			{ type: "image", source: { type: "base64", media_type: "image/png", data: "BASE64DATA" } },
 		]);
@@ -334,7 +330,7 @@ describe("message structure", () => {
 		const msgs = [
 			{ role: "toolResult", toolCallId: "x", content: [{ type: "text", text: "just text" }] },
 		];
-		assert.deepEqual(convert(msgs)[0].content[0].content, textBlocks("just text"));
+		expect(convert(msgs)[0].content[0].content).toStrictEqual(textBlocks("just text"));
 	});
 
 	it("toolResult drops unsupported blocks exactly as the live MCP path does", () => {
@@ -345,7 +341,7 @@ describe("message structure", () => {
 			]},
 		];
 		const result = convert(msgs)[0].content[0].content;
-		assert.deepEqual(result, [
+		expect(result).toStrictEqual([
 			{ type: "image", source: { type: "base64", media_type: "image/png", data: "BASE64DATA" } },
 		]);
 	});
@@ -357,7 +353,7 @@ describe("message structure", () => {
 			]},
 		];
 		const result = convert(msgs)[0].content[0].content;
-		assert.deepEqual(result, [
+		expect(result).toStrictEqual([
 			{ type: "image", source: { type: "base64", media_type: "image/png", data: "BASE64DATA" } },
 		]);
 	});
@@ -370,15 +366,15 @@ describe("live MCP result contracts", () => {
 				{ role: "assistant", content: [{ type: "toolCall", id: "t1", name: "Probe", arguments: {} }] },
 				{ role: "toolResult", toolCallId: "t1", content },
 			], new Map([["Probe", "mcp__custom-tools__Probe"]]));
-			assert.equal(converted[1].content[0].content, "(mcp__custom-tools__Probe completed with no output)");
-			assert.equal(Object.hasOwn(converted[1].content[0], "is_error"), false);
+			expect(converted[1].content[0].content).toBe("(mcp__custom-tools__Probe completed with no output)");
+			expect(Object.hasOwn(converted[1].content[0], "is_error")).toBe(false);
 		}
 	});
 	it("keeps failed MCP results as text without unsupported-block markers", () => {
 		const converted = convert([{ role: "toolResult", toolCallId: "t1", isError: true,
 			content: [{ type: "text", text: "failed" }, { type: "resource" }, { type: "text", text: "again" }] }]);
-		assert.equal(converted[0].content[0].content, "failed\nagain");
-		assert.equal(converted[0].content[0].is_error, true);
+		expect(converted[0].content[0].content).toBe("failed\nagain");
+		expect(converted[0].content[0].is_error).toBe(true);
 	});
 	it("writes CC's success/error key order through cc-session-io to the final JSONL", () => {
 		const root = mkdtempSync(join(tmpdir(), "bridge-result-order-"));
@@ -392,15 +388,15 @@ describe("live MCP result contracts", () => {
 			matchLiveToolResultKeyOrder(session.records);
 			const once = JSON.stringify(session.records);
 			matchLiveToolResultKeyOrder(session.records);
-			assert.equal(JSON.stringify(session.records), once);
+			expect(JSON.stringify(session.records)).toBe(once);
 			session.save();
 			const records = readFileSync(session.jsonlPath, "utf8").trim().split("\n").map(JSON.parse);
 			const results = records.find(record => record.type === "user").message.content;
-			assert.deepEqual(Object.keys(results[0]), ["tool_use_id", "type", "content"]);
-			assert.deepEqual(Object.keys(results[1]), ["type", "content", "is_error", "tool_use_id"]);
-			assert.deepEqual(results[0].content, textBlocks("value"));
-			assert.equal(results[1].content, "failure");
-			assert.equal(results[1].is_error, true);
+			expect(Object.keys(results[0])).toStrictEqual(["tool_use_id", "type", "content"]);
+			expect(Object.keys(results[1])).toStrictEqual(["type", "content", "is_error", "tool_use_id"]);
+			expect(results[0].content).toStrictEqual(textBlocks("value"));
+			expect(results[1].content).toBe("failure");
+			expect(results[1].is_error).toBe(true);
 		} finally { rmSync(root, { recursive: true, force: true }); }
 	});
 });
@@ -425,9 +421,9 @@ describe("conversion survives repairToolPairing", () => {
 		const converted = convert(parallelCall(3));
 		const repaired = repairToolPairing(converted);
 
-		assert.deepEqual(repaired, converted);
+		expect(repaired).toStrictEqual(converted);
 		const results = repaired.flatMap((m) => (Array.isArray(m.content) ? m.content : [])).filter((b) => b.type === "tool_result");
-		assert.deepEqual(results.map((b) => b.content), ["body of t0", "body of t1", "body of t2"].map(textBlocks));
+		expect(results.map((b) => b.content)).toStrictEqual(["body of t0", "body of t1", "body of t2"].map(textBlocks));
 	});
 
 	// Mid-turn steering puts a user message between the results (which is why
@@ -442,9 +438,9 @@ describe("conversion survives repairToolPairing", () => {
 		];
 		const repaired = repairToolPairing(convert(msgs));
 
-		assert.deepEqual(repaired.map((m) => m.role), ["assistant", "user", "user"]);
-		assert.deepEqual(repaired[1].content.map((b) => b.content), ["first", "second"].map(textBlocks));
-		assert.equal(repaired[2].content, "actually, also check X");
+		expect(repaired.map((m) => m.role)).toStrictEqual(["assistant", "user", "user"]);
+		expect(repaired[1].content.map((b) => b.content)).toStrictEqual(["first", "second"].map(textBlocks));
+		expect(repaired[2].content).toBe("actually, also check X");
 	});
 
 	// A steer sent while the first tool is still running lands in pi's history
@@ -459,9 +455,9 @@ describe("conversion survives repairToolPairing", () => {
 		];
 		const repaired = repairToolPairing(convert(msgs));
 
-		assert.deepEqual(repaired.map((m) => m.role), ["assistant", "user", "user"]);
-		assert.deepEqual(repaired[1].content.map((b) => b.content), ["first", "second"].map(textBlocks));
-		assert.equal(repaired[2].content, "actually stop and check X");
+		expect(repaired.map((m) => m.role)).toStrictEqual(["assistant", "user", "user"]);
+		expect(repaired[1].content.map((b) => b.content)).toStrictEqual(["first", "second"].map(textBlocks));
+		expect(repaired[2].content).toBe("actually stop and check X");
 	});
 
 	it("leaves no synthetic result stubs behind", () => {
@@ -469,7 +465,7 @@ describe("conversion survives repairToolPairing", () => {
 
 		const stubs = repaired.flatMap((m) => (Array.isArray(m.content) ? m.content : []))
 			.filter((b) => b.type === "tool_result" && typeof b.content === "string" && b.content.includes("no tool result recorded"));
-		assert.deepEqual(stubs, []);
+		expect(stubs).toStrictEqual([]);
 	});
 });
 
@@ -480,16 +476,16 @@ describe("aborted assistant turns", () => {
 			{ role: "assistant", content: [] },
 			{ role: "user", content: [{ type: "text", text: "second ask" }] },
 		]);
-		assert.equal(result.length, 2);
-		assert.deepEqual(result.map((m) => m.role), ["user", "user"]);
+		expect(result.length).toBe(2);
+		expect(result.map((m) => m.role)).toStrictEqual(["user", "user"]);
 	});
 
 	it("a turn whose blocks were all filtered still says so", () => {
 		const result = convert([
 			{ role: "assistant", provider: "deepseek", content: [{ type: "thinking", thinking: "deep thoughts" }] },
 		]);
-		assert.equal(result.length, 1);
-		assert.equal(result[0].content[0].text, "[incompatible content omitted]");
+		expect(result.length).toBe(1);
+		expect(result[0].content[0].text).toBe("[incompatible content omitted]");
 	});
 
 	// The prompt cache is keyed on exact prefix bytes, so a rebuild must reproduce
@@ -508,7 +504,7 @@ describe("aborted assistant turns", () => {
 			{ role: "user", content: [{ type: "text", text: "second ask" }] },
 			{ role: "assistant", content: [{ type: "text", text: "answer" }] },
 		]);
-		assert.deepEqual(rebuilt, live);
+		expect(rebuilt).toStrictEqual(live);
 	});
 
 	it("a result stranded after an aborted turn still lands on the real assistant", () => {
@@ -517,8 +513,8 @@ describe("aborted assistant turns", () => {
 			{ role: "assistant", content: [] },
 			{ role: "toolResult", toolCallId: "t1", content: "ok" },
 		]);
-		assert.deepEqual(result.map((m) => m.role), ["assistant", "user"]);
-		assert.equal(result[1].content[0].tool_use_id, "t1");
+		expect(result.map((m) => m.role)).toStrictEqual(["assistant", "user"]);
+		expect(result[1].content[0].tool_use_id).toBe("t1");
 	});
 });
 
@@ -534,9 +530,9 @@ describe("dropped-content accounting", () => {
 				{ type: "thinking", thinking: "mine", thinkingSignature: "sig" },
 			]},
 		]);
-		assert.equal(dropped.thinking, 1);
-		assert.deepEqual([...dropped.providers], ["openrouter"]);
-		assert.equal(dropped.abortedTurns, 1);
+		expect(dropped.thinking).toBe(1);
+		expect([...dropped.providers]).toStrictEqual(["openrouter"]);
+		expect(dropped.abortedTurns).toBe(1);
 	});
 
 	it("reports nothing when everything converts", () => {
@@ -544,8 +540,8 @@ describe("dropped-content accounting", () => {
 			{ role: "user", content: [{ type: "text", text: "hi" }] },
 			{ role: "assistant", content: [{ type: "text", text: "hello" }] },
 		]);
-		assert.equal(dropped.thinking, 0);
-		assert.equal(dropped.abortedTurns, 0);
-		assert.equal(dropped.other.size, 0);
+		expect(dropped.thinking).toBe(0);
+		expect(dropped.abortedTurns).toBe(0);
+		expect(dropped.other.size).toBe(0);
 	});
 });

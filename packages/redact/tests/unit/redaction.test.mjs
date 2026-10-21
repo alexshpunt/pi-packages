@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { fileURLToPath } from "node:url";
 import {
     BUILT_IN_RULE_IDS,
@@ -73,17 +72,17 @@ test("[core-parity] credentials are hidden without changing safe code or line br
     ];
     for (const [input, secret] of cases) {
         const masked = redactText(input);
-        assert.ok(
-            !masked.includes(secret),
+        expect(
+            masked.includes(secret),
             `credential remained visible: ${masked}`,
-        );
-        assert.ok(masked.length <= input.length);
-        assert.equal(count(masked, "\n"), count(input, "\n"));
-        assert.equal(count(masked, "\r"), count(input, "\r"));
+        ).toBeFalsy();
+        expect(masked.length <= input.length).toBeTruthy();
+        expect(count(masked, "\n")).toBe(count(input, "\n"));
+        expect(count(masked, "\r")).toBe(count(input, "\r"));
     }
     const safe =
         'const token = process.env.TOKEN;\nlet password = load_password();\nconst token_count = 12;\nconst message = "hello";\n// Basic conditional paths remain visible.\n';
-    assert.equal(redactText(safe), safe);
+    expect(redactText(safe)).toBe(safe);
 });
 
 test("[json] response masking keeps source locations and protocol structure", () => {
@@ -100,17 +99,17 @@ test("[json] response masking keeps source locations and protocol structure", ()
     const options = { stringScope: "line", textContent: "context-free" };
     const { value } = redactor.redactJson(input, options);
     const text = value.content[0].text;
-    assert.ok(
+    expect(
         text.includes("2→[REDACTED]") && text.includes("4→public = 42"),
         text,
-    );
-    assert.equal(value.content[0].type, "text");
-    assert.equal(value.other.code, -32602);
-    assert.ok(!JSON.stringify(value).includes("interior-secret"));
-    assert.ok(!JSON.stringify(value).includes("error-secret-value"));
+    ).toBeTruthy();
+    expect(value.content[0].type).toBe("text");
+    expect(value.other.code).toBe(-32602);
+    expect(JSON.stringify(value).includes("interior-secret")).toBeFalsy();
+    expect(JSON.stringify(value).includes("error-secret-value")).toBeFalsy();
     const second = redactor.redactJson(value, options);
-    assert.deepEqual(second.value, value);
-    assert.deepEqual(second.maskedLocations, []);
+    expect(second.value).toStrictEqual(value);
+    expect(second.maskedLocations).toStrictEqual([]);
 });
 
 // tests.rs runs these through tree-sitter; only the text fallback is ported.
@@ -181,14 +180,17 @@ test("[core-parity] file-path scans mask values and keep references through the 
     ];
     for (const [filePath, input, secret, safe] of cases) {
         const masked = redactText(input, { filePath });
-        assert.ok(!masked.includes(secret), `${filePath}: ${masked}`);
+        expect(masked.includes(secret), `${filePath}: ${masked}`).toBeFalsy();
         if (safe !== undefined)
-            assert.ok(masked.includes(safe), `${filePath}: ${masked}`);
+            expect(
+                masked.includes(safe),
+                `${filePath}: ${masked}`,
+            ).toBeTruthy();
         const { value } = redactor.redactJson(
             { content: [{ type: "text", text: masked }] },
             { stringScope: "line", textContent: "context-free" },
         );
-        assert.equal(value.content[0].text, masked, filePath);
+        expect(value.content[0].text, filePath).toBe(masked);
     }
 });
 
@@ -197,7 +199,7 @@ test("[core-parity] detections keep original UTF-16 spans next to Unicode text",
         "const 설명 = {password: '비밀-문자열', message: 'public-literal'};\r\n";
     const scan = redactor.scan(input, { filePath: "config.ts" });
     const secretStart = input.indexOf("비밀-문자열");
-    assert.ok(
+    expect(
         scan.detections.some(
             (detection) =>
                 detection.ruleId === "field.sensitive" &&
@@ -205,12 +207,14 @@ test("[core-parity] detections keep original UTF-16 spans next to Unicode text",
                 detection.start === secretStart &&
                 detection.end === secretStart + "비밀-문자열".length,
         ),
-    );
+    ).toBeTruthy();
     const masked = scan.render(input);
     corpus.add(input);
-    assert.ok(masked.endsWith("\r\n"));
-    assert.ok(masked.length <= input.length);
-    assert.ok(masked.includes("public-literal") && !masked.includes("비밀"));
+    expect(masked.endsWith("\r\n")).toBeTruthy();
+    expect(masked.length <= input.length).toBeTruthy();
+    expect(
+        masked.includes("public-literal") && !masked.includes("비밀"),
+    ).toBeTruthy();
 });
 
 test("[core-parity] vendor catalog and overlaps cover the whole original value", () => {
@@ -222,16 +226,15 @@ test("[core-parity] vendor catalog and overlaps cover the whole original value",
         "xoxp-abcdefghijklmnop0123456789",
         "SG.abcdefghijklmnop012345.abcdefghijklmnop0123456789",
     ])
-        assert.ok(!redactText(value).includes(value), value);
+        expect(redactText(value).includes(value), value).toBeFalsy();
     const input = `password = 'sk-proj-${"a".repeat(240)}-tail-of-secret'`;
-    assert.ok(!redactText(input).includes("tail-of-secret"));
-    assert.equal(
+    expect(redactText(input).includes("tail-of-secret")).toBeFalsy();
+    expect(
         maskRanges("abcdefghijklmnop", [
             [0, 8],
             [4, 16],
         ]),
-        REDACTION_MARKER,
-    );
+    ).toBe(REDACTION_MARKER);
 });
 
 test("[configuration] custom rules, exact exceptions, and per-key fallback", () => {
@@ -244,26 +247,28 @@ test("[configuration] custom rules, exact exceptions, and per-key fallback", () 
         "const config = { internal_credential: 'private-value', safe: 'ACME_EXAMPLE', other: 'ACME_SECRET' };";
     corpus.add(input);
     const masked = configured.redactText(input, { filePath: "config.ts" });
-    assert.ok(masked.includes("ACME_EXAMPLE"));
-    assert.ok(
+    expect(masked.includes("ACME_EXAMPLE")).toBeTruthy();
+    expect(
         !masked.includes("ACME_SECRET") && !masked.includes("private-value"),
-    );
+    ).toBeTruthy();
     // An exception never suppresses another matching rule or a longer value.
-    assert.ok(
-        !configured.redactText("ACME_EXAMPLEPLUS").includes("ACME_EXAMPLE"),
-    );
-    assert.ok(
-        !configured
+    expect(
+        configured.redactText("ACME_EXAMPLEPLUS").includes("ACME_EXAMPLE"),
+    ).toBeFalsy();
+    expect(
+        configured
             .redactText("password='ACME_EXAMPLE'")
             .includes("ACME_EXAMPLE"),
-    );
+    ).toBeFalsy();
     const fallback = normalizeRedactionConfig({
         rules: [{ id: "custom.invalid", pattern: "[" }],
         sensitiveFields: ["internalCredential"],
     });
-    assert.deepEqual(fallback.config.rules, []);
-    assert.deepEqual(fallback.config.sensitiveFields, ["internalCredential"]);
-    assert.deepEqual(fallback.issues, [
+    expect(fallback.config.rules).toStrictEqual([]);
+    expect(fallback.config.sensitiveFields).toStrictEqual([
+        "internalCredential",
+    ]);
+    expect(fallback.issues).toStrictEqual([
         {
             key: "rules",
             index: 0,
@@ -271,9 +276,9 @@ test("[configuration] custom rules, exact exceptions, and per-key fallback", () 
         },
     ]);
     const empty = normalizeRedactionConfig({ rules: [], exceptions: [] });
-    assert.deepEqual(empty.config.rules, []);
-    assert.deepEqual(empty.config.exceptions, []);
-    assert.deepEqual(empty.issues, []);
+    expect(empty.config.rules).toStrictEqual([]);
+    expect(empty.config.exceptions).toStrictEqual([]);
+    expect(empty.issues).toStrictEqual([]);
 });
 
 // value.ts, value.py, and value.json depend on tree-sitter template, concatenation,
@@ -301,8 +306,11 @@ test("[core-parity] concatenated and unrecognized values retain coverage", () =>
     ]) {
         const output = redactText(input, { filePath });
         for (const secret of secrets)
-            assert.ok(!output.includes(secret), `${filePath}: ${output}`);
-        assert.ok(output.includes(safe), `${filePath}: ${output}`);
+            expect(
+                output.includes(secret),
+                `${filePath}: ${output}`,
+            ).toBeFalsy();
+        expect(output.includes(safe), `${filePath}: ${output}`).toBeTruthy();
     }
 });
 
@@ -321,17 +329,17 @@ test("[configuration] custom capture groups limit masking to the secret", () => 
     corpus.add(source);
     const scan = configured.scan(source, { filePath: "config.ts" });
     const output = scan.render(source);
-    assert.ok(
+    expect(
         !output.includes("private-value") && !output.includes("VALUE_SECRET"),
-    );
-    assert.ok(output.includes("LABEL="));
-    assert.ok(
+    ).toBeTruthy();
+    expect(output.includes("LABEL=")).toBeTruthy();
+    expect(
         scan.detections.some(
             (detection) =>
                 detection.ruleId === "custom.capture" &&
                 detection.kind === "custom",
         ),
-    );
+    ).toBeTruthy();
 });
 
 const ruleCases = {
@@ -375,8 +383,7 @@ const ruleCases = {
 };
 
 test("[rules] the rule-case table covers every built-in rule id", () => {
-    assert.deepEqual(
-        Object.keys(ruleCases).sort(),
+    expect(Object.keys(ruleCases).sort()).toStrictEqual(
         [...BUILT_IN_RULE_IDS, "private-key.pem", "field.sensitive"].sort(),
     );
     const [secret] = redactor
@@ -384,7 +391,7 @@ test("[rules] the rule-case table covers every built-in rule id", () => {
         .detections.filter(
             (detection) => detection.ruleId === "credential.url-password",
         );
-    assert.deepEqual([secret.start, secret.end], [13, 21]);
+    expect([secret.start, secret.end]).toStrictEqual([13, 21]);
 });
 
 for (const [ruleId, [positive, negative]] of Object.entries(ruleCases))
@@ -395,30 +402,32 @@ for (const [ruleId, [positive, negative]] of Object.entries(ruleCases))
             redactor
                 .scan(text)
                 .detections.filter((detection) => detection.ruleId === ruleId);
-        assert.ok(hits(positive).length > 0, `${ruleId} missed ${positive}`);
-        assert.equal(hits(negative).length, 0, `${ruleId} matched ${negative}`);
+        expect(
+            hits(positive).length > 0,
+            `${ruleId} missed ${positive}`,
+        ).toBeTruthy();
+        expect(hits(negative).length, `${ruleId} matched ${negative}`).toBe(0);
     });
 
 test("[rules] Unicode word boundaries follow Rust semantics", () => {
     const token = `ghp_${"a".repeat(36)}`;
-    assert.equal(redactor.scan(`가${token}`).detections.length, 0);
-    assert.equal(redactor.scan(`${token}가`).detections.length, 0);
-    assert.equal(redactor.scan(`가 ${token}`).detections.length, 1);
-    assert.equal(redactor.scan(`-${token}`).detections.length, 1);
+    expect(redactor.scan(`가${token}`).detections.length).toBe(0);
+    expect(redactor.scan(`${token}가`).detections.length).toBe(0);
+    expect(redactor.scan(`가 ${token}`).detections.length).toBe(1);
+    expect(redactor.scan(`-${token}`).detections.length).toBe(1);
     // `(?i)` folds U+212A KELVIN SIGN to `k`, as Rust case-insensitive classes do.
-    assert.ok(
+    expect(
         redactor
             .scan("https://ci.example.com/hoo\u212As/abcdefghijklmnop1234")
             .detections.some(
                 (detection) => detection.ruleId === "credential.webhook-url",
             ),
-    );
+    ).toBeTruthy();
     // U+0085 is Unicode whitespace for Rust `\s`; U+FEFF is not.
-    assert.equal(
+    expect(
         redactor.scan("https://user:pass\u0085word@example.com").detections
             .length,
-        0,
-    );
+    ).toBe(0);
 });
 
 function seededRandom(seed) {
@@ -501,16 +510,15 @@ test("[linear-time] linear rewrites match their reference translations", () => {
                 text += alphabet[random(alphabet.length)];
             const expected = [...reference(text)];
             if (expected.length) matchedCases++;
-            assert.deepEqual(
+            expect(
                 [...linear(text)],
-                expected,
                 `${ruleId}: ${JSON.stringify(text)}`,
-            );
+            ).toStrictEqual(expected);
         }
-        assert.ok(
+        expect(
             matchedCases > 50,
             `${ruleId} produced too few matching cases`,
-        );
+        ).toBeTruthy();
     }
 });
 
@@ -577,10 +585,10 @@ test("[linear-time] built-in patterns grow less than 8x from 256 KiB to 1 MiB", 
             // Sub-millisecond baselines are timer noise; floor them at 0.5 ms.
             const small = Math.max(measure(fn, smallInput), 0.5);
             const large = measure(fn, largeInput);
-            assert.ok(
+            expect(
                 large / small < 8,
                 `${ruleId} on ${JSON.stringify(fragment)}: ${small.toFixed(2)} ms -> ${large.toFixed(2)} ms`,
-            );
+            ).toBeTruthy();
         }
 });
 
@@ -590,48 +598,44 @@ test("[masking] scans render whole texts and sub-ranges from one full scan", () 
     const scan = redactor.scan(source);
     const lineStart = source.indexOf("line-two-secret");
     const lineEnd = lineStart + "line-two-secret\n".length;
-    assert.equal(
-        scan.renderRange(source, lineStart, lineEnd),
+    expect(scan.renderRange(source, lineStart, lineEnd)).toBe(
         `${REDACTION_MARKER}\n`,
     );
-    assert.equal(scan.renderRange(source, 0, 7), "header\n");
-    assert.equal(
-        redactor.redactText(source.slice(lineStart, lineEnd)),
+    expect(scan.renderRange(source, 0, 7)).toBe("header\n");
+    expect(redactor.redactText(source.slice(lineStart, lineEnd))).toBe(
         "line-two-secret\n",
     );
     for (const detection of scan.detections)
-        assert.deepEqual(Object.keys(detection).sort(), [
+        expect(Object.keys(detection).sort()).toStrictEqual([
             "end",
             "kind",
             "ruleId",
             "start",
         ]);
-    assert.ok(Object.isFrozen(scan) && Object.isFrozen(scan.detections));
+    expect(
+        Object.isFrozen(scan) && Object.isFrozen(scan.detections),
+    ).toBeTruthy();
 });
 
 test("[masking] hidden values never grow and keep CR/LF in place", () => {
-    assert.equal(hideValue("short"), "*****");
-    assert.equal(
-        hideValue("long-enough-value\r\nab\n"),
+    expect(hideValue("short")).toBe("*****");
+    expect(hideValue("long-enough-value\r\nab\n")).toBe(
         `${REDACTION_MARKER}\r\n**\n`,
     );
-    assert.equal(hideValue(REDACTION_MARKER), REDACTION_MARKER);
-    assert.equal(hideValue("한글"), "**");
-    assert.equal(redactor.redactNamedValue("password", "x"), "*");
-    assert.equal(
-        redactor.redactNamedValue("Proxy-Password", "secret-value-1"),
+    expect(hideValue(REDACTION_MARKER)).toBe(REDACTION_MARKER);
+    expect(hideValue("한글")).toBe("**");
+    expect(redactor.redactNamedValue("password", "x")).toBe("*");
+    expect(redactor.redactNamedValue("Proxy-Password", "secret-value-1")).toBe(
         REDACTION_MARKER,
     );
-    assert.equal(
-        redactor.redactNamedValue("description", "plain words"),
+    expect(redactor.redactNamedValue("description", "plain words")).toBe(
         "plain words",
     );
-    assert.equal(
+    expect(
         redactor.redactNamedValue("description", `ghp_${"a".repeat(36)}`),
-        REDACTION_MARKER,
-    );
-    assert.ok(redactor.isSensitiveField("client_secret"));
-    assert.ok(!redactor.isSensitiveField("authorization"));
+    ).toBe(REDACTION_MARKER);
+    expect(redactor.isSensitiveField("client_secret")).toBeTruthy();
+    expect(redactor.isSensitiveField("authorization")).toBeFalsy();
 });
 
 test("[json] JSON masking preserves keys, structure, and preserved paths", () => {
@@ -652,37 +656,37 @@ test("[json] JSON masking preserves keys, structure, and preserved paths", () =>
         shouldPreserve: (path) => path.length === 1 && path[0] === "id",
     };
     const { value, maskedLocations } = redactor.redactJson(input, options);
-    assert.equal(value.id, input.id);
-    assert.equal(value.password, "*****");
-    assert.equal(value.count, 3);
-    assert.equal(value.enabled, true);
-    assert.equal(value.nothing, null);
-    assert.equal(value.nested[0].apiKey, REDACTION_MARKER);
-    assert.equal(
-        value.nested[1],
+    expect(value.id).toBe(input.id);
+    expect(value.password).toBe("*****");
+    expect(value.count).toBe(3);
+    expect(value.enabled).toBe(true);
+    expect(value.nothing).toBe(null);
+    expect(value.nested[0].apiKey).toBe(REDACTION_MARKER);
+    expect(value.nested[1]).toBe(
         `note ${REDACTION_MARKER}\n${REDACTION_MARKER}\n${REDACTION_MARKER}`,
     );
-    assert.deepEqual(value.list, input.list);
-    assert.equal(Object.getPrototypeOf(value), Object.prototype);
-    assert.equal(
-        Object.getOwnPropertyDescriptor(value, "__proto__").value,
+    expect(value.list).toStrictEqual(input.list);
+    expect(Object.getPrototypeOf(value)).toBe(Object.prototype);
+    expect(Object.getOwnPropertyDescriptor(value, "__proto__").value).toBe(
         "proto-value",
     );
-    assert.equal(value.date, "1970-01-01T00:00:00.000Z");
-    assert.deepEqual(maskedLocations, [
+    expect(value.date).toBe("1970-01-01T00:00:00.000Z");
+    expect(maskedLocations).toStrictEqual([
         { path: ["password"], ruleId: "field.sensitive" },
         { path: ["nested", 0, "apiKey"], ruleId: "field.sensitive" },
         { path: ["nested", 1], ruleId: "private-key.pem" },
     ]);
-    assert.ok(!JSON.stringify(maskedLocations).includes("secret-value"));
+    expect(
+        JSON.stringify(maskedLocations).includes("secret-value"),
+    ).toBeFalsy();
     const lineScoped = redactor.redactJson(
         { text: pem },
         { stringScope: "line" },
     );
-    assert.ok(lineScoped.value.text.includes("pem-body-secret"));
+    expect(lineScoped.value.text.includes("pem-body-secret")).toBeTruthy();
     const again = redactor.redactJson(value, options);
-    assert.deepEqual(again.value, value);
-    assert.deepEqual(again.maskedLocations, []);
+    expect(again.value).toStrictEqual(value);
+    expect(again.maskedLocations).toStrictEqual([]);
 });
 
 test("[configuration] normalization reports keys and indexes, never values", () => {
@@ -705,45 +709,46 @@ test("[configuration] normalization reports keys and indexes, never values", () 
         piiEntities: ["EMAIL"],
         [secret]: true,
     });
-    assert.deepEqual(config.sensitiveFields, []);
-    assert.deepEqual(config.rules, []);
-    assert.deepEqual(config.exceptions, []);
-    assert.deepEqual(config.piiEntities, []);
-    assert.deepEqual(
-        issues.map(({ key, index }) => [key, index]),
-        [
-            [secret, undefined],
-            ["sensitiveFields", 0],
-            ["rules", 1],
-            ["rules", 2],
-            ["rules", 3],
-            ["rules", 4],
-            ["rules", 5],
-            ["rules", 6],
-            ["exceptions", 0],
-            ["piiEntities", 0],
-        ],
-    );
+    expect(config.sensitiveFields).toStrictEqual([]);
+    expect(config.rules).toStrictEqual([]);
+    expect(config.exceptions).toStrictEqual([]);
+    expect(config.piiEntities).toStrictEqual([]);
+    expect(issues.map(({ key, index }) => [key, index])).toStrictEqual([
+        [secret, undefined],
+        ["sensitiveFields", 0],
+        ["rules", 1],
+        ["rules", 2],
+        ["rules", 3],
+        ["rules", 4],
+        ["rules", 5],
+        ["rules", 6],
+        ["exceptions", 0],
+        ["piiEntities", 0],
+    ]);
     for (const issue of issues)
         if (issue.key !== secret)
-            assert.ok(!JSON.stringify(issue).includes(secret));
-    assert.ok(!JSON.stringify(issues).includes("EMAIL"));
-    assert.throws(
-        () =>
-            createRedactor({
-                rules: [{ id: "custom.bad", pattern: `(${secret}` }],
-            }),
-        (error) =>
-            error instanceof RedactionConfigError &&
-            !error.message.includes(secret) &&
-            error.issues.length === 1,
+            expect(JSON.stringify(issue).includes(secret)).toBeFalsy();
+    expect(JSON.stringify(issues).includes("EMAIL")).toBeFalsy();
+    expect(() =>
+        createRedactor({
+            rules: [{ id: "custom.bad", pattern: `(${secret}` }],
+        }),
+    ).toThrow(
+        expect.toSatisfy(
+            (error) =>
+                error instanceof RedactionConfigError &&
+                !error.message.includes(secret) &&
+                error.issues.length === 1,
+        ),
     );
-    assert.throws(() => createRedactor({ unknown: [] }), RedactionConfigError);
+    expect(() => createRedactor({ unknown: [] })).toThrow(RedactionConfigError);
     const valid = createRedactor({
         rules: [{ id: "custom.case", pattern: "acme_[a-z]+", flags: "i" }],
     });
-    assert.equal(valid.redactText("ACME_TOKENVALUE"), REDACTION_MARKER);
-    assert.ok(Object.isFrozen(valid) && Object.isFrozen(valid.config));
+    expect(valid.redactText("ACME_TOKENVALUE")).toBe(REDACTION_MARKER);
+    expect(
+        Object.isFrozen(valid) && Object.isFrozen(valid.config),
+    ).toBeTruthy();
 });
 
 test("[configuration] host rules and fields use their own namespace", () => {
@@ -761,46 +766,42 @@ test("[configuration] host rules and fields use their own namespace", () => {
         },
     );
     const scan = host.scan("synthetic_marker USER_42");
-    assert.deepEqual(
+    expect(
         scan.detections.map(({ ruleId, kind }) => [ruleId, kind]),
-        [
-            ["host.synthetic", "host"],
-            ["custom.user", "custom"],
-        ],
-    );
-    assert.equal(
-        host.redactNamedValue("Authorization", "Basic abc"),
+    ).toStrictEqual([
+        ["host.synthetic", "host"],
+        ["custom.user", "custom"],
+    ]);
+    expect(host.redactNamedValue("Authorization", "Basic abc")).toBe(
         "*********",
     );
-    assert.ok(!host.config.rules.some((rule) => rule.id.startsWith("host.")));
-    assert.throws(
-        () => createRedactor({}, { rules: [{ id: "custom.x", pattern: "x" }] }),
-        RedactionConfigError,
-    );
-    assert.throws(
-        () => createRedactor({ rules: [{ id: "host.x", pattern: "x" }] }),
-        RedactionConfigError,
-    );
+    expect(
+        host.config.rules.some((rule) => rule.id.startsWith("host.")),
+    ).toBeFalsy();
+    expect(() =>
+        createRedactor({}, { rules: [{ id: "custom.x", pattern: "x" }] }),
+    ).toThrow(RedactionConfigError);
+    expect(() =>
+        createRedactor({ rules: [{ id: "host.x", pattern: "x" }] }),
+    ).toThrow(RedactionConfigError);
 });
 
 test("[pii] the PII extension point is off by default and accepts only catalog names", () => {
-    assert.equal(listSupportedPiiEntities().length, 90);
-    assert.equal(isSupportedPiiEntity("EMAIL_ADDRESS"), true);
-    assert.equal(piiRuleId("CREDIT_CARD"), "pii.credit-card");
-    assert.throws(
-        () => createRedactor({ piiEntities: ["EMAIL"] }),
+    expect(listSupportedPiiEntities().length).toBe(90);
+    expect(isSupportedPiiEntity("EMAIL_ADDRESS")).toBe(true);
+    expect(piiRuleId("CREDIT_CARD")).toBe("pii.credit-card");
+    expect(() => createRedactor({ piiEntities: ["EMAIL"] })).toThrow(
         RedactionConfigError,
     );
     const text = "mail user@example.com card 4111 1111 1111 1111";
-    assert.equal(createRedactor({ piiEntities: [] }).redactText(text), text);
-    assert.equal(
+    expect(createRedactor({ piiEntities: [] }).redactText(text)).toBe(text);
+    expect(
         redactor.scan(text, { mode: "context-free" }).detections.length,
-        0,
-    );
+    ).toBe(0);
 });
 
 test("[properties] masking never grows output, keeps line breaks, and is idempotent", () => {
-    assert.ok(corpus.size > 40, `corpus has ${corpus.size} inputs`);
+    expect(corpus.size > 40, `corpus has ${corpus.size} inputs`).toBeTruthy();
     for (const input of corpus) {
         for (const options of [
             {},
@@ -808,20 +809,20 @@ test("[properties] masking never grows output, keeps line breaks, and is idempot
             { mode: "context-free" },
         ]) {
             const masked = redactor.redactText(input, options);
-            assert.ok(masked.length <= input.length);
-            assert.deepEqual(
+            expect(masked.length <= input.length).toBeTruthy();
+            expect(
                 [...masked.matchAll(/\r|\n/g)].map((found) => found[0]),
+            ).toStrictEqual(
                 [...input.matchAll(/\r|\n/g)].map((found) => found[0]),
             );
             const inputLines = input.split("\n");
             masked.split("\n").forEach((line, index) => {
-                assert.ok(line.length <= inputLines[index].length);
+                expect(line.length <= inputLines[index].length).toBeTruthy();
             });
-            assert.equal(
+            expect(
                 redactor.redactText(masked, options),
-                masked,
                 JSON.stringify(input),
-            );
+            ).toBe(masked);
         }
     }
 });
@@ -833,10 +834,13 @@ test("[properties] the engine imports nothing from Pi or auto-review", async () 
     const files = [];
     for (const entry of await readdir(sourceDirectory, { recursive: true }))
         if (entry.endsWith(".ts")) files.push(entry);
-    assert.ok(files.length > 5);
+    expect(files.length > 5).toBeTruthy();
     for (const file of files) {
         const source = await readFile(join(sourceDirectory, file), "utf8");
-        assert.ok(!/earendil-works|pi-codex-auto-review/.test(source), file);
+        expect(
+            /earendil-works|pi-codex-auto-review/.test(source),
+            file,
+        ).toBeFalsy();
     }
     const manifest = JSON.parse(
         await readFile(
@@ -844,5 +848,5 @@ test("[properties] the engine imports nothing from Pi or auto-review", async () 
             "utf8",
         ),
     );
-    assert.equal(manifest.dependencies, undefined);
+    expect(manifest.dependencies).toBe(undefined);
 });

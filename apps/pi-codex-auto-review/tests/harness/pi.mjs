@@ -104,7 +104,7 @@ export async function guardedFixture(t, f, options = {}) {
         },
         ...options,
     });
-    t.after(async () => {
+    t.onTestFinished(async () => {
         await runtime.dispose();
     });
     return runtime;

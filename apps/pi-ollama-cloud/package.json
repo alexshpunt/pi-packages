@@ -65,7 +65,7 @@
     "@typescript/native-preview": "catalog:",
     "tsx": "catalog:",
     "typebox": "catalog:",
-    "vitest": "^4.1.11"
+    "vitest": "catalog:"
   },
   "dependencies": {
     "proper-lockfile": "^4.1.2"

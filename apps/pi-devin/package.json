@@ -41,8 +41,8 @@
   },
   "scripts": {
     "typecheck": "tsgo --noEmit",
-    "verify:offline": "node --test tests/*.test.ts",
-    "test:unit": "node --test tests/*.test.ts",
+    "verify:offline": "vitest run",
+    "test:unit": "vitest run",
     "cli": "node cli.ts"
   },
   "dependencies": {
@@ -60,6 +60,7 @@
     "@earendil-works/pi-tui": "catalog:devin",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "vitest": "catalog:"
   }
 }

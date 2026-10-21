@@ -12,8 +12,7 @@
  * stay synthetic on purpose: a 429 and a hallucinated tool name cannot be recorded
  * on demand.
  */
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { QueryContext } from "../src/provider/query-context.js";
 
@@ -71,18 +70,18 @@ describe("replaying a recorded text-only turn", () => {
 	it("produces the assistant text and a clean stop", async () => {
 		const { ctx, events } = await replay("text");
 
-		assert.equal(blocks(ctx, "text").map((b) => b.text).join("").trim(), "ALPHA");
-		assert.equal(ctx.turnOutput.stopReason, "stop");
-		assert.equal(ctx.turnSawToolCall, false);
-		assert.ok(events.some((e) => e.type === "text_delta"), "pi should have seen streaming deltas");
+		expect(blocks(ctx, "text").map((b) => b.text).join("").trim()).toBe("ALPHA");
+		expect(ctx.turnOutput.stopReason).toBe("stop");
+		expect(ctx.turnSawToolCall).toBe(false);
+		expect(events.some((e) => e.type === "text_delta"), "pi should have seen streaming deltas").toBeTruthy();
 	});
 
 	it("reports usage and captures the session id", async () => {
 		const { ctx, capturedSessionId } = await replay("text");
 
-		assert.ok(ctx.turnOutput.usage.output > 0, "output tokens");
-		assert.ok(ctx.turnOutput.usage.input + ctx.turnOutput.usage.cacheRead + ctx.turnOutput.usage.cacheWrite > 0, "prompt tokens");
-		assert.match(capturedSessionId ?? "", /^[0-9a-f-]{36}$/);
+		expect(ctx.turnOutput.usage.output > 0, "output tokens").toBeTruthy();
+		expect(ctx.turnOutput.usage.input + ctx.turnOutput.usage.cacheRead + ctx.turnOutput.usage.cacheWrite > 0, "prompt tokens").toBeTruthy();
+		expect(capturedSessionId ?? "").toMatch(/^[0-9a-f-]{36}$/);
 	});
 });
 
@@ -94,9 +93,9 @@ describe("reasoning tokens from a recorded turn", () => {
 			const { ctx, messages } = await replay(name);
 			const expected = turnThinkingTokens(messages);
 
-			assert.ok(expected > 0, "fixture must carry a thinking-token count, else this asserts nothing");
-			assert.equal(ctx.turnOutput.usage.reasoning, expected);
-			assert.ok(expected <= ctx.turnOutput.usage.output, "SDK documents thinking_tokens <= output_tokens");
+			expect(expected > 0, "fixture must carry a thinking-token count, else this asserts nothing").toBeTruthy();
+			expect(ctx.turnOutput.usage.reasoning).toBe(expected);
+			expect(expected <= ctx.turnOutput.usage.output, "SDK documents thinking_tokens <= output_tokens").toBeTruthy();
 		});
 	}
 
@@ -110,9 +109,9 @@ describe("reasoning tokens from a recorded turn", () => {
 			.map((u) => u.output_tokens_details?.thinking_tokens)
 			.filter((n) => n != null);
 
-		assert.ok(counts.length > 1, "fixture must span more than one cycle for this to mean anything");
-		assert.equal(ctx.turnOutput.stopReason, "toolUse", "the turn must have ended on the tool call");
-		assert.equal(ctx.turnOutput.usage.reasoning, counts[0]);
+		expect(counts.length > 1, "fixture must span more than one cycle for this to mean anything").toBeTruthy();
+		expect(ctx.turnOutput.stopReason, "the turn must have ended on the tool call").toBe("toolUse");
+		expect(ctx.turnOutput.usage.reasoning).toBe(counts[0]);
 	});
 });
 
@@ -121,11 +120,11 @@ describe("replaying a recorded single-tool turn", () => {
 		const { ctx } = await replay("single-tool");
 
 		const calls = blocks(ctx, "toolCall");
-		assert.equal(calls.length, 1);
-		assert.equal(calls[0].name, "read", "SDK's mcp__custom-tools__read must arrive as pi's read");
-		assert.ok(calls[0].id.startsWith("toolu_"));
-		assert.equal(ctx.turnSawToolCall, true);
-		assert.deepEqual(ctx.turnToolCallIds, [calls[0].id]);
+		expect(calls.length).toBe(1);
+		expect(calls[0].name, "SDK's mcp__custom-tools__read must arrive as pi's read").toBe("read");
+		expect(calls[0].id.startsWith("toolu_")).toBeTruthy();
+		expect(ctx.turnSawToolCall).toBe(true);
+		expect(ctx.turnToolCallIds).toStrictEqual([calls[0].id]);
 	});
 });
 
@@ -134,10 +133,10 @@ describe("replaying a recorded parallel-tool turn", () => {
 		const { ctx } = await replay("parallel-tools");
 
 		const calls = blocks(ctx, "toolCall");
-		assert.ok(calls.length >= 2, `expected a parallel batch, got ${calls.length}`);
-		assert.deepEqual(ctx.turnToolCallIds, calls.map((c) => c.id), "routing ids must match the emitted calls, in order");
-		assert.equal(new Set(calls.map((c) => c.id)).size, calls.length, "no duplicate ids");
-		for (const call of calls) assert.equal(call.name, "read");
+		expect(calls.length >= 2, `expected a parallel batch, got ${calls.length}`).toBeTruthy();
+		expect(ctx.turnToolCallIds, "routing ids must match the emitted calls, in order").toStrictEqual(calls.map((c) => c.id));
+		expect(new Set(calls.map((c) => c.id)).size, "no duplicate ids").toBe(calls.length);
+		for (const call of calls) expect(call.name).toBe("read");
 	});
 
 	// The bug in 122914dd was a tool_use surviving into pi under a name the bridge
@@ -146,7 +145,7 @@ describe("replaying a recorded parallel-tool turn", () => {
 	it("leaves nothing unmapped when the served tool list is empty", async () => {
 		const { ctx } = await replay("parallel-tools", { toolNames: [] });
 
-		assert.equal(blocks(ctx, "toolCall").length, 0, "unserved names must not reach pi");
-		assert.equal(ctx.turnSawToolCall, false);
+		expect(blocks(ctx, "toolCall").length, "unserved names must not reach pi").toBe(0);
+		expect(ctx.turnSawToolCall).toBe(false);
 	});
 });

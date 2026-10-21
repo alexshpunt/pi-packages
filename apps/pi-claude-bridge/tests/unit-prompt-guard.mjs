@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PI_PREAMBLE, projectPromptCapture, PromptCaptures } from "../src/prompt-capture.js";
@@ -19,16 +18,16 @@ describe("prompt guard", () => {
 			custom: `${PI_PREAMBLE}, a coding agent harness.\n\n<tools>\n- read: Read a file\n</tools>`,
 		}), "before_agent_start");
 		const found = captures.resolve("leaking prompt");
-		assert.ok(found);
+		expect(found).toBeTruthy();
 
-		assert.throws(() => projectPromptCapture(found, { skillReadTool: "none" }), (error) => {
-			assert.ok(error instanceof Error);
-			assert.ok(error.message.includes(PI_PREAMBLE));
-			assert.match(error.message, /offset 0 of \d+ chars/);
-			assert.match(error.message, /Capture: before_agent_start/);
-			assert.match(error.message, /Compatibility with other extensions/);
+		expect(() => projectPromptCapture(found, { skillReadTool: "none" })).toThrow(expect.toSatisfy((error) => {
+			expect(error instanceof Error).toBeTruthy();
+			expect(error.message.includes(PI_PREAMBLE)).toBeTruthy();
+			expect(error.message).toMatch(/offset 0 of \d+ chars/);
+			expect(error.message).toMatch(/Capture: before_agent_start/);
+			expect(error.message).toMatch(/Compatibility with other extensions/);
 			return true;
-		});
+		}));
 	});
 
 	it("checks the custom text after replacing a matched inherited prompt", () => {
@@ -39,14 +38,14 @@ describe("prompt guard", () => {
 			custom: `child wrapper\n\n${parentPrompt}\n\nchild instructions`,
 		}), "agent_start");
 		const child = captures.resolve("child assembled prompt");
-		assert.ok(child);
-		assert.equal(child.inherited.length, 1);
+		expect(child).toBeTruthy();
+		expect(child.inherited.length).toBe(1);
 
 		const projected = projectPromptCapture(child, { skillReadTool: "none" });
-		assert.ok(projected);
-		assert.ok(!projected.includes(PI_PREAMBLE));
-		assert.match(projected, /child wrapper/);
-		assert.match(projected, /parent rules/);
+		expect(projected).toBeTruthy();
+		expect(projected.includes(PI_PREAMBLE)).toBeFalsy();
+		expect(projected).toMatch(/child wrapper/);
+		expect(projected).toMatch(/parent rules/);
 	});
 
 	it("throws when a context file carries the trigger pair", () => {
@@ -56,15 +55,12 @@ describe("prompt guard", () => {
 			contextFiles: [{ path: "/AGENTS.md", content: "see docs/custom-provider.md and docs/packages.md" }],
 		}), "before_agent_start");
 		const found = captures.resolve(key);
-		assert.ok(found);
+		expect(found).toBeTruthy();
 
-		assert.throws(
-			() => projectPromptCapture(found, { skillReadTool: "none" }),
-			(error) => {
-				assert.match(error.message, /docs\/custom-provider\.md and docs\/packages\.md in the project context block/);
-				return true;
-			},
-		);
+		expect(() => projectPromptCapture(found, { skillReadTool: "none" })).toThrow(expect.toSatisfy((error) => {
+			expect(error.message).toMatch(/docs\/custom-provider\.md and docs\/packages\.md in the project context block/);
+			return true;
+		}));
 	});
 
 	it("ignores either trigger path on its own", () => {
@@ -73,7 +69,7 @@ describe("prompt guard", () => {
 			const custom = `see ${path}`;
 			captures.record("one path", capture({ custom }), "before_agent_start");
 
-			assert.equal(projectPromptCapture(captures.resolve("one path"), { skillReadTool: "none" }), custom);
+			expect(projectPromptCapture(captures.resolve("one path"), { skillReadTool: "none" })).toBe(custom);
 		}
 	});
 
@@ -82,34 +78,22 @@ describe("prompt guard", () => {
 		const custom = `note: ${PI_PREAMBLE}, allegedly`;
 		captures.record("mid-line prompt", capture({ custom }), "before_agent_start");
 		const found = captures.resolve("mid-line prompt");
-		assert.ok(found);
+		expect(found).toBeTruthy();
 
-		assert.equal(projectPromptCapture(found, { skillReadTool: "none" }), custom);
+		expect(projectPromptCapture(found, { skillReadTool: "none" })).toBe(custom);
 	});
 
 	it("pins the guard's marker in pi's own rendered system prompt", async () => {
-		assert.ok(
-			existsSync(PI_SYSTEM_PROMPT),
-			`pi's system prompt module is not at ${PI_SYSTEM_PROMPT}; if pi moved it, update this test`,
-		);
+		expect(existsSync(PI_SYSTEM_PROMPT), `pi's system prompt module is not at ${PI_SYSTEM_PROMPT}; if pi moved it, update this test`).toBeTruthy();
 		const { buildSystemPrompt } = await import(PI_SYSTEM_PROMPT);
 		const harness = buildSystemPrompt({ cwd: "/tmp" });
-		assert.ok(
-			harness.includes(PI_PREAMBLE),
-			"pi reworded its preamble, so the harness guard matches nothing; update PI_PREAMBLE in src/prompt-capture.ts",
-		);
+		expect(harness.includes(PI_PREAMBLE), "pi reworded its preamble, so the harness guard matches nothing; update PI_PREAMBLE in src/prompt-capture.ts").toBeTruthy();
 		for (const trigger of ["docs/custom-provider.md", "docs/packages.md"]) {
-			assert.ok(
-				harness.includes(trigger),
-				`pi's rendered prompt no longer carries ${trigger}, so the third-party trigger pair may have moved; update ANTHROPIC_THIRD_PARTY_TRIGGERS in src/prompt-capture.ts`,
-			);
+			expect(harness.includes(trigger), `pi's rendered prompt no longer carries ${trigger}, so the third-party trigger pair may have moved; update ANTHROPIC_THIRD_PARTY_TRIGGERS in src/prompt-capture.ts`).toBeTruthy();
 		}
 		// A custom prompt replaces the harness in full, which is what makes these strings'
 		// presence mean "this prompt carries pi's harness or its gate fingerprint".
 		const custom = buildSystemPrompt({ cwd: "/tmp", customPrompt: "custom" });
-		assert.ok(
-			!custom.includes(PI_PREAMBLE) && !custom.includes("docs/packages.md"),
-			"pi now emits its harness alongside a custom prompt, so these strings no longer imply a leak",
-		);
+		expect(!custom.includes(PI_PREAMBLE) && !custom.includes("docs/packages.md"), "pi now emits its harness alongside a custom prompt, so these strings no longer imply a leak").toBeTruthy();
 	});
 });

@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+import { expect } from "vitest";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { validatePlatformEvidence } from "../../dist/reports.js";
@@ -218,95 +218,92 @@ export function validateLiveEvidence(report, offline, identity) {
         platform: report.platform,
         ...identity,
     });
-    assert.equal(report.status, "pass");
-    assert.equal(report.provenance, "executed");
-    assert.equal(report.mode, "conformance");
+    expect(report.status).toBe("pass");
+    expect(report.provenance).toBe("executed");
+    expect(report.mode).toBe("conformance");
     for (const key of ["sourceDigest", "contractDigest"])
-        assert.equal(report[key], identity[key]);
-    assert.match(report.imageDigest, /^sha256:[a-f0-9]{64}$/);
-    assert.equal(report.imageDigest, offline.imageDigest);
-    assert.match(report.pluginArtifactDigest, /^[a-f0-9]{64}$/);
-    assert.equal(report.pluginArtifactDigest, offline.pluginArtifactDigest);
-    assert.equal(report.provider?.id, "ollama-cloud");
-    assert.equal(report.provider?.package, "pi-ollama-cloud");
-    assert.equal(report.provider?.version, "0.12.2");
-    assert.equal(report.provider?.model, identity.model);
+        expect(report[key]).toBe(identity[key]);
+    expect(report.imageDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(report.imageDigest).toBe(offline.imageDigest);
+    expect(report.pluginArtifactDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(report.pluginArtifactDigest).toBe(offline.pluginArtifactDigest);
+    expect(report.provider?.id).toBe("ollama-cloud");
+    expect(report.provider?.package).toBe("pi-ollama-cloud");
+    expect(report.provider?.version).toBe("0.12.2");
+    expect(report.provider?.model).toBe(identity.model);
     for (const key of [
         "guardLoaded",
         "providerLoaded",
         "reloadPassed",
         "webToolsAbsent",
     ])
-        assert.equal(report.startup?.[key], true);
-    assert.equal(report.startup?.usagePolling, false);
-    assert.equal(report.executionCapabilities?.osIsolation, false);
-    assert.equal(
-        report.executionCapabilities?.preflight?.permittedEffect,
-        true,
-    );
-    assert.equal(
+        expect(report.startup?.[key]).toBe(true);
+    expect(report.startup?.usagePolling).toBe(false);
+    expect(report.executionCapabilities?.osIsolation).toBe(false);
+    expect(report.executionCapabilities?.preflight?.permittedEffect).toBe(true);
+    expect(
         report.executionCapabilities?.preflight?.cancellationPreventedEffect,
-        true,
-    );
-    assert.ok(report.networkRequests > 0);
+    ).toBe(true);
+    expect(report.networkRequests > 0).toBeTruthy();
     const live = report.live;
-    assert.equal(live?.status, "pass");
-    assert.equal(live?.evidenceKind, "live-provider");
-    assert.deepEqual(
-        live.cases.map((item) => item.id),
-        liveCaseIds,
-    );
-    assert.equal(live.limits.maxCallsPerCase, 24);
-    assert.equal(live.limits.deadlineMsPerCase, 180000);
+    expect(live?.status).toBe("pass");
+    expect(live?.evidenceKind).toBe("live-provider");
+    expect(live.cases.map((item) => item.id)).toStrictEqual(liveCaseIds);
+    expect(live.limits.maxCallsPerCase).toBe(24);
+    expect(live.limits.deadlineMsPerCase).toBe(180000);
     for (const item of live.cases) {
-        assert.equal(item.status, "pass");
-        assert.equal(item.provider, "ollama-cloud");
-        assert.equal(item.model, identity.model);
-        assert.equal(item.effectObserved, true);
-        assert.equal(item.credentialScanPassed, true);
-        assert.ok(Number.isInteger(item.calls.main) && item.calls.main > 0);
-        assert.ok(
+        expect(item.status).toBe("pass");
+        expect(item.provider).toBe("ollama-cloud");
+        expect(item.model).toBe(identity.model);
+        expect(item.effectObserved).toBe(true);
+        expect(item.credentialScanPassed).toBe(true);
+        expect(
+            Number.isInteger(item.calls.main) && item.calls.main > 0,
+        ).toBeTruthy();
+        expect(
             Number.isInteger(item.calls.reviewer) && item.calls.reviewer >= 0,
-        );
-        assert.ok(item.calls.main + item.calls.reviewer <= 24);
-        assert.ok(item.elapsedMs >= 0 && item.elapsedMs <= 180000);
-        assert.ok(item.auditRecords > 0);
+        ).toBeTruthy();
+        expect(item.calls.main + item.calls.reviewer <= 24).toBeTruthy();
+        expect(item.elapsedMs >= 0 && item.elapsedMs <= 180000).toBeTruthy();
+        expect(item.auditRecords > 0).toBeTruthy();
         if (["authorized-outside", "reviewer-policy-denied"].includes(item.id))
-            assert.ok(item.calls.reviewer > 0);
-        else assert.equal(item.calls.reviewer, 0);
+            expect(item.calls.reviewer > 0).toBeTruthy();
+        else expect(item.calls.reviewer).toBe(0);
         if (item.id === "authorized-outside")
-            assert.ok(item.approvedReviews > 0);
+            expect(item.approvedReviews > 0).toBeTruthy();
         if (item.id === "protected-path-denied")
-            assert.ok(item.deniedToolEvents > 0);
+            expect(item.deniedToolEvents > 0).toBeTruthy();
         if (item.id === "reviewer-policy-denied") {
-            assert.ok(item.deniedReviews > 0);
-            assert.ok(item.feedbackCodes.includes("AUTO_REVIEW_DENIED"));
+            expect(item.deniedReviews > 0).toBeTruthy();
+            expect(
+                item.feedbackCodes.includes("AUTO_REVIEW_DENIED"),
+            ).toBeTruthy();
         }
     }
     const cli = live.cli;
-    assert.equal(cli?.status, "pass");
-    assert.equal(cli.entrypoint, "packed-cli");
-    assert.equal(cli.provider, "ollama-cloud");
-    assert.equal(cli.model, identity.model);
-    assert.equal(cli.effectObserved, true);
-    assert.equal(cli.credentialScanPassed, true);
-    assert.ok(
+    expect(cli?.status).toBe("pass");
+    expect(cli.entrypoint).toBe("packed-cli");
+    expect(cli.provider).toBe("ollama-cloud");
+    expect(cli.model).toBe(identity.model);
+    expect(cli.effectObserved).toBe(true);
+    expect(cli.credentialScanPassed).toBe(true);
+    expect(
         Number.isInteger(cli.calls?.main) &&
             Number.isInteger(cli.calls?.reviewer) &&
             cli.calls.main > 0 &&
             cli.calls.reviewer > 0 &&
             cli.calls.main + cli.calls.reviewer <= 24,
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
         cli.approvedReviews > 0 &&
             cli.auditRecords > 0 &&
             cli.elapsedMs >= 0 &&
             cli.elapsedMs <= 180000,
-    );
+    ).toBeTruthy();
     const checkWire = (wire, count) => {
-        assert.equal(wire?.status, "pass");
-        assert.equal(wire.expected.length, count);
-        assert.ok(count > 0);
+        expect(wire?.status).toBe("pass");
+        expect(wire.expected.length).toBe(count);
+        expect(count > 0).toBeTruthy();
         for (const item of wire.expected)
             for (const key of [
                 "inputDigest",
@@ -314,48 +311,45 @@ export function validateLiveEvidence(report, offline, identity) {
                 "conversationDigest",
                 "toolsDigest",
             ])
-                assert.match(item[key], /^[a-f0-9]{64}$/);
-        assert.deepEqual(wire.transmitted, wire.expected);
+                expect(item[key]).toMatch(/^[a-f0-9]{64}$/);
+        expect(wire.transmitted).toStrictEqual(wire.expected);
     };
     checkWire(cli.wire, cli.calls.reviewer);
-    assert.equal(live.policy?.status, "pass");
-    assert.equal(live.policy.evidenceKind, "live-review-policy");
-    assert.deepEqual(
-        live.policy.cases.map((item) => item.id),
+    expect(live.policy?.status).toBe("pass");
+    expect(live.policy.evidenceKind).toBe("live-review-policy");
+    expect(live.policy.cases.map((item) => item.id)).toStrictEqual(
         livePolicyCases.map((item) => item.id),
     );
     for (const [index, item] of live.policy.cases.entries()) {
-        assert.equal(item.status, "pass");
-        assert.equal(item.expected, livePolicyCases[index].outcome);
-        assert.equal(item.assessment?.outcome, item.expected);
-        assert.equal(
-            item.reviewStatus,
+        expect(item.status).toBe("pass");
+        expect(item.expected).toBe(livePolicyCases[index].outcome);
+        expect(item.assessment?.outcome).toBe(item.expected);
+        expect(item.reviewStatus).toBe(
             item.expected === "allow" ? "approved" : "denied",
         );
         if (livePolicyCases[index].riskLevel)
-            assert.equal(
-                item.assessment.risk_level,
+            expect(item.assessment.risk_level).toBe(
                 livePolicyCases[index].riskLevel,
             );
-        assert.equal(item.provider, "ollama-cloud");
-        assert.equal(item.model, identity.model);
-        assert.equal(item.plannedActionExecuted, false);
-        assert.equal(item.credentialScanPassed, true);
-        assert.equal(item.calls.main, 0);
-        assert.ok(
+        expect(item.provider).toBe("ollama-cloud");
+        expect(item.model).toBe(identity.model);
+        expect(item.plannedActionExecuted).toBe(false);
+        expect(item.credentialScanPassed).toBe(true);
+        expect(item.calls.main).toBe(0);
+        expect(
             Number.isInteger(item.calls.reviewer) &&
                 item.calls.reviewer > 0 &&
                 item.calls.reviewer <= 24,
-        );
-        assert.match(item.promptDigest, /^[a-f0-9]{64}$/);
+        ).toBeTruthy();
+        expect(item.promptDigest).toMatch(/^[a-f0-9]{64}$/);
         if (item.id === "read-only-inspection")
-            assert.ok(item.inspections.includes("inspect_directory"));
+            expect(item.inspections.includes("inspect_directory")).toBeTruthy();
         if (
             ["post-denial-approval", "prior-critical-reassessed"].includes(
                 item.id,
             )
         )
-            assert.equal(item.assessment.user_authorization, "high");
+            expect(item.assessment.user_authorization).toBe("high");
     }
     checkWire(
         live.wire,

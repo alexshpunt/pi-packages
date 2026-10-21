@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 // Unit tests for carrying CC attachments across a rebuild (attachments.ts).
 
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { collectCarriedAttachments, placeCarriedAttachments } from "../src/attachments.js";
 
 const user = (uuid, text) => ({ type: "user", uuid, message: { role: "user", content: [{ type: "text", text }] } });
@@ -26,7 +25,7 @@ describe("collectCarriedAttachments", () => {
 		// edited_text_file is deliberately not carried: the edit is already in pi's
 		// history as a tool call; supporting tool-result anchors does not add this
 		// duplicate snapshot kind to the carry policy.
-		assert.deepEqual(carried.map((c) => c.attachment.filename), ["/a.js"]);
+		expect(carried.map((c) => c.attachment.filename)).toStrictEqual(["/a.js"]);
 	});
 
 	it("counts ordinals over prompts only, skipping tool-result user records", () => {
@@ -36,8 +35,8 @@ describe("collectCarriedAttachments", () => {
 			user("u3", "review @a.js"),
 			attach("a1", "u3", "file", "/a.js"),
 		]);
-		assert.equal(carried[0].userOrdinal, 1);
-		assert.equal(carried[0].parentText, "review @a.js");
+		expect(carried[0].userOrdinal).toBe(1);
+		expect(carried[0].parentText).toBe("review @a.js");
 	});
 
 	it("ignores an attachment whose parent cannot be resolved", () => {
@@ -45,7 +44,7 @@ describe("collectCarriedAttachments", () => {
 			user("u1", "first"),
 			attach("a1", "missing-uuid", "file", "/a.js"),
 		]);
-		assert.equal(carried.length, 0);
+		expect(carried.length).toBe(0);
 	});
 });
 
@@ -58,8 +57,8 @@ describe("placeCarriedAttachments", () => {
 			{ role: "assistant", content: [{ type: "text", text: "ok" }] },
 			{ role: "user", content: [{ type: "text", text: "review @a.js" }] },
 		]);
-		assert.equal(skipped.length, 0);
-		assert.deepEqual(attachments, [{ afterIndex: 2, attachment: carried[0].attachment }]);
+		expect(skipped.length).toBe(0);
+		expect(attachments).toStrictEqual([{ afterIndex: 2, attachment: carried[0].attachment }]);
 	});
 
 	it("drops it when that prompt changed rather than guessing", () => {
@@ -67,14 +66,14 @@ describe("placeCarriedAttachments", () => {
 			{ role: "user", content: "first" },
 			{ role: "user", content: "something else entirely" },
 		]);
-		assert.equal(attachments.length, 0);
-		assert.match(skipped[0], /changed/);
+		expect(attachments.length).toBe(0);
+		expect(skipped[0]).toMatch(/changed/);
 	});
 
 	it("drops it when history no longer reaches that prompt", () => {
 		const { attachments, skipped } = placeCarriedAttachments(carried, [{ role: "user", content: "first" }]);
-		assert.equal(attachments.length, 0);
-		assert.match(skipped[0], /no longer in history/);
+		expect(attachments.length).toBe(0);
+		expect(skipped[0]).toMatch(/no longer in history/);
 	});
 });
 
@@ -88,8 +87,8 @@ describe("attachments chained to other attachments", () => {
 			attach("a3", "a2", "file", "/c.js"),
 		]);
 		// The uncarried kind still has to resolve, or the run breaks after it.
-		assert.deepEqual(carried.map((c) => c.attachment.filename), ["/a.js", "/c.js"]);
-		assert.deepEqual(carried.map((c) => c.userOrdinal), [1, 1]);
+		expect(carried.map((c) => c.attachment.filename)).toStrictEqual(["/a.js", "/c.js"]);
+		expect(carried.map((c) => c.userOrdinal)).toStrictEqual([1, 1]);
 	});
 
 	it("resolves through a kind it does not carry", () => {
@@ -98,8 +97,8 @@ describe("attachments chained to other attachments", () => {
 			attach("a1", "u1", "skill_listing"),
 			attach("a2", "a1", "file", "/a.js"),
 		]);
-		assert.deepEqual(carried.map((c) => c.attachment.filename), ["/a.js"]);
-		assert.equal(carried[0].userOrdinal, 0);
+		expect(carried.map((c) => c.attachment.filename)).toStrictEqual(["/a.js"]);
+		expect(carried[0].userOrdinal).toBe(0);
 	});
 });
 
@@ -108,30 +107,30 @@ describe("session context anchors", () => {
 		const kinds = ["environment", "model", "output_style_instructions", "total_tokens_reminder", "output_style", "session_context", "date", "credential_org", "instructions"];
 		const records = [user("u1", "original prompt"), ...kinds.map((kind, i) => attach(`a${i}`, i ? `a${i - 1}` : "u1", kind))];
 		const carried = collectCarriedAttachments(records);
-		assert.deepEqual(carried.map(item => item.attachment.type), kinds);
+		expect(carried.map(item => item.attachment.type)).toStrictEqual(kinds);
 		const placed = placeCarriedAttachments(carried, [{ role: "user", content: "original prompt" }, { role: "assistant", content: "answer" }, { role: "user", content: "next prompt" }]);
-		assert.equal(placed.skipped.length, 0);
-		assert.deepEqual(placed.attachments.map(item => item.afterIndex), kinds.map(() => 0));
+		expect(placed.skipped.length).toBe(0);
+		expect(placed.attachments.map(item => item.afterIndex)).toStrictEqual(kinds.map(() => 0));
 	});
 	it("anchors chained reminders by tool-use id even inside a parallel result group", () => {
 		const carried = collectCarriedAttachments([
 			user("u1", "prompt"), toolResultUser("r1"), attach("a1", "r1", "total_tokens_reminder"), attach("a2", "a1", "session_context"),
 		]);
-		assert.deepEqual(carried.map(item => item.toolUseId), ["t1", "t1"]);
+		expect(carried.map(item => item.toolUseId)).toStrictEqual(["t1", "t1"]);
 		const placed = placeCarriedAttachments(carried, [
 			{ role: "assistant", content: [] },
 			{ role: "user", content: [{ type: "tool_result", tool_use_id: "other", content: "other" }, { type: "tool_result", tool_use_id: "t1", content: "ok" }] },
 		]);
-		assert.equal(placed.skipped.length, 0);
-		assert.deepEqual(placed.attachments.map(item => item.afterIndex), [1, 1]);
+		expect(placed.skipped.length).toBe(0);
+		expect(placed.attachments.map(item => item.afterIndex)).toStrictEqual([1, 1]);
 		const missing = placeCarriedAttachments(carried, [{ role: "user", content: "not the old tool result" }]);
-		assert.equal(missing.attachments.length, 0);
-		assert.equal(missing.skipped.length, 2);
+		expect(missing.attachments.length).toBe(0);
+		expect(missing.skipped.length).toBe(2);
 	});
 	it("does not attach old session context to a changed prompt", () => {
 		const carried = collectCarriedAttachments([user("u1", "old prompt"), attach("a1", "u1", "instructions")]);
 		const placed = placeCarriedAttachments(carried, [{ role: "user", content: "new prompt" }]);
-		assert.deepEqual(placed.attachments, []);
-		assert.match(placed.skipped[0], /changed/);
+		expect(placed.attachments).toStrictEqual([]);
+		expect(placed.skipped[0]).toMatch(/changed/);
 	});
 });

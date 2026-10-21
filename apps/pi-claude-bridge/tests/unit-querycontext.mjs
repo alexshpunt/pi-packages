@@ -3,8 +3,7 @@
  * Exercises turn-state reset, session-keyed top-level state and its release
  * using the real modules — no API calls, no extension activation.
  */
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { createQueryRegistry, QueryContext } from "../src/provider/query-context.js";
 import { createBridgeRuntime } from "../src/runtime.js";
 import { registerBridge } from "../src/provider/registration.js";
@@ -29,20 +28,20 @@ function parkHandler(c, id) {
 
 describe("QueryContext class", () => {
 	it("turnBlocks throws before resetTurnState", () => {
-		assert.throws(() => new QueryContext().turnBlocks, /turnBlocks accessed before resetTurnState/);
+		expect(() => new QueryContext().turnBlocks).toThrow(/turnBlocks accessed before resetTurnState/);
 	});
 
 	it("turnBlocks reflects turnOutput.content after resetTurnState", () => {
 		const c = new QueryContext();
 		c.resetTurnState(fakeModel);
-		assert.ok(Array.isArray(c.turnBlocks));
-		assert.strictEqual(c.turnBlocks.length, 0);
+		expect(Array.isArray(c.turnBlocks)).toBeTruthy();
+		expect(c.turnBlocks.length).toBe(0);
 
 		c.turnBlocks.push({ type: "text", text: "hello" });
-		assert.strictEqual(c.turnOutput.content.length, 1);
-		assert.strictEqual(c.turnOutput.content[0].text, "hello");
+		expect(c.turnOutput.content.length).toBe(1);
+		expect(c.turnOutput.content[0].text).toBe("hello");
 		// Same array reference
-		assert.strictEqual(c.turnBlocks, c.turnOutput.content);
+		expect(c.turnBlocks).toBe(c.turnOutput.content);
 	});
 
 	it("resetTurnState preserves turnToolCallIds", () => {
@@ -50,7 +49,7 @@ describe("QueryContext class", () => {
 		c.turnToolCallIds = ["id1", "id2"];
 		c.resetTurnState(fakeModel);
 
-		assert.deepStrictEqual(c.turnToolCallIds, ["id1", "id2"]);
+		expect(c.turnToolCallIds).toStrictEqual(["id1", "id2"]);
 	});
 });
 
@@ -58,35 +57,35 @@ describe("per-session query state", () => {
 	it("keeps one top-level context per pi session; calls without an id share (none)", () => {
 		const registry = createQueryRegistry({ debug });
 		const a = registry.sessionQueryContextFor("pi-a");
-		assert.equal(registry.sessionQueryContextFor("pi-a"), a);
-		assert.notEqual(registry.sessionQueryContextFor("pi-b"), a);
-		assert.equal(registry.sessionQueryContextFor(null), registry.sessionQueryContextFor(undefined));
-		assert.notEqual(registry.sessionQueryContextFor(null), a);
-		assert.deepEqual([...registry.sessionQueryContexts.keys()], ["pi-a", "pi-b", "(none)"]);
-		assert.notEqual(createQueryRegistry({ debug }).sessionQueryContextFor("pi-a"), a, "each runtime owns its own state");
+		expect(registry.sessionQueryContextFor("pi-a")).toBe(a);
+		expect(registry.sessionQueryContextFor("pi-b")).not.toBe(a);
+		expect(registry.sessionQueryContextFor(null)).toBe(registry.sessionQueryContextFor(undefined));
+		expect(registry.sessionQueryContextFor(null)).not.toBe(a);
+		expect([...registry.sessionQueryContexts.keys()]).toStrictEqual(["pi-a", "pi-b", "(none)"]);
+		expect(createQueryRegistry({ debug }).sessionQueryContextFor("pi-a"), "each runtime owns its own state").not.toBe(a);
 	});
 
 	it("judges reentrancy only from the calling session's top-level query", () => {
 		const registry = createQueryRegistry({ debug });
-		assert.equal(registry.isSessionQueryActive("pi-a"), false);
-		assert.equal(registry.sessionQueryContexts.size, 0, "asking does not create state");
+		expect(registry.isSessionQueryActive("pi-a")).toBe(false);
+		expect(registry.sessionQueryContexts.size, "asking does not create state").toBe(0);
 		startQuery(registry, "pi-a");
-		assert.equal(registry.isSessionQueryActive("pi-a"), true);
-		assert.equal(registry.isSessionQueryActive("pi-b"), false, "another session's live query does not make this one reentrant");
-		assert.equal(registry.isSessionQueryActive(null), false);
+		expect(registry.isSessionQueryActive("pi-a")).toBe(true);
+		expect(registry.isSessionQueryActive("pi-b"), "another session's live query does not make this one reentrant").toBe(false);
+		expect(registry.isSessionQueryActive(null)).toBe(false);
 
 		startQuery(registry, null);
-		assert.equal(registry.isSessionQueryActive(undefined), true, "unattributed calls judge within the (none) bucket");
+		expect(registry.isSessionQueryActive(undefined), "unattributed calls judge within the (none) bucket").toBe(true);
 
 		// A reentrant query lives outside the session map: it is in flight for its
 		// session, but the session's top-level slot stays free.
 		const reentrant = new QueryContext();
 		reentrant.piSessionId = "pi-b";
 		registry.activeQueryContexts.add(reentrant);
-		assert.equal(registry.isSessionQueryActive("pi-b"), false);
-		assert.equal(registry.hasQueryInFlightForSession("pi-b"), true);
-		assert.equal(registry.hasQueryInFlightForSession("pi-c"), false);
-		assert.equal(registry.hasQueryInFlightForSession(null), true);
+		expect(registry.isSessionQueryActive("pi-b")).toBe(false);
+		expect(registry.hasQueryInFlightForSession("pi-b")).toBe(true);
+		expect(registry.hasQueryInFlightForSession("pi-c")).toBe(false);
+		expect(registry.hasQueryInFlightForSession(null)).toBe(true);
 	});
 
 	it("releases only the ending session and settles its idle leftovers, once", () => {
@@ -97,19 +96,18 @@ describe("per-session query state", () => {
 		const endingReplies = parkHandler(ending, "toolu_ending");
 
 		registry.releaseSessionQueryContext("pi-ending");
-		assert.equal(registry.sessionQueryContexts.has("pi-ending"), false);
-		assert.deepEqual(endingReplies, [{ content: [{ type: "text", text: "Session ended." }] }]);
-		assert.equal(ending.pendingToolCalls.size, 0);
-		assert.equal(registry.sessionQueryContextFor("pi-live"), live, "another session keeps its state");
-		assert.equal(live.activeQuery !== null && live.pendingToolCalls.size === 1 && liveReplies.length === 0, true,
-			"another session's running query is not ended");
+		expect(registry.sessionQueryContexts.has("pi-ending")).toBe(false);
+		expect(endingReplies).toStrictEqual([{ content: [{ type: "text", text: "Session ended." }] }]);
+		expect(ending.pendingToolCalls.size).toBe(0);
+		expect(registry.sessionQueryContextFor("pi-live"), "another session keeps its state").toBe(live);
+		expect(live.activeQuery !== null && live.pendingToolCalls.size === 1 && liveReplies.length === 0, "another session's running query is not ended").toBe(true);
 
 		registry.releaseSessionQueryContext("pi-ending");
-		assert.equal(endingReplies.length, 1, "a repeated release finds nothing to settle");
+		expect(endingReplies.length, "a repeated release finds nothing to settle").toBe(1);
 		const next = registry.sessionQueryContextFor("pi-ending");
-		assert.notEqual(next, ending, "the session's next query starts on fresh state");
+		expect(next, "the session's next query starts on fresh state").not.toBe(ending);
 		registry.activeQueryContexts.delete(ending);
-		assert.equal(registry.sessionQueryContextFor("pi-ending"), next, "the released context's cleanup cannot remove the new one");
+		expect(registry.sessionQueryContextFor("pi-ending"), "the released context's cleanup cannot remove the new one").toBe(next);
 	});
 
 	it("leaves a query still in flight to its own run", () => {
@@ -117,9 +115,9 @@ describe("per-session query state", () => {
 		const running = startQuery(registry, "pi-running");
 		const replies = parkHandler(running, "toolu_running");
 		registry.releaseSessionQueryContext("pi-running");
-		assert.equal(registry.sessionQueryContexts.has("pi-running"), false);
-		assert.equal(registry.activeQueryContexts.has(running), true);
-		assert.equal(replies.length, 0, "its handlers settle when its own completion runs");
+		expect(registry.sessionQueryContexts.has("pi-running")).toBe(false);
+		expect(registry.activeQueryContexts.has(running)).toBe(true);
+		expect(replies.length, "its handlers settle when its own completion runs").toBe(0);
 	});
 
 	it("a release reaches the module instance that serves the session", () => {
@@ -128,8 +126,8 @@ describe("per-session query state", () => {
 		serving.sessionQueryContextFor("pi-child");
 		const parent = serving.sessionQueryContextFor("pi-parent");
 		notified.sponsorReleaseSessionQueries("pi-child");
-		assert.equal(serving.sessionQueryContexts.has("pi-child"), false);
-		assert.equal(serving.sessionQueryContextFor("pi-parent"), parent);
+		expect(serving.sessionQueryContexts.has("pi-child")).toBe(false);
+		expect(serving.sessionQueryContextFor("pi-parent")).toBe(parent);
 	});
 
 	it("session_shutdown releases the ending session through production registration", () => {
@@ -150,12 +148,12 @@ describe("per-session query state", () => {
 		};
 		try {
 			shutdown();
-			assert.equal(serving.sessionQueryContexts.has("pi-ending"), false);
-			assert.equal(endingReplies.length, 1);
-			assert.equal(serving.sessionQueryContextFor("pi-live"), live);
-			assert.equal(live.activeQuery !== null && serving.activeQueryContexts.has(live), true);
+			expect(serving.sessionQueryContexts.has("pi-ending")).toBe(false);
+			expect(endingReplies.length).toBe(1);
+			expect(serving.sessionQueryContextFor("pi-live")).toBe(live);
+			expect(live.activeQuery !== null && serving.activeQueryContexts.has(live)).toBe(true);
 			shutdown();
-			assert.equal(endingReplies.length, 1, "a repeated shutdown is a no-op");
+			expect(endingReplies.length, "a repeated shutdown is a no-op").toBe(1);
 		} finally {
 			serving.activeQueryContexts.delete(live);
 		}

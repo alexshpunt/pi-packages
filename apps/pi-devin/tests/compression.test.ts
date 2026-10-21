@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { createServer, type IncomingHttpHeaders } from "node:http";
 import { gzipSync, gunzipSync } from "node:zlib";
-import { test } from "node:test";
+import { expect, test } from "vitest";
 import { chatRequest, streamChat, userMessage } from "../src/core/inference/chat.ts";
 import { CHAT_METHOD, chatRequestCodec, chatResponseCodec } from "../src/core/protocol/protobuf.ts";
 import { ConnectClient, decodeFrames, encodeFrame, type RequestAttempt } from "../src/core/protocol/transport.ts";
@@ -27,22 +26,22 @@ test("real HTTP gzip + Connect gzip responses and an identical uncompressed rese
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   try {
-    const address = server.address(); assert.ok(address && typeof address !== "string");
+    const address = server.address(); expect(address && typeof address !== "string").toBeTruthy(); if (!address || typeof address === "string") throw new Error("unreachable");
     const client = new ConnectClient({ baseURL: `http://127.0.0.1:${address.port}`, token: credential.sessionToken, onRequest: (attempt) => attempts.push(attempt) });
     const result = await streamChat(client, request());
-    assert.equal(result.message.prompt, "compressed reply");
-    assert.ok(result.lastUsageFrameIndex! > result.stopFrameIndex!);
-    assert.deepEqual(attempts.map((attempt) => [attempt.attempt, attempt.isCompressed]), [[1, true], [2, false]]);
-    assert.equal(received[0].body[0], 1); assert.equal(received[1].body[0], 0);
-    assert.equal(received[0].headers["connect-content-encoding"], "gzip");
-    assert.equal(received[1].headers["connect-content-encoding"], undefined);
-    for (const sent of received) assert.equal(Number(sent.headers["content-length"]), sent.body.length);
-    assert.equal(received[0].headers["sentry-trace"], received[1].headers["sentry-trace"]);
+    expect(result.message.prompt).toBe("compressed reply");
+    expect(result.lastUsageFrameIndex! > result.stopFrameIndex!).toBeTruthy();
+    expect(attempts.map((attempt) => [attempt.attempt, attempt.isCompressed])).toStrictEqual([[1, true], [2, false]]);
+    expect(received[0].body[0]).toBe(1); expect(received[1].body[0]).toBe(0);
+    expect(received[0].headers["connect-content-encoding"]).toBe("gzip");
+    expect(received[1].headers["connect-content-encoding"]).toBe(undefined);
+    for (const sent of received) expect(Number(sent.headers["content-length"])).toBe(sent.body.length);
+    expect(received[0].headers["sentry-trace"]).toBe(received[1].headers["sentry-trace"]);
     const first = gunzipSync(received[0].body.subarray(5));
-    assert.deepEqual(first, received[1].body.subarray(5));
+    expect(first).toStrictEqual(received[1].body.subarray(5));
     const decoded = chatRequestCodec.decode(first);
-    assert.equal(decoded.clientSessionId, "clear-otter");
-    assert.equal(decoded.executionId, "execution");
+    expect(decoded.clientSessionId).toBe("clear-otter");
+    expect(decoded.executionId).toBe("execution");
   } finally { server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); }
 });
 
@@ -57,11 +56,11 @@ test("408/415/500/502/503/504 resend only compressed requests, once, with the sa
       ])), { headers: { "content-type": "application/connect+proto" } });
     } });
     await streamChat(client, request());
-    assert.equal(attempts.length, 2);
-    assert.equal(attempts[0].bytes[0], 1); assert.equal(attempts[1].bytes[0], 0);
-    assert.ok(gunzipSync(attempts[0].bytes.subarray(5)).equals(attempts[1].bytes.subarray(5)), "the fallback body must not change.");
-    assert.equal(attempts[0].headers.get("sentry-trace"), attempts[1].headers.get("sentry-trace"));
-    assert.equal(attempts[0].signal, attempts[1].signal);
+    expect(attempts.length).toBe(2);
+    expect(attempts[0].bytes[0]).toBe(1); expect(attempts[1].bytes[0]).toBe(0);
+    expect(gunzipSync(attempts[0].bytes.subarray(5)).equals(attempts[1].bytes.subarray(5)), "the fallback body must not change.").toBeTruthy();
+    expect(attempts[0].headers.get("sentry-trace")).toBe(attempts[1].headers.get("sentry-trace"));
+    expect(attempts[0].signal).toBe(attempts[1].signal);
     client.close();
   }
 });
@@ -70,15 +69,15 @@ test("native observations and both sides of the static 8192-byte boundary are ch
   for (const [payloadBytes, expectedFlag] of [[8179, 0], [8191, 0], [8192, 1], [8193, 1], [8286, 1]]) {
     // The decision must use the final protobuf's UTF-8 byte count, not the string length (€ is 3 bytes in UTF-8).
     const body = { prompt: "€".repeat(2000) + "x".repeat(payloadBytes - 6003) };
-    assert.equal(chatRequestCodec.encode(body).length, payloadBytes);
+    expect(chatRequestCodec.encode(body).length).toBe(payloadBytes);
     const client = new ConnectClient({ baseURL: credential.apiServerURL, fetch: async (_url, init) => {
       const bytes = Buffer.from(init!.body as Uint8Array);
-      assert.equal(bytes[0], expectedFlag);
-      assert.equal(bytes.readUInt32BE(1), bytes.length - 5);
+      expect(bytes[0]).toBe(expectedFlag);
+      expect(bytes.readUInt32BE(1)).toBe(bytes.length - 5);
       const headers = new Headers(init!.headers);
-      assert.equal(headers.get("connect-content-encoding"), expectedFlag ? "gzip" : null);
-      assert.equal(Number(headers.get("content-length")), bytes.length);
-      assert.deepEqual(expectedFlag ? gunzipSync(bytes.subarray(5)) : bytes.subarray(5), chatRequestCodec.encode(body));
+      expect(headers.get("connect-content-encoding")).toBe(expectedFlag ? "gzip" : null);
+      expect(Number(headers.get("content-length"))).toBe(bytes.length);
+      expect(expectedFlag ? gunzipSync(bytes.subarray(5)) : bytes.subarray(5)).toStrictEqual(chatRequestCodec.encode(body));
       return new Response(new Uint8Array(encodeFrame(Buffer.from("{}"), 2)), { headers: { "content-type": "application/connect+proto" } });
     } });
     for await (const _ of client.stream(CHAT_METHOD, body)) {}
@@ -88,15 +87,15 @@ test("native observations and both sides of the static 8192-byte boundary are ch
 test("the 415 resend happens at most once and is not sent when the request budget refuses", async () => {
   let calls = 0;
   const client = new ConnectClient({ baseURL: credential.apiServerURL, fetch: async () => { calls++; return Response.json({}, { status: 415 }); } });
-  await assert.rejects(async () => { for await (const _ of client.stream(CHAT_METHOD, request())) {} }, /http_415/);
-  assert.equal(calls, 2);
+  await expect(async () => { for await (const _ of client.stream(CHAT_METHOD, request())) {} }).rejects.toThrow(/http_415/);
+  expect(calls).toBe(2);
   calls = 0;
   const bounded = new ConnectClient({ baseURL: credential.apiServerURL,
     onRequest: (attempt) => { if (attempt.attempt === 2) throw new Error("budget exhausted"); },
     fetch: async () => { calls++; return Response.json({}, { status: 415 }); },
   });
-  await assert.rejects(async () => { for await (const _ of bounded.stream(CHAT_METHOD, request())) {} }, /budget exhausted/);
-  assert.equal(calls, 1);
+  await expect(async () => { for await (const _ of bounded.stream(CHAT_METHOD, request())) {} }).rejects.toThrow(/budget exhausted/);
+  expect(calls).toBe(1);
 });
 
 test("rejects oversized decompression and invalid gzip", async () => {
@@ -104,8 +103,8 @@ test("rejects oversized decompression and invalid gzip", async () => {
     async function* chunks() { yield encodeFrame(payload, 1); yield encodeFrame(Buffer.from("{}"), 2); }
     for await (const _ of decodeFrames(chunks(), { compression: "gzip" })) {}
   };
-  await assert.rejects(collect(Buffer.from("invalid gzip")));
-  await assert.rejects(collect(gzipSync(Buffer.alloc(9 * 1024 * 1024))));
+  await expect(collect(Buffer.from("invalid gzip"))).rejects.toThrow();
+  await expect(collect(gzipSync(Buffer.alloc(9 * 1024 * 1024)))).rejects.toThrow();
 });
 
 test("the RPC timeout applies to the real connection even after the response starts", async () => {
@@ -115,10 +114,10 @@ test("the RPC timeout applies to the real connection even after the response sta
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   try {
-    const address = server.address(); assert.ok(address && typeof address !== "string");
+    const address = server.address(); expect(address && typeof address !== "string").toBeTruthy(); if (!address || typeof address === "string") throw new Error("unreachable");
     const client = new ConnectClient({ baseURL: `http://127.0.0.1:${address.port}`, timeoutMs: 100 });
     const stream = client.stream(CHAT_METHOD, {});
-    assert.equal((await stream.next()).value?.data.deltaText, "partial");
-    await assert.rejects(stream.next(), (error: Error) => error.name === "TimeoutError");
+    expect((await stream.next()).value?.data.deltaText).toBe("partial");
+    await expect(stream.next()).rejects.toThrow(expect.toSatisfy((error: Error) => error.name === "TimeoutError"));
   } finally { server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); }
 });

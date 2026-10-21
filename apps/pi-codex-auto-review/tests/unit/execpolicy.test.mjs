@@ -1,7 +1,6 @@
-import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { createAction } from "../../dist/contracts.js";
 import {
     PolicyEngine,
@@ -32,18 +31,16 @@ prefix_rule(pattern=["git", "show", "secret"], decision="forbidden", justificati
             ["git", "show", "secret"],
         ],
     );
-    assert.equal(result.revision, CODEX_EXECPOLICY_REVISION);
-    assert.equal(result.matches[0][0].decision, "allow");
-    assert.equal(result.matches[1].length, 0);
-    assert.ok(result.matches[2].some((rule) => rule.decision === "forbidden"));
-    assert.throws(
-        () =>
-            parseRules(
-                `${source}\nprefix_rule(pattern=["x"], not_match=[["x"]])`,
-            ),
-        /INVALID_RULES|rule engine/,
-    );
-    assert.throws(() => parseRules('load("external.star", "rule")\nrule()'));
+    expect(result.revision).toBe(CODEX_EXECPOLICY_REVISION);
+    expect(result.matches[0][0].decision).toBe("allow");
+    expect(result.matches[1].length).toBe(0);
+    expect(
+        result.matches[2].some((rule) => rule.decision === "forbidden"),
+    ).toBeTruthy();
+    expect(() =>
+        parseRules(`${source}\nprefix_rule(pattern=["x"], not_match=[["x"]])`),
+    ).toThrow(/INVALID_RULES|rule engine/);
+    expect(() => parseRules('load("external.star", "rule")\nrule()')).toThrow();
 });
 
 test("[rules] host executable constraints reject aliases and preserve exact-path precedence", async () => {
@@ -63,10 +60,10 @@ prefix_rule(pattern=[${JSON.stringify(program)}, "push"], decision="forbidden")`
             ["git", "status"],
         ],
     );
-    assert.equal(result.matches[0][0].decision, "allow");
-    assert.equal(result.matches[1].length, 0);
-    assert.equal(result.matches[2][0].decision, "forbidden");
-    assert.equal(result.matches[3][0].decision, "allow");
+    expect(result.matches[0][0].decision).toBe("allow");
+    expect(result.matches[1].length).toBe(0);
+    expect(result.matches[2][0].decision).toBe("forbidden");
+    expect(result.matches[3][0].decision).toBe("allow");
 });
 
 test("[rules] all network_rule protocols and overlay ordering reach approval policy", async (t) => {
@@ -111,48 +108,49 @@ network_rule(host="prompt.example.com", protocol="https", decision="prompt")
             },
             policy.profile,
         );
-    assert.equal(
-        (await policy.evaluate(action("api.example.com"))).kind,
+    expect((await policy.evaluate(action("api.example.com"))).kind).toBe(
         "allow",
     );
-    assert.equal(
+    expect(
         (await policy.evaluate(action("blocked.example.com"))).isHardDeny,
-        true,
-    );
-    assert.equal(
-        (await policy.evaluate(action("prompt.example.com"))).kind,
+    ).toBe(true);
+    expect((await policy.evaluate(action("prompt.example.com"))).kind).toBe(
         "ask",
     );
-    assert.ok(policy.profile.allowedDomains.includes("tcp.example.com"));
-    assert.ok(policy.profile.deniedDomains.includes("udp.example.com"));
-    assert.ok(!policy.profile.deniedDomains.includes("api.example.com"));
-    assert.ok(policy.profile.allowedDomains.includes("::1"));
-    assert.equal((await policy.evaluate(action("[::1]"))).kind, "allow");
+    expect(
+        policy.profile.allowedDomains.includes("tcp.example.com"),
+    ).toBeTruthy();
+    expect(
+        policy.profile.deniedDomains.includes("udp.example.com"),
+    ).toBeTruthy();
+    expect(
+        policy.profile.deniedDomains.includes("api.example.com"),
+    ).toBeFalsy();
+    expect(policy.profile.allowedDomains.includes("::1")).toBeTruthy();
+    expect((await policy.evaluate(action("[::1]"))).kind).toBe("allow");
 });
 
 test("[rules] malformed rules, cancelled evaluation and oversized requests fail closed", async () => {
-    await assert.rejects(
+    await expect(
         evaluateRules([
             {
                 name: "bad.rules",
                 source: 'network_rule(host="ok.example", protocol="smtp", decision="allow")',
             },
         ]),
-        /rule engine/,
-    );
+    ).rejects.toThrow(/rule engine/);
     const controller = new AbortController();
     controller.abort();
-    await assert.rejects(
+    await expect(
         evaluateRules(
             [{ name: "empty.rules", source: "" }],
             [],
             controller.signal,
         ),
-    );
-    await assert.rejects(
+    ).rejects.toThrow();
+    await expect(
         evaluateRules([
             { name: "large.rules", source: "#".repeat(9 * 1024 * 1024) },
         ]),
-        /size/,
-    );
+    ).rejects.toThrow(/size/);
 });

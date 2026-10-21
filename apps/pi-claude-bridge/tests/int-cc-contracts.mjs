@@ -25,8 +25,7 @@
 // Requires: ANTHROPIC_API_KEY or CC logged in. Must run OUTSIDE the sandbox —
 // CC persists session state under ~/.claude.
 
-import { test } from "node:test";
-import assert from "node:assert/strict";
+import { expect, test } from "vitest";
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
@@ -124,14 +123,13 @@ test("tools/call carries _meta[claudecode/toolUseId] equal to its own tool_use i
 		options: providerOptions({ mcpServers: toolServer([noArgTool("alpha"), noArgTool("beta")], calls) }),
 	}));
 
-	assert.ok(calls.length >= 1, "CC dispatched no tool call — the test proved nothing");
+	expect(calls.length >= 1, "CC dispatched no tool call — the test proved nothing").toBeTruthy();
 	for (const call of calls) {
 		const id = call.meta?.[TOOL_USE_ID_META];
-		assert.equal(typeof id, "string", `tools/call for ${call.name} has no _meta["${TOOL_USE_ID_META}"]: ${JSON.stringify(call.meta)}`);
+		expect(typeof id, `tools/call for ${call.name} has no _meta["${TOOL_USE_ID_META}"]: ${JSON.stringify(call.meta)}`).toBe("string");
 		const match = toolUses.find((use) => use.id === id);
-		assert.ok(match, `_meta id ${id} matches no tool_use CC emitted: ${JSON.stringify(toolUses)}`);
-		assert.equal(match.name, `mcp__custom-tools__${call.name}`,
-			`tools/call ${call.name} was stamped with the id of ${match.name} — results would be mispaired`);
+		expect(match, `_meta id ${id} matches no tool_use CC emitted: ${JSON.stringify(toolUses)}`).toBeTruthy();
+		expect(match.name, `tools/call ${call.name} was stamped with the id of ${match.name} — results would be mispaired`).toBe(`mcp__custom-tools__${call.name}`);
 	}
 });
 
@@ -145,15 +143,14 @@ test("tools/call names the bare tool, not the mcp__server__tool alias", { timeou
 		options: providerOptions({ mcpServers: toolServer([noArgTool("alpha")], calls) }),
 	}));
 
-	assert.deepEqual(calls.map((c) => c.name), ["alpha"]);
+	expect(calls.map((c) => c.name)).toStrictEqual(["alpha"]);
 });
 
 // --- `tools: []` and the unserved-tool premise ---
 
 test("tools: [] exposes no builtin tools — only what we serve over MCP", { timeout: 60_000 }, async () => {
 	const init = await initOnly(providerOptions({ mcpServers: toolServer([noArgTool("alpha")], []) }));
-	assert.deepEqual(init.tools, ["mcp__custom-tools__alpha"],
-		`CC exposed tools beyond our MCP server: ${JSON.stringify(init.tools)}`);
+	expect(init.tools, `CC exposed tools beyond our MCP server: ${JSON.stringify(init.tools)}`).toStrictEqual(["mcp__custom-tools__alpha"]);
 });
 
 test("a tool_use naming an unserved tool is answered by CC, never dispatched to us", { timeout: 120_000 }, async () => {
@@ -166,22 +163,20 @@ test("a tool_use naming an unserved tool is answered by CC, never dispatched to 
 		options: providerOptions({ mcpServers: toolServer([{ name: "bash", description: "Run a shell command.", inputSchema: { type: "object", properties: { command: { type: "string" } } } }], calls) }),
 	}));
 
-	assert.deepEqual(calls.filter((c) => c.name !== "bash"), [],
-		`CC dispatched a tool we do not serve: ${JSON.stringify(calls.map((c) => c.name))}`);
+	expect(calls.filter((c) => c.name !== "bash"), `CC dispatched a tool we do not serve: ${JSON.stringify(calls.map((c) => c.name))}`).toStrictEqual([]);
 
 	const bogus = toolUses.filter((use) => !use.name.startsWith("mcp__custom-tools__"));
 	if (bogus.length === 0) return; // model declined the bait; nothing more to pin
 	for (const use of bogus) {
 		const rejection = toolResults.find((block) => block.tool_use_id === use.id);
-		assert.ok(rejection?.is_error && String(rejection.content).includes("No such tool available"),
-			`CC did not self-answer the unserved tool_use ${use.name} [${use.id}]: ${JSON.stringify(rejection)}`);
+		expect(rejection?.is_error && String(rejection.content).includes("No such tool available"), `CC did not self-answer the unserved tool_use ${use.name} [${use.id}]: ${JSON.stringify(rejection)}`).toBeTruthy();
 	}
 	// Anything CC did dispatch came from a different tool_use block, so a result
 	// keyed to the rejected id can never release the real handler — which is why
 	// forwarding the rejected call deadlocked the turn.
 	const dispatchedIds = new Set(calls.map((c) => c.meta?.[TOOL_USE_ID_META]));
 	for (const use of bogus) {
-		assert.ok(!dispatchedIds.has(use.id), `rejected tool_use ${use.id} was also dispatched`);
+		expect(dispatchedIds.has(use.id), `rejected tool_use ${use.id} was also dispatched`).toBeFalsy();
 	}
 });
 
@@ -216,15 +211,15 @@ test("is_error can be true on a result whose subtype is still success", { timeou
 		rmSync(cwd, { recursive: true, force: true });
 	}
 
-	assert.ok(requests.length > 0, "CC sent no request to the local error fixture");
-	assert.ok(requests.every((request) => request.model === MODEL), "error fixture received an unexpected model");
-	assert.ok(result, "no result message arrived");
-	assert.equal(result.subtype, "success", `expected a success-shaped failure, got subtype=${result.subtype}`);
-	assert.equal(result.is_error, true);
-	assert.match(result.result, /too long/i, `expected the API's own text in result.result, got: ${result.result}`);
+	expect(requests.length > 0, "CC sent no request to the local error fixture").toBeTruthy();
+	expect(requests.every((request) => request.model === MODEL), "error fixture received an unexpected model").toBeTruthy();
+	expect(result, "no result message arrived").toBeTruthy();
+	expect(result.subtype, `expected a success-shaped failure, got subtype=${result.subtype}`).toBe("success");
+	expect(result.is_error).toBe(true);
+	expect(result.result, `expected the API's own text in result.result, got: ${result.result}`).toMatch(/too long/i);
 	// The SDK then rejects the generator, which is why the provider's catch path
 	// has to prefer the text consumeQuery already recorded off the result.
-	assert.match(threw?.message ?? "", /too long/i, `SDK swallowed the cause: ${threw?.message}`);
+	expect(threw?.message ?? "", `SDK swallowed the cause: ${threw?.message}`).toMatch(/too long/i);
 
 	// CC prefixes the failure with a `<synthetic>` assistant message carrying the
 	// same text — its own report, not model output. src/index.ts keys its
@@ -232,13 +227,11 @@ test("is_error can be true on a result whose subtype is still success", { timeou
 	// partial messages on, the failure is not preceded by content stream_events
 	// (message_start is fine; the branch drops abandoned blocks if one slipped
 	// through), so a synthetic report after a stalled stream is still handled.
-	assert.ok(assistantMessages.length > 0, "no assistant message preceded the failure result");
-	assert.ok(streamEventTypes.every((t) => t === "message_start" || t === "ping"),
-		`stream_events preceded the failure: ${JSON.stringify(streamEventTypes)}`);
+	expect(assistantMessages.length > 0, "no assistant message preceded the failure result").toBeTruthy();
+	expect(streamEventTypes.every((t) => t === "message_start" || t === "ping"), `stream_events preceded the failure: ${JSON.stringify(streamEventTypes)}`).toBeTruthy();
 	for (const { message } of assistantMessages) {
-		assert.equal(message.model, "<synthetic>", `failure report is not synthetic: model=${message.model}`);
-		assert.ok((message.content ?? []).some((b) => b.type === "text" && /too long/i.test(b.text ?? "")),
-			`synthetic message lost the failure text: ${JSON.stringify(message.content)?.slice(0, 200)}`);
+		expect(message.model, `failure report is not synthetic: model=${message.model}`).toBe("<synthetic>");
+		expect((message.content ?? []).some((b) => b.type === "text" && /too long/i.test(b.text ?? "")), `synthetic message lost the failure text: ${JSON.stringify(message.content)?.slice(0, 200)}`).toBeTruthy();
 	}
 });
 
@@ -247,9 +240,8 @@ test("result.modelUsage reports the served context window", { timeout: 120_000 }
 	// is what pi registered, not what the account actually got (issue #18).
 	const { result } = await collect(query({ prompt: "Reply with just: OK", options: providerOptions({ maxTurns: 1, persistSession: false }) }));
 	const entries = Object.values(result?.modelUsage ?? {});
-	assert.ok(entries.length > 0, `result carried no modelUsage: ${JSON.stringify(Object.keys(result ?? {}))}`);
-	assert.ok(entries.every((usage) => typeof usage.contextWindow === "number"),
-		`modelUsage entries missing contextWindow: ${JSON.stringify(result.modelUsage)}`);
+	expect(entries.length > 0, `result carried no modelUsage: ${JSON.stringify(Object.keys(result ?? {}))}`).toBeTruthy();
+	expect(entries.every((usage) => typeof usage.contextWindow === "number"), `modelUsage entries missing contextWindow: ${JSON.stringify(result.modelUsage)}`).toBeTruthy();
 });
 
 // --- Streaming ---
@@ -271,13 +263,13 @@ test("includePartialMessages yields the stream_event shapes processStreamEvent d
 	}
 
 	for (const type of ["message_start", "message_delta", "message_stop", "content_block_start", "content_block_delta", "content_block_stop"]) {
-		assert.ok(events.has(type), `no ${type} stream_event arrived — got ${JSON.stringify([...events])}`);
+		expect(events.has(type), `no ${type} stream_event arrived — got ${JSON.stringify([...events])}`).toBeTruthy();
 	}
 	for (const type of ["text", "thinking", "tool_use"]) {
-		assert.ok(contentBlocks.has(type), `no ${type} content_block — got ${JSON.stringify([...contentBlocks])}`);
+		expect(contentBlocks.has(type), `no ${type} content_block — got ${JSON.stringify([...contentBlocks])}`).toBeTruthy();
 	}
 	for (const type of ["text_delta", "thinking_delta", "signature_delta", "input_json_delta"]) {
-		assert.ok(deltas.has(type), `no ${type} delta — got ${JSON.stringify([...deltas])}`);
+		expect(deltas.has(type), `no ${type} delta — got ${JSON.stringify([...deltas])}`).toBeTruthy();
 	}
 });
 
@@ -293,7 +285,7 @@ test("message_delta usage carries thinking tokens nested under output_tokens_det
 	const requests = [];
 	const api = await stubApi(requests, { thinkingTokens });
 	const cwd = mkdtempSync(join(tmpdir(), "cc-thinking-usage-"));
-	t.after(() => { api.close(); rmSync(cwd, { recursive: true, force: true }); });
+	t.onTestFinished(() => { api.close(); rmSync(cwd, { recursive: true, force: true }); });
 	const deltaUsages = [];
 	for await (const message of query({
 		prompt: "Reply OK.",
@@ -307,19 +299,17 @@ test("message_delta usage carries thinking tokens nested under output_tokens_det
 		}
 	}
 
-	assert.ok(requests.length > 0, "CC sent no request to the thinking fixture");
-	assert.ok(requests.every((request) => request.model === MODEL), "thinking fixture received an unexpected model");
-	assert.ok(deltaUsages.length > 0, "no message_delta carried usage");
+	expect(requests.length > 0, "CC sent no request to the thinking fixture").toBeTruthy();
+	expect(requests.every((request) => request.model === MODEL), "thinking fixture received an unexpected model").toBeTruthy();
+	expect(deltaUsages.length > 0, "no message_delta carried usage").toBeTruthy();
 	const withThinking = deltaUsages.filter((u) => typeof u.output_tokens_details?.thinking_tokens === "number");
-	assert.ok(withThinking.length > 0,
-		`no message_delta reported output_tokens_details.thinking_tokens — got ${JSON.stringify(deltaUsages)}`);
+	expect(withThinking.length > 0, `no message_delta reported output_tokens_details.thinking_tokens — got ${JSON.stringify(deltaUsages)}`).toBeTruthy();
 	for (const usage of withThinking) {
-		assert.equal(usage.output_tokens_details.thinking_tokens, thinkingTokens, "CC changed the upstream thinking count");
-		assert.ok(usage.output_tokens_details.thinking_tokens > 0, "a thinking turn must report a positive count");
-		assert.ok(usage.output_tokens_details.thinking_tokens <= usage.output_tokens,
-			`thinking_tokens must stay a subset of output_tokens: ${JSON.stringify(usage)}`);
-		assert.equal(usage.thinking_tokens, undefined, "a flat thinking_tokens would mean the shape changed");
-		assert.equal(usage.reasoning_tokens, undefined, "reasoning_tokens has never existed; a value means the shape changed");
+		expect(usage.output_tokens_details.thinking_tokens, "CC changed the upstream thinking count").toBe(thinkingTokens);
+		expect(usage.output_tokens_details.thinking_tokens > 0, "a thinking turn must report a positive count").toBeTruthy();
+		expect(usage.output_tokens_details.thinking_tokens <= usage.output_tokens, `thinking_tokens must stay a subset of output_tokens: ${JSON.stringify(usage)}`).toBeTruthy();
+		expect(usage.thinking_tokens, "a flat thinking_tokens would mean the shape changed").toBe(undefined);
+		expect(usage.reasoning_tokens, "reasoning_tokens has never existed; a value means the shape changed").toBe(undefined);
 	}
 });
 
@@ -348,9 +338,8 @@ test("a streamed prompt keeps the query open past result until the input generat
 	}
 	exitAt = Date.now() - started;
 
-	assert.ok(resultAt !== null, "no result message arrived");
-	assert.ok(exitAt - resultAt >= HOLD_MS * 0.8,
-		`the SDK closed stdin on its own ${exitAt - resultAt}ms after result — a streamed prompt no longer parks the query, so steering is dead`);
+	expect(resultAt !== null, "no result message arrived").toBeTruthy();
+	expect(exitAt - resultAt >= HOLD_MS * 0.8, `the SDK closed stdin on its own ${exitAt - resultAt}ms after result — a streamed prompt no longer parks the query, so steering is dead`).toBeTruthy();
 });
 
 // --- The in-process MCP server ---
@@ -373,9 +362,8 @@ test("the SDK treats our McpServer as an opaque endpoint — it only calls conne
 
 	await collect(query({ prompt: "Call the alpha tool once, then stop.", options: providerOptions({ mcpServers: servers }) }));
 
-	assert.ok(calls.length > 0, "no tool call happened — the proxy was never exercised");
-	assert.deepEqual([...touched], ["connect"],
-		`the SDK now inspects the McpServer instance beyond connect(): ${JSON.stringify([...touched])}`);
+	expect(calls.length > 0, "no tool call happened — the proxy was never exercised").toBeTruthy();
+	expect([...touched], `the SDK now inspects the McpServer instance beyond connect(): ${JSON.stringify([...touched])}`).toStrictEqual(["connect"]);
 });
 
 test("JSON Schema is served verbatim — nested objects and anyOf/const survive", { timeout: 120_000 }, async () => {
@@ -403,9 +391,8 @@ test("JSON Schema is served verbatim — nested objects and anyOf/const survive"
 		options: providerOptions({ mcpServers: toolServer([{ name: "apply_edit", description: "Apply a structured edit.", inputSchema }], calls) }),
 	}));
 
-	assert.equal(calls.length, 1, `expected one apply_edit call, got ${calls.length}`);
-	assert.deepEqual(calls[0].args, { edit: { path: "a.txt", replacement: { from: "X", to: "Y" } }, kind: "fast" },
-		"the nested schema did not reach the model intact");
+	expect(calls.length, `expected one apply_edit call, got ${calls.length}`).toBe(1);
+	expect(calls[0].args, "the nested schema did not reach the model intact").toStrictEqual({ edit: { path: "a.txt", replacement: { from: "X", to: "Y" } }, kind: "fast" });
 });
 
 // --- Session transcripts and --resume ---
@@ -433,11 +420,11 @@ test("--resume re-reads the JSONL from disk on every call", { timeout: 180_000 }
 	};
 
 	seed("FOXGLOVE");
-	assert.match(await ask(), /foxglove/i);
+	expect(await ask()).toMatch(/foxglove/i);
 	seed("SANDPIPER");
 	const second = await ask();
-	assert.match(second, /sandpiper/i, `rewrite between resumes was ignored: ${second}`);
-	assert.doesNotMatch(second, /foxglove/i, `CC served stale content for the same UUID: ${second}`);
+	expect(second, `rewrite between resumes was ignored: ${second}`).toMatch(/sandpiper/i);
+	expect(second, `CC served stale content for the same UUID: ${second}`).not.toMatch(/foxglove/i);
 });
 
 test("arbitrary sanitized tool_use ids in an imported transcript resume fine", { timeout: 120_000 }, async () => {
@@ -459,7 +446,7 @@ test("arbitrary sanitized tool_use ids in an imported transcript resume fine", {
 	})) {
 		if (message.type === "assistant") for (const block of message.message?.content ?? []) if (block.type === "text") answer += block.text;
 	}
-	assert.match(answer, /platypus/i, `CC did not resume a transcript with non-toolu_ ids: ${answer}`);
+	expect(answer, `CC did not resume a transcript with non-toolu_ ids: ${answer}`).toMatch(/platypus/i);
 });
 
 test("CC writes each tool result of a parallel turn as its own transcript record", { timeout: 120_000 }, async () => {
@@ -473,7 +460,7 @@ test("CC writes each tool result of a parallel turn as its own transcript record
 		prompt: "Call both the alpha tool and the beta tool at the same time, in a single assistant message with two parallel tool calls. Then report both values.",
 		options: providerOptions({ mcpServers: toolServer([noArgTool("alpha"), noArgTool("beta")], calls) }),
 	}));
-	assert.equal(calls.length, 2, `expected two parallel tool calls, got ${calls.length}`);
+	expect(calls.length, `expected two parallel tool calls, got ${calls.length}`).toBe(2);
 
 	const jsonlPath = openSession({ sessionId: init.session_id, projectPath: CWD, claudeDir: process.env.CLAUDE_CONFIG_DIR }).jsonlPath;
 	const records = readFileSync(jsonlPath, "utf8").trim().split("\n").map((line) => JSON.parse(line));
@@ -484,12 +471,9 @@ test("CC writes each tool result of a parallel turn as its own transcript record
 	const resultBlocks = resultRecords.map((record) => record.message.content.filter((block) => block.type === "tool_result"));
 	const perRecord = resultBlocks.map((blocks) => blocks.length);
 
-	assert.deepEqual(perRecord, [1, 1],
-		`CC's transcript layout for parallel results changed: ${JSON.stringify(perRecord)}`);
-	assert.ok(resultRecords.every((record) => record.promptId && record.uuid && record.sourceToolAssistantUUID),
-		"tool results must be live CC conversation records, not imported or request metadata");
-	assert.deepEqual(resultBlocks.flat().map((block) => block.tool_use_id).sort(),
-		calls.map((call) => call.meta[TOOL_USE_ID_META]).sort(), "tool results are missing, duplicated, or mispaired");
+	expect(perRecord, `CC's transcript layout for parallel results changed: ${JSON.stringify(perRecord)}`).toStrictEqual([1, 1]);
+	expect(resultRecords.every((record) => record.promptId && record.uuid && record.sourceToolAssistantUUID), "tool results must be live CC conversation records, not imported or request metadata").toBeTruthy();
+	expect(resultBlocks.flat().map((block) => block.tool_use_id).sort(), "tool results are missing, duplicated, or mispaired").toStrictEqual(calls.map((call) => call.meta[TOOL_USE_ID_META]).sort());
 });
 
 test("repairToolPairing keeps every result only when they share one user message", { timeout: 30_000 }, () => {
@@ -506,9 +490,8 @@ test("repairToolPairing keeps every result only when they share one user message
 	const single = resultsOf([{ role: "user", content: "go" }, assistant,
 		{ role: "user", content: ids.map((id) => ({ type: "tool_result", tool_use_id: id, content: `RESULT-${id}` })) }]);
 
-	assert.deepEqual(single, ["RESULT-t1", "RESULT-t2", "RESULT-t3"]);
-	assert.ok(split.some((content) => !String(content).startsWith("RESULT-")),
-		`repairToolPairing now tolerates split results (${JSON.stringify(split)}) — convertPiMessages could stop collecting them`);
+	expect(single).toStrictEqual(["RESULT-t1", "RESULT-t2", "RESULT-t3"]);
+	expect(split.some((content) => !String(content).startsWith("RESULT-")), `repairToolPairing now tolerates split results (${JSON.stringify(split)}) — convertPiMessages could stop collecting them`).toBeTruthy();
 });
 
 // --- Environment suppression ---
@@ -528,8 +511,7 @@ test("ENABLE_CLAUDEAI_MCP_SERVERS=0 suppresses claude.ai cloud MCP servers", { t
 	}
 
 	const after = await initOnly({ cwd: CWD, model: MODEL, tools: [], permissionMode: "bypassPermissions", env: { ...withoutVar, ENABLE_CLAUDEAI_MCP_SERVERS: "0" }, maxTurns: 1 });
-	assert.deepEqual((after.mcp_servers ?? []).filter(isCloud), [],
-		`cloud MCP servers survived the env gate: ${JSON.stringify(after.mcp_servers)}`);
+	expect((after.mcp_servers ?? []).filter(isCloud), `cloud MCP servers survived the env gate: ${JSON.stringify(after.mcp_servers)}`).toStrictEqual([]);
 });
 
 test("--strict-mcp-config suppresses filesystem MCP servers", { timeout: 120_000 }, async (t) => {
@@ -543,8 +525,7 @@ test("--strict-mcp-config suppresses filesystem MCP servers", { timeout: 120_000
 	}
 
 	const after = await initOnly({ ...base, extraArgs: { "strict-mcp-config": null } });
-	assert.deepEqual(after.mcp_servers ?? [], [],
-		`filesystem MCP servers survived --strict-mcp-config: ${JSON.stringify(after.mcp_servers)}`);
+	expect(after.mcp_servers ?? [], `filesystem MCP servers survived --strict-mcp-config: ${JSON.stringify(after.mcp_servers)}`).toStrictEqual([]);
 });
 
 test("--thinking-display summarized is still an accepted flag value", { timeout: 120_000 }, async () => {
@@ -556,7 +537,7 @@ test("--thinking-display summarized is still an accepted flag value", { timeout:
 		prompt: "Reply with just: OK",
 		options: providerOptions({ effort: "medium", maxTurns: 1, persistSession: false, extraArgs: { "strict-mcp-config": null, "thinking-display": "summarized" } }),
 	}));
-	assert.equal(result?.subtype, "success", `CC rejected --thinking-display summarized: ${JSON.stringify(result)}`);
+	expect(result?.subtype, `CC rejected --thinking-display summarized: ${JSON.stringify(result)}`).toBe("success");
 });
 
 // --- Captured request contracts ---
@@ -628,14 +609,13 @@ test("claudeMdExcludes prevents native AGENTS.md from duplicating forwarded inst
 					systemPrompt: { type: "preset", preset: "claude_code", append: marker },
 				}),
 			}));
-			assert.equal(result?.subtype, "success");
+			expect(result?.subtype).toBe("success");
 			const request = requests.at(-1);
-			assert.ok(request, "CC sent no request");
+			expect(request, "CC sent no request").toBeTruthy();
 			const system = JSON.stringify(request.system);
 			const messages = JSON.stringify(request.messages);
-			assert.equal(system.split(marker).length - 1, 1, "forwarded instructions must remain");
-			assert.equal(messages.split(marker).length - 1, excluded ? 0 : 1,
-				excluded ? "native AGENTS.md survived the exclusion" : "CC did not load AGENTS.md — check ambient exclusions or native loading changes");
+			expect(system.split(marker).length - 1, "forwarded instructions must remain").toBe(1);
+			expect(messages.split(marker).length - 1, excluded ? "native AGENTS.md survived the exclusion" : "CC did not load AGENTS.md — check ambient exclusions or native loading changes").toBe(excluded ? 0 : 1);
 		}
 	} finally {
 		api.close();
@@ -687,37 +667,31 @@ test("includeGitInstructions:false strips gitStatus and keeps the preset static 
 		// where the break lives.
 		await collect(query({ prompt: "Reply OK.", options: opts({}) }));
 		const ctrlFirst = requests.at(-1);
-		assert.ok(JSON.stringify(ctrlFirst).includes("gitStatus"),
-			"the preset no longer carries a gitStatus block — this test's negative side is obsolete");
+		expect(JSON.stringify(ctrlFirst).includes("gitStatus"), "the preset no longer carries a gitStatus block — this test's negative side is obsolete").toBeTruthy();
 		writeFileSync(join(repo, "ctrl-new.txt"), "x\n");
 		await collect(query({ prompt: "Reply OK.", options: opts({}) }));
-		assert.ok(presetReqs().length >= 2, "missing control requests with the test's preset marker");
+		expect(presetReqs().length >= 2, "missing control requests with the test's preset marker").toBeTruthy();
 		const [c1, c2] = [presetReqs().at(-2), presetReqs().at(-1)];
-		assert.ok(JSON.stringify(c1.messages[0]).includes("gitStatus") && JSON.stringify(c2.messages[0]).includes("gitStatus"),
-			"git snapshot no longer rides in the leading user message — re-point this control");
-		assert.notDeepEqual(sansCacheControl(c1.messages[0]), sansCacheControl(c2.messages[0]),
-			"a git transition did not move the git snapshot without the setting — the break this test guards no longer exists");
+		expect(JSON.stringify(c1.messages[0]).includes("gitStatus") && JSON.stringify(c2.messages[0]).includes("gitStatus"), "git snapshot no longer rides in the leading user message — re-point this control").toBeTruthy();
+		expect(sansCacheControl(c1.messages[0]), "a git transition did not move the git snapshot without the setting — the break this test guards no longer exists").not.toStrictEqual(sansCacheControl(c2.messages[0]));
 
 		// With the setting: baseline, then a git transition, then resume.
 		const base = await collect(query({ prompt: "Reply OK.", options: opts({ includeGitInstructions: false }) }));
-		assert.equal(base.result?.subtype, "success");
+		expect(base.result?.subtype).toBe("success");
 		writeFileSync(join(repo, "untracked.txt"), "x\n");
 		await collect(query({ prompt: "Reply OK.", options: opts({ includeGitInstructions: false }, base.result?.session_id) }));
 
 		const [turn1, turn2] = presetReqs().slice(-2);
 		for (const body of [turn1, turn2]) {
-			assert.ok(!JSON.stringify({ system: body.system, messages: body.messages }).includes("gitStatus"),
-				"a gitStatus block survived includeGitInstructions:false");
+			expect(JSON.stringify({ system: body.system, messages: body.messages }).includes("gitStatus"), "a gitStatus block survived includeGitInstructions:false").toBeFalsy();
 		}
 		// The prompt cache keys the whole request body: the system blocks and the
 		// leading user message must be byte-identical across the transition.
 		// (Block 0 of `system` is a per-request billing header, hence slice(1);
 		// later blocks may legitimately carry moved cache_control markers, which are
 		// breakpoint directives, not cache-keyed content.)
-		assert.deepEqual(sansCacheControl(turn1.system).slice(1), sansCacheControl(turn2.system).slice(1),
-			"system prompt changed across a git transition despite includeGitInstructions:false");
-		assert.deepEqual(sansCacheControl(turn1.messages[0]), sansCacheControl(turn2.messages[0]),
-			"leading user message changed across a git transition despite includeGitInstructions:false");
+		expect(sansCacheControl(turn1.system).slice(1), "system prompt changed across a git transition despite includeGitInstructions:false").toStrictEqual(sansCacheControl(turn2.system).slice(1));
+		expect(sansCacheControl(turn1.messages[0]), "leading user message changed across a git transition despite includeGitInstructions:false").toStrictEqual(sansCacheControl(turn2.messages[0]));
 	} finally {
 		api.close();
 		rmSync(repo, { recursive: true, force: true });
