@@ -11,7 +11,6 @@ Pi packages (extensions and their resources) in one Turborepo workspace.
 
 | Package | Description |
 | --- | --- |
-| [`apps/pi-claude-compact`](apps/pi-claude-compact) | Claude Code's context compaction, rebuilt for Pi |
 | [`apps/pi-claude-bridge`](apps/pi-claude-bridge) | Claude Code provider and AskClaude tool for Pi |
 | [`apps/pi-ollama-cloud`](apps/pi-ollama-cloud) | Ollama Cloud 공급자, 웹 도구, 사용량 조회 |
 | [`apps/pi-codex`](apps/pi-codex) | The four Codex extensions below and the `imagegen` skill in one bundle |
@@ -30,8 +29,8 @@ Requires Node.js 22.19 or later and pnpm 10.
 pnpm install
 pnpm check                          # typecheck and lint every package, cached by Turborepo
 pnpm build                          # compile the packages that ship dist/ (pi-codex family, redact)
-pnpm --filter @buyong/pi-claude-compact typecheck
-pi -e ./apps/pi-claude-compact      # load an app in Pi for one session
+pnpm --filter @buyong/pi-ollama-cloud typecheck
+pi -e ./apps/pi-ollama-cloud        # load an app in Pi for one session
 ```
 
 ## 공통 CI와 패키지별 배포

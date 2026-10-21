@@ -95,10 +95,7 @@ export function createMirrorStore(runtime: Pick<BridgeRuntime, "activeQueryConte
 	 *  cwd, and a worktree cwd clears it), while the serving instance — whose
 	 *  streamSimple the pi sessions actually call — is whoever registered first.
 	 *  A fresh instance must forward its session's rewrites to the serving one.
-	 *  Symbol.for: one registry per process, like SHARED_CAPTURES_KEY below.
-	 *  pi-claude-compact also calls these hooks: its boundary compactions
-	 *  (turn_end, agent_before_settle) rewrite the history without a
-	 *  session_compact event. */
+	 *  Symbol.for: one registry per process, like SHARED_CAPTURES_KEY below. */
 	const MARK_REBUILD_HOOKS_KEY = Symbol.for("claude-bridge:markRebuildHooks");
 
 	const markRebuildHooks: Set<MarkRebuildHook> =
