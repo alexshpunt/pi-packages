@@ -19,18 +19,20 @@ export interface CapturedProviderRequest { method: string; body: JsonObject; hea
 export async function providerFixture(options: {
   chat?: (request: CapturedProviderRequest, index: number) => Response | Promise<Response>;
   status?: JsonObject;
+  /** Replaces the nth account status response (1-based); undefined keeps the normal response. */
+  statusFailure?: (index: number) => Response | Promise<Response> | undefined;
   maxModelCalls?: number;
   catalog?: JsonObject;
 } = {}) {
   const requests: CapturedProviderRequest[] = [];
-  let chatCalls = 0, fingerprintCollections = 0;
+  let chatCalls = 0, statusCalls = 0, fingerprintCollections = 0;
   const fetchImpl: typeof fetch = async (url, init) => {
     const method = new URL(String(url)).pathname.slice(1);
     const captured = { method, body: requestBody(method, init!), headers: new Headers(init!.headers), signal: init!.signal!, init: init! };
     requests.push(captured);
     if (method.endsWith("/ExchangeDevinCLIPKCECode")) return unaryResponse(method, { sessionToken: providerCredential.sessionToken });
     if (method.endsWith("/ExchangePKCEAuthorizationCode")) return unaryResponse(method, { apiKey: providerCredential.sessionToken, apiServerUrl: providerCredential.apiServerURL });
-    if (method === STATUS_METHOD) return unaryResponse(method, options.status ?? statusResponse());
+    if (method === STATUS_METHOD) return (await options.statusFailure?.(++statusCalls)) ?? unaryResponse(method, options.status ?? statusResponse());
     if (method === MODELS_METHOD) return unaryResponse(method, options.catalog ?? providerCatalog);
     if (method === TEAM_METHOD) return unaryResponse(method, {});
     if (method !== CHAT_METHOD) throw new Error("Unexpected fixture RPC: " + method);

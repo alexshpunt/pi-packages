@@ -151,35 +151,38 @@ export class SidekickRuntime {
   }
 
   handoff(message: string): Handoff {
-    if (this.pending) {
+    const current = this.pending;
+    if (current) {
       this.send({ type: "steer", message });
-      return { id: this.pending.id, done: this.pending.done, isSteer: true };
+      return { id: current.id, done: current.done, isSteer: true };
     }
     if (!this.isAlive()) this.start();
     let resolve!: (report: HandoffReport) => void;
     const done = new Promise<HandoffReport>((settle) => { resolve = settle; });
     const id = randomUUID();
     this.pending = { id, startedAt: Date.now(), toolCalls: 0, recentTools: [], isAborted: false, resolve, done };
-    try { this.send({ id, type: "prompt", message }); }
-    catch (error) { this.finish("error", "", error instanceof Error ? error.message : String(error)); }
+    this.send({ id, type: "prompt", message });
     return { id, done, isSteer: false };
   }
 
   abort(): void {
     if (!this.pending) return;
     this.pending.isAborted = true;
-    try { this.send({ type: "abort" }); } catch { this.finish("aborted", ""); }
+    this.send({ type: "abort" });
   }
 
   close(): void {
     const child = this.child;
     this.child = undefined;
     if (this.pending) this.finish("aborted", "", "Stopped the sidekick process.");
+    for (const resolve of this.waiting.values()) resolve(undefined);
+    this.waiting.clear();
     if (!child || child.exitCode !== null || child.signalCode !== null) return;
     child.stdin?.end();
-    child.kill("SIGTERM");
     const timer = setTimeout(() => { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); }, KILL_GRACE_MS);
     timer.unref();
+    child.once("close", () => clearTimeout(timer));
+    child.kill("SIGTERM");
   }
 
   private start(): void {
@@ -195,6 +198,7 @@ export class SidekickRuntime {
     const decoder = new StringDecoder("utf8");
     let buffer = "";
     child.stdout?.on("data", (chunk: Buffer) => {
+      if (this.child !== child) return;
       buffer += decoder.write(chunk);
       let index: number;
       while ((index = buffer.indexOf("\n")) >= 0) {
@@ -205,28 +209,37 @@ export class SidekickRuntime {
         let record: Record<string, unknown>;
         try { record = JSON.parse(line) as Record<string, unknown>; } catch { continue; }
         this.handle(record);
+        if (this.child !== child) return;
       }
     });
-    child.stderr?.on("data", (chunk: Buffer) => { this.stderrTail = (this.stderrTail + chunk.toString("utf8")).slice(-STDERR_TAIL); });
-    child.on("error", (error) => { if (this.child === child) this.finish("error", "", error.message); });
-    child.on("close", () => {
-      if (this.child === child) this.child = undefined;
-      for (const resolve of this.waiting.values()) resolve(undefined);
-      this.waiting.clear();
-      if (this.pending) this.finish("error", "", this.stderrTail.trim() || "The sidekick process exited.");
-    });
+    child.stderr?.on("data", (chunk: Buffer) => { if (this.child === child) this.stderrTail = (this.stderrTail + chunk.toString("utf8")).slice(-STDERR_TAIL); });
+    child.stdin?.on("error", (error) => this.fail(child, error.message));
+    child.on("error", (error) => this.fail(child, error.message));
+    child.on("close", () => this.fail(child, this.stderrTail.trim() || "The sidekick process exited."));
+  }
+
+  /** Transport errors settle the handoff and all RPC waits once, even if the failed child closes after its replacement starts. */
+  private fail(child: ChildProcess | undefined, error: string): void {
+    if (this.child !== child) return;
+    this.finish(this.pending?.isAborted ? "aborted" : "error", "", error);
+    this.close();
   }
 
   private send(value: Record<string, unknown>): void {
-    if (!this.child?.stdin?.writable) throw new Error("Cannot write to the sidekick process.");
-    this.child.stdin.write(JSON.stringify(value) + "\n");
+    const child = this.child;
+    try {
+      if (!child?.stdin?.writable) throw new Error("Cannot write to the sidekick process.");
+      child.stdin.write(JSON.stringify(value) + "\n");
+    } catch (error) {
+      this.fail(child, error instanceof Error ? error.message : String(error));
+    }
   }
 
   private request(type: string): Promise<string | undefined> {
     const id = randomUUID();
     return new Promise((resolve) => {
       this.waiting.set(id, resolve);
-      try { this.send({ id, type }); } catch { this.waiting.delete(id); resolve(undefined); }
+      this.send({ id, type });
     });
   }
 
@@ -247,7 +260,7 @@ export class SidekickRuntime {
       case "extension_ui_request":
         // The sidekick never talks to the user. Dialogs that need an answer are returned as cancelled.
         if (["select", "confirm", "input", "editor"].includes(String(record.method))) {
-          try { this.send({ type: "extension_ui_response", id: record.id, cancelled: true }); } catch { /* shutting down */ }
+          this.send({ type: "extension_ui_response", id: record.id, cancelled: true });
         }
         return;
       case "tool_execution_start":

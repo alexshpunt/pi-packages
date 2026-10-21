@@ -1,11 +1,12 @@
 import { expect, test, vi } from "vitest";
 import { normalizeContext, type AssistantMessageEvent, type Context } from "@earendil-works/pi-ai";
+import { isRetryableAssistantError } from "@earendil-works/pi-ai/utils/retry";
 import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
 import { encodeFrame } from "../src/core/protocol/transport.ts";
 import { chatResponseCodec } from "../src/core/protocol/protobuf.ts";
 import type { JsonObject } from "../src/core/types.ts";
-import { errorStreamResponse, finalFrames, streamResponse } from "./helpers.ts";
-import { extendedCacheCatalog, providerCredential, providerFixture } from "./provider-fixture.ts";
+import { errorStreamResponse, finalFrames, STATUS_METHOD, streamResponse } from "./helpers.ts";
+import { extendedCacheCatalog, providerCredential, providerFixture, providerHostCredential } from "./provider-fixture.ts";
 
 const context = (): Context => ({ systemPrompt: "Current Pi prompt", messages: [{ role: "user", content: "hello", timestamp: 1 }] });
 async function collect(stream: ReturnType<Awaited<ReturnType<typeof providerFixture>>["provider"]["streamSimple"]>) {
@@ -122,6 +123,55 @@ test("the fixed 8-call budget is not reset at host retry boundaries and blocks b
     expect(new Set(bodies.map((body) => body.cascadeId)).size).toBe(1);
     expect((bodies[0].trajectoryReference as JsonObject).stepType).toBe("CORTEX_STEP_TYPE_USER_INPUT");
     expect((bodies[1].trajectoryReference as JsonObject).stepType).toBe(undefined);
+  } finally { fixture.provider.shutdown(); }
+});
+
+const socketError = (message: string, code: string) => () => Promise.reject(Object.assign(new Error(message), { code }));
+const withoutEndStream = () => new Response(new Uint8Array(encodeFrame(chatResponseCodec.encode({ deltaText: "partial" }))), { headers: { "content-type": "application/connect+proto" } });
+for (const [name, chat, retryable] of [
+  ["a refused connection", socketError("connect ECONNREFUSED 35.223.238.178:443", "ECONNREFUSED"), true],
+  ["a reset connection", socketError("read ECONNRESET", "ECONNRESET"), true],
+  ["a broken pipe", socketError("write EPIPE", "EPIPE"), true],
+  ["a connect timeout", socketError("connect ETIMEDOUT 35.223.238.178:443", "ETIMEDOUT"), true],
+  ["a stream that ends without EndStream", withoutEndStream, true],
+  ["a Connect unavailable error", () => errorStreamResponse("unavailable", "upstream busy"), true],
+  ["an HTTP 503 response", () => Response.json({ code: "overloaded_backend", message: "try later" }, { status: 503 }), true],
+  ["a TLS certificate failure", socketError("self-signed certificate", "DEPTH_ZERO_SELF_SIGNED_CERT"), false],
+  ["a Connect internal error", () => errorStreamResponse("internal", "model failed"), false],
+] as const) test(`${name} ${retryable ? "is" : "is not"} reported as a retryable connection error`, async () => {
+  const fixture = await providerFixture({ chat });
+  try {
+    const { result } = await collect(fixture.provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
+    expect(result.stopReason).toBe("error");
+    expect(result.errorMessage!.startsWith("Connection error (")).toBe(retryable);
+    if (retryable) expect(isRetryableAssistantError(result)).toBe(true);
+  } finally { fixture.provider.shutdown(); }
+});
+
+test("the account check runs before every request outside Pi's credential lock, and refresh no longer repeats it", async () => {
+  const fixture = await providerFixture({ statusFailure: (index) => index === 2 ? Promise.reject(Object.assign(new Error("read ECONNRESET"), { code: "ECONNRESET" })) : undefined });
+  const statusCalls = () => fixture.requests.filter((request) => request.method === STATUS_METHOD).length;
+  const run = () => collect(fixture.provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
+  try {
+    expect((await run()).result.stopReason).toBe("stop");
+    expect(statusCalls()).toBe(1);
+    // An unreachable check keeps the account from the previous check, and the request is still sent.
+    expect((await run()).result.stopReason).toBe("stop");
+    expect(statusCalls()).toBe(2);
+    expect(fixture.chatCalls()).toBe(2);
+    // Pi calls refresh under the shared auth.json lock before each request (expires: 0); it must not wait on the network.
+    await fixture.provider.auth.oauth!.refresh(providerHostCredential, new AbortController().signal);
+    expect(statusCalls()).toBe(2);
+  } finally { fixture.provider.shutdown(); }
+});
+
+test("an unreachable first account check fails the request with a retryable connection error", async () => {
+  const fixture = await providerFixture({ statusFailure: () => Promise.reject(Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:9"), { code: "ECONNREFUSED" })) });
+  try {
+    const { result } = await collect(fixture.provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
+    expect(result.errorMessage).toBe("Connection error (connect ECONNREFUSED 127.0.0.1:9)");
+    expect(isRetryableAssistantError(result)).toBe(true);
+    expect(fixture.chatCalls()).toBe(0);
   } finally { fixture.provider.shutdown(); }
 });
 

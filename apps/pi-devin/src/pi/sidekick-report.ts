@@ -30,13 +30,18 @@ export function truncateReport(text: string, maxChars = SIDEKICK_REPORT_CHAR_LIM
 export async function boundReport(text: string, maxChars = SIDEKICK_REPORT_CHAR_LIMIT): Promise<BoundedReport> {
   const result = truncateReport(text, maxChars);
   if (!result.isTruncated) return { text };
-  const notice = `[The sidekick report exceeded about ${SIDEKICK_REPORT_TOKEN_LIMIT} tokens and was cut.`;
+  let notice = `\n\n[The sidekick report exceeded about ${SIDEKICK_REPORT_TOKEN_LIMIT} tokens and was cut.`;
+  let fullReportPath: string | undefined;
   try {
     const directory = await mkdtemp(join(tmpdir(), "pi-devin-sidekick-report-"));
-    const fullReportPath = join(directory, "report.md");
-    await writeFile(fullReportPath, text, { encoding: "utf8", mode: 0o600 });
-    return { text: `${result.text}\n\n${notice} Full report: ${fullReportPath}]`, fullReportPath };
+    const path = join(directory, "report.md");
+    await writeFile(path, text, { encoding: "utf8", mode: 0o600 });
+    fullReportPath = path;
+    notice += ` Full report: ${path}]`;
   } catch (error) {
-    return { text: `${result.text}\n\n${notice} The full report could not be saved: ${error instanceof Error ? error.message : String(error)}]` };
+    notice += ` The full report could not be saved: ${error instanceof Error ? error.message : String(error)}]`;
   }
+  // The notice is part of the same budget, including a filesystem error if preservation failed.
+  const suffix = truncateReport(notice, maxChars).text;
+  return { text: truncateReport(text, maxChars - suffix.length).text + suffix, ...(fullReportPath ? { fullReportPath } : {}) };
 }

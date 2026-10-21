@@ -80,7 +80,7 @@ There are two toggles, both off by default. Changes apply to all sessions at onc
 - **Recommended models only**: `/model` shows only the models that have a variant Devin marks as Recommended, plus Devin Fusion. Devin marks single variants such as `swe-2-high`, but the list keeps the model itself (`swe-2`), so you still pick the thinking level with `/thinking`. The recommended level is not applied automatically. If your account has no recommended models, the full list is shown.
 - **Usage in status line**: the TUI footer shows the remaining daily and weekly quota as bars, plus this session's input and output tokens, like `devin day ▕█████████░▏98% week ▕█████████░▏98% · ↑263 ↓49`. A bar turns to the warning color at 40% or less and to the error color at 20% or less.
 
-Quota is not live. It is refreshed when you log in and when Pi checks the login right before sending a model request, so the usage of the message you just sent shows up after the next request. `/devin` and the status line send no network requests. Credits, per-request costs and usage history are not shown.
+Quota is not live. It is refreshed when you log in and by the account check right before each model request, so the usage of the message you just sent shows up after the next request. If that check cannot reach the Devin server (for example `ECONNREFUSED` or a 503), the request is still sent with the last checked account. A model request whose connection is refused, reset or cut off mid-response is reported as `Connection error (…)`, which Pi's automatic retry recognizes; a lasting outage reports that connection error instead of `OAuth refresh failed`. `/devin` and the status line send no network requests. Credits, per-request costs and usage history are not shown.
 
 If a filter change removes the model you are using from the list, you can keep using it in the current session. When you reopen the session, that model is not restored, so pick a model from the list again.
 
@@ -95,8 +95,9 @@ Picking **Devin Fusion** (`fusion`) in `/model` turns on the `devin_sidekick` to
 - You can also use arguments: `/devin-fusion <lead model ID> <sidekick model ID>` (for example, `/devin-fusion swe-2 swe-2-high`). The lead is a family ID from the `/model` list; the sidekick is a variant ID with a fixed thinking level. With the TUI picker you do not need to know the IDs. The saved pair applies to all sessions.
 - The lead's thinking level follows `/thinking`.
 - The sidekick runs as a separate Pi process for each lead session. It shares the working directory, active tools and Devin login with the lead.
-- By default, the lead waits for the sidekick's report. If the lead model calls the `devin_sidekick` tool with `block: false`, it continues without waiting, and runs again when the report arrives. Cancelling the lead also stops the sidekick task it was waiting for.
-- The lead receives at most about 131,072 tokens of each sidekick report, counted like Pi's own context estimate (4 characters per token). A longer report is cut at that point, and the cut report ends with the path of a temporary file that holds the complete text (see [Storage locations](#storage-locations)).
+- By default, the lead waits for the sidekick's report. If the lead model calls the `devin_sidekick` tool with `block: false`, it continues without waiting, and runs again when the report arrives. A later blocking call to the running task receives the report as its tool result instead of another background message. Actual user input while waiting moves the task back to the background.
+- Cancelling the lead also stops the sidekick task it was waiting for. A call already cancelled before handoff starts no work, including with `block: false`. A broken connection to the sidekick fails the task and closes that child process rather than terminating the lead Pi.
+- The lead receives at most about 131,072 tokens of each sidekick report, counted like Pi's own context estimate (4 characters per token). This includes status, errors, background headings and truncation notices. A longer report is cut, and the cut report ends with the path of a temporary file that holds the complete report (see [Storage locations](#storage-locations)). If saving fails, the report stays bounded and includes a notice instead.
 - If you restricted tools with `pi --tools`, include `devin_sidekick` in the list for Fusion to work.
 - With Fusion, the lead and the sidekick each use quota as regular requests to the models they call.
 
@@ -108,7 +109,7 @@ Picking **Devin Fusion** (`fusion`) in `/model` turns on the `devin_sidekick` to
 | Request timeout | Follows the value set by Pi (300 seconds by default). |
 | Prompt cache | Short cache by default. `PI_CACHE_RETENTION=long` is allowed only for models Devin marks with a 24-hour cache; for other models the request is refused before sending. |
 | Images | On supported models, up to 4 MiB per image and 5 MiB in total per message. |
-| Sidekick report | The lead receives at most about 131,072 tokens (524,288 characters) of each report. The complete text of a longer report is saved in a temporary file. |
+| Sidekick report | The lead receives at most about 131,072 tokens (524,288 characters), including errors and notices. The complete report is saved in a temporary file when possible. |
 | print and JSON modes | These modes do not fetch the model list; they use the list stored by an earlier TUI or RPC session. After logging in, run the TUI or RPC mode once, or `--model devin/<model ID>` is not found. |
 
 - On a 401 error, log in again. 403, 429 and timeouts are not treated as an expired login. If logging in again does not help, check your account permissions, quota and network.
@@ -212,4 +213,12 @@ SOFTWARE.
 
 ## Development
 
-The source and verification procedures are in the [GitHub repository](https://github.com/buYoung/pi-packages/tree/main/apps/pi-devin). See `verification/README.md` for verification and `proto/README.md` for the schema sources.
+The source and verification procedures are in the [GitHub repository](https://github.com/buYoung/pi-packages/tree/main/apps/pi-devin). With development dependencies installed, run these from `apps/pi-devin/` in a source checkout; they use local fixtures and need no Devin account:
+
+```bash
+pnpm run typecheck
+pnpm run test:unit
+node verification/scripts/import-closure.mjs . --expect verification/inventory.json
+```
+
+Expected: exit code 0, all tests passing, and `ok: true` with no import-closure problems. The sidekick tests cover cancellation, broken child connections, one-time delivery and report limits. See `verification/README.md` for isolated Pi and archive checks, and `proto/README.md` for the schema sources.

@@ -9,7 +9,7 @@ import { applyTeamModelPolicy } from "../core/models/access.ts";
 import type { BackendModelSelection, EffectiveThinkingLevel } from "../core/models/variants.ts";
 import { createFingerprintProvider, type FingerprintProvider } from "../core/protocol/fingerprint.ts";
 import { CHAT_METHOD } from "../core/protocol/protobuf.ts";
-import { awaitWithSignal, endpoint, isAuthenticationError, RPCError, safeError } from "../core/protocol/transport.ts";
+import { awaitWithSignal, endpoint, isAuthenticationError, isTransientConnectionFailure, RPCError, safeError } from "../core/protocol/transport.ts";
 import { object, requiredString, tokenCount, type Credential, type JsonObject } from "../core/types.ts";
 import { createDevinAccountAuth } from "./auth.ts";
 import { DevinLifecycle, type RequestLease, type SessionBinding } from "./lifecycle.ts";
@@ -22,6 +22,11 @@ import { accountUsage, type AccountUsage } from "./usage.ts";
 type LoginConfiguration = NonNullable<Parameters<typeof createDevinAccountAuth>[0]>["loginOptions"];
 
 /** Like Pi's built-in providers: the caller option wins; otherwise only PI_CACHE_RETENTION=long (provider env first) means long retention. */
+/** Node and Connect report these failures as codes ("read ECONNRESET", "unavailable: …") that Pi's host retry does not match. */
+function hostRetryableMessage(error: unknown, message: string): string {
+  return isTransientConnectionFailure(error) ? `Connection error (${message})` : message;
+}
+
 function resolveCacheRetention(options: SimpleStreamOptions): NonNullable<SimpleStreamOptions["cacheRetention"]> {
   if (options.cacheRetention) return options.cacheRetention;
   return (options.env?.PI_CACHE_RETENTION || process.env.PI_CACHE_RETENTION) === "long" ? "long" : "short";
@@ -85,6 +90,7 @@ export function createDevinProvider(options: {
     loginOptions: { ...options.loginOptions, fetch: options.loginOptions?.fetch ?? options.fetch },
     createClient: (credential) => clientFor(credential, { profile: "login" }),
     getSignal: () => lifetime.signal,
+    isAccountChecked: (credential) => accounts.has(catalogScope(credential)),
     onValidated: rememberAccount,
     onInvalidated: (credential, error) => { accounts.delete(catalogScope(credential)); latestUsage = undefined; lifecycle.abort(error); },
     onLogin: () => {
@@ -141,18 +147,20 @@ export function createDevinProvider(options: {
           }
         };
         assertCacheRetention(selected);
+        // The per-request account check (permission and quota) runs here, outside Pi's shared credential lock.
         let account = accounts.get(catalogScope(credential));
-        if (!account) {
-          const probe = clientFor(credential, { profile: "login", fetch: requestOptions.fetch, timeoutMs: requestOptions.timeoutMs });
-          try {
-            const status = await probe.status(signal);
-            signal.throwIfAborted();
-            if (generation !== auth.generation) throw new DOMException("The Devin authentication generation changed.", "AbortError");
-            auth.assertUsable(credential);
-            rememberAccount(credential, requiredString(probe.accountIdentityHash, "Devin account scope"), status);
-            account = accounts.get(catalogScope(credential));
-          } finally { probe.transport.close(); }
-        }
+        const probe = clientFor(credential, { profile: "login", fetch: requestOptions.fetch, timeoutMs: requestOptions.timeoutMs });
+        try {
+          const status = await probe.status(signal);
+          signal.throwIfAborted();
+          if (generation !== auth.generation) throw new DOMException("The Devin authentication generation changed.", "AbortError");
+          auth.assertUsable(credential);
+          rememberAccount(credential, requiredString(probe.accountIdentityHash, "Devin account scope"), status);
+          account = accounts.get(catalogScope(credential));
+        } catch (error) {
+          // A check that cannot reach the server keeps the last known account; the model request reports its own failure.
+          if (!account || signal.aborted || !isTransientConnectionFailure(error)) throw error;
+        } finally { probe.transport.close(); }
         if (!account) throw new Error("The Devin account check was interrupted.");
         assertCanInfer(account.status);
         lease = await lifecycle.acquire(account.ownerHash, signal);
@@ -215,7 +223,7 @@ export function createDevinProvider(options: {
       } catch (error) {
         if (credential) authenticationFailed(credential, error, generation);
         accumulator.message.modelUid = actualUID || undefined;
-        response.fail(safeError(error, credential ? [credential.sessionToken] : []), error instanceof Error && error.name === "AbortError", isRedacted ? undefined : accumulator.message);
+        response.fail(hostRetryableMessage(error, safeError(error, credential ? [credential.sessionToken] : [])), error instanceof Error && error.name === "AbortError", isRedacted ? undefined : accumulator.message);
       } finally { client?.transport.close(); lease?.release(); }
     })();
     return response.stream;
