@@ -21,7 +21,7 @@ const STATUS_KEY = "codex-fast-mode";
 const SETTINGS_DIRECTORY = "codex-fast-mode";
 const MODEL_FAMILY_ORDER = ["astra", "sol", "luna"];
 const COMMAND_USAGE =
-    "Usage: /codex-fast [status|on|off], /codex-fast speed <standard|fast|ultrafast>, /codex-fast <fast|ultrafast> <on|off>, or /codex-fast model <provider/id> <standard|fast|ultrafast|inherit>";
+    "Usage: /codex-fast [status|on|off], /codex-fast session <standard|fast|ultrafast|clear>, /codex-fast speed <standard|fast|ultrafast>, /codex-fast <fast|ultrafast> <on|off>, or /codex-fast model <provider/id> <standard|fast|ultrafast|inherit>";
 
 export function defaultSettingsPath(): string {
     return join(getAgentDir(), SETTINGS_DIRECTORY, "settings.json");
@@ -92,12 +92,14 @@ export default function codexFastModeExtension(pi: ExtensionAPI): void {
                   ? "Request enabled"
                   : "Unsupported by this model; preference retained";
         const source =
-            ctx.model &&
-            fastController.getModelTier(
-                `${ctx.model.provider}/${ctx.model.id}`,
-            ) !== undefined
-                ? "model override"
-                : "global speed";
+            fastController.sessionTier !== undefined
+                ? "session speed overrides saved model/global speeds"
+                : ctx.model &&
+                    fastController.getModelTier(
+                        `${ctx.model.provider}/${ctx.model.id}`,
+                    ) !== undefined
+                  ? "model override"
+                  : "global speed";
         return `OpenAI requested service tier: ${tier} · ${application} · ${model} · ${source}`;
     };
     const showStatus = (ctx: ExtensionContext) => {
@@ -108,19 +110,30 @@ export default function codexFastModeExtension(pi: ExtensionAPI): void {
             [
                 describeState(ctx),
                 `Global speed: ${fastController.desiredTier}`,
+                fastController.sessionTier === undefined
+                    ? "Session speed: not set"
+                    : `Session speed: ${fastController.sessionTier} · overrides saved model/global speeds; never saved`,
                 `Settings: ${store?.settingsPath ?? defaultSettingsPath()}`,
                 cfg.persistState
-                    ? "Mode changes are saved to the settings file."
-                    : "Mode changes apply only to this session.",
+                    ? "Global/model speed changes are saved to the settings file."
+                    : "Global/model speed changes apply only to this session.",
                 last
                     ? `Last payload injection: ${last.at} · ${last.model} · ${last.tier} (request only; server processing and billing not verified)`
                     : "No service tier has been injected into a request during this session.",
             ].join("\n"),
         );
     };
-    const persist = async () => {
-        if (cfg.persistState && store)
-            await store.persist(fastController.persistedState());
+    const changeSessionTier = async (
+        tier: ServiceTier | null,
+        ctx: ExtensionCommandContext,
+    ): Promise<void> => {
+        await ctx.waitForIdle();
+        fastController.setSessionTier(tier ?? undefined, ctx, cfg);
+        updateStatus(ctx);
+        report(
+            ctx,
+            `Session speed: ${tier ?? "cleared"} · Not saved\n${describeState(ctx)}`,
+        );
     };
     const changeTier = async (
         tier: ServiceTier,
@@ -131,7 +144,8 @@ export default function codexFastModeExtension(pi: ExtensionAPI): void {
         if (tier === "ultrafast") fastController.setDesired(tier, ctx, cfg);
         else fastController.setActive(tier === "fast", ctx, cfg);
         try {
-            await persist();
+            if (cfg.persistState && store)
+                await store.persist(fastController.persistedState(ctx, cfg));
         } catch (error) {
             fastController.restore(previous);
             updateStatus(ctx);
@@ -257,8 +271,10 @@ export default function codexFastModeExtension(pi: ExtensionAPI): void {
         modelSettings.sort(compareModelSettings);
         await showFastSettings(ctx, {
             models: modelSettings,
+            getSessionTier: () => fastController.sessionTier,
             getGlobalTier: () => fastController.desiredTier,
             getModelTier: (model) => fastController.getModelTier(model),
+            setSessionTier: (tier) => changeSessionTier(tier, ctx),
             setGlobalTier: (tier) => changeTier(tier, ctx),
             setModelTier: (model, tier) => changeModelTier(model, tier, ctx),
         });
@@ -272,13 +288,17 @@ export default function codexFastModeExtension(pi: ExtensionAPI): void {
     });
     pi.registerCommand(COMMAND_NAME, {
         description:
-            "Configure model and global Standard, Fast, and Ultrafast speeds.",
+            "Configure session, model, and global Standard, Fast, and Ultrafast speeds.",
         getArgumentCompletions: (prefix) =>
             completions(
                 [
                     "status",
                     "on",
                     "off",
+                    "session standard",
+                    "session fast",
+                    "session ultrafast",
+                    "session clear",
                     "speed standard",
                     "speed fast",
                     "speed ultrafast",
@@ -300,6 +320,17 @@ export default function codexFastModeExtension(pi: ExtensionAPI): void {
                     return;
                 }
                 const [mode, state, extra, trailing] = value.split(/\s+/);
+                if (
+                    !extra &&
+                    mode === "session" &&
+                    (isServiceTier(state) || state === "clear")
+                ) {
+                    await changeSessionTier(
+                        state === "clear" ? null : state,
+                        ctx,
+                    );
+                    return;
+                }
                 if (!extra && mode === "speed" && isServiceTier(state)) {
                     await changeTier(state, ctx);
                     return;

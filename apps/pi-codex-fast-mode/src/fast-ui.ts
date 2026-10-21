@@ -17,18 +17,25 @@ export interface ModelSpeedSetting {
 
 interface FastSettings {
     models: readonly ModelSpeedSetting[];
+    getSessionTier: () => ServiceTier | undefined;
+    setSessionTier: (tier: ServiceTier | null) => Promise<void>;
     getGlobalTier: () => ServiceTier;
     getModelTier: (model: string) => ServiceTier | undefined;
     setGlobalTier: (tier: ServiceTier) => Promise<void>;
     setModelTier: (model: string, tier: ServiceTier | null) => Promise<void>;
 }
 
-/** Model overrides appear first; Enter saves a single selected speed. */
+/** Session speed appears first; only model/global rows persist their selection. */
 export async function showFastSettings(
     ctx: ExtensionCommandContext,
     settings: FastSettings,
 ): Promise<void> {
     const rows = [
+        {
+            label: "Session speed (not saved)",
+            model: undefined,
+            availableTiers: SPEEDS,
+        },
         ...settings.models.map((model) => ({
             label: `${model.model}${model.isCurrentModel ? " (current)" : ""}`,
             model: model.model,
@@ -40,7 +47,10 @@ export async function showFastSettings(
             availableTiers: SPEEDS,
         },
     ];
+    const tierLabel = (tier: ServiceTier | undefined) =>
+        tier === undefined ? "Not set" : LABELS[tier];
     const getTier = (index: number) => {
+        if (index === 0) return settings.getSessionTier();
         const row = rows[index];
         return (
             (row.model ? settings.getModelTier(row.model) : undefined) ??
@@ -48,6 +58,7 @@ export async function showFastSettings(
         );
     };
     const saveTier = (index: number, tier: ServiceTier | null) => {
+        if (index === 0) return settings.setSessionTier(tier);
         const row = rows[index];
         return row.model
             ? settings.setModelTier(row.model, tier)
@@ -58,7 +69,7 @@ export async function showFastSettings(
             const choices = [
                 ...rows.map(
                     (row, index) =>
-                        `${row.label} — Speed: ${LABELS[getTier(index)]}${row.model && settings.getModelTier(row.model) === undefined ? " (global)" : ""}`,
+                        `${row.label} — Speed: ${tierLabel(getTier(index))}${row.model && settings.getModelTier(row.model) === undefined ? " (global)" : ""}`,
                 ),
                 "Close",
             ];
@@ -67,7 +78,9 @@ export async function showFastSettings(
             const row = rows[index];
             if (!row) return;
             const speeds = row.availableTiers.map((tier) => LABELS[tier]);
-            if (row.model)
+            if (index === 0)
+                speeds.push("Clear session speed (use saved speeds)");
+            else if (row.model)
                 speeds.push(`Use global (${LABELS[settings.getGlobalTier()]})`);
             const speed = await ctx.ui.select(`${row.label} · Speed`, speeds);
             const speedIndex = speeds.indexOf(speed ?? "");
@@ -85,9 +98,11 @@ export async function showFastSettings(
     return ctx.ui.custom<void>((tui, theme, keybindings, done) => {
         let selectedRowIndex = 0;
         const initialTier = getTier(selectedRowIndex);
-        let focusedTier = rows[0].availableTiers.includes(initialTier)
-            ? initialTier
-            : rows[0].availableTiers[0];
+        let focusedTier =
+            initialTier !== undefined &&
+            rows[0].availableTiers.includes(initialTier)
+                ? initialTier
+                : rows[0].availableTiers[0];
         let firstVisibleModelIndex = 0;
         let isBusy = false;
         let isClosed = false;
@@ -109,11 +124,11 @@ export async function showFastSettings(
             try {
                 await saveTier(selectedRowIndex, tier);
                 const currentTier = getTier(selectedRowIndex);
-                focusedTier = rows[selectedRowIndex].availableTiers.includes(
-                    currentTier,
-                )
-                    ? currentTier
-                    : rows[selectedRowIndex].availableTiers[0];
+                focusedTier =
+                    currentTier !== undefined &&
+                    rows[selectedRowIndex].availableTiers.includes(currentTier)
+                        ? currentTier
+                        : rows[selectedRowIndex].availableTiers[0];
             } catch (error) {
                 errorMessage =
                     error instanceof Error ? error.message : String(error);
@@ -131,20 +146,20 @@ export async function showFastSettings(
                 const modelCount = settings.models.length;
                 const visibleModelCount = Math.max(
                     1,
-                    Math.floor((tui.terminal.rows - 12) / 3),
+                    Math.floor((tui.terminal.rows - 15) / 3),
                 );
                 firstVisibleModelIndex = Math.min(
                     firstVisibleModelIndex,
                     Math.max(0, modelCount - visibleModelCount),
                 );
-                if (selectedRowIndex < modelCount) {
+                if (selectedRowIndex > 0 && selectedRowIndex <= modelCount) {
                     firstVisibleModelIndex = Math.min(
                         firstVisibleModelIndex,
-                        selectedRowIndex,
+                        selectedRowIndex - 1,
                     );
                     firstVisibleModelIndex = Math.max(
                         firstVisibleModelIndex,
-                        selectedRowIndex - visibleModelCount + 1,
+                        selectedRowIndex - visibleModelCount,
                     );
                 }
                 const lastVisibleModelIndex = Math.min(
@@ -174,17 +189,20 @@ export async function showFastSettings(
                     }).join("  ");
                     const speed =
                         contentWidth < 50
-                            ? `${LABELS[currentTier]}${isFocused && focusedTier !== currentTier ? ` → ${LABELS[focusedTier]}` : ""}`
+                            ? `${tierLabel(currentTier)}${isFocused && focusedTier !== currentTier ? ` → ${LABELS[focusedTier]}` : ""}`
                             : options;
                     return [
-                        `${isFocused ? "›" : " "} ${theme.bold(row.label)}${isInherited ? theme.fg("muted", " · global") : ""}`,
+                        `${isFocused ? "›" : " "} ${theme.bold(row.label)}${isInherited ? theme.fg("muted", " · global") : currentTier === undefined ? theme.fg("muted", " · not set") : ""}`,
                         `  Speed: ${speed}`,
                         "",
                     ];
                 };
                 return new Text(
                     [
-                        theme.bold("Codex Fast · model speed > global speed"),
+                        theme.bold(
+                            "Codex Fast · session > model > global speed",
+                        ),
+                        ...renderRow(0),
                         theme.fg(
                             "muted",
                             modelCount === 0
@@ -195,20 +213,20 @@ export async function showFastSettings(
                         ),
                         ...rows
                             .slice(
-                                firstVisibleModelIndex,
-                                lastVisibleModelIndex,
+                                firstVisibleModelIndex + 1,
+                                lastVisibleModelIndex + 1,
                             )
                             .flatMap((_, index) =>
-                                renderRow(firstVisibleModelIndex + index),
+                                renderRow(firstVisibleModelIndex + index + 1),
                             ),
-                        ...renderRow(modelCount),
+                        ...renderRow(modelCount + 1),
                         theme.fg(
                             "dim",
-                            "↑/↓ model · ←/→ or Tab speed · Enter save",
+                            "↑/↓ row · ←/→ or Tab speed · Enter apply",
                         ),
                         theme.fg(
                             "dim",
-                            "R use global · Esc close · × unavailable",
+                            "R clear session/use global · Esc close · × unavailable",
                         ),
                         ...(isBusy ? [theme.fg("muted", "Applying…")] : []),
                         ...(errorMessage
@@ -242,9 +260,10 @@ export async function showFastSettings(
                         rows.length;
                     const row = rows[selectedRowIndex];
                     const tier = getTier(selectedRowIndex);
-                    focusedTier = row.availableTiers.includes(tier)
-                        ? tier
-                        : row.availableTiers[0];
+                    focusedTier =
+                        tier !== undefined && row.availableTiers.includes(tier)
+                            ? tier
+                            : row.availableTiers[0];
                     errorMessage = undefined;
                     tui.requestRender();
                 } else if (
@@ -273,7 +292,7 @@ export async function showFastSettings(
                 } else if (
                     (matchesKey(data, "r") ||
                         matchesKey(data, Key.shift("r"))) &&
-                    rows[selectedRowIndex].model
+                    (selectedRowIndex === 0 || rows[selectedRowIndex].model)
                 ) {
                     void save(null);
                 }

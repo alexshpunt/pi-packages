@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### New
+
+- Override speed for the current session with `/codex-fast session` or the first settings row, without changing saved preferences.
+
+### Fixed
+
+- Concurrent settings saves from multiple Pi sessions no longer lose other models' changes.
+- Model-list sorting documentation now matches the settings screen.
+
 ## [0.3.2] - 2026-10-20
 
 ### Improved
