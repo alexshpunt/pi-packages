@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-21
+
 ### Improved
 
 - The README keeps the setup path and a summary of approval, cancellation, and output limits, and the usage guide owns the detailed rules, including the start conditions and expected result of the browser task.
