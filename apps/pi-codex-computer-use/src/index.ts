@@ -106,11 +106,20 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
         if (!current) return;
         connection = undefined;
         // Give an in-flight turn_ended a moment so a quitting session still notifies the runtime.
-        if (pendingTurnEnded)
-            await Promise.race([
-                pendingTurnEnded,
-                new Promise((resolve) => setTimeout(resolve, 3_000)),
-            ]);
+        if (pendingTurnEnded) {
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            try {
+                await Promise.race([
+                    pendingTurnEnded,
+                    new Promise<void>((resolve) => {
+                        timer = setTimeout(resolve, 3_000);
+                        timer.unref();
+                    }),
+                ]);
+            } finally {
+                clearTimeout(timer);
+            }
+        }
         log.write("server-stop", { reason, pid: current.pid });
         try {
             await current.close();
@@ -119,6 +128,10 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
                 reason,
                 error: describeError(error),
             });
+            notify?.(
+                `Codex Computer Use could not stop the cua_repl server: ${describeError(error)}`,
+                "error",
+            );
         }
     };
 
@@ -146,7 +159,7 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
                 cause: discovery.reason,
                 message: discovery.message,
             });
-            ctx.ui.notify(`Codex Computer Use: ${discovery.message}`, "error");
+            notify?.(`Codex Computer Use: ${discovery.message}`, "error");
             refreshTools();
             applyStatus(ctx);
             return;
@@ -165,6 +178,7 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
                 serverProblem = "the cua_repl server exited";
                 log.write("server-closed-unexpectedly", { pid: opened.pid });
                 refreshTools();
+                applyStatus(ctx);
                 notify?.(
                     "Codex Computer Use: the cua_repl server exited; its tools are hidden until the next restart.",
                     "warning",
@@ -173,7 +187,7 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
         } catch (error) {
             serverProblem = describeError(error);
             log.write("server-start-failed", { reason, error: serverProblem });
-            ctx.ui.notify(
+            notify?.(
                 `Codex Computer Use could not start the cua_repl server: ${serverProblem}`,
                 "error",
             );
@@ -183,14 +197,16 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
     };
 
     pi.on("session_start", async (event, ctx) => {
-        notify = (message, type) => ctx.ui.notify(message, type);
+        notify = (message, type) => {
+            ctx.ui.notify(message, type);
+            // No-UI modes implement notify as a no-op; keep failures visible there too.
+            if (!ctx.hasUI) process.stderr.write(`${message}\n`);
+        };
         sessionContext = ctx;
         settings = await store.load();
         if (settings.source === "invalid") {
             const message = `Codex Computer Use: ${settings.error}. Both features are off for this session.`;
-            ctx.ui.notify(message, "error");
-            // No-UI modes implement notify as a no-op; keep the failure visible there too.
-            if (!ctx.hasUI) process.stderr.write(`${message}\n`);
+            notify(message, "error");
         }
         await startServer(ctx, `session_start:${event.reason}`);
     });

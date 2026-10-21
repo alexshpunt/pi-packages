@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Oversized MCP responses now fail pending calls and disconnect instead of waiting indefinitely for cancellation.
+- Large runtime errors now follow the same output limit and full-output file handling as other results.
+- Unexpected server exits update the footer, and runtime startup/shutdown failures are visible in print/JSON mode.
+- Shutdown no longer leaves its turn-notification wait timer active after cleanup.
+
+### Improved
+
+- Logs summarize image sizes without serializing the image payloads.
+
 ## [0.1.3] - 2026-10-20
 
 ### Improved

@@ -385,17 +385,31 @@ function createToolDefinition(
                         true,
                     );
                 }
+                const message = describeError(error);
                 deps.log.write("tool-error", {
                     tool: tool.name,
                     callId: toolCallId,
                     durationMs,
-                    error: describeError(error),
+                    error: message,
                 });
                 return withNotes(
-                    errorResult(
-                        tool.name,
-                        `${tool.name} failed: ${describeError(error)}`,
-                        durationMs,
+                    await convertCallToolResult(
+                        {
+                            isError: true,
+                            content: [
+                                {
+                                    type: "text",
+                                    text: `${tool.name} failed: ${message}`,
+                                },
+                            ],
+                        },
+                        {
+                            tool: tool.name,
+                            limitBytes:
+                                connection.plan.outputTokenLimit *
+                                BYTES_PER_TOKEN,
+                            durationMs,
+                        },
                     ),
                 );
             } finally {

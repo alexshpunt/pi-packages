@@ -88,7 +88,7 @@ For Browser Use only:
 | Browser only | `browser` | Shared server; `js` and `js_reset` |
 | Both off | None | No server; tools hidden |
 
-RPC presents a repeating two-feature picker with Close. Print/JSON mode prints status for the bare command and accepts explicit arguments; it does not render the custom settings screen.
+RPC presents a repeating two-feature picker with Close. Print/JSON mode prints status for the bare command and accepts explicit arguments; it does not render the custom settings screen. Status/check output and runtime discovery, startup, shutdown, and unexpected-exit failures go to stderr.
 
 ### Settings file
 
@@ -155,7 +155,7 @@ Ask the model to close tabs it created and confirm `/computer-use status` after 
 
 Closing or reloading Pi stops the bridge's server process tree, not Desktop's own processes. Resetting the REPL discards bindings; do not treat it as proof that task-created tabs were closed.
 
-Long text is middle-truncated according to the discovered runtime output limit. The fallback is 25,000 approximate tokens, calculated as 100,000 bytes. When saving succeeds, the result identifies a full-output file in the system temporary directory with owner-only permissions. Image blocks are forwarded as image content.
+Long text, including JSON-RPC error messages and data, is middle-truncated according to the discovered runtime output limit. The fallback is 25,000 approximate tokens, calculated as 100,000 bytes. When saving succeeds, the result identifies a full-output file in the system temporary directory with owner-only permissions. Image blocks are forwarded as image content. The bridge does not automatically delete full-output files.
 
 ## Troubleshooting
 
@@ -170,8 +170,9 @@ Long text is middle-truncated according to the discovered runtime output limit. 
 | No approval UI in print/JSON | Use interactive Pi or a UI-capable RPC client; the tool error explains why the request was declined. |
 | Login/OTP/URL request declined | Complete login through the supported app/browser flow yourself; this bridge cannot handle those elicitation surfaces. |
 | Cancelled call delays later calls | Let the runtime finish or reach its timeout; it serializes JavaScript calls. Inspect status if the server exited. |
+| Connection closes after a response over 16 MiB | The bridge fails pending calls, hides tools, and updates the footer to an error. Run `/reload` or restart Pi, reacquire REPL bindings, and request smaller results. The client does not shorten approval waits. |
 
-Logs rotate at 5 MiB at `<agentDir>/codex-computer-use/mcp.log`. Key-based masking can leave page/app content. Review logs before sharing. Private runtime interfaces and telemetry outside Desktop are not guaranteed by this bridge.
+Logs rotate at 5 MiB at `<agentDir>/codex-computer-use/mcp.log`. Image data is replaced with its base64 character count before JSON encoding. Key-based masking can leave page/app content. Review logs before sharing. Private runtime interfaces and telemetry outside Desktop are not guaranteed by this bridge.
 
 ## Recorded verification and remaining gaps
 

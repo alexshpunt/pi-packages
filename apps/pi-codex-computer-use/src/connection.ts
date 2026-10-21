@@ -258,7 +258,23 @@ export async function openConnection(
     client.setRequestHandler("elicitation/create", (params, context) =>
         elicitationHandler((params ?? {}) as ElicitationParams, context),
     );
-    client.onError((error) => log.write("client-error", error.message));
+    client.onError((error) => {
+        log.write("client-error", error.message);
+        // pi-mcp 1.3.0 reports discarded oversized frames as plain Errors without a code.
+        // Closing rejects pending requests (including timeoutMs: 0) and runs onClose cleanup.
+        if (
+            /^MCP stdio message exceeds \d+ bytes$/.test(error.message) &&
+            client.connectionState !== "closed"
+        )
+            void client.close().catch((closeError: unknown) => {
+                log.write(
+                    "server-close-failed",
+                    closeError instanceof Error
+                        ? closeError.message
+                        : String(closeError),
+                );
+            });
+    });
     let closed = false;
     const closeListeners = new Set<() => void>();
     client.onClose(() => {
