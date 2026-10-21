@@ -6,21 +6,32 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { ActiveCallTracker } from "./active-call.js";
 import { registerCodexComputerUseCommand } from "./commands.js";
-import { type BridgeConnection, openConnection } from "./connection.js";
+import {
+    type BridgeConnection,
+    composeEnvironment,
+    openConnection,
+} from "./connection.js";
 import { createElicitationHandler } from "./elicitation.js";
 import { BridgeLog } from "./log.js";
-import { discoverRuntime } from "./runtime.js";
+import { discoverRuntime, type RuntimePlan } from "./runtime.js";
 import {
     DEFAULT_FEATURE_STATE,
     FeatureSettingsStore,
     type FeatureState,
     type SettingsLoadResult,
 } from "./settings.js";
+import {
+    catalogKey,
+    isSameCatalog,
+    type ToolCatalog,
+    ToolCatalogStore,
+} from "./tool-catalog.js";
 import { registerBridgeTools } from "./tools.js";
 import { notifyTurnEnded, TurnTracker } from "./turn.js";
 
 export const SETTINGS_DIRECTORY_NAME = "codex-computer-use";
 export const LOG_FILE_NAME = "mcp.log";
+export const CATALOG_FILE_NAME = "tool-catalog.json";
 const STATUS_KEY = "codex-computer-use";
 
 /** `<agentDir>/codex-computer-use/settings.json`, where agentDir honors `PI_CODING_AGENT_DIR`. */
@@ -37,21 +48,42 @@ function describeError(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 
+/** Settles with `promise`, or rejects with the abort reason once `signal` aborts first. */
+function untilAborted<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+    if (signal.aborted) return Promise.reject(signal.reason);
+    return new Promise<T>((resolve, reject) => {
+        const onAbort = () => reject(signal.reason);
+        signal.addEventListener("abort", onAbort, { once: true });
+        promise
+            .then(resolve, reject)
+            .finally(() => signal.removeEventListener("abort", onAbort));
+    });
+}
+
 /**
- * Extension entry. Loads the feature flags on `session_start`, starts one `cua_repl` server when a
- * feature is on, registers the bridged tools, forwards turn ends, and restarts on settings changes.
- * Nothing starts in this factory itself.
+ * Extension entry. Loads the feature flags on `session_start` and registers the bridged tools. The
+ * one `cua_repl` server starts on the first tool call when a cached tool catalog matches the runtime
+ * plan and features, and at `session_start` otherwise. Forwards turn ends and restarts on settings
+ * changes. Nothing starts in this factory itself.
  */
 export default function codexComputerUseExtension(pi: ExtensionAPI): void {
     const settingsPath = defaultSettingsPath();
     const store = new FeatureSettingsStore(settingsPath);
     const log = new BridgeLog(join(dirname(settingsPath), LOG_FILE_NAME));
+    const catalogStore = new ToolCatalogStore(
+        join(dirname(settingsPath), CATALOG_FILE_NAME),
+    );
     const turn = new TurnTracker();
     let settings: SettingsLoadResult = {
         source: "defaults",
         state: { ...DEFAULT_FEATURE_STATE },
     };
     let connection: BridgeConnection | undefined;
+    /** Tools registered from a cached catalog while the server waits for the first tool call. */
+    let standby: (ToolCatalog & { key: string }) | undefined;
+    let pendingStart: Promise<BridgeConnection | undefined> | undefined;
+    /** Advanced by every stop, so a start finishing after one closes its own server. */
+    let generation = 0;
     let registeredToolNames: string[] = [];
     let serverProblem: string | undefined;
     let notify:
@@ -72,18 +104,48 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
         }
         if (!settings.state.computerUse && !settings.state.browserUse)
             return "not started (both features are off)";
-        return serverProblem ? `not running: ${serverProblem}` : "not started";
+        if (serverProblem) return `not running: ${serverProblem}`;
+        if (standby)
+            return pendingStart
+                ? "starting"
+                : "ready; starts on the first tool call";
+        return "not started";
     };
     const shortServer = (): string =>
         connection && !connection.isClosed()
             ? "running"
             : serverProblem
               ? "error"
-              : "off";
+              : standby
+                ? "ready"
+                : "off";
     const applyStatus = (ctx: ExtensionContext) =>
         ctx.ui.setStatus(STATUS_KEY, statusText(settings.state, shortServer()));
     const bridgeDeps = {
         getConnection: () => connection,
+        connect: async ({
+            signal,
+            ctx,
+        }: {
+            signal?: AbortSignal;
+            ctx: ExtensionContext;
+        }) => {
+            if (connection && !connection.isClosed()) return connection;
+            if (!pendingStart) {
+                if (!standby) return undefined;
+                const starting: Promise<BridgeConnection | undefined> = launch(
+                    ctx,
+                    standby.plan,
+                    standby.state,
+                    "first tool call",
+                    standby.key,
+                ).finally(() => {
+                    if (pendingStart === starting) pendingStart = undefined;
+                });
+                pendingStart = starting;
+            }
+            return signal ? untilAborted(pendingStart, signal) : pendingStart;
+        },
         ensureTurn: () => turn.ensure(),
         log,
         describeServer,
@@ -94,7 +156,7 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
     const refreshTools = () => {
         registeredToolNames = registerBridgeTools(
             pi,
-            connection,
+            connection ?? standby,
             bridgeDeps,
             registeredToolNames,
         );
@@ -102,6 +164,8 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
 
     let pendingTurnEnded: Promise<unknown> | undefined;
     const stopServer = async (reason: string): Promise<void> => {
+        generation += 1;
+        pendingStart = undefined;
         const current = connection;
         if (!current) return;
         connection = undefined;
@@ -135,12 +199,85 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
         }
     };
 
-    const startServer = async (
+    const launch = async (
+        ctx: ExtensionContext,
+        plan: RuntimePlan,
+        state: FeatureState,
+        reason: string,
+        key: string,
+    ): Promise<BridgeConnection | undefined> => {
+        const startedGeneration = generation;
+        let opened: BridgeConnection;
+        try {
+            opened = await openConnection({
+                plan,
+                state,
+                log,
+                elicitationHandler,
+            });
+        } catch (error) {
+            if (startedGeneration !== generation) return undefined;
+            standby = undefined;
+            serverProblem = describeError(error);
+            log.write("server-start-failed", { reason, error: serverProblem });
+            notify?.(
+                `Codex Computer Use could not start the cua_repl server: ${serverProblem}`,
+                "error",
+            );
+            refreshTools();
+            applyStatus(ctx);
+            return undefined;
+        }
+        if (startedGeneration !== generation) {
+            // The session stopped or replaced the server while this one was starting.
+            log.write("server-stop", {
+                reason: `superseded while starting: ${reason}`,
+                pid: opened.pid,
+            });
+            await opened.close().catch((error: unknown) =>
+                log.write("server-stop-failed", {
+                    reason,
+                    error: describeError(error),
+                }),
+            );
+            return undefined;
+        }
+        connection = opened;
+        opened.onClose(() => {
+            if (connection !== opened) return;
+            connection = undefined;
+            serverProblem = "the cua_repl server exited";
+            log.write("server-closed-unexpectedly", { pid: opened.pid });
+            refreshTools();
+            applyStatus(ctx);
+            notify?.(
+                "Codex Computer Use: the cua_repl server exited; its tools are hidden until the next restart.",
+                "warning",
+            );
+        });
+        const cached = standby;
+        standby = undefined;
+        // Tools registered from a matching cache already carry these definitions.
+        if (!cached || !isSameCatalog(cached, opened)) {
+            if (cached) log.write("tool-catalog-changed", { reason });
+            refreshTools();
+            catalogStore.save(key, opened).catch((error: unknown) =>
+                log.write("tool-catalog-save-failed", {
+                    error: describeError(error),
+                }),
+            );
+        }
+        applyStatus(ctx);
+        return opened;
+    };
+
+    const prepareServer = async (
         ctx: ExtensionContext,
         reason: string,
     ): Promise<void> => {
         await stopServer(`restart: ${reason}`);
         serverProblem = undefined;
+        standby = undefined;
         const { state } = settings;
         if (!state.computerUse && !state.browserUse) {
             log.write("server-not-started", {
@@ -164,36 +301,26 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
             applyStatus(ctx);
             return;
         }
-        try {
-            const opened = await openConnection({
+        const key = catalogKey(discovery, state);
+        const cached = await catalogStore.load(key);
+        if (cached) {
+            // Most sessions never call these tools; start the server only when one does.
+            standby = {
                 plan: discovery,
                 state,
-                log,
-                elicitationHandler,
+                environment: composeEnvironment(discovery, state),
+                ...cached,
+                key,
+            };
+            log.write("server-deferred", {
+                reason,
+                cause: "starts on the first tool call",
             });
-            connection = opened;
-            opened.onClose(() => {
-                if (connection !== opened) return;
-                connection = undefined;
-                serverProblem = "the cua_repl server exited";
-                log.write("server-closed-unexpectedly", { pid: opened.pid });
-                refreshTools();
-                applyStatus(ctx);
-                notify?.(
-                    "Codex Computer Use: the cua_repl server exited; its tools are hidden until the next restart.",
-                    "warning",
-                );
-            });
-        } catch (error) {
-            serverProblem = describeError(error);
-            log.write("server-start-failed", { reason, error: serverProblem });
-            notify?.(
-                `Codex Computer Use could not start the cua_repl server: ${serverProblem}`,
-                "error",
-            );
+            refreshTools();
+            applyStatus(ctx);
+            return;
         }
-        refreshTools();
-        applyStatus(ctx);
+        await launch(ctx, discovery, state, reason, key);
     };
 
     pi.on("session_start", async (event, ctx) => {
@@ -208,7 +335,7 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
             const message = `Codex Computer Use: ${settings.error}. Both features are off for this session.`;
             notify(message, "error");
         }
-        await startServer(ctx, `session_start:${event.reason}`);
+        await prepareServer(ctx, `session_start:${event.reason}`);
     });
     pi.on("agent_start", () => {
         const started = turn.begin();
@@ -274,7 +401,7 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
         updateState: async (next, ctx) => {
             await store.save(next);
             settings = { source: "file", state: next };
-            await startServer(ctx, "settings-change");
+            await prepareServer(ctx, "settings-change");
         },
         describeServer,
     });
@@ -378,6 +505,13 @@ export {
     type SettingsSource,
     validateFeatureState,
 } from "./settings.js";
+export {
+    catalogKey,
+    isSameCatalog,
+    type ServerCatalog,
+    type ToolCatalog,
+    ToolCatalogStore,
+} from "./tool-catalog.js";
 export {
     type BridgeToolDetails,
     type BridgeToolResult,
