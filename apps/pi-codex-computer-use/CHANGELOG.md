@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-21
+
 ### Improved
 
 - Logs summarize image sizes without serializing the image payloads.
