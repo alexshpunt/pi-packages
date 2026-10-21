@@ -5,7 +5,8 @@
 // empty object returned) so the extension always starts.
 
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { randomBytes } from "crypto";
+import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 
 export type ClaudePlan = "pro" | "max";
@@ -81,7 +82,18 @@ function updateGlobalConfig(fields: (existing: Partial<Config>) => Partial<Confi
 	const update = fields(existing);
 	if (update === null) return path;
 	mkdirSync(dirname(path), { recursive: true });
-	writeFileSync(path, `${JSON.stringify({ ...existing, ...update }, null, 2)}\n`);
+	// Pi processes starting together (sub-agents) read this file while one of them writes it;
+	// a partly written file parses as {} there and drops the user's settings for that session.
+	// Write a sibling and rename it into place, at the real path so a symlinked config stays a link.
+	const target = existsSync(path) ? realpathSync(path) : path;
+	const temporary = `${target}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
+	try {
+		const mode = existsSync(target) ? statSync(target).mode & 0o777 : 0o666;
+		writeFileSync(temporary, `${JSON.stringify({ ...existing, ...update }, null, 2)}\n`, { mode });
+		renameSync(temporary, target);
+	} finally {
+		rmSync(temporary, { force: true });
+	}
 	return path;
 }
 
