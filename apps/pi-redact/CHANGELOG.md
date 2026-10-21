@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-21
+
 ### New
 
 - Tool results are masked before Pi stores or shows them, including their details and structured content.
