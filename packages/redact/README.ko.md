@@ -84,6 +84,8 @@ JSON 키와 문자열 아닌 값은 보입니다. 민감한 부모 키가 내부
 | `textContent` | `"full"` | `context-free`이면 `type`이 `"text"`인 객체의 `text`에 문맥 없는 규칙만 다시 적용합니다. |
 | `shouldPreserve(path)` | 없음 | `true`를 돌려준 경로의 값은 하위 구조까지 그대로 복사합니다. 구조 식별자에 씁니다. |
 
+끝나지 않은 PEM 시작 표식이 반복되어도 `maskedLocations`를 계산하면서 중첩 구간을 반복해서 가리지 않습니다.
+
 민감한 키 아래의 문자열은 전체를 가립니다. 숫자·불리언·`null`은 유지합니다. 배열과 객체는 키의 민감성을 물려받지 않고 내부 문자열을 독립적으로 스캔합니다. `toJSON` 객체는 `JSON.stringify`처럼 먼저 직렬화합니다. `shouldPreserve`는 하위 구조의 가림을 의도적으로 건너뛰므로 보여도 되는 값에만 사용하세요.
 
 ## 규칙
@@ -197,7 +199,7 @@ const piiRedactor = createRedactor({ piiEntities: ["EMAIL_ADDRESS", "IBAN_CODE",
 - 범위와 표식 길이 비교에 UTF-8 바이트 대신 UTF-16 코드 단위를 씁니다. 그래서 `한글-비밀번호`처럼 짧은 비ASCII 값은 원본의 `[REDACTED]` 대신 `*******`가 됩니다.
 - `\b`, `\w`, `\d`, `\s`는 명시한 유니코드 속성 클래스로 원래의 유니코드 의미를 유지합니다. 속성 데이터는 JavaScript 런타임의 것을 쓰고, 원본의 `regex` 1.13은 유니코드 16.0을 씁니다. 저장소의 Node.js 24.14.0 환경처럼 유니코드 17.0을 쓰는 런타임은 새로 추가된 문자를 글자·숫자로 봅니다. 그런 문자 바로 옆의 값은 원본과 다르게 일치할 수 있고, 대개 원본이 가리는 값을 가리지 않는 쪽입니다(`AKIAIOSFODNN7EXAMPLE` 바로 뒤에 U+16EAA가 붙은 경우). 유니코드 16.0까지 있던 문자는 지원하는 모든 Node.js 버전에서 같게 동작합니다.
 - `token.jwt`, `credential.url-password`, `credential.webhook-url`, 대입문 대체 탐지, PEM 끝 표식 검색은 원본 패턴과 같은 결과를 내는 선형 시간 스캐너를 씁니다. JavaScript로 그대로 옮기면 역추적이 2차 시간으로 늘어나기 때문입니다.
-- 같은 이유로 `EMAIL_ADDRESS` 후보 검색은 카탈로그 패턴과 같은 결과를 내는 선형 시간 스캐너를 씁니다.
+- 같은 이유로 `EMAIL_ADDRESS` 후보 검색은 카탈로그 패턴과 같은 결과를 내는 선형 시간 스캐너를 씁니다. 라벨이 붙은 의료 행정번호 패턴은 결과가 같은 구분자 표현으로 바꿔 긴 공백에서의 2차 시간 역추적을 피합니다.
 - `cases.jsonl`의 PII 범위는 UTF-8 바이트 위치이고, 엔진은 같은 구간을 UTF-16 색인으로 보고합니다.
 - tree-sitter 식별자 보호가 없어서 식별자에 걸린 PII도 가립니다. `const member = sha256;`은 `const member = ******;`가 됩니다.
 - `normalizeRedactionConfig`는 `sensitiveFields` 항목을 적힌 그대로 두고, 일치를 볼 때 정규화합니다.

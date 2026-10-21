@@ -84,6 +84,8 @@ Choose `redactText` for text output, `redactJson` for payloads, or `redactNamedV
 | `textContent` | `"full"` | `context-free` re-applies only context-free rules to `text` in objects whose `type` is `"text"`. |
 | `shouldPreserve(path)` | none | Values at paths for which this returns `true` are copied unchanged, including subtrees. Use it for structural identifiers. |
 
+Repeated unterminated PEM headers do not cause repeated masking of nested spans when calculating `maskedLocations`.
+
 A string under a sensitive key is masked whole. Numbers, booleans, and `null` remain unchanged. Arrays and objects under a sensitive key do not inherit that sensitivity; their nested strings are scanned independently. Objects with `toJSON` are serialized first, like `JSON.stringify`. `shouldPreserve` deliberately bypasses masking for a subtree, so use it only for values that may remain visible.
 
 ## Rules
@@ -197,7 +199,7 @@ const piiRedactor = createRedactor({ piiEntities: ["EMAIL_ADDRESS", "IBAN_CODE",
 - Ranges and the marker-length comparison use UTF-16 code units instead of UTF-8 bytes. A short non-ASCII value such as `한글-비밀번호` becomes `*******` where the source printed `[REDACTED]`.
 - `\b`, `\w`, `\d`, and `\s` keep their Unicode meaning through explicit Unicode property classes. The property data comes from the JavaScript runtime, while the source's `regex` 1.13 uses Unicode 16.0. On a runtime using Unicode 17.0, such as this repository's Node.js 24.14.0 environment, newly assigned characters count as letters or digits. A value directly next to one can match differently from the source, usually staying unmasked where the source masks it (`AKIAIOSFODNN7EXAMPLE` followed by U+16EAA). Characters assigned in Unicode 16.0 or earlier behave the same on every supported Node.js version.
 - `token.jwt`, `credential.url-password`, `credential.webhook-url`, the assignment fallback, and the PEM end-marker search use linear-time scanners that produce the same matches as the source patterns, because the direct JavaScript translations backtrack quadratically.
-- The `EMAIL_ADDRESS` candidate search uses a linear-time scanner with the same results as the catalog pattern, for the same reason.
+- The `EMAIL_ADDRESS` candidate search uses a linear-time scanner with the same results as the catalog pattern, for the same reason. Labelled healthcare-number patterns use an equivalent separator rewrite to avoid quadratic backtracking on long whitespace runs.
 - PII ranges in `cases.jsonl` are UTF-8 byte offsets; the engine reports the same spans as UTF-16 indices.
 - Without tree-sitter identifier protection, a PII match on an identifier is masked: `const member = sha256;` becomes `const member = ******;`.
 - `normalizeRedactionConfig` keeps `sensitiveFields` entries as written and normalizes them when matching.

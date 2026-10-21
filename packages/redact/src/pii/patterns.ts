@@ -1,7 +1,11 @@
 // Compile catalog patterns and keep candidate boundaries in the original text,
 // ported from codemap-search `src/redact/pii/patterns.rs`.
 import type { TextRange } from "../transform.js";
-import { type CandidateSearch, createCandidateSearch } from "./accelerators.js";
+import {
+    accelerateLabelledPattern,
+    type CandidateSearch,
+    createCandidateSearch,
+} from "./accelerators.js";
 import { createLabelContext, type LabelContext } from "./context.js";
 import { translateRustRegex } from "./regex.js";
 import { isAscii } from "./validators/checksums.js";
@@ -116,7 +120,10 @@ export function compilePiiRule(
 ): CompiledPiiRule {
     const flags = `u${definition.is_case_insensitive ? "i" : ""}s`;
     const translate = (pattern: string) =>
-        translateRustRegex(pattern, definition.is_case_insensitive);
+        translateRustRegex(
+            accelerateLabelledPattern(pattern),
+            definition.is_case_insensitive,
+        );
     const patterns: CompiledPattern[] = definition.patterns.flatMap((pattern) =>
         [
             [pattern.regex, false] as const,

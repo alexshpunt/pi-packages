@@ -592,6 +592,30 @@ test("[linear-time] built-in patterns grow less than 8x from 256 KiB to 1 MiB", 
         }
 });
 
+test("[linear-time] redactJson on unclosed PEM lines grows less than 8x from 64 KiB to 256 KiB", () => {
+    const build = (size) => ({
+        text: "-----BEGIN PRIVATE KEY-----\n".repeat(Math.ceil(size / 28)),
+    });
+    const measure = (input) => {
+        let best = Number.POSITIVE_INFINITY;
+        for (let run = 0; run < 3; run++) {
+            const started = process.hrtime.bigint();
+            redactor.redactJson(input);
+            best = Math.min(
+                best,
+                Number(process.hrtime.bigint() - started) / 1e6,
+            );
+        }
+        return best;
+    };
+    const small = Math.max(measure(build(64 * 1024)), 0.5);
+    const large = measure(build(256 * 1024));
+    expect(
+        large / small < 8,
+        `redactJson on unclosed PEM lines: ${small.toFixed(2)} ms -> ${large.toFixed(2)} ms`,
+    ).toBeTruthy();
+});
+
 test("[masking] scans render whole texts and sub-ranges from one full scan", () => {
     const source =
         'header\npassword = """\nline-one-secret\nline-two-secret\n"""\nfooter';
@@ -687,6 +711,40 @@ test("[json] JSON masking preserves keys, structure, and preserved paths", () =>
     const again = redactor.redactJson(value, options);
     expect(again.value).toStrictEqual(value);
     expect(again.maskedLocations).toStrictEqual([]);
+});
+
+test("[json] changed rules keep their first changed order per path, not their first detection", () => {
+    const configured = createRedactor({
+        rules: [
+            { id: "custom.value", pattern: "\\[REDACTED\\]|secret-\\d+" },
+            { id: "custom.overlap", pattern: "secret-1" },
+        ],
+    });
+    const input = {
+        unchanged: REDACTION_MARKER,
+        first: "[REDACTED]\r\nsecret-1 secret-2\r\nsecret-1",
+        second: "secret-2",
+        pem: "-----BEGIN PRIVATE KEY-----\n".repeat(4),
+    };
+    for (const stringScope of ["whole", "line"]) {
+        const { value, maskedLocations } = configured.redactJson(input, {
+            stringScope,
+        });
+        expect(value).toStrictEqual({
+            unchanged: REDACTION_MARKER,
+            first: "[REDACTED]\r\n******** ********\r\n********",
+            second: "********",
+            pem: "[REDACTED]\n".repeat(4),
+        });
+        expect(maskedLocations).toStrictEqual([
+            { path: ["first"], ruleId: "custom.overlap" },
+            { path: ["first"], ruleId: "custom.value" },
+            { path: ["second"], ruleId: "custom.value" },
+            { path: ["pem"], ruleId: "private-key.pem" },
+        ]);
+        expect(configured.redactJson(value, { stringScope }).maskedLocations)
+            .toStrictEqual([]);
+    }
 });
 
 test("[configuration] normalization reports keys and indexes, never values", () => {

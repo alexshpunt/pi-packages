@@ -44,12 +44,15 @@ function changedRuleIds(
     text: string,
     detections: readonly Detection[],
 ): string[] {
-    return detections
-        .filter(({ start, end }) => {
-            const original = text.slice(start, end);
-            return hideValue(original) !== original;
-        })
-        .map((detection) => detection.ruleId);
+    const changed = new Set<string>();
+    for (const { start, end, ruleId } of detections) {
+        // Nested PEM detections can each extend to EOF. Transform a rule's
+        // remaining spans only until its first actual change is known.
+        if (changed.has(ruleId)) continue;
+        const original = text.slice(start, end);
+        if (hideValue(original) !== original) changed.add(ruleId);
+    }
+    return [...changed];
 }
 
 function lineRanges(text: string): TextRange[] {
