@@ -172,14 +172,16 @@ test("[user-bash] ! and !! return handled operations with native output and deni
         registerTool: (tool) => tools.push(tool),
         on: (event, handler) => handlers.set(event, handler),
         appendEntry: () => {},
+        getSettings: () => ({}),
     });
+    await extension.initialize();
     t.onTestFinished(() => extension.assertReady().close());
     const context = {
         cwd: f.workspace,
         sessionManager: { getSessionId: () => "shell-session" },
         hasUI: false,
     };
-    handlers.get("session_start")({}, context);
+    await handlers.get("session_start")({}, context);
     // Check routing and effects with room for emulated process startup. The native
     // lifecycle suite separately enforces a two-second deadline and no late effects.
     const executionTimeoutSeconds = 15;
@@ -878,7 +880,9 @@ test("[startup] default permissions protect the guard control directory inside t
         registerTool: (tool) => tools.push(tool),
         on: () => {},
         appendEntry: () => {},
+        getSettings: () => ({}),
     });
+    await extension.initialize();
     t.onTestFinished(() => extension.assertReady().close());
     const sessionManager = pi.SessionManager.inMemory(f.workspace),
         context = {
@@ -1027,7 +1031,9 @@ test("[options] supplied bash prefix, spawn cwd/env, seconds, signal and streami
         registerTool: (tool) => tools.push(tool),
         on: (name, handler) => handlers.set(name, handler),
         appendEntry: () => {},
+        getSettings: () => ({}),
     });
+    await extension.initialize();
     t.onTestFinished(() => extension.assertReady().close());
     const context = {
             cwd: f.workspace,
@@ -1035,7 +1041,7 @@ test("[options] supplied bash prefix, spawn cwd/env, seconds, signal and streami
             hasUI: false,
         },
         caller = new AbortController();
-    handlers.get("session_start")({}, context);
+    await handlers.get("session_start")({}, context);
     const updates = [],
         result = await tools
             .find((tool) => tool.name === "bash")
@@ -1107,7 +1113,9 @@ test("[tools] the host file queue waits for a cancelled invocation to settle bef
         registerTool: (tool) => tools.push(tool),
         on: (event, handler) => handlers.set(event, handler),
         appendEntry: () => {},
+        getSettings: () => ({}),
     });
+    await extension.initialize();
     t.onTestFinished(() => extension.assertReady().close());
     const context = {
             cwd: f.workspace,
@@ -1116,7 +1124,7 @@ test("[tools] the host file queue waits for a cancelled invocation to settle bef
             hasUI: false,
         },
         caller = new AbortController();
-    handlers.get("session_start")({}, context);
+    await handlers.get("session_start")({}, context);
     const write = tools.find((tool) => tool.name === "write");
     const first = write
         .execute(
@@ -1229,7 +1237,9 @@ test("[final-input] authorization changed during a pending review cannot reach n
         registerTool: (tool) => tools.push(tool),
         on: () => {},
         appendEntry: () => {},
+        getSettings: () => ({}),
     });
+    await extension.initialize();
     t.onTestFinished(() => extension.assertReady().close());
     const sessionManager = pi.SessionManager.inMemory(f.workspace),
         context = {

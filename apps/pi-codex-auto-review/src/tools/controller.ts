@@ -34,6 +34,7 @@ import {
     type PackageApproval,
     skillPackageApproval,
 } from "../package-approvals.js";
+import { shellIdentity } from "../pi-host.js";
 import {
     canonicalPath,
     type GuardSettings,
@@ -60,6 +61,49 @@ import {
 import { withApprovalMutationQueue } from "./mutation-queue.js";
 
 type ToolSchema = ToolDefinition["parameters"];
+
+export function guardedToolParameters<
+    T extends ToolSchema & { properties: Record<string, ToolSchema> },
+>(name: string, parameters: T): T {
+    return name === "bash"
+        ? {
+              ...parameters,
+              properties: {
+                  ...parameters.properties,
+                  sandbox_permissions: {
+                      type: "string",
+                      enum: ["use_default", "require_escalated"],
+                      description:
+                          "Compatibility field: request approval review for this exact command.",
+                  },
+                  additional_permissions: {
+                      type: "object",
+                      properties: {
+                          readPaths: {
+                              type: "array",
+                              items: { type: "string" },
+                          },
+                          writePaths: {
+                              type: "array",
+                              items: { type: "string" },
+                          },
+                          domains: {
+                              type: "array",
+                              items: { type: "string" },
+                          },
+                      },
+                      additionalProperties: false,
+                      description:
+                          "Describe the exact additional action scope for approval review.",
+                  },
+                  justification: {
+                      type: "string",
+                      description: "Explain the boundary crossing for review.",
+                  },
+              },
+          }
+        : parameters;
+}
 
 export class GuardController {
     private currentPolicy: PolicyEngine;
@@ -215,11 +259,18 @@ export class GuardController {
         context: ExtensionContext,
     ): Promise<void> {
         const next = createAction(
-            { ...action, toolCallId: randomUUID() },
+            {
+                ...action,
+                toolCallId: randomUUID(),
+                args: {
+                    ...action.args,
+                    shellPath: await shellIdentity(this.options.shellPath),
+                },
+            },
             this.policy.profile,
         );
         const command = String(next.args.command),
-            shellPath = String(next.args.shellPath ?? "/bin/bash");
+            shellPath = this.options.shellPath;
         await this.admitAndExecute(
             next,
             { kind: "shell", command, shellPath, cwd: next.cwd },
@@ -792,49 +843,9 @@ export class GuardController {
                 "UNKNOWN_LOCAL_TOOL",
                 "Cannot delegate unknown local tool",
             );
-        const parameters =
-            tool === "bash"
-                ? {
-                      ...definition.parameters,
-                      properties: {
-                          ...definition.parameters.properties,
-                          sandbox_permissions: {
-                              type: "string",
-                              enum: ["use_default", "require_escalated"],
-                              description:
-                                  "Compatibility field: request approval review for this exact command.",
-                          },
-                          additional_permissions: {
-                              type: "object",
-                              properties: {
-                                  readPaths: {
-                                      type: "array",
-                                      items: { type: "string" },
-                                  },
-                                  writePaths: {
-                                      type: "array",
-                                      items: { type: "string" },
-                                  },
-                                  domains: {
-                                      type: "array",
-                                      items: { type: "string" },
-                                  },
-                              },
-                              additionalProperties: false,
-                              description:
-                                  "Describe the exact additional action scope for approval review.",
-                          },
-                          justification: {
-                              type: "string",
-                              description:
-                                  "Explain the boundary crossing for review.",
-                          },
-                      },
-                  }
-                : definition.parameters;
         return {
             ...definition,
-            parameters,
+            parameters: guardedToolParameters(tool, definition.parameters),
             execute: async (toolCallId, params, signal, onUpdate, context) => {
                 this.assertReady();
                 if (!this.options.settings.isEnabled)
@@ -866,12 +877,12 @@ export class GuardController {
                         operations: {
                             exec: async (command, finalCwd, options) => {
                                 const env = options.env;
-                                const shellPath =
-                                    (toolOptions as BashToolOptions)
-                                        ?.shellPath ?? "/bin/bash";
+                                const shellPath = (
+                                    toolOptions as BashToolOptions
+                                )?.shellPath;
                                 const args = {
                                     command,
-                                    shellPath,
+                                    shellPath: await shellIdentity(shellPath),
                                     ...(options.timeout !== undefined
                                         ? { timeout: options.timeout }
                                         : {}),
@@ -1017,7 +1028,7 @@ export class GuardController {
             exec: async (command, cwd, options) => {
                 const resolvedCwd = await canonicalPath(cwd, cwd);
                 const env = options.env;
-                const shellPath = this.options.shellPath ?? "/bin/bash";
+                const shellPath = this.options.shellPath;
                 const action = createAction(
                     {
                         toolCallId: randomUUID(),
@@ -1026,7 +1037,7 @@ export class GuardController {
                         args: JSON.parse(
                             canonicalJson({
                                 command,
-                                shellPath,
+                                shellPath: await shellIdentity(shellPath),
                                 environment: reviewEnvironment(env),
                                 redactedEnvironmentVariables:
                                     redactedEnvironmentNames(env),

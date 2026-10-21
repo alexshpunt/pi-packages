@@ -333,9 +333,11 @@ async function retryDeniedAction(
 
 export function registerApprovalCommands(
     pi: ExtensionAPI,
-    guard: GuardController,
+    controller: GuardController | (() => Promise<GuardController>),
     store: ApprovalSettingsStore,
 ): void {
+    const ready = async () =>
+        typeof controller === "function" ? controller() : controller;
     const requireUI = (context: ExtensionCommandContext) => {
         if (!context.hasUI)
             throw new GuardError(
@@ -355,6 +357,7 @@ export function registerApprovalCommands(
         >,
         context: ExtensionCommandContext,
     ) => {
+        const guard = await ready();
         await guard.updateSettings(
             (current) => validateSettings({ ...current, ...patch }),
             context.cwd,
@@ -369,6 +372,7 @@ export function registerApprovalCommands(
         isEnabled: boolean,
         context: ExtensionCommandContext,
     ) => {
+        const guard = await ready();
         await apply({ isEnabled }, context);
         guard.setFullAccess(false);
         context.ui.notify(
@@ -379,6 +383,7 @@ export function registerApprovalCommands(
         );
     };
     const configureCacheExpiry = async (context: ExtensionCommandContext) => {
+        const guard = await ready();
         const hours = await chooseCacheTtlHours(
             context,
             guard.options.settings.reviewCacheTtlHours,
@@ -396,6 +401,7 @@ export function registerApprovalCommands(
         handler: async (args, context) => {
             requireUI(context);
             await context.waitForIdle();
+            const guard = await ready();
             const command = args.trim();
             if (command === "on" || command === "off") {
                 await setEnabled(command === "on", context);
@@ -507,6 +513,7 @@ export function registerApprovalCommands(
         handler: async (args, context) => {
             requireUI(context);
             await context.waitForIdle();
+            const guard = await ready();
             const current = guard.options.settings;
             const model = await chooseReviewModel(
                 context,

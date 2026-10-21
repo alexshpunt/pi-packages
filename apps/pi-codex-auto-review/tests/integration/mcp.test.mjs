@@ -1,3 +1,4 @@
+import { getEventListeners } from "node:events";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { expect, test } from "vitest";
@@ -686,4 +687,67 @@ test("[external-tools] project MCP startup requires a recorded or explicit proje
     await planStream(explicitDeny.session, []);
     await explicitDeny.session.prompt("Keep this project untrusted.");
     expect(await readFile(target, "utf8")).toBe("unchanged");
+});
+
+for (const isEnabled of [true, false]) {
+    test(`[mcp-transport] real Pi cancellation during transport authentication prevents late dispatch (enabled=${isEnabled})`, async (t) => {
+        const f = await fixture(t);
+        let entered, release, finished, signal;
+        const started = new Promise((resolve) => { entered = resolve; });
+        const gate = new Promise((resolve) => { release = resolve; });
+        const done = new Promise((resolve) => { finished = resolve; });
+        class DelayedTransport extends FixtureMcpTransport {
+            async send(message, options) {
+                if (message.method !== "tools/call") return super.send(message, options);
+                signal = options?.signal;
+                entered();
+                try {
+                    await gate;
+                    signal?.throwIfAborted();
+                    return await super.send(message, options);
+                } finally { finished(); }
+            }
+        }
+        const transport = new DelayedTransport([tool("probe", { annotations: { readOnlyHint: true } })], async () => mcpText("late"));
+        const runtime = await guardedFixture(t, f, { settings: { isEnabled }, mcp: mcpFixture("owned", transport) });
+        const pending = invoke(runtime, "mcp__owned__probe");
+        await started;
+        const stop = runtime.session.abort();
+        release();
+        await Promise.all([pending, stop, done]);
+        expect(signal).toBeInstanceOf(AbortSignal);
+        expect(signal.aborted).toBe(true);
+        expect(transport.calls).toHaveLength(0);
+        expect(getEventListeners(signal, "abort")).toHaveLength(0);
+    });
+}
+
+test("[mcp-transport] real Pi timeout aborts and releases unanswered requests without disconnecting", async (t) => {
+    const f = await fixture(t);
+    const signals = [];
+    class UnansweredTransport extends FixtureMcpTransport {
+        async send(message, options) {
+            if (message.method === "tools/call") {
+                signals.push(options?.signal);
+                return;
+            }
+            return super.send(message, options);
+        }
+    }
+    const transport = new UnansweredTransport([tool("probe", { annotations: { readOnlyHint: true } })], async () => mcpText("unused"));
+    const mcp = mcpFixture("owned", transport);
+    const load = mcp.loadConfig;
+    mcp.loadConfig = () => {
+        const config = load();
+        config.servers[0].config.timeout = 0.02;
+        return config;
+    };
+    const runtime = await guardedFixture(t, f, { mcp });
+    for (let i = 0; i < 3; i++) await invoke(runtime, "mcp__owned__probe");
+    expect(signals).toHaveLength(3);
+    for (const signal of signals) {
+        expect(signal).toBeInstanceOf(AbortSignal);
+        expect(signal.aborted).toBe(true);
+        expect(getEventListeners(signal, "abort")).toHaveLength(0);
+    }
 });

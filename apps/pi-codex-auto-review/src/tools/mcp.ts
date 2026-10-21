@@ -86,9 +86,31 @@ function guardedTransport(
 ): Transport {
     const pending = new Map<
         string | number,
-        { method: string; callId?: string }
+        { method: string; cleanup: () => void }
     >();
     const active = new Map<string, ExternalInvocation>();
+    const track = (
+        id: string | number,
+        method: string,
+        signal?: AbortSignal,
+        invocation?: ExternalInvocation,
+    ) => {
+        pending.get(id)?.cleanup();
+        const callId = invocation ? randomUUID() : undefined;
+        const request = {
+            method,
+            cleanup: () => {
+                if (pending.get(id) === request) pending.delete(id);
+                if (callId) active.delete(callId);
+                signal?.removeEventListener("abort", request.cleanup);
+            },
+        };
+        pending.set(id, request);
+        if (callId && invocation) active.set(callId, invocation);
+        signal?.addEventListener("abort", request.cleanup, { once: true });
+        if (signal?.aborted) request.cleanup();
+        return { callId, cleanup: request.cleanup };
+    };
     let generation = 0;
     // The initialize result names the server version used in package approval fingerprints.
     let serverInfo: unknown = null;
@@ -213,63 +235,95 @@ function guardedTransport(
     return new Proxy(base, {
         get(target, key) {
             if (key === "send")
-                return async (message: Message) => {
-                    const raw = message;
+                return async (
+                    message: Message,
+                    options: Parameters<Transport["send"]>[1],
+                ) => {
+                    options?.signal?.throwIfAborted();
                     if (
-                        "method" in raw &&
-                        raw.method &&
-                        "id" in raw &&
-                        raw.id !== undefined
+                        "method" in message &&
+                        message.method === "notifications/cancelled"
                     ) {
-                        const params = record(raw.params);
-                        const invocation = externalInvocations.getStore();
-                        if (raw.method === "tools/call") {
-                            if (!isGuardEnabled()) return target.send(message);
-                            if (
-                                !invocation ||
-                                invocation.identity.server !== server ||
-                                invocation.identity.tool !== params.name
-                            )
-                                throw new GuardError(
-                                    "UNBOUND_MCP_CALL",
-                                    "MCP execution has no matching reviewed invocation",
-                                );
-                            await invocation.checkCurrent();
-                            // Caller IDs can repeat; nested approvals must identify this exact in-flight invocation.
-                            const callId = randomUUID();
-                            active.set(callId, invocation);
-                            pending.set(raw.id, { method: raw.method, callId });
-                            return target.send({
-                                ...raw,
-                                params: {
-                                    ...params,
-                                    _meta: {
-                                        ...record(params._meta),
-                                        callId,
-                                    },
-                                },
-                            });
-                        }
-                        pending.set(raw.id, { method: raw.method });
-                        if (raw.method === "tools/list" && !params.cursor) {
-                            generation++;
-                            for (const [name, item] of catalog)
-                                if (item.identity.server === server)
-                                    catalog.delete(name);
-                        }
-                        if (raw.method === "initialize")
-                            return target.send({
-                                ...raw,
-                                params: {
-                                    ...params,
-                                    capabilities: {
-                                        ...record(params.capabilities),
-                                        elicitation: { form: {} },
-                                    },
-                                },
-                            });
+                        const id = record(message.params).requestId;
+                        if (typeof id === "string" || typeof id === "number")
+                            pending.get(id)?.cleanup();
                     }
-                    return target.send(message);
+                    let cleanup: (() => void) | undefined;
+                    try {
+                        if (
+                            "method" in message &&
+                            message.method &&
+                            "id" in message &&
+                            message.id !== undefined
+                        ) {
+                            const params = record(message.params);
+                            if (message.method === "tools/call") {
+                                if (!isGuardEnabled())
+                                    return target.send(message, options);
+                                const invocation =
+                                    externalInvocations.getStore();
+                                if (
+                                    !invocation ||
+                                    invocation.identity.server !== server ||
+                                    invocation.identity.tool !== params.name
+                                )
+                                    throw new GuardError(
+                                        "UNBOUND_MCP_CALL",
+                                        "MCP execution has no matching reviewed invocation",
+                                    );
+                                await invocation.checkCurrent();
+                                options?.signal?.throwIfAborted();
+                                // Caller IDs can repeat; nested approvals identify this exact live invocation.
+                                const tracked = track(
+                                    message.id,
+                                    message.method,
+                                    options?.signal,
+                                    invocation,
+                                );
+                                cleanup = tracked.cleanup;
+                                message = {
+                                    ...message,
+                                    params: {
+                                        ...params,
+                                        _meta: {
+                                            ...record(params._meta),
+                                            callId: tracked.callId,
+                                        },
+                                    },
+                                };
+                            } else {
+                                cleanup = track(
+                                    message.id,
+                                    message.method,
+                                    options?.signal,
+                                ).cleanup;
+                                if (
+                                    message.method === "tools/list" &&
+                                    !params.cursor
+                                ) {
+                                    generation++;
+                                    for (const [name, item] of catalog)
+                                        if (item.identity.server === server)
+                                            catalog.delete(name);
+                                }
+                                if (message.method === "initialize")
+                                    message = {
+                                        ...message,
+                                        params: {
+                                            ...params,
+                                            capabilities: {
+                                                ...record(params.capabilities),
+                                                elicitation: { form: {} },
+                                            },
+                                        },
+                                    };
+                            }
+                        }
+                        return await target.send(message, options);
+                    } catch (error) {
+                        cleanup?.();
+                        throw error;
+                    }
                 };
             if (key === "onMessage")
                 return (listener: Parameters<Transport["onMessage"]>[0]) =>
@@ -291,8 +345,7 @@ function guardedTransport(
                                 ? pending.get(id)
                                 : undefined;
                         if (request && id !== undefined) {
-                            pending.delete(id);
-                            if (request.callId) active.delete(request.callId);
+                            request.cleanup();
                             if (
                                 request.method === "initialize" &&
                                 "result" in raw &&
@@ -324,8 +377,7 @@ function guardedTransport(
                     });
             if (key === "close")
                 return async () => {
-                    active.clear();
-                    pending.clear();
+                    for (const request of pending.values()) request.cleanup();
                     await target.close();
                 };
             const value = Reflect.get(target, key, target);
@@ -343,6 +395,7 @@ export async function createGuardedMcpExtension(
     controller: () => GuardController,
     options: McpExtensionOptions = {},
     policies: McpToolPolicies = {},
+    ready?: () => Promise<GuardController>,
 ): Promise<InlineExtension> {
     const sdk = new URL("./", pathToFileURL(getPiSDKEntryPath()));
     const [runtime, config, auth] = await Promise.all([
@@ -405,6 +458,20 @@ export async function createGuardedMcpExtension(
         return mcpFactory(
             new Proxy(api, {
                 get(target, key, receiver) {
+                    if (key === "registerCommand")
+                        return (
+                            name: string,
+                            command: Parameters<
+                                ExtensionAPI["registerCommand"]
+                            >[1],
+                        ) =>
+                            target.registerCommand(name, {
+                                ...command,
+                                handler: async (...args) => {
+                                    await ready?.();
+                                    return command.handler(...args);
+                                },
+                            });
                     if (key === "on")
                         return (
                             event: string,
@@ -424,6 +491,7 @@ export async function createGuardedMcpExtension(
                                 return target.on(
                                     "session_start",
                                     async (event, context) => {
+                                        await ready?.();
                                         // Pi rebinds modes with another session_start, without a preceding shutdown.
                                         if (hasStarted)
                                             await shutdown?.(

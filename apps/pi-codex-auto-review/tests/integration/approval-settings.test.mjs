@@ -40,8 +40,10 @@ async function setup(t, options = {}) {
         registerTool: (tool) => tools.set(tool.name, tool),
         on: () => {},
         appendEntry: () => {},
+        getSettings: () => ({}),
     };
     await extension.factory(api);
+    await extension.initialize();
     t.onTestFinished(() => extension.assertReady().close());
     const sessionManager = SessionManager.inMemory(f.workspace);
     const context = {
@@ -223,6 +225,7 @@ test("[approval-settings] reload restores both selections and the persisted mode
     await f.commands.get("approve-model").handler("", f.context);
     const before = await readFile(f.settingsPath, "utf8");
     await f.extension.factory(f.api);
+    await f.extension.initialize();
     expect(f.extension.assertReady().options.settings.approvalsReviewer).toBe(
         "user",
     );

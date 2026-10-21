@@ -49,7 +49,7 @@ Use `/approve-model` to choose a reviewer without changing the conversation mode
 - Do not enable this extension both individually and through `@buyong/pi-codex`. Duplicate registrations can affect tools, commands, and event handlers.
 - When replacing the older unscoped `pi-codex-auto-review`, remove its source as shown by `pi list` before installing the scoped package. Use the same global or `--local` scope when removing it.
 
-**Need execution to refuse startup if approval controls fail to load?** Use the [guarded CLI or SDK](docs/usage.md#run-with-protected-startup). Normal Pi extension loading can report a failure and continue without the extension.
+**Need execution to refuse startup if approval controls fail to load?** Use the [guarded CLI or SDK](docs/usage.md#run-with-protected-startup). Pi 1.3.0 exits with code 1 on extension loading errors during a fresh CLI startup. Reload and SDK error handling are separate; guarded startup also checks controller readiness before execution.
 
 ## Approval modes and settings
 
@@ -64,6 +64,8 @@ Use `/approve-model` to choose a reviewer without changing the conversation mode
 
 Use `/approve off` to turn the whole extension off, `/approve on` to restore the previous approval mode and review model, and `/approve status` to show its current state. On/off changes apply immediately and persist across sessions. Choosing an approval mode in the picker also turns the extension back on.
 
+Ordinary installation preserves Pi’s effective `shellPath`, `shellCommandPrefix`, and `images.autoResize` settings, including while Off; explicit SDK tool options take precedence. Without a shell path, Pi performs its platform-specific shell discovery. Initialization runs at session start or first use, not while loading the extension for `--help`.
+
 Settings are saved to `<agentDir>/guard/settings.json`, or the policy file selected through the CLI/SDK. `agentDir` normally is `~/.pi/agent` and honors `PI_CODING_AGENT_DIR`. Cancelling a picker preserves the existing settings. Fixed command, picker, and approval-dialog text is in English.
 
 The [usage guide](docs/usage.md#choose-an-approval-method-and-review-model) covers model scope, saved settings, and reloading. For a denied operation, read the reason before changing your authorization or using [`/approve retry`](docs/usage.md#denials-errors-and-retries); a retry requests a new review, not an automatic approval.
@@ -74,6 +76,7 @@ With **the extension on and Full Access off**, the default policy distinguishes 
 
 | Target | Behavior |
 | --- | --- |
+| Built-in `powershell` calls | Blocked as unsupported; use `bash`. Ordinary installations permit PowerShell only while Off or in confirmed Full Access; guarded startup excludes it entirely. |
 | Ordinary workspace and temporary-directory writes | Allowed in `workspace-write`; writes require review in `read-only` |
 | Writes outside ordinary scope or to project `.git`, `.agents`, `.codex`, `.aws`, and `.pi` metadata | Require review rather than an unconditional block |
 | Guard control files, selected policy, and rule files | Protected from guarded reads and writes; project `.pi/guard` is write-protected |
@@ -81,7 +84,7 @@ With **the extension on and Full Access off**, the default policy distinguishes 
 
 Absolute denials are checked before model review and saved approvals. Review errors, timeouts, and cancellation never count as approval. Saved exact-action grants bind to the tool, input, execution context, policy, and requested scope; eligible MCP tools and skill scripts can separately reuse approval for unchanged versions and content.
 
-Reviewer-bound evidence is masked with `@buyong/redact`. Custom masking rules and opt-in personal-information detection are available. Masking protects the reviewer copy, not the original action executed after approval. See [policy settings](docs/usage.md#policy-file), [approval reuse](docs/usage.md#exact-action-approvals-and-execution), and [reviewer redaction](docs/usage.md#reviewer-redaction).
+Reviewer-bound evidence is masked with `@buyong/redact`. Custom masking rules and opt-in personal-information detection are available. Masking protects the reviewer copy, not the original action executed after approval. File investigation masks up to 1 MiB of complete source text with its file path before excerpting, and rejects larger files. The latest 1,000 audit records stay in memory; `<agentDir>/guard/audit.jsonl` keeps growing without rotation. Stop sessions before manually archiving or deleting that file. See [policy settings](docs/usage.md#policy-file), [approval reuse](docs/usage.md#exact-action-approvals-and-execution), and [reviewer redaction](docs/usage.md#reviewer-redaction).
 
 ### What approval does not guarantee
 
@@ -117,6 +120,21 @@ pnpm --filter @buyong/pi-codex-auto-review test:unit
 ```
 
 `build` also builds `@buyong/redact`, which this package imports. `test:unit` runs the unit, integration, conformance, execution, and end-to-end tests on the current OS using model/UI fixtures, not paid model calls. To load the built extension, follow [source installation](docs/usage.md#building-from-source).
+
+After building, run these model-free checks from the repository root (requires the installed Pi CLI):
+
+```sh
+cd apps/pi-codex-auto-review
+pnpm run typecheck
+pnpm run lint
+pnpm run test:unit
+verification_dir="$(mktemp -d)"
+PI_CODING_AGENT_DIR="$verification_dir" PI_OFFLINE=1 \
+  pi --no-extensions -e "$PWD/dist/index.js" --help
+test ! -e "$verification_dir/pi-codex-auto-review.sqlite"
+```
+
+Expected: checks exit 0, help prints without a review database being created. Pi may create its own settings/authentication files in the temporary directory. The help check does not start a session or exercise a live model.
 
 A local pass does not verify another OS or live model. The Docker and Windows verification of the previous [pi-codex-auto-review](https://github.com/buYoung/pi-codex-auto-review) repository is not part of this repository; its records remain in the [verification matrix](docs/testing/auto-review-protection.md).
 
