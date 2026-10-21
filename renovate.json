@@ -32,6 +32,11 @@
     {
       "matchUpdateTypes": ["major"],
       "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Skip packages owned by this repository and the pi-ollama-cloud version pinned by Auto Review conformance tests",
+      "matchPackageNames": ["@buyong/**", "@repo/**", "pi-ollama-cloud"],
+      "enabled": false
     }
   ]
 }
