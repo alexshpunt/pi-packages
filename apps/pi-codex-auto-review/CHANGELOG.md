@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-21
+
 ### Improved
 
 - The README and usage guide put the pre-install checks and a first review with its expected result first, list the protected files and accepted policy values, say where saved allow rules are stored, and describe running the guarded CLI from an npm installation.
