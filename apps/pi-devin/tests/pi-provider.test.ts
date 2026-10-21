@@ -1,5 +1,6 @@
 import { expect, test, vi } from "vitest";
 import { normalizeContext, type AssistantMessageEvent, type Context } from "@earendil-works/pi-ai";
+import { isRetryableAssistantError } from "@earendil-works/pi-ai/utils/retry";
 import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
 import { encodeFrame } from "../src/core/protocol/transport.ts";
 import { chatResponseCodec } from "../src/core/protocol/protobuf.ts";
@@ -122,6 +123,16 @@ test("the fixed 8-call budget is not reset at host retry boundaries and blocks b
     expect(new Set(bodies.map((body) => body.cascadeId)).size).toBe(1);
     expect((bodies[0].trajectoryReference as JsonObject).stepType).toBe("CORTEX_STEP_TYPE_USER_INPUT");
     expect((bodies[1].trajectoryReference as JsonObject).stepType).toBe(undefined);
+  } finally { fixture.provider.shutdown(); }
+});
+
+test("a refused connection is reported in words Pi's host retry recognizes", async () => {
+  const fixture = await providerFixture({ chat: () => Promise.reject(Object.assign(new Error("connect ECONNREFUSED 35.223.238.178:443"), { code: "ECONNREFUSED" })) });
+  try {
+    const { result } = await collect(fixture.provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
+    expect(result.stopReason).toBe("error");
+    expect(result.errorMessage).toBe("Connection refused (connect ECONNREFUSED 35.223.238.178:443)");
+    expect(isRetryableAssistantError(result)).toBe(true);
   } finally { fixture.provider.shutdown(); }
 });
 

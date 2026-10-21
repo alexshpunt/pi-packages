@@ -114,6 +114,39 @@ for (const status of [403, 429]) test(`${status} is not remembered as OAuth toke
   expect(f.counts()).toStrictEqual({ sends: 2, closed: 2, exchanges: 1 });
 });
 
+function unreachableCheckFixture(firstFailure: () => Promise<Response>) {
+  let calls = 0;
+  const auth = createDevinAccountAuth({ createClient: (credential) => new DevinClient(credential, {
+    fingerprint: createFingerprintProvider(credential.sessionToken, { collectIdentity: () => identity }),
+    fetch: async () => (++calls === 1 ? firstFailure() : unaryResponse(STATUS_METHOD, statusResponse())),
+  }) });
+  const f = host(auth);
+  const stored = { type: "oauth" as const, access: "fake-unreachable-token", refresh: "", expires: 0,
+    devin: { version: 1, apiServerURL: "https://example.invalid", createdAt: "2026-01-01T00:00:00.000Z" } };
+  return { f, stored, calls: () => calls };
+}
+
+const refused = () => Promise.reject(Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:9"), { code: "ECONNREFUSED" }));
+for (const [name, firstFailure] of [
+  ["a refused connection", refused],
+  ["a 503 response", () => Promise.resolve(Response.json({}, { status: 503 }))],
+] as const) test(`${name} during the pre-request session check keeps the stored session`, async () => {
+  const { f, stored, calls } = unreachableCheckFixture(firstFailure);
+  await f.storage.modify("devin", async () => stored);
+  // The model request proceeds with the stored session instead of failing as "OAuth refresh failed".
+  expect((await f.models.getAuth("devin"))?.auth.apiKey).toBe(stored.access);
+  expect(await f.storage.read("devin")).toStrictEqual(stored);
+  // Not remembered as an authentication failure: the next request checks the session again.
+  expect((await f.models.getAuth("devin"))?.auth.apiKey).toBe(stored.access);
+  expect(calls()).toBe(2);
+});
+
+test("a TLS failure during the session check still fails the request", async () => {
+  const { f, stored } = unreachableCheckFixture(() => Promise.reject(Object.assign(new Error("self-signed certificate"), { code: "DEPTH_ZERO_SELF_SIGNED_CERT" })));
+  await f.storage.modify("devin", async () => stored);
+  await expect(f.models.getAuth("devin")).rejects.toThrow(/OAuth refresh failed/);
+});
+
 test("Pi browser login and the callback/manual prompt race use the same shared REST exchange", async () => {
   let callback!: URL, promptSignal!: AbortSignal, request: Promise<Response> | undefined, exchanges = 0;
   const auth = createDevinAccountAuth({ loginOptions: { fetch: async (url, init) => {

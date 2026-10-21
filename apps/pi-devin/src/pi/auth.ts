@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { OAuthAuth, OAuthCredential } from "@earendil-works/pi-ai";
 import { loginAccount, type LoginOptions } from "../core/auth/index.ts";
 import { DevinClient } from "../core/client.ts";
-import { awaitWithSignal, endpoint, isAuthenticationError, RPCError } from "../core/protocol/transport.ts";
+import { awaitWithSignal, endpoint, failureDetails, isAuthenticationError, RPCError } from "../core/protocol/transport.ts";
 import { object, requiredString, type Credential, type JsonObject } from "../core/types.ts";
 
 export const OAUTH_ONLY_MESSAGE = "Devin uses only the OAuth account session from /login. API key authentication is not supported.";
@@ -30,6 +30,13 @@ export function credentialFromOAuth(credential: OAuthCredential): Credential {
     apiServerURL: endpoint(requiredString(metadata.apiServerURL, "Devin credential API server")),
     createdAt: requiredString(metadata.createdAt, "Devin credential creation time"),
   };
+}
+
+/** A session check that never reached a working server says nothing about the session itself. TLS failures stay fatal. */
+function isUnreachableSessionCheck(error: unknown): boolean {
+  if (error instanceof RPCError) return error.code === "unavailable" || error.httpStatus === 502 || error.httpStatus === 503;
+  const details = failureDetails(error);
+  return details.category === "network" && /^(ECONN|ENET|EHOST|EPIPE$|ENOTFOUND$|EAI_|ETIMEDOUT$)/.test(String(details.code));
 }
 
 function credentialKey(credential: Credential): string {
@@ -111,7 +118,13 @@ export function createDevinAccountAuth(options: {
         const status = await client.status(signal);
         if (expectedGeneration === generation) options.onValidated?.(credential, requiredString(client.accountIdentityHash, "Devin account scope"), status);
         return current;
-      } catch (error) { auth.invalidate(credential, error, expectedGeneration); throw error; }
+      } catch (error) {
+        auth.invalidate(credential, error, expectedGeneration);
+        // expires 0 makes Pi run this check before every request. An unreachable check must not block the request:
+        // keep the stored session so the model request succeeds or reports its own transport error.
+        if (!signal.aborted && isUnreachableSessionCheck(error)) return current;
+        throw error;
+      }
       finally { client.transport.close(); }
     },
     async toAuth(current) {

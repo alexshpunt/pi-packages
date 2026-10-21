@@ -9,7 +9,7 @@ import { applyTeamModelPolicy } from "../core/models/access.ts";
 import type { BackendModelSelection, EffectiveThinkingLevel } from "../core/models/variants.ts";
 import { createFingerprintProvider, type FingerprintProvider } from "../core/protocol/fingerprint.ts";
 import { CHAT_METHOD } from "../core/protocol/protobuf.ts";
-import { awaitWithSignal, endpoint, isAuthenticationError, RPCError, safeError } from "../core/protocol/transport.ts";
+import { awaitWithSignal, endpoint, failureDetails, isAuthenticationError, RPCError, safeError } from "../core/protocol/transport.ts";
 import { object, requiredString, tokenCount, type Credential, type JsonObject } from "../core/types.ts";
 import { createDevinAccountAuth } from "./auth.ts";
 import { DevinLifecycle, type RequestLease, type SessionBinding } from "./lifecycle.ts";
@@ -22,6 +22,15 @@ import { accountUsage, type AccountUsage } from "./usage.ts";
 type LoginConfiguration = NonNullable<Parameters<typeof createDevinAccountAuth>[0]>["loginOptions"];
 
 /** Like Pi's built-in providers: the caller option wins; otherwise only PI_CACHE_RETENTION=long (provider env first) means long retention. */
+/** Node reports connections that never reached the server only as codes; Pi's host retry recognizes these words. */
+function hostRetryableMessage(error: unknown, message: string): string {
+  const { category, code } = failureDetails(error);
+  if (category !== "network") return message;
+  if (code === "ECONNREFUSED") return `Connection refused (${message})`;
+  if (code === "EHOSTUNREACH" || code === "ENETUNREACH") return `Network error (${message})`;
+  return message;
+}
+
 function resolveCacheRetention(options: SimpleStreamOptions): NonNullable<SimpleStreamOptions["cacheRetention"]> {
   if (options.cacheRetention) return options.cacheRetention;
   return (options.env?.PI_CACHE_RETENTION || process.env.PI_CACHE_RETENTION) === "long" ? "long" : "short";
@@ -215,7 +224,7 @@ export function createDevinProvider(options: {
       } catch (error) {
         if (credential) authenticationFailed(credential, error, generation);
         accumulator.message.modelUid = actualUID || undefined;
-        response.fail(safeError(error, credential ? [credential.sessionToken] : []), error instanceof Error && error.name === "AbortError", isRedacted ? undefined : accumulator.message);
+        response.fail(hostRetryableMessage(error, safeError(error, credential ? [credential.sessionToken] : [])), error instanceof Error && error.name === "AbortError", isRedacted ? undefined : accumulator.message);
       } finally { client?.transport.close(); lease?.release(); }
     })();
     return response.stream;
