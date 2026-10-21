@@ -2,7 +2,7 @@
 
 **English** | [한국어](README.ko.md)
 
-Request an OpenAI service tier from Pi while keeping the same conversation model and endpoint. Choose Standard, Fast, or Ultrafast per model, with a global speed for models without an override. **Model settings take precedence over global speed.** The extension adds `service_tier` only when its local compatibility checks pass; initial Standard without an explicit preference leaves the payload unchanged.
+Request an OpenAI service tier from Pi while keeping the same conversation model and endpoint. Choose Standard, Fast, or Ultrafast per model, with a global speed for models without an override. **Session speed takes precedence over model settings, then global speed.** The extension adds `service_tier` only when its local compatibility checks pass; initial Standard without an explicit preference leaves the payload unchanged.
 
 The selected tier applies to requests. Response tiers can differ; the Codex backend has returned `default` for Fast and Ultrafast requests. A `default` response alone does not disable the selection or cause a failure. Check processing speed and billing separately. See the OpenAI [Fast](https://developers.openai.com/api/docs/guides/fast-mode) and [Ultrafast](https://developers.openai.com/api/docs/guides/ultrafast-mode) guides.
 
@@ -35,20 +35,22 @@ Run `/codex-fast status` again. `OpenAI requested service tier` identifies the s
 
 ## Select a tier
 
-`/codex-fast` lists available models selected in `/scoped-models` that have speed controls, followed by **Global speed**. Without a configured scope, it uses all available models, matching Pi's behavior. The current model appears first if included; the other models retain their scope order. Models outside the scope are not added, even if currently selected. Under each model, `Speed` offers one choice among **Standard, Fast, and Ultrafast**. Models without an override show `global` beside their name and inherit the global speed.
+`/codex-fast` shows **Session speed (not saved)** first, then available models selected in `/scoped-models` that have speed controls, followed by **Global speed**. Without a configured scope, it uses all available models, matching Pi's behavior. Models are sorted by Astra, Sol, then Luna family, descending numeric version within each family, then model key; other models follow in model-key order. The current model has no special sort priority. Models outside the scope are not added, even if currently selected. Under each model, `Speed` offers one choice among **Standard, Fast, and Ultrafast**. Models without an override show `global` beside their name and inherit the global speed.
 
 After changing `/scoped-models`, reopen `/codex-fast` to see the updated list. Speed settings for models hidden from the list are preserved.
 
-- **↑/↓**: select a model or global speed. Long model lists scroll with the selection.
-- **←/→ or Tab/Shift+Tab**: select a speed. Brackets mark the saved value; `›…‹` marks keyboard focus.
-- **Enter**: apply and save the selected speed. The view stays open.
-- **R**: clear the selected model's override and inherit global speed.
-- **Esc**: close. Choices not saved with Enter are discarded.
+- **↑/↓**: select session, model, or global speed. Long model lists scroll with the selection.
+- **←/→ or Tab/Shift+Tab**: select a speed. Brackets mark the session selection or saved model/global value; `›…‹` marks keyboard focus.
+- **Enter**: apply the session row without saving, or save a model/global speed. The view stays open.
+- **R**: clear session speed on the session row, or restore global inheritance on a model row.
+- **Esc**: close. Choices not applied with Enter are discarded.
 
-Unavailable speeds are dimmed, marked `×`, and skipped during selection. Narrow terminals show the saved speed and pending choice in a compact form.
+Unavailable model speeds are dimmed, marked `×`, and skipped during selection. The session row offers all three speeds, retaining the choice even when the current model cannot use it. Narrow terminals show the saved speed and pending choice in a compact form.
 
 | Command | Behavior |
 | --- | --- |
+| `/codex-fast session standard` / `fast` / `ultrafast` | Override speed for this session only; never write settings |
+| `/codex-fast session clear` | Clear session speed and return to model/global settings |
 | `/codex-fast speed standard` / `fast` / `ultrafast` | Select global speed; preserve model overrides |
 | `/codex-fast model <provider/id> standard` / `fast` / `ultrafast` | Set that model's speed; unsupported choices preserve the previous setting |
 | `/codex-fast model <provider/id> inherit` | Restore global-speed inheritance for that model |
@@ -56,11 +58,13 @@ Unavailable speeds are dimmed, marked `×`, and skipped during selection. Narrow
 | `/codex-fast off` | Select global Standard; preserve model overrides |
 | `/codex-fast fast on` / `/codex-fast fast off` | Toggle global Fast; turning off an inactive mode preserves the other global speed |
 | `/codex-fast ultrafast on` / `/codex-fast ultrafast off` | Toggle global Ultrafast; unsupported models receive no tier injection |
-| `/codex-fast status` | Show the desired tier, activation, model, settings path, persistence, and last injection without changing the preference |
+| `/codex-fast status` | Show the desired tier, session override (or not set), activation, model, settings path, persistence, and last injection without changing the preference |
 
-Explicit arguments also work without a UI. Replace `<provider/id>` with an actual model ID such as `openai-codex/gpt-6.1-sol`. RPC first selects a model or global speed, then opens a speed picker; models also offer a global-inheritance option. Mode changes wait for the current agent run to become idle. `status` does not save settings or make a model request. The startup `--fast` flag overrides the saved global speed; model settings still take precedence.
+Explicit arguments also work without a UI. Replace `<provider/id>` with an actual model ID such as `openai-codex/gpt-6.1-sol`. RPC first selects session, model, or global speed, then opens a speed picker; session speed has a clear option and models offer global inheritance. Mode changes wait for the current agent run to become idle. `status` does not save settings or make a model request. The startup `--fast` flag overrides the saved global speed; model settings still take precedence.
 
-Switching models recalculates the model-specific or inherited global speed. An unsupported accelerated preference is retained without adding a tier. Model-specific commands check the target model's compatibility before changing its setting.
+Session speed overrides model settings and global speed (including `--fast`). It stays in memory only, regardless of `persistState`, and survives model switches with compatibility recalculated for each model. It is cleared on process exit, `/new`, `/resume`, `/fork`, or `/reload`; session startup returns to saved settings and any startup flag. Use `/codex-fast session clear` to return without changing sessions. While set, the footer includes `· session` (and `unsupported` when acceleration cannot be requested), and `status` explains that saved speeds are overridden. Global/model commands and TUI saves still save normally, but their result messages note that session speed takes precedence.
+
+Without session speed, switching models recalculates the model-specific or inherited global speed. An unsupported accelerated preference is retained without adding a tier. Model-specific commands check the target model's compatibility before changing its setting.
 
 ## Migrating from earlier commands
 
@@ -75,7 +79,7 @@ Update scripts that call the removed commands. Legacy booleans and storage paths
 | Global | `<agentDir>/codex-fast-mode/settings.json` |
 | Project | `<cwd>/.pi/codex-fast-mode/settings.json` |
 
-`agentDir` honors `PI_CODING_AGENT_DIR` and normally is `~/.pi/agent`. The project layer overrides the global layer. Commands save to the project file if it exists, otherwise to the global file.
+`agentDir` honors `PI_CODING_AGENT_DIR` and normally is `~/.pi/agent`. The project layer overrides the global layer. Global/model commands save to the project file if it exists, otherwise to the global file. Session speed never writes either file.
 
 ```json
 {
@@ -93,14 +97,14 @@ Update scripts that call the removed commands. Legacy booleans and storage paths
 | --- | --- | --- |
 | `serviceTier` | `"standard"` | Global speed for models without an override: `standard`, `fast`, or `ultrafast`. Explicitly saving Standard differs from having no preference. |
 | `modelServiceTiers` | `{}` | Speeds keyed by exact `provider/id`: `standard`, `fast`, or `ultrafast` take precedence over global speed; `null` restores global inheritance. |
-| `persistState` | `true` | `false` keeps command changes in the session only |
+| `persistState` | `true` | `false` keeps global/model command changes in memory only; session speed is never saved either way |
 | `notifyOnModelSwitch` | `true` | Notifies when a model switch changes activation |
 | `supportedModels` | Built-in list below | Replaces the Fast allowlist with exact `provider/id` strings. `[]` disables Fast support; it does not change Ultrafast checks. |
 | `desiredActive`, `active`, `fast.enabled` | Unset | Legacy booleans. Within each layer, precedence is `serviceTier`, then `desiredActive`, `active`, and `fast.enabled`. |
 
 Global speed is resolved per layer, so project legacy booleans can override global `serviceTier`. Model settings merge by ID, with project values taking precedence for the same model. A global-file model override also takes precedence over a project's global speed. A project `null` entry masks the global-file model override and restores global-speed inheritance.
 
-Global changes update `serviceTier`, `desiredActive`, and `active`; model changes update only the target ID while preserving unrelated fields. Restoring inheritance in the global file removes that model's entry. Failed saves restore the previous choice. Model switches recalculate speed and activation without writing settings.
+Global changes update `serviceTier`, `desiredActive`, and `active`; model changes update only the target ID while preserving unrelated fields. Restoring inheritance in the global file removes that model's entry. Concurrent saves to the same file are serialized across extension instances and Pi processes, preserving other models and unrelated fields. If a save cannot acquire the lock within two seconds, it reports an error and restores the previous choice; retry after the other save finishes. Other failed saves also restore the previous choice. Model switches recalculate speed and activation without writing settings.
 
 After manual edits, run `/reload`. Invalid or unreadable settings report an error and use defaults with session-only changes. A failed command save restores the previous tier.
 
@@ -125,7 +129,7 @@ Use the default HTTPS port or 443, without URL credentials, query, or fragment. 
 | Selection | Injected `service_tier` |
 | --- | --- |
 | Initial Standard with no explicit preference | No field added |
-| Explicit or saved global/model Standard | `"default"` on models with speed controls |
+| Explicit session or saved global/model Standard | `"default"` on models with speed controls |
 | Fast | `"priority"` on Fast-supported models |
 | Ultrafast | `"ultrafast"` when its checks pass |
 | Accelerated preference on an unsupported model | No field added; preference retained |
@@ -139,7 +143,7 @@ The [Sol service-tier PoC](https://github.com/buYoung/pi-codex-auto-review/blob/
 | Symptom | What to check |
 | --- | --- |
 | Preference retained but not active | Check the selected `provider/id` and your `supportedModels` override. A saved choice is not a compatibility result. |
-| Global changes do not change the current model's speed | Model settings take precedence. Press `R` for that model or use `model <provider/id> inherit` to restore global inheritance. |
+| Saved changes do not change the current model's speed | Check `status` for a session override; use `session clear` to remove it. Otherwise model settings take precedence over global speed: press `R` on that model or use `model <provider/id> inherit`. |
 | Ultrafast selection rejected | Check every Ultrafast requirement above. The previous tier remains selected; the command does not fall back to Fast. |
 | No injection after a prompt | Check the selected model and whether its provider payload has a matching `model` field. Other-model requests and incompatible payloads are left unchanged. |
 | Settings load/save error | Follow the reported settings path. Load errors use defaults with session-only changes; a failed command save restores the previous tier. |
@@ -154,7 +158,7 @@ pnpm --filter @buyong/pi-codex-fast-mode build
 pnpm --filter @buyong/pi-codex-fast-mode exec pi -ne -e ./dist/index.js
 ```
 
-This loads the extension for one invocation without registering a permanent package source. Rebuild after source changes. The [repository release process](https://github.com/buYoung/pi-packages#공통-ci와-패키지별-배포) describes release preparation.
+This loads the extension for one invocation without registering a permanent package source. Rebuild after source changes. For model-free source checks, run `pnpm run typecheck`, `pnpm run lint`, and `pnpm run build` from `apps/pi-codex-fast-mode`; all should exit successfully. Inside Pi, run `/codex-fast session fast`, then `/codex-fast status` to see the session override without saving settings. Run `/codex-fast session clear` or `/reload`, then `status` again to confirm `Session speed: not set`. These checks do not make a model request. The [repository release process](https://github.com/buYoung/pi-packages#공통-ci와-패키지별-배포) describes release preparation.
 
 ## License
 

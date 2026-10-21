@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
+import { withSettingsLock } from "./settings-lock.js";
 
 export type ServiceTier = "standard" | "fast" | "ultrafast";
 export type ModelServiceTiers = Readonly<Record<string, ServiceTier | null>>;
@@ -186,37 +186,43 @@ export class FastSettingsStore {
         desiredActive: boolean;
         active: boolean;
     }): Promise<void> {
-        const current = (await readSettings(this.path)) ?? {};
-        await this.write({ ...current, ...state });
+        await withSettingsLock(this.path, async (path) => {
+            const current = (await readSettings(path)) ?? {};
+            await this.write(path, { ...current, ...state });
+        });
     }
 
     async persistModelTier(
         model: string,
         tier: ServiceTier | null,
     ): Promise<void> {
-        const current = (await readSettings(this.path)) ?? {};
-        const modelServiceTiers = {
-            ...(isRecord(current.modelServiceTiers)
-                ? current.modelServiceTiers
-                : {}),
-        };
-        if (tier === null && this.path === this.globalPath)
-            delete modelServiceTiers[model];
-        else modelServiceTiers[model] = tier;
-        const next = { ...current, modelServiceTiers };
-        validateLayer(next);
-        await this.write(next);
+        const isGlobal = this.path === this.globalPath;
+        await withSettingsLock(this.path, async (path) => {
+            const current = (await readSettings(path)) ?? {};
+            const modelServiceTiers = {
+                ...(isRecord(current.modelServiceTiers)
+                    ? current.modelServiceTiers
+                    : {}),
+            };
+            if (tier === null && isGlobal) delete modelServiceTiers[model];
+            else modelServiceTiers[model] = tier;
+            const next = { ...current, modelServiceTiers };
+            validateLayer(next);
+            await this.write(path, next);
+        });
     }
 
-    private async write(next: Record<string, unknown>): Promise<void> {
-        await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
-        const temporary = `${this.path}.${randomUUID()}.tmp`;
+    private async write(
+        path: string,
+        next: Record<string, unknown>,
+    ): Promise<void> {
+        const temporary = `${path}.${randomUUID()}.tmp`;
         try {
             await writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, {
                 flag: "wx",
                 mode: 0o600,
             });
-            await rename(temporary, this.path);
+            await rename(temporary, path);
         } finally {
             await rm(temporary, { force: true });
         }

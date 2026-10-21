@@ -34,11 +34,17 @@ export class FastController {
     };
     private lastInjection: PayloadInjection | undefined;
     private currentTier: ServiceTier = "standard";
+    // Saved-setting rollback must not revert a later memory-only session choice.
+    private sessionTierOverride: ServiceTier | undefined;
 
     constructor(private readonly serviceTier = "priority" as const) {}
 
     get desiredTier(): ServiceTier {
         return this.state.desiredTier;
+    }
+
+    get sessionTier(): ServiceTier | undefined {
+        return this.sessionTierOverride;
     }
 
     get active(): boolean {
@@ -54,6 +60,10 @@ export class FastController {
     }
 
     getEffectiveTier(ctx: FastContext): ServiceTier {
+        return this.sessionTier ?? this.getSavedTier(ctx);
+    }
+
+    private getSavedTier(ctx: FastContext): ServiceTier {
         return (
             (ctx.model &&
                 this.getModelTier(`${ctx.model.provider}/${ctx.model.id}`)) ??
@@ -80,6 +90,7 @@ export class FastController {
             active: false,
             hasExplicitStandard: !forceFast && cfg.hasExplicitStandard,
         };
+        this.sessionTierOverride = undefined;
         this.lastInjection = undefined;
         this.currentTier = "standard";
         this.applyDesiredState(ctx, cfg);
@@ -143,15 +154,31 @@ export class FastController {
         const previous = this.state.active;
         const previousTier = this.currentTier;
         this.currentTier = this.getEffectiveTier(ctx);
-        this.state.active =
-            this.currentTier === "fast"
-                ? this.supportsFast(ctx, cfg)
-                : this.currentTier === "ultrafast"
-                  ? this.supportsUltrafast(ctx)
-                  : false;
+        this.state.active = this.isTierActive(this.currentTier, ctx, cfg);
         return (
             previous !== this.state.active || previousTier !== this.currentTier
         );
+    }
+
+    private isTierActive(
+        tier: ServiceTier,
+        ctx: FastContext,
+        cfg: FastConfig,
+    ): boolean {
+        return tier === "fast"
+            ? this.supportsFast(ctx, cfg)
+            : tier === "ultrafast"
+              ? this.supportsUltrafast(ctx)
+              : false;
+    }
+
+    setSessionTier(
+        tier: ServiceTier | undefined,
+        ctx: FastContext,
+        cfg: FastConfig,
+    ): void {
+        this.sessionTierOverride = tier;
+        this.applyDesiredState(ctx, cfg);
     }
 
     setDesired(tier: ServiceTier, ctx: FastContext, cfg: FastConfig): void {
@@ -183,12 +210,18 @@ export class FastController {
             ctx.model &&
             this.getModelTier(`${ctx.model.provider}/${ctx.model.id}`) ===
                 "standard";
-        return (this.active || hasModelStandard) && ctx.model
+        if (!ctx.model) return undefined;
+        if (this.sessionTier !== undefined)
+            return `${ctx.model.id} ${this.currentTier} · session${!this.active && this.currentTier !== "standard" ? " (unsupported)" : ""}`;
+        return this.active || hasModelStandard
             ? `${ctx.model.id} ${this.currentTier}`
             : undefined;
     }
 
-    persistedState(): {
+    persistedState(
+        ctx: FastContext,
+        cfg: FastConfig,
+    ): {
         serviceTier: ServiceTier;
         desiredActive: boolean;
         active: boolean;
@@ -196,7 +229,7 @@ export class FastController {
         return {
             serviceTier: this.desiredTier,
             desiredActive: this.desiredTier !== "standard",
-            active: this.active,
+            active: this.isTierActive(this.getSavedTier(ctx), ctx, cfg),
         };
     }
 
@@ -216,7 +249,9 @@ export class FastController {
                 this.getModelTier(`${ctx.model.provider}/${ctx.model.id}`) ===
                 "standard";
             if (
-                (!this.state.hasExplicitStandard && !hasModelStandard) ||
+                (this.sessionTier !== "standard" &&
+                    !this.state.hasExplicitStandard &&
+                    !hasModelStandard) ||
                 (!this.supportsFast(ctx, cfg) && !this.supportsUltrafast(ctx))
             )
                 return undefined;
