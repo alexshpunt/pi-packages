@@ -1,9 +1,13 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { isRetryableAssistantError } from "@earendil-works/pi-ai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AccountCredentialStore, StoredAccountKey } from "../src/accounts/credentials.ts";
+import {
+  type AccountCredentialStore,
+  createAccountCredentialStore,
+  type StoredAccountKey,
+} from "../src/accounts/credentials.ts";
 import { accountFingerprint, createAccountRouter, NO_ACCOUNT_MESSAGE } from "../src/accounts/router.ts";
 import { createSessionAccountBinding, type SessionAccountBinding } from "../src/accounts/session.ts";
 import { createAccountStateStore } from "../src/accounts/state.ts";
@@ -107,6 +111,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   rmSync(directory, { recursive: true, force: true });
 });
 
@@ -217,8 +222,8 @@ describe("account router failures", () => {
     });
     expect(await acquiredId(instance, session("s1"))).toBe("work");
     expect(instance.readState().health[accountFingerprint("key-default")].isUnauthorized).toBe(true);
-    const resolveCalls = credentials.resolve.mock.calls.length;
     const { accounts } = await instance.listAccounts("key-default");
+    const resolveCalls = credentials.resolve.mock.calls.length;
     await instance.reportFailure(account(accounts, "work"), { kind: "unauthorized" });
     await instance.listAccounts("key-default");
     expect(credentials.resolve.mock.calls.length).toBe(resolveCalls + 1);
@@ -226,6 +231,68 @@ describe("account router failures", () => {
     fetchBalance.mockImplementation(async () => healthy);
     await instance.resetHealth(accounts);
     expect(await acquiredId(instance, session("s3"))).toBe("default");
+  });
+
+  it("re-resolves a rotated environment reference after a balance 401 without changing the accounts file", async () => {
+    vi.stubEnv("OLLAMA_ROUTER_ROTATING_KEY", "key-rejected");
+    writeFileSync(credentialsPath, JSON.stringify({ work: { type: "api_key", key: "$OLLAMA_ROUTER_ROTATING_KEY" } }));
+    const revision = statSync(credentialsPath);
+    const credentials = createAccountCredentialStore(credentialsPath);
+    const resolve = vi.spyOn(credentials, "resolve");
+    const fetchBalance = vi.fn(async (key: string) => {
+      if (key === "key-rejected") throw new OllamaHttpError("authentication error", 401, "unauthorized");
+      return healthy;
+    });
+    const instance = createAccountRouter({
+      credentials,
+      state: createAccountStateStore({ path: statePath, now: () => clock }),
+      fetchBalance,
+      now: () => clock,
+    });
+    const binding = session("s1");
+    expect((await instance.acquire({ primaryKey: undefined, binding })).ok).toBe(false);
+    expect(instance.readState().health[accountFingerprint("key-rejected")]).toMatchObject({
+      isUnauthorized: true,
+      balanceFailedAtMs: NOW,
+    });
+    vi.stubEnv("OLLAMA_ROUTER_ROTATING_KEY", "key-rotated");
+    expect(statSync(credentialsPath)).toMatchObject({
+      ino: revision.ino,
+      size: revision.size,
+      mtimeMs: revision.mtimeMs,
+    });
+    const recovered = await instance.acquire({ primaryKey: undefined, binding });
+    expect(recovered).toMatchObject({ ok: true, account: { id: "work", apiKey: "key-rotated" } });
+    expect(resolve).toHaveBeenCalledTimes(2);
+    expect(fetchBalance.mock.calls.map(([key]) => key)).toEqual(["key-rejected", "key-rotated"]);
+    expect(instance.readState().health[accountFingerprint("key-rotated")]?.isUnauthorized).toBeUndefined();
+  });
+
+  it("reloads resolved file keys on the next account listing after a balance 401", async () => {
+    const { router: instance, credentials } = router({
+      fetchBalance: async () => {
+        throw new OllamaHttpError("authentication error", 401, "unauthorized");
+      },
+    });
+    const { accounts } = await instance.listAccounts(undefined);
+    await instance.refreshBalance(accounts[0]);
+    entries = [{ id: "work", apiKey: "key-rotated" }];
+    const refreshed = await instance.listAccounts(undefined);
+    expect(refreshed.accounts).toMatchObject([{ id: "work", apiKey: "key-rotated" }]);
+    expect(credentials.resolve).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps resolved credentials cached after a non-authentication balance failure", async () => {
+    const { router: instance, credentials } = router({
+      fetchBalance: async () => {
+        throw new OllamaHttpError("server error", 500, "fixture");
+      },
+    });
+    const { accounts } = await instance.listAccounts(undefined);
+    await instance.refreshBalance(accounts[0]);
+    await instance.listAccounts(undefined);
+    expect(credentials.resolve).toHaveBeenCalledOnce();
+    expect(instance.readState().health[accounts[0].fingerprint]?.isUnauthorized).toBeUndefined();
   });
 
   it("avoids an account only for the model it refused", async () => {

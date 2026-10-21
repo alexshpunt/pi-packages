@@ -3,6 +3,7 @@ import { accountStatusLabel } from "../accounts/report.ts";
 import type { OllamaAccount } from "../accounts/types.ts";
 import { getCloudApiKey } from "../auth/context.ts";
 import { fetchUsage, fetchUsageStats, formatUsage, type UsageStats } from "../usage/api.ts";
+import { reportCommandResult } from "./command-output.ts";
 import type { AccountServices } from "./ollama-command.ts";
 
 function errorText(error: unknown): string {
@@ -22,9 +23,9 @@ function statusLine(services: AccountServices, account: OllamaAccount): string {
 export async function showCloudUsage(ctx: ExtensionContext, services: AccountServices): Promise<void> {
   const { accounts, problems } = await services.router.listAccounts(await getCloudApiKey(ctx));
   if (accounts.length === 0) {
-    ctx.ui.notify("No Ollama Cloud API key configured. Set OLLAMA_API_KEY or add to auth.json.", "error");
+    reportCommandResult(ctx, "No Ollama Cloud API key configured. Set OLLAMA_API_KEY or add to auth.json.", "error");
     for (const problem of problems)
-      ctx.ui.notify(`Ollama Cloud account [${problem.id}] unusable: ${problem.error}`, "warning");
+      reportCommandResult(ctx, `Ollama Cloud account [${problem.id}] unusable: ${problem.error}`, "warning");
     return;
   }
   const sessionAccount = accounts.find((account) => account.id === services.binding.accountId) ?? accounts[0];
@@ -49,13 +50,13 @@ export async function showCloudUsage(ctx: ExtensionContext, services: AccountSer
       sections.push(formatUsage(data, stats, { title }) + statusLine(services, account));
     } catch (error) {
       if (isSingle) {
-        ctx.ui.notify(errorText(error), "error");
+        reportCommandResult(ctx, errorText(error), "error");
         return;
       }
       sections.push(`${title} unavailable (${errorText(error)})`);
     }
   }
   for (const problem of problems) sections.push(`Ollama Cloud account [${problem.id}] unusable: ${problem.error}`);
-  ctx.ui.notify(sections.join("\n\n"), "info");
-  if (statsError) ctx.ui.notify(`Ollama Cloud request statistics unavailable: ${statsError}`, "warning");
+  reportCommandResult(ctx, sections.join("\n\n"), "info");
+  if (statsError) reportCommandResult(ctx, `Ollama Cloud request statistics unavailable: ${statsError}`, "warning");
 }

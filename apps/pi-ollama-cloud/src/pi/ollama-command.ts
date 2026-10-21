@@ -20,6 +20,7 @@ import {
 import { OllamaHttpError } from "../shared/http.ts";
 import { fetchUsage, fetchUsageStats, formatUsageSummary, type UsageStats } from "../usage/api.ts";
 import { resolveToggleArgument } from "../usage/status.ts";
+import { reportCommandResult } from "./command-output.ts";
 import {
   globalConfigPath,
   type OllamaCloudConfig,
@@ -353,7 +354,7 @@ async function handleOllamaCommand(
   try {
     if (subcommand === undefined) {
       if (ctx.mode === "tui" && ctx.hasUI) await openSettingsPanel(ctx, services, controls, options);
-      else ctx.ui.notify(await settingsSummary(ctx, services, controls), "info");
+      else reportCommandResult(ctx, await settingsSummary(ctx, services, controls), "info");
       return;
     }
     if (subcommand === "usage" && value === undefined) {
@@ -365,18 +366,18 @@ async function handleOllamaCommand(
       const current = isStatus ? controls.isUsageStatusEnabled() : controls.areWebToolsEnabled();
       const toggle = resolveToggleArgument(value ?? "", current, `/ollama ${subcommand} [on|off]`);
       if (toggle.error) {
-        ctx.ui.notify(toggle.error, "error");
+        reportCommandResult(ctx, toggle.error, "error");
         return;
       }
       const message = isStatus
         ? setUsageStatus(toggle.enabled, ctx, controls)
         : setWebTools(toggle.enabled, ctx, controls);
-      ctx.ui.notify(message.text, message.level);
+      reportCommandResult(ctx, message.text, message.level);
       return;
     }
-    ctx.ui.notify(USAGE, "error");
+    reportCommandResult(ctx, USAGE, "error");
   } catch (error) {
-    ctx.ui.notify(`Ollama Cloud: ${errorText(error)}`, "error");
+    reportCommandResult(ctx, `Ollama Cloud: ${errorText(error)}`, "error");
   }
 }
 

@@ -162,6 +162,7 @@ describe("usage status event wiring", () => {
       const notify = vi.fn();
       const context = (provider = "ollama-cloud", mode = "tui") => ({
         mode,
+        hasUI: mode === "tui" || mode === "rpc",
         model: { provider },
         cwd: process.cwd(),
         modelRegistry: { getApiKeyForProvider: async () => "fixture" },
@@ -215,6 +216,7 @@ describe("usage status event wiring", () => {
     });
     const ctx = {
       mode: "tui",
+      hasUI: true,
       model: { provider: "ollama-cloud" },
       cwd: process.cwd(),
       modelRegistry: { getApiKeyForProvider: async () => "fixture" },
@@ -259,6 +261,7 @@ describe("usage status event wiring", () => {
     const context = (provider: string): ExtensionContext =>
       ({
         mode: "tui",
+        hasUI: true,
         cwd: process.cwd(),
         model: { provider },
         modelRegistry: { getApiKeyForProvider: async () => "test-key" },
@@ -318,6 +321,7 @@ describe("usage status event wiring", () => {
     const context = (): ExtensionContext =>
       ({
         mode: "tui",
+        hasUI: true,
         cwd: process.cwd(),
         model: { provider: "ollama-cloud" },
         modelRegistry: { getApiKeyForProvider: getApiKey },

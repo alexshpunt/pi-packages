@@ -185,8 +185,9 @@ export function createAccountStateStore(options: AccountStateStoreOptions = {}):
       const lock = await withCacheLock(
         path,
         () => {
+          // Preserve memory-only changes while the file revision is unchanged.
           // No await is allowed between this read and the write.
-          const current = readStateFile(path);
+          const current = read();
           result = mutate(current);
           pruneAccountState(current, now());
           next = current;
