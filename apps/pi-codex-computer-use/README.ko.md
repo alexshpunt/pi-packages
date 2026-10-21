@@ -43,7 +43,7 @@ Pi에서 다음 순서로 진행합니다.
 Use mcp__cua_repl__js to run await cua.getState(). Summarize the available apps and browsers without operating them.
 ```
 
-첫 결과는 `mcp__cua_repl__js`가 반환한 활성 기능의 목록입니다. 연결되면 `mcp__cua_repl__js_reset`도 제공합니다. 시작에 실패하면 하단에 문제를 표시하고 도구는 숨깁니다. MCP 서버가 실행 중이거나 사전 검사를 통과해도 모든 앱·브라우저 작업의 성공을 보장하지는 않습니다.
+첫 결과는 `mcp__cua_repl__js`가 반환한 활성 기능의 목록입니다. 연결되면 `mcp__cua_repl__js_reset`도 제공합니다. 시작에 실패하거나 서버가 예기치 않게 종료되면 하단에 오류를 표시하고 재시작할 때까지 도구를 숨깁니다. MCP 서버가 실행 중이거나 사전 검사를 통과해도 모든 앱·브라우저 작업의 성공을 보장하지는 않습니다.
 
 이후 브라우저 작업은 [Chrome 작업·승인 안내](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.ko.md#4-작업-실행과-승인)를 따르세요. 런타임은 첫 진입 호출에서 API 문서를 반환하며 모델은 다음 호출 전에 읽어야 합니다.
 
@@ -59,7 +59,7 @@ Use mcp__cua_repl__js to run await cua.getState(). Summarize the available apps 
 | `/computer-use browser on` / `/computer-use browser off` | Browser Use 변경 |
 | `/computer-use check` | `/computer-use-check`의 호환용 별칭 |
 
-RPC는 기능 두 개와 Close 항목이 있는 반복 선택창을 사용합니다. UI가 없으면 인자 없는 명령은 상태를 출력하며 명시적인 인자도 사용할 수 있습니다. print·JSON 모드의 상태·점검 문구는 stderr로 출력합니다.
+RPC는 기능 두 개와 Close 항목이 있는 반복 선택창을 사용합니다. UI가 없으면 인자 없는 명령은 상태를 출력하며 명시적인 인자도 사용할 수 있습니다. print·JSON 모드의 상태·점검 문구와 런타임 탐색·시작·종료 실패, 예기치 않은 서버 종료는 stderr로 출력합니다.
 
 ### 설정 파일과 재시작
 
@@ -82,10 +82,12 @@ RPC는 기능 두 개와 Close 항목이 있는 반복 선택창을 사용합니
 - `node_repl`의 일반적인 빈 폼 `js` 실행 승인은 Codex 사용자 검토자의 자동 승인 규칙을 따릅니다. 민감 요청이나 사용자 입력이 필요한 요청에는 적용하지 않습니다. 이 연결은 Guardian 자동 검토를 구현하지 않습니다.
 - print·JSON 모드에서는 사용자 상호작용이 필요한 요청을 거부합니다. RPC 클라이언트는 Pi UI 요청에 응답해야 합니다. 지원하는 일반 폼은 Pi 입력·선택·확인 창을 사용하지만, 브라우저 로그인·QR, 이메일 OTP, URL 요청과 지원하지 않는 폼은 거부합니다.
 - MCP 취소를 보내도 이미 실행 중인 JavaScript는 완료되거나 런타임 제한 시간에 이를 때까지 계속될 수 있습니다. OS 수준의 즉시 중단을 보장하지 않습니다.
+- MCP 응답 프레임이 16 MiB를 넘으면 취소를 기다리지 않고 실행 중인 호출을 오류로 끝냅니다. 연결과 REPL 바인딩은 그대로 쓸 수 있으니 더 작은 결과를 요청하세요. 승인 대기에는 여전히 클라이언트의 고정 시간 제한이 없습니다.
+- JSON-RPC 오류를 포함한 긴 결과 텍스트는 런타임 출력 한도에 따라 중간을 생략합니다. 저장에 성공하면 전체 텍스트가 담긴 사용자 전용 임시 파일의 경로를 표시합니다. 연결은 이 파일을 자동 삭제하지 않습니다.
 - macOS 앱 번들 폴백의 최초 서비스 실행, Windows 실행, Desktop 종료 상태, 영구 승인, 다운로드·업로드·전체 CDP·WebMCP는 미검증입니다.
 - Desktop 업데이트로 비공개 인터페이스가 바뀔 수 있습니다. Codex 밖의 런타임 사용 정보 전송 동작은 확인되지 않았습니다. 적용되는 OpenAI 약관을 확인하세요.
 
-로그는 `<agentDir>/codex-computer-use/mcp.log`에 기록하고 5 MiB에서 순환합니다. 키 기반 가림이 모든 페이지·앱 내용을 제거하지는 않습니다. 공유 전에 확인하고 가리세요.
+로그는 `<agentDir>/codex-computer-use/mcp.log`에 기록하고 5 MiB에서 순환합니다. 이미지 데이터 대신 base64 문자 수만 기록합니다. 키 기반 가림이 모든 페이지·앱 내용을 제거하지는 않습니다. 공유 전에 확인하고 가리세요.
 
 런타임 부재, 사용 불가 브라우저, 승인 UI 거부나 취소 지연은 [문제 해결 표](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.ko.md#문제-해결)를 참고하세요. 탐색 상세, 작업 예시와 검증 기록은 [전체 사용법](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/docs/usage.ko.md)에 있으며 압축 파일에도 `docs/usage.ko.md`로 포함합니다.
 
@@ -95,11 +97,13 @@ RPC는 기능 두 개와 Close 항목이 있는 반복 선택창을 사용합니
 
 ```sh
 pnpm install
+pnpm --filter @buyong/pi-codex-computer-use typecheck
+pnpm --filter @buyong/pi-codex-computer-use lint
 pnpm --filter @buyong/pi-codex-computer-use build
 pnpm --filter @buyong/pi-codex-computer-use exec pi -ne -e ./dist/index.js
 ```
 
-`-ne`는 자동 확장 탐색을 끄고 `-e`는 이번 실행에만 확장을 로드합니다. Desktop 준비는 계속 필요합니다. 소스를 바꾼 뒤 다시 빌드하고 Pi를 다시 로드하거나 시작하세요.
+`-ne`는 자동 확장 탐색을 끄고 `-e`는 이번 실행에만 확장을 로드합니다. Desktop 준비는 계속 필요합니다. typecheck·lint·build 검사는 Desktop 없이 정상 종료해야 합니다. 소스를 바꾼 뒤 다시 빌드하고 Pi를 다시 로드하거나 시작한 다음 `/computer-use status`를 다시 실행하세요. 서버 실행이나 명시적인 런타임 오류가 표시되어야 하며, 도구가 숨겨졌는데 하단이 `running`으로 남아서는 안 됩니다.
 
 ## 라이선스
 

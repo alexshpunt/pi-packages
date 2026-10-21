@@ -210,6 +210,8 @@ export interface BridgeConnection {
     setElicitationHandler(handler: ElicitationHandler): void;
     isClosed(): boolean;
     onClose(listener: () => void): () => void;
+    /** The transport discarded a response larger than the stdio message limit; its request stays pending. */
+    onOversizedResponse(listener: (error: Error) => void): () => void;
     close(): Promise<void>;
 }
 
@@ -258,7 +260,15 @@ export async function openConnection(
     client.setRequestHandler("elicitation/create", (params, context) =>
         elicitationHandler((params ?? {}) as ElicitationParams, context),
     );
-    client.onError((error) => log.write("client-error", error.message));
+    const oversizedListeners = new Set<(error: Error) => void>();
+    client.onError((error) => {
+        log.write("client-error", error.message);
+        // pi-mcp 1.3.0 discards an oversized frame and reports it as a plain Error without a code,
+        // leaving the request it answered pending. The line-delimited stream stays usable, so the
+        // in-flight call fails and the connection is kept.
+        if (/^MCP stdio message exceeds \d+ bytes$/.test(error.message))
+            for (const listener of [...oversizedListeners]) listener(error);
+    });
     let closed = false;
     const closeListeners = new Set<() => void>();
     client.onClose(() => {
@@ -311,6 +321,10 @@ export async function openConnection(
             if (closed) listener();
             else closeListeners.add(listener);
             return () => closeListeners.delete(listener);
+        },
+        onOversizedResponse(listener) {
+            oversizedListeners.add(listener);
+            return () => oversizedListeners.delete(listener);
         },
         async close() {
             if (closed) return;

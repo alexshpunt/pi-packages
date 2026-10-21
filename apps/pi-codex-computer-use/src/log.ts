@@ -22,6 +22,17 @@ export function redactSecrets(value: unknown): unknown {
     return value;
 }
 
+/** JSON's replacer runs before encoding the value, avoiding a serialized copy of image data. */
+function summarizeImageData(
+    this: Record<string, unknown>,
+    key: string,
+    value: unknown,
+): unknown {
+    return key === "data" && this.type === "image" && typeof value === "string"
+        ? `[image data: ${value.length} base64 chars]`
+        : value;
+}
+
 /**
  * Append-only, redacted record of the bridge's JSON-RPC traffic and lifecycle, rotated to `.1` once
  * it grows past 5 MB like pi's own `mcp.log`. Writes are synchronous and best effort.
@@ -38,8 +49,10 @@ export class BridgeLog {
                 body =
                     typeof payload === "string"
                         ? payload
-                        : (JSON.stringify(redactSecrets(payload)) ??
-                          String(payload));
+                        : (JSON.stringify(
+                              redactSecrets(payload),
+                              summarizeImageData,
+                          ) ?? String(payload));
             } catch {
                 body = String(payload);
             }
