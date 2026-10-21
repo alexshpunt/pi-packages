@@ -4,28 +4,29 @@
 
 ## 1. Overview
 
-This package installs the four Pi extensions and the image-generation skill together. It contains distribution metadata and staged dependencies, not a separate runtime implementation.
+This package installs four Codex extensions and the image-generation skill as one distribution. It owns packaging and resource discovery, not the extensions' runtime behavior.
 
 ## 2. Ownership Map
 
 ### Stable Ownership Boundaries
 
-- **Component selection and loading**: Start in `package.json` for the `workspace:*` component dependencies, `bundleDependencies`, `pi.extensions`, and `pi.skills`. The four extension paths resolve inside this package's physical `node_modules`; the skill path belongs to the image-generation dependency. Keep these paths aligned with the individual packages, and do not load the same extension both individually and through the aggregate. The aggregate assertions in `../../scripts/codex/check-package.mjs` verify the component references, entry paths, and bundled files.
-- **Dependency staging**: Start in `scripts/prepare-package.mjs` for changes to the aggregate's contents. It constructs a physical tree, including transitive runtime dependencies such as `@buyong/redact`, rather than packaging pnpm's symlinks: workspace packages are extracted from their own `pnpm pack` archives so their manifests carry resolved versions, and registry packages are copied from npm's publishable file set. Preserve version-range checks and the rejection of conflicting versions of the same dependency. The required-file and forbidden-content assertions in `../../scripts/codex/check-package.mjs` are the verification boundary.
+- **Bundle membership.** Change `dependencies`, `bundleDependencies`, `pi.extensions`, and `pi.skills` together in `package.json`. Resources resolve inside this package's physical `node_modules`; they must not point at sibling workspace directories. Verify the component and entry-point checks in `../../scripts/codex/check-package.mjs`.
+- **Dependency materialization.** `scripts/prepare-package.mjs` turns workspace links into distributable copies, including transitive runtime dependencies such as `@buyong/redact`. Workspace packages come from their archives; registry packages contribute their publishable files. Follow version validation and forbidden-file checks through the final bundle.
 
 ## 3. Core Behaviors & Patterns
 
-- **Snapshot, not source linkage**: Pi loads staged copies of the original extension entry points. Editing a sibling workspace does not update these copies automatically. Commands, settings, and feature eligibility remain owned by each component; the bundle provides neither Codex Desktop nor account access and does not make ordinary extension loading fail closed.
-- **Bounded dependency traversal**: `stageDependency` resolves upward through `node_modules` and follows pnpm's links. It checks the resolved package name and range (`workspace:*` accepts the linked version), deduplicates identical versions, and recursively visits `dependencies`, not peer or development dependencies. Packing a workspace dependency runs its `prepack`; registry dependencies are copied with lifecycle scripts disabled.
-- **Staging lifetime**: All dependencies are prepared in a unique `.package-*` directory before the existing aggregate `node_modules` is removed and staging is renamed into place. `finally` removes leftover staging. This is not a rollback guarantee: failure after removing the old tree can leave no usable staged dependencies.
-- **Distribution checks**: The checker requires `workspace:*` for the four components, bundled versions equal to the workspace versions, no `workspace:`/`catalog:` ranges left in bundled manifests, and the declared bundle list to match the four extensions. It checks bundled component/redactor artifacts and excludes Pi host packages, source/development trees, native binaries, and private OpenAI runtime files. Do not add runtime behavior here to work around a component's prerequisite or failure.
+- `stageDependency()` prefers a workspace package, then resolves through ancestor `node_modules` directories. It validates names and requested version ranges, reuses matching versions, and rejects conflicting versions of the same name. Recursion follows `dependencies`, not peers or development dependencies.
+- Workspace archives pass through their own `prepack` lifecycle and contain resolved workspace/catalog dependency ranges. Registry file discovery suppresses lifecycle scripts. Do not package duplicate Pi host dependencies, development sources, native binaries, or OpenAI's private runtime.
+- Preparation uses unique staging and archive directories. Only after preparation finishes does it remove the old `node_modules` tree and rename staging into place. `finally` removes temporary directories, but failure after deleting the old tree does not restore it.
+- A prepared bundle is a snapshot. Later changes to a component do not modify its copied files. The checker requires the four component declarations, exact bundle membership, matching workspace versions, and no unresolved workspace/catalog ranges. Check the archive rather than inferring its contents from workspace resolution.
+- Individual components retain ownership of authentication, settings, commands, and failures. Installing this bundle does not install Desktop's automation runtime, grant account access, or turn ordinary extension loading into Auto Review's guarded startup. Avoid loading the same extension through both the bundle and an individual installation.
 
 ## 4. Conventions
 
-- Keep `pi` paths relative to the aggregate package, for example `./node_modules/@buyong/pi-codex-image-gen/skills`; do not point them at sibling `src` or `dist` directories.
-- pnpm packs `bundleDependencies` only with hoisted linking, so pack this package with `pnpm pack --config.node-linker=hoisted`; the workspace keeps isolated linking. `prepack` rebuilds the components, stages the bundle, and runs the checker.
-- Feature logic and package-specific working rules live in sibling packages. This package has no local TypeScript source; its `typecheck` runs the bundled components' type checks.
+- Declare Pi resources relative to the installed package, for example `./node_modules/@buyong/pi-codex-image-gen/skills`.
+- The workspace uses isolated dependency linking, but packaging `bundleDependencies` needs the hoisted arrangement prepared for this bundle. Keep that exception at the packaging boundary rather than changing component runtime imports.
+- This package has no TypeScript feature implementation. Its type-check script delegates to components; add feature logic to the responsible app, not the preparation script.
 
 ## 5. Working Agreements
 
-Follow [the root working agreements](../../AGENTS.md).
+Apply the [root working agreements](../../AGENTS.md). Run this package's `pnpm typecheck` after component-contract changes. Type checks and verification of the physical bundle's files and versions establish different properties.

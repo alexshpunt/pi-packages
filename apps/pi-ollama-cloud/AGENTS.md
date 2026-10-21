@@ -1,133 +1,72 @@
-# Development Rules
+# AGENTS.md
 
-Package-specific guidance for `apps/pi-ollama-cloud`. The monorepo's common policies apply as well. Runtime modules and public submodule paths remain at the package root; this migration is not a move to `src/`.
+<!-- agents-md-generator: v1; doc-type: single_repo -->
 
-## Conversational Style
+## 1. Overview
 
-- Keep answers short and concise.
-- No emojis in commits, issues, PR comments, or code.
-- No fluff or cheerful filler text.
-- Technical prose only, be direct.
-- When the user asks a question, answer it first before making edits or running implementation commands.
-- When responding to user feedback or an analysis, explicitly say whether you agree or disagree before saying what you changed.
+This provider connects Pi to Ollama Cloud models, web tools, and usage reporting. It manages session-bound accounts, conditional failover, catalog restoration, and bounded reuse of fetched content.
 
-## Code Quality
+## 2. Ownership Map
 
-- Read files in full before wide-ranging changes, before editing files you have not fully inspected, and when asked to investigate or audit. Do not rely on search snippets for broad changes.
-- No `any` unless absolutely necessary.
-- Inline single-line helpers that have only one call site.
-- Check `node_modules` for external API types; do not guess.
-- No inline imports (`await import()`, `import("pkg").Type`, dynamic type imports). Top-level imports only.
-- Always ask before removing functionality or code that appears intentional.
-- Do not preserve backward compatibility unless the user asks for it.
-- Strict TypeScript: no `enum`, no `namespace`/`module`, no `import =`, no `export =`, no parameter properties. Use explicit fields with constructor assignments if needed.
+### Stable Ownership Boundaries
 
-## Module Boundaries
+Verification names below refer to `test/`.
 
-This is a Pi extension. The split is intentional, do not collapse it:
+- **Integration.** Change registration/lifecycle in `src/index.ts` and `src/pi/lifecycle.ts`, settings in `config.ts`/`ollama-command.ts`. Preserve provider/tool names and unrelated active tools. Check `fixtures/package-contract.ts`.
+- **Accounts.** `src/accounts/router.ts`, `policy.ts`, and `session.ts` own selection; `src/pi/account-stream.ts` and `account-requests.ts` apply different retry rules. Check account-policy/router/session-lifecycle and stream/request tests. Storage belongs to `accounts/credentials.ts`/`state.ts`, polling to `render/settings-panel.ts`; credential/state/panel tests cover failed saves and cancellation.
+- **Catalog.** `src/models/catalog-service.ts` refreshes, `snapshot.ts` restores, and `metadata.ts` assembles policy. ModelsStore owns snapshots; diagnostics owns retry/provenance only. Check catalog-runtime/model-metadata-consumer across live, stored, generated, and CLI inputs.
+- **Web/cache.** Start in `src/web/search.ts`/`fetch.ts`, schemas in `src/pi/web-tools.ts`, paging in `web/paging.ts`. `cache/bounded-storage.ts`/`merge.ts`/`lock.ts` own retention; `coordinator.ts`/`publication.ts` own sharing. Check cache/cache-concurrency/web-tools-cache-paging/web-budgets, including injected stores.
+- **Usage/display.** `src/usage/api.ts`, `status-controller.ts`, and `src/render/result.ts` own responses, footer work, and components. Check usage/usage-status/render-result.
+- **Maintenance.** `scripts/lib/generation/pipeline.ts` publishes catalog/pricing/reasoning; limits remain separate. `scripts/cli/registry.ts` wires diagnostics. Check generators/core-consumer/package-gates. Live effects belong to `scripts/lib/verification/live.ts`, checked by live-budget.
 
-- `index.ts` — Extension entry point. Provider registration, command registration, session lifecycle hooks. Should not call the network directly; delegate to `models.ts` and `web-tools.ts`.
-- `models.ts` — Provider data plane: API constants, model assembly, fetch helpers, and the `refreshOllamaCatalog` callback wired as `refreshModels` in `index.ts`. Owns `OLLAMA_BASE`.
-- `web-tools.ts` — `ollama_web_search` and `ollama_web_fetch` tool registrations. Self-contained; depends on `models.ts` for `OLLAMA_BASE` and `utils.ts` for `fetchJsonWithTimeout`.
-- `config.ts` — JSON config file loader, env-var resolution, and schema validation (`CONFIG_SCHEMA` / `sanitizeConfig`).
-- `thinking-levels.ts` — Per-model reasoning-effort maps. Pure data + a single resolve function reading `reasoning.generated.ts`.
-- `utils.ts` — Cross-cutting helpers (`fetchJsonWithTimeout`, `concurrentMap`, `getContextLength`). Keep small.
-- `scripts/generate-models.ts` — Generator script. Runs against the live API to refresh `models.generated.ts`. Not shipped at runtime.
-- `scripts/generate-pricing.ts` — Generator script. Fetches the model pricing table from `https://ollama.com/pricing` plus the Ollama model list and writes `pricing.generated.ts` by matching catalog IDs to pricing rows. Not shipped at runtime.
-- `scripts/generate-reasoning.ts` — Generator script. Fetches the `ollama-cloud` provider's `reasoning_options` from `https://models.dev/api.json` and writes `reasoning.generated.ts` (the reasoning-level data source; the same models.dev data pi uses for built-in providers). Runs before `generate-models` in the `pnpm run generate-models` chain. Not shipped at runtime.
-- `scripts/generate-limits.ts` — Generator script. Probes per-model max output tokens against the live chat completions API (reads Pi's `ollama-cloud` API key from `auth.json`, falling back to `OLLAMA_API_KEY`) and writes `limits.generated.ts`. Must be rerun whenever the model catalog changes so new models get probed limits — run it BEFORE `pnpm run generate-models` when new models appear, because `generate-models` bakes `maxTokens` from `limits.generated.ts` into the catalog. Not shipped at runtime.
-- `models.generated.ts` — Generated output of `scripts/generate-models.ts`. **Do not edit by hand.** Regenerate via `pnpm run generate-models` and commit the result.
-- `pricing.generated.ts` — Generated output of `scripts/generate-pricing.ts`. Shipped at runtime (in `package.json` `files`). **Do not edit by hand.**
-- `reasoning.generated.ts` — Generated output of `scripts/generate-reasoning.ts`. Shipped at runtime (in `package.json` `files`). **Do not edit by hand.** Regenerate via `pnpm run generate-reasoning` (or as part of `pnpm run generate-models`) and commit the result.
-- `limits.generated.ts` — Generated output of `scripts/generate-limits.ts`. Shipped at runtime (in `package.json` `files`). **Do not edit by hand.** Regenerate via `pnpm run generate-limits` (uses Pi's `auth.json` or `OLLAMA_API_KEY`) and commit the result. Models without a probed limit fall back to 32768 in `models.ts`.
+## 3. Core Behaviors & Patterns
 
-When adding a new **runtime** module (a `.ts` file that ships):
+### Catalog and model policy
 
-- Add it to `package.json` `files` in the same PR. CI does not catch missing entries; npm will silently ship a broken package. Test files and `scripts/` are not shipped and must not be added.
+- Keep a service per diagnostics path. Restore usable stored models or generated fallback, retaining names/context/modalities but reapplying current price/limit/compatibility/off policy. Stored native-thinking provenance requires matching `snapshotCheckedAtMs` and `checkedAt`. False `allowNetwork` or cancellation blocks network. Pi's authenticated refresh phase differs from keyless-capable catalog endpoints.
+- Successful snapshots last four hours; failure retry defaults to 15 minutes via `PI_OLLAMA_MODEL_FAIL_RETRY_MINUTES`. `force` bypasses timing gates. Partial/total failure or no tool-capable models preserves the old catalog/success timestamp. List/detail errors throw; empty results return fallback. Signal/generation checks protect `context.publish()`: rejection/staleness returns fallback; persistence errors may return fresh models without claiming a save.
+- `assembleModels()` requires `tools`, derives vision/thinking, and keeps exact IDs. Context fallback is 128000; exact-ID output-limit fallback is 32768. Prices/limits never infer alias/date-tag equivalence. Unknown zero cost does not mean free. Disabled compat flags remain `false`; unused routing objects remain `undefined`, not `{}`.
+- Reasoning uses validated native `thinking.values`, generated exact-ID/`:tag`-family options, then defaults. Diagnose unknown native values without forwarding them; no usable enabled level falls back. Keep `OFF_NULL_EXACT`/`OFF_NULL_FAMILIES` in both paths. Server defaults do not replace caller choices. Model/price/reasoning key sets can differ.
 
-## Error Handling
+### Accounts and settings
 
-- Never silently swallow rejections from `Promise.allSettled`, `Promise.all`, or `concurrentMap`. Count failures, surface them in the final notification, and let the caller decide.
-- `try/finally` is mandatory for every `setTimeout` and `AbortController`. Cleanup must run on the error path, not only the happy path.
-- Validate `JSON.parse` results before use. When the consumer expects an object, guard against `null`, arrays, and primitives. See `config.ts` for the pattern.
-- User-facing error messages should name the operation, the failure mode, and the next step. Do not collapse distinct conditions (auth vs. rate limit vs. server error) into a single generic message.
+- Order Pi's `default` credential before additional auth.json-format accounts; deduplicate key fingerprints. Retain a usable binding or choose the next account after the shared round-robin cursor. Exclude disabled/rejected keys, usage limits, blocked models, and purchase-protected accounts.
+- `ollama-cloud-account` stores session/account IDs only. Resume/reload uses the latest matching session ID; forks ignore parent bindings. Failed persistence retains memory binding only. A changed key's fingerprint separates it from old health.
+- Stream failover requires a classified first-event error; after `start`/another event, pass failures through. Never switch on cancellation. Set the selected `apiKey` and existing case-insensitive Authorization headers; preserve other options/signals. Web failover permits usage-limit/rejected-key errors, not 403, ordinary rate limits, or transport failure. Try each account once and retain the last error if alternatives fail.
+- Prefer a future server reset for usage-limit exclusion. Without one, session/unknown waits 30 minutes, weekly six hours, monthly 24 hours. A model-specific 403 excludes that account/model for six hours, not the entire account.
+- With purchased credits, stop at 3% or less included allowance: minimum quota-window fraction, else balance/allowance, else zero. Balance rechecks: no purchases, 15 minutes; purchased with at least 25% remaining, 10 minutes; at least 10%, two minutes; otherwise 30 seconds; nearly exhausted, five minutes. A passed reset also makes snapshots stale.
+- Failed checks suppress retries for one minute. Block stale purchased snapshots below 10% remaining or at least 30 minutes old. Never-verified accounts may proceed as unverified after a recent check failure: this is not guaranteed charge prevention. Canceling one balance subscriber ends its wait, not shared work.
+- Resolve extra credentials through private `ModelRuntime` with model networking off, never raw env/command references. Reject built-in provider names, duplicate IDs, and unsupported credentials. Errors hide file contents/keys/commands; malformed files are not overwritten as empty. UI addition removes unusable/duplicate/401-rejected keys but warns and retains them after transient balance failure. Pi's default credential is not deleted here.
+- Health stores fingerprints/balances/timestamps/cursor, never keys. Validate fields, cap reads at 256KiB, and retain up to 64 health entries for 30 days. Reread/update under a cross-process lock and rename a 0600 file. Lock/write failure leaves memory-only changes until a later file revision.
+- Precedence is defaults < global JSON < project JSON < `PI_OLLAMA_WEB_TOOLS`; ignore wrong types, unknown keys, and nonobjects. Env `0`/`false`/`no`/`off`/empty locks web tools off. Load at first `session_start`; register idempotently and change only owned active tools.
+- `/ollama` toggles apply immediately and save globally/atomically, preserving unknown file keys. Failed saves are run-local; report restart overrides from project/env. Malformed JSON is not overwritten; invalid arguments leave state unchanged.
 
-## HTTP and Auth
+### Authentication, requests, and retained output
 
-- Prefer `fetchJsonWithTimeout` from `utils.ts` over raw `fetch` in `models.ts` and `web-tools.ts`. It centralizes the timeout, the abort signal, and the error-shape response (`{ ok, status, data, error }`). A bare `fetch` skips all three.
-- Never send `Authorization: Bearer undefined`. Build the headers object first, then set `Authorization: Bearer ${apiKey}` only when an API key is present. Sending `Bearer undefined` to `ollama.com` breaks the anonymous-access endpoints (`/v1/models`, `/api/show`).
-- Normalize user-provided base URLs by stripping trailing slashes before composing paths. `OLLAMA_BASE` does this; replicate the pattern anywhere a base URL is composed.
-- Treat 401/403 and 429 distinctly in user-facing output. Auth errors should mention the API key env var and `auth.json`; rate-limit errors should say "try again shortly".
-- Web tools resolve the API key via `ctx.modelRegistry.getApiKeyForProvider("ollama-cloud")` (with `?? process.env.OLLAMA_API_KEY` as a fallback). Do not import `AuthStorage` — it was removed from `@earendil-works/pi-coding-agent`'s public exports in 0.80.8+; importing it crashes the extension at load.
-- Constrain tool parameters with `typebox` at the boundary: `Type.Integer` with `minimum`/`maximum`, `format: "uri"`, etc. Pi's runtime rejects out-of-range integers; a `Type.Number` lets `2.5` through. Do not push into `execute` what the schema can enforce.
+- Resolve primary auth through the provider registry, then env. CLI/generators use `auth/pi-resolver.ts`/`ModelRuntime.getAuth()` for `$ENV`/`!command`, forwarding resolved env and cancellation. Catalog bearer headers require an env key; `OLLAMA_BASE` ignores local-server overrides. `fetchJsonWithTimeout()` combines timeout/cancellation, cleans timers/listeners in `finally`, and returns `{ ok, status, data, error }`. Consumers validate shapes and distinguish transport/auth/rate-limit/server errors.
+- Cache hits require resolved auth. Search caches successes; fetch also caches eligible failures. TTL: success 24 hours, failure 15 minutes. Exclude transport failures, 401/403, 429, 5xx, and malformed responses from negative caching. Noncacheable page refresh deletes the old entry; cancellation deletes only the captured entry by identity, not its replacement. Distinguish retained and uncached live errors.
+- Scope coordinators by cache/auth-scope objects; share matching parameters, credential digest, and refresh mode. One canceled subscriber ends its wait; the last aborts transport. Normal/forced jobs differ, but only the latest resource generation publishes. `publishCache()` rechecks inside `updateCache()` and supports synchronous-only injected stores.
+- Track memory, fingerprint baseline, and disk revision. Merge without reviving peer deletions; routine eviction must not erase newer peer entries. Evict whole entries. Defaults: 500 per map, 8MiB serialized memory, 256KiB per disk entry/8MiB total. These do not bound heap or response reception.
+- Oversized/corrupt files yield validated empty/partial data and diagnostics. Lock, synchronously reread/merge/prune/rename, then release in `finally`; files use 0600. Report lock/write failure. Peer revisions can invalidate memory-only results.
+- `createPagedResult()` bounds serialized `content`+`details` by Pi byte/line limits. Metadata previews leave cached source intact. `full`/`expand` stay paged, with UTF-16 `nextOffset` and surrogate-safe ends. No-API continuation requires fresh retained data; errors are bounded too.
+- Expanded/error rendering reuses only `Text`; collapsed rendering caches width/styled output and clears both on invalidation. Expanded display is not unbounded retrieval.
 
-## Command Input Validation
+### Usage and maintenance consumers
 
-Slash commands with arguments must validate the argument and notify the user on unknown values. Do not silently fall through to a default state. `/ollama-webtools` does this; follow the same pattern.
+- Validate quota windows, allowances, purchased balances, and resets separately. Manual balance output survives optional statistics failure. The opt-in footer requires TUI and an active cloud model. Its five-minute timer/after-turn cooldown share an in-flight/generation guard. Read the bound or first account without assigning one; record its balance.
+- Disable/provider switch/shutdown abort footer requests, remove the timer, and clear status without canceling manual usage work. Stale results cannot publish; current failures clear the footer. Settings-panel polling has its own lifetime, backs off on rate limits, and cancels its timer/request on close/dispose.
+- `completeOllamaChat()` shares assembly, requires tools, and checks exact IDs at registration/final payload. Its temporary runtime uses an in-memory key, resolved env, caller signal, 120000ms timeout, and `min(4096, model.maxTokens)`. Clean timers/directories in `finally`. Child-process fixture diagnostics isolate environment/signals from the CLI menu.
+- Generation validates IDs, all details, exact standard prices, reasoning schema, and native-thinking warnings before formatting and single-snapshot replacement via a same-directory temporary file. Incomplete/invalid input, cancellation, or write failure keeps the old snapshot. Exclude Off-Peak/extra rounding; unmatched IDs stay unknown.
+- Limit probes accept only validated HTTP 400 maximum-output errors as exact limits; success at every tier is a lower bound. Ambiguous results retain old values; no usable measurements means no replacement. Catalog assembly reads existing limits without probing. Dry-run suppresses file replacement, not network calls or inference charges.
+- Live verification allows exact cloud endpoints/payloads and one request per slot, including a separate balance slot. Record before dispatch; reject retries, redirects, and extra requests. Attempt cache replay only for retained results. Restore fetch/env and dispose the session/temporary directory. The CLI rejects an existing report path; reports retain failure categories, not credentials or complete responses.
 
-## File-Specific Patterns
+## 4. Conventions
 
-- `assembleModels()` in `models.ts` is the single source of truth for converting raw `/api/show` responses into `ProviderModelConfig[]`. `refreshOllamaCatalog` assembles the live catalog through it; do not hand-roll configs that diverge from its output.
-- `buildCompat()` in `models.ts` sets every `OpenAICompletionsCompat` flag explicitly. If a new flag is added upstream, the function must set it (or explicitly `undefined`) for structural consistency with `assembleModels()` runtime output. Optional object-shaped flags (`openRouterRouting`, `vercelGatewayRouting`) must be `undefined`, never `{}`: pi-ai truthiness-checks the raw `model.compat` in its OpenAI-completions `buildParams` and forwards the object, so `{}` sends a stray `provider: {}`. Behavioral booleans stay explicit `false` (omitting them falls back to pi's generic-OpenAI detection, which is wrong for Ollama).
-- `concurrentMap` in `utils.ts` is the preferred parallel-fetch helper. Reasonable worker default is 8; very high values risk rate limits.
-- `getContextLength` falls back to 128000 when the API does not report one. The fallback is intentional, not a TODO.
-- The model fetch in `models.ts` is keyless (public `/v1/models` and `/api/show` endpoints; `Authorization` is only added when `OLLAMA_API_KEY` is set). But pi only invokes the `refreshModels` network phase when a credential resolves, so a credentialless user stays on `GENERATED_MODELS` until they configure a key. That is a non-issue in practice because a credentialless user cannot run models anyway. Do not "fix" this by threading a credential into the fetch, and do not claim the live refresh runs without a credential.
+- Use `.ts`/type-only imports; runtime excludes scripts/tests.
+- Validate `unknown`, reject null/arrays and prototype-sensitive keys, and align TypeBox integer/URI constraints with execution.
+- Keep clock/storage/transport injection and caller signals. Edit generators, not snapshots; order keys stably with `id`/`name` first.
+- Put procedures in [the maintenance guide](docs/maintaining.md).
 
-## Generated Files
+## 5. Working Agreements
 
-- `models.generated.ts` is regenerated by `scripts/generate-models.ts`. The script sorts models by id and object keys alphabetically (with `id`/`name` first) for minimal diffs. If your regen produces large diffs, the script is probably broken; do not hand-edit the file into shape.
-- `pricing.generated.ts` is regenerated by `scripts/generate-pricing.ts` from the model pricing table on `https://ollama.com/pricing`. A catalog ID matches a pricing row by exact name or `:tag`-suffix family match, so every variant of a family inherits the family price. Values are per-1M-token rates written verbatim (no rounding). Do not hand-edit; regenerate via `pnpm run generate-models`, which runs `generate-pricing` first. Catalog IDs with no matching row get zero cost and a build-time warning — the pricing table upstream needs a row for them.
-- `reasoning.generated.ts` is keyed off models.dev (the `ollama-cloud` provider's `reasoning_options`), not the live Cloud API, so its key set is not expected to match `models.generated.ts` / `pricing.generated.ts` (both keyed off `https://ollama.com/v1/models`). Divergence runs both ways: models.dev may list ids the live API never returns (e.g. bare family aliases like `deepseek-v4-pro` when the API ships `deepseek-v4-pro:0813`), and the live catalog may include a model models.dev has no reasoning data for (e.g. a non-reasoning model). Extra keys are inert — `resolveThinkingLevelMap` only looks up ids present in the catalog — so do not intersect the sets to reconcile the counts; the bare-alias entries may serve pi's native `ollama-cloud` provider.
-- `RETIRED_MODEL_IDS` in `scripts/generate-models.ts` holds retired models still listed by the live API so they're excluded from the baked-in list. Currently empty because past retirements have been removed from the API; update it (and regenerate) when Ollama announces new retirements, per https://docs.ollama.com/cloud#retirements.
-- `GENERATED_MODELS` is a first-launch fallback only; pi refreshes the live catalog at runtime via `refreshModels`, so regenerating the catalog is not needed for model freshness (see Releasing).
-
-## Documentation Accuracy
-
-The README and inline comments describe observable behavior. When the behavior changes, update both in the same change. Past drift caught in review: "background refresh" wording when the refresh is visible, "no API key required" for endpoints that do require one.
-
-## Verification Commands
-
-Run workspace commands from the monorepo root unless noted otherwise.
-
-- After code changes: `pnpm --filter @buyong/pi-ollama-cloud check` (read-only lint and typecheck), then `pnpm --filter @buyong/pi-ollama-cloud test:unit`.
-- `pnpm --dir apps/pi-ollama-cloud pack --pack-destination /tmp/pi-ollama-cloud-pack` resolves workspace/catalog references. Check the actual packed files and load the extracted extension, not only the checkout.
-- Do not add new test files or cases unless the user requests them. Preserve the existing test suite and CI coverage during migrations.
-- There is no build step. Generated data is committed source; do not regenerate it merely to validate a packaging change.
-- The existing live checks use `OLLAMA_CLOUD_API_KEY` in GitHub Actions, exposed to the process as `OLLAMA_API_KEY`. Never expose this secret to pull requests. Missing credentials must fail a release rather than silently bypass its smoke gate.
-- The only active workflow is `../../.github/workflows/pi-packages.yml`. Keep lint, typecheck, `test:unit`, latest-Pi compatibility, package contents, and live smoke connected there.
-- Publishing needs `contents: write` for GitHub Releases and `id-token: write` for npm OIDC. No `NPM_TOKEN` is needed.
-
-## Changelog
-
-Location: `CHANGELOG.md` at the repo root. All entries go under `## [Unreleased]` until a release cuts them into a dated version section.
-
-- Released and unreleased versions are both flat bullet lists, no subsections. Match the style of the existing entries.
-- Attribution for external contributions: append `Thanks @username (#N).` to the bullet, with the PR or issue number. Internal contributions are not attributed.
-- Released version sections (e.g. `## [0.5.0]`) are immutable; never modify them.
-
-## Commit Format
-
-Follow the monorepo convention: `<type>(<간단한 설명>): <현재 브랜치명>`. After a blank line, summarize changes in at most five numbered lines. Use the actual branch name; omit file paths and line numbers from the body.
-
-## Git
-
-- Only commit files you changed in this session.
-- Stage explicit paths (`git add <path1> <path2>`); never `git add -A` or `git add .`.
-- Before committing, run `git status` and verify you are only staging your files.
-- `models.generated.ts` may be staged alongside your files when regenerating the catalog.
-- Never run `git reset --hard`, `git checkout .`, `git clean -fd`, `git stash`, or `git commit --no-verify`.
-
-## Releasing
-
-Follow [the maintenance guide](docs/maintaining.md). npm identity stays `@buyong/pi-ollama-cloud`; source and publishing belong to `buYoung/pi-packages`.
-
-- Use `pi-ollama-cloud-v<version>` tags, never the old repository's `v<version>` namespace.
-- Keep the version independent from other apps. Use pnpm for workspace installation and packing; do not reintroduce a package-local lockfile.
-- Preserve historical changelog sections. The inherited `0.13.1` entry predates this migration and was not published under the scoped package when imported; do not silently merge or rewrite it.
-- Before versioning, creating or pushing the release tag, or publishing, obtain the user's final approval for the exact version.
-- Commit and push prepared changes to `main`, wait for CI, then push only the approved release tag. A tag reruns checks on that revision before npm publishing and GitHub Release creation.
-- Runtime refresh handles catalog freshness. Pricing, output limits and retirement behavior still need a generated-data/code release.
-
-## User Override
-
-Follow explicit user instructions and higher-priority monorepo policies. Ask about unresolved behavior or release decisions; do not turn this guide into an extra approval gate for already authorized implementation.
+Apply the [root working agreements](../../AGENTS.md). After code changes, run `pnpm --filter @buyong/pi-ollama-cloud typecheck` at the root. Separate account-file effects, live requests/probes, and offline verification.

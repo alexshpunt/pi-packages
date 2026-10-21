@@ -1,48 +1,55 @@
-# Agent Guidelines
+# AGENTS.md
 
-## Restricted Actions
+<!-- agents-md-generator: v1; doc-type: single_repo -->
 
-Do **not** auto-commit.
+## 1. Overview
 
-Do **not** interact with the public without explicit permission. For example, do not open PRs or comment on github issues unless I say so.
+This provider runs Claude Code conversations through Pi while leaving tool execution and conversation history under Pi's control. It translates requests, maintains Claude session mirrors, and routes streamed tool results back to their owning query.
 
-## Claims about how Claude Code behaves
+## 2. Ownership Map
 
-`~/.claude/projects/**` is **not** evidence of what CC does -- the bridge writes there too, and CC re-serializes imported records under synthetic ids. Split by provenance (CC-live: real `requestId`/`promptId`; ours: `msg_syn_*`/`req_syn_*`) and regroup by `message.id` (`diag/audit-transcripts.mjs` does both).
+### Stable Ownership Boundaries
 
-Better: prove it with a live probe. `tests/int-cc-contracts.mjs` pins undocumented behavior against the installed CC/SDK; `diag/capture-proxy.mjs` captures request bodies. Before relying on an SDK option, grep `node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts` first.
+- **Provider lifetime.** Begin in `src/provider/registration.ts` and the instance services assembled by `src/runtime.ts`. Registration and shutdown must not replace or remove another instance's provider. Verify with `tests/unit-provider-registration.mjs` and `tests/unit-cross-session-turns.mjs`.
+- **SDK requests.** Environment, launch settings, and reasoning policy belong to `src/cc/env.ts`, `launch-settings.ts`, and `request-options.ts`. `query-options.ts` assembles them; `query.ts` owns SDK invocation and instance-local injection. Follow changes to the final captured options and the child-env, launch-settings, and request-options unit cases.
+- **Prompt ownership.** `src/prompt-capture.ts` connects structured Pi instructions to `src/provider/stream.ts`. Preserve instruction provenance and reject unsafe projection rather than substituting an empty prompt. The prompt-capture, turn-failure, and agent-start-capture tests exercise this boundary.
+- **Session reconstruction.** Start in `src/session/sync.ts`, `continuity.ts`, and `mirror-store.ts`. Pi history is authoritative; prior Claude files supply compatible carried data, not permission to resume an old writer. Check shared-session, continuity, and rebuild-fidelity tests.
+- **Tool delivery and cleanup.** `src/provider/tool-bridge.ts` routes results, `query-context.ts` identifies their owner, and `completion.ts` ends or cancels work. Use the querycontext, deliver-tool-results, discard-rewritten-query, and query-exception tests to check late events and replacement queries.
+- **Models and summaries.** `src/models.ts` governs both registered context windows and actual Claude model IDs. `src/provider/plan-detection.ts` supplies account-plan information; `src/summary/isolated.ts` handles one-shot summaries. Check model/request-option tests and the summary's final SDK options together.
 
-Validate any *rate* from the debug log on a case whose answer you know. Bin by era before comparing groups -- a window straddling the onset credits whatever else changed.
+## 3. Core Behaviors & Patterns
 
-Five wrong conclusions across two sessions came from skipping the above.
+### Instance and request boundaries
 
-## Changelog
+- `createBridgeRuntime()` composes services without losing accessor properties. Service assembly must not invoke another service's runtime operations. The first instance registers the provider immediately; later instances register on `session_start` only when that registry lacks it. Shutdown removes the global registration marker only when its stream function is still the owner.
+- Mirrors and top-level `QueryContext` objects are keyed by Pi session ID. Calls without an ID share `(none)`. Compaction, tree changes, and Compact's boundary notifications mark only that session for rebuilding. The `releaseSessionQueriesHooks` fanout also identifies the session: active work finishes through its own execution signal, while idle pending handlers can be released immediately. An idle instance leaves both hook sets on shutdown and rejoins on its next stream call.
+- Child environment preparation copies the host environment and removes parent Claude-session variables, retaining authentication, routing, and unknown caller variables. Provider queries disable Claude's built-in tools and hooks, allow only the Pi-tool MCP server, and avoid duplicate project instructions. Summary queries also disable tools and hooks, use their own system prompt, and set empty skills, `persistSession: false`, and `maxTurns: 1`. Duplicate `extraArgs` keys are errors.
+- Reasoning uses a valid model `thinkingLevelMap` before the generic mapping. An absent level may fall back; `null` or unsupported mappings do not send effort. Explicit enabled reasoning requests adaptive thinking for Claude 4.6 and later. Off disables thinking unless the model declares `off: null`.
+- Context-window policy applies `forceTwoHundredK` first and requests `[1m]` only for measured models. Opus 4.6 requires Max or extra usage; Sonnet 4.6 requires extra usage. Unknown models remain at 200K. Update registered metadata and the final Claude model ID through the same policy.
+- Project provider settings override global settings. An explicit plan disables detection. Otherwise `accountInfo()` is attempted once per runtime; an exception permits another attempt on a later query, but an unrecognized response remains a diagnostic outcome. Do not infer Max from a Team label. A recognized result updates memory and is saved best-effort; malformed existing JSON is not overwritten. Only the registering instance refreshes provider models.
 
-Every user-visible change gets an entry in the `## UNRELEASED` section of both `CHANGELOG.md` (English) and `CHANGELOG.ko.md` (Korean), following the repository-root changelog rules in `AGENTS.md`:
+### Prompt and history reconstruction
 
-```
-## UNRELEASED
+- Capture structured options at `before_agent_start` and completed prompts at `agent_start`/`turn_start`. Resolve an exact capture first, then a reachable inherited capture, then a temporary child containing a known prompt. Keep a temporary child's outer instructions. Projection includes project instructions, selected tool guidance, available skills, and custom/append/section content while removing duplicate skills. Unresolvable, cyclic, or prohibited projection fails before claiming a query. Input with no prompt is a separate supported case.
+- Synchronization excludes system messages and imports history before the current user turn. Reuse requires no rebuild marker, sufficient history for the cursor, and either no missing messages or one missing assistant message. Shorter history rebuilds an ordinary identified session. Without a rebuild marker, reentrant or ID-less calls instead preserve the existing mirror and use a temporary session, deleted afterward. No prior history starts a clean session.
+- A rebuild normally retains its UUID. `forceRotate` allocates another when an abandoned or canceled writer could collide. Restart recovery consults only the latest `claude-bridge-cc-session` entry on the branch; an invalid latest entry must not revive an older one. A matching session/cwd/file link is read-only carry input, and a new process creates a new Claude UUID. Failed carry reads do not block reconstruction from Pi history. Same-UUID rebuilding preserves valid `tool-results/` without following symlinks during cleanup. Verification warnings reach logs/UI but do not themselves block execution.
+- Replay thinking only when it has the bridge's own signature. Drop genuinely empty assistant messages, but retain a placeholder when filtering removed all their content. Group parallel results after their assistant before repairing pairs; calculate attachment placement after repair. Restore a prior Claude result representation only when tool ID, error status, and content fingerprint match Pi's result.
+- Carried text files must be regular, non-symlink files under the same project's UUID-specific `tool-results/`, no larger than 32MiB. Validate descriptor identity and size, and close every descriptor. Intact inline image data can remain usable even when the previous image file is missing.
 
-### New          (### 새로워진 것)
-### Improved     (### 달라진 것)
-### Fixed        (### 해결된 것)
-### Removed      (### 제거된 것)
-```
+### Tool and query lifetime
 
-Keep the subsections in that order, omit empty ones, and give both files the same subsections with the same number of bullets. Write only what a user of the bridge notices; leave out implementation details, refactors, tests, CI and docs-only changes. `pnpm release` drafts missing entries with `claude -p` and writes them after a confirmation. Released sections stay as they are.
+- Pi executes tools. MCP handlers and results meet through `claudecode/toolUseId`, not arrival order; missing IDs fail. Early results wait in a query-owned queue. Await steer's stdin acknowledgment before delivering tool results. A failed steer schedules rebuilding but does not discard the tool result.
+- An orphan result ends quietly only when its own call signal is already aborted. Otherwise resume or rebuild from current history. When a pending query transfers to another execution, detach its previous abort listener and bind the current caller's signal.
+- Cancellation and discard release prompt waits, answer pending MCP handlers, and then interrupt/close the SDK query. A discarded query's late completion cannot update its replacement's stream or mirror. Ordinary failure leaves the cursor unchanged and schedules a rebuild. Cleanup checks ownership before releasing listeners, prompts, queries, or session-link writers. SDK consumption failures become terminal Pi stream results.
+- `cacheRetention: "none"` selects isolated summarization before ordinary session synchronization. Resolve cwd from the registered call session, then the session associated with the operation signal, then `process.cwd()`. Forward caller reasoning and system prompt without creating or resuming a mirror. Accept final/assistant text, reject an empty summary, and remove cancellation listeners and close the query on every exit.
 
-## Release
+## 4. Conventions
 
-No build step — the package ships `src` TypeScript as-is (see `files` in `package.json`). Releases are cut by the user, never by an agent: `pnpm release` from the monorepo root on a clean tracked/index `main` asks for the app (`@buyong/pi-claude-bridge`) and the version, then confirms commit, tag and push one at a time (release-it, this app's `.release-it.json`). The branch must track `origin/main`. Agents check readiness with `pnpm release:dry-run --app pi-claude-bridge --version <version>` instead. Along the way it:
+- Keep policies in their owning modules and assembly in factories. For example, `createSdkQueryClient()` owns its injected query function; `setQuery(null)` restores that instance's SDK default.
+- Runtime TypeScript uses ESM `.js` relative imports but ships as source. `src/index.ts` is the extension entry. Runtime code must not depend on tests, diagnostics, or maintenance tools.
+- MCP tool schemas must be objects. Normalize only root `anyOf`, `oneOf`, and `allOf`: root properties win; `allOf` contributes required fields; alternative branches describe constraints without making all their fields required. Pi still validates the original arguments.
+- Shared symbol keys, session-entry formats, tool IDs, and diagnostic prefixes such as `syncResult:`, `Case 1` through `Case 4`, `usage:`, `WARNING:`, and `BUG:` have consumers outside their defining module. Follow those consumers when changing the contract.
 
-1. **Drafts and checks** — offers a `claude -p` draft of the entries `## UNRELEASED` misses in both changelog files, then fails unless both hold paired entries, and runs `typecheck` and `test:unit`.
-2. **Bumps** — the app's `package.json` to `X.Y.Z`, and renames `## UNRELEASED` to `## X.Y.Z — YYYY-MM-DD` in `CHANGELOG.md` and `CHANGELOG.ko.md` (the repository-root `scripts/release/changelog.mjs`). Do not create a package-lock; the root `pnpm-lock.yaml` owns dependency resolution and does not store the app's own version.
-3. **Commits, tags, pushes** — use the monorepo commit format and annotated tag `pi-claude-bridge-vX.Y.Z`; push only `main` and that tag atomically, never all historical tags.
+## 5. Working Agreements
 
-The pushed tag triggers the repository-root `.github/workflows/pi-packages.yml`, which re-runs the checks, packs with pnpm to resolve catalog references, publishes the tarball to npm through trusted publishing (OIDC, no token), and creates the GitHub Release from that version's English and Korean changelog sections.
-
-Do not configure an upstream remote or automatic synchronization without an explicit request. Follow `docs/upstream.md` only when the user asks to import upstream changes.
-
-## Tests
-
-Smoke tests typically need to run outside a sandbox because they access local pi/Claude settings and auth state.
+Apply the [root working agreements](../../AGENTS.md). After code changes, run `pnpm typecheck` from this package directory. Distinguish fixture/option-capture checks from actual Claude execution, account access, and cache measurements; those external effects require an explicitly authorized scope.
