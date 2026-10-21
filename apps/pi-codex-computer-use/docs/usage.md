@@ -32,7 +32,7 @@ pnpm --filter @buyong/pi-codex-computer-use build
 pnpm --filter @buyong/pi-codex-computer-use exec pi -ne -e ./dist/index.js
 ```
 
-Do not load both paths or overlap with the same extension in `@buyong/pi-codex`. A successfully loaded extension registers `/computer-use` and `/computer-use-check`. Runtime tools appear only when a feature is on and the runtime connects; the footer reports feature/server state.
+Do not load both paths or overlap with the same extension in `@buyong/pi-codex`. A successfully loaded extension registers `/computer-use` and `/computer-use-check`. Runtime tools appear only when a feature is on and the runtime connects; the footer reports feature/server state. The first connection saves the server's tool catalog. Later sessions with the same runtime and switches register the tools from it and start the server on the first tool call (footer `ready` until then); a different catalog from the started server replaces the registered tools and the saved copy.
 
 ## 2. Check and resolve prerequisites
 
@@ -172,7 +172,7 @@ Long text, including JSON-RPC error messages and data, is middle-truncated accor
 | Cancelled call delays later calls | Let the runtime finish or reach its timeout; it serializes JavaScript calls. Inspect status if the server exited. |
 | A call fails with `MCP stdio message exceeds 16777216 bytes` | The response was over 16 MiB and was discarded. The connection stays open; request smaller results. The client does not shorten approval waits. |
 
-Logs rotate at 5 MiB at `<agentDir>/codex-computer-use/mcp.log`. Image data is replaced with its base64 character count before JSON encoding. Key-based masking can leave page/app content. Review logs before sharing. Private runtime interfaces and telemetry outside Desktop are not guaranteed by this bridge.
+Logs rotate at 5 MiB at `<agentDir>/codex-computer-use/mcp.log`. The saved tool catalog is `<agentDir>/codex-computer-use/tool-catalog.json`; deleting it only restores an immediate server start for the next session. Image data is replaced with its base64 character count before JSON encoding. Key-based masking can leave page/app content. Review logs before sharing. Private runtime interfaces and telemetry outside Desktop are not guaranteed by this bridge.
 
 ## Recorded verification and remaining gaps
 
