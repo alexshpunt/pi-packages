@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-21
+
 ### Improved
 
 - Keep JSON masking responsive on repeated unterminated private-key headers without changing masked output or location metadata.

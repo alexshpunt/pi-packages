@@ -1,6 +1,6 @@
 {
     "name": "@buyong/redact",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "description": "Host-independent masking of credentials, private keys, and opt-in PII in text and JSON before it reaches logs or language models.",
     "license": "Apache-2.0",
     "keywords": [
