@@ -232,8 +232,15 @@ test("[user-bash] ! and !! return handled operations with native output and deni
                 request.context.items.some(
                     (item) =>
                         item.source === "user" &&
-                        JSON.stringify(item.content).includes(command),
+                        typeof item.content === "string" &&
+                        item.content.includes(command),
                 ) && request.untrustedAction.source === "user-bash",
+        ),
+        JSON.stringify(
+            reviews.map((request) => ({
+                source: request.untrustedAction.source,
+                user: request.context.items.filter((item) => item.source === "user"),
+            })),
         ),
     ).toBeTruthy();
 });
@@ -722,7 +729,8 @@ test("[tools] outside creation reviews the exact target and cannot approve a lat
         uiContext: {
             select: async (title, choices) => {
                 prompts++;
-                expect(title.includes(target)).toBeTruthy();
+                // The dialog shows the requested scope as JSON, which escapes Windows separators.
+                expect(title.includes(JSON.stringify(target).slice(1, -1)), title).toBeTruthy();
                 return prompts === 1 ? choices[0] : choices.at(-1);
             },
             notify: () => {},

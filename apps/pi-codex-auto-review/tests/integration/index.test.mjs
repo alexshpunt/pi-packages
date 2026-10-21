@@ -119,7 +119,7 @@ test("[index] ordinary shell settings reach execution and unset shell stays unse
     await run("default");
     expect(jobs[1].shellPath).toBeUndefined();
     const actions = f.extension.assertReady().reviewContext.snapshot(60000).items.filter((item) => item.source === "tool-call" && item.content.stage === "prepared");
-    expect(JSON.stringify(actions)).toContain(await shellIdentity());
+    expect(actions.map((item) => item.content.args.shellPath)).toStrictEqual(["/configured/shell", await shellIdentity()]);
 });
 
 for (const isEnabled of [true, false]) {
