@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-10-21
+
 ### Improved
 
 - The README is now in English, with the Korean version shipped as `README.ko.md`. It explains the installation routes before the install command and corrects when `!command` key references are read again.
