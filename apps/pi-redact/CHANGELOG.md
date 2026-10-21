@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-21
+
 ### Improved
 
 - Masking no longer slows down on repeated unterminated private-key headers in JSON or on whitespace-heavy non-matches with healthcare-number detection (`@buyong/redact` 0.1.4).
