@@ -27,7 +27,7 @@ export interface ToolBridgeServices {
 	};
 }
 
-export function createToolBridge(runtime: Pick<BridgeRuntime, "debug" | "piUI" | "sessionStateFor" | "setSessionStateFor">): ToolBridgeServices {
+export function createToolBridge(runtime: Pick<BridgeRuntime, "DEBUG" | "debug" | "piUI" | "sessionStateFor" | "setSessionStateFor">): ToolBridgeServices {
 	// Pi doesn't pass tool results directly — it appends them to the context and calls
 	// the provider again. Thin wrapper over extract-tool-results.js that adds per-turn
 	// debug logging at the extraction boundary.
@@ -35,8 +35,10 @@ export function createToolBridge(runtime: Pick<BridgeRuntime, "debug" | "piUI" |
 		const { results, stopIdx } = _extractAllToolResults(context.messages as unknown as Array<{ role: string; [key: string]: unknown }>);
 		runtime.debug(`extractAllToolResults: ${results.length} results from ${context.messages.length} msgs, stopped at index ${stopIdx}`);
 		runtime.debug(`extractAllToolResults: all msg roles:`, context.messages.map((m, i) => `[${i}]${m.role}`).join(" "));
-		for (let r = 0; r < results.length; r++) {
-			runtime.debug(`extractAllToolResults: result[${r}] id=${results[r].toolCallId}${results[r].isError ? " ERROR" : ""} preview:`, JSON.stringify(results[r].content).slice(0, 150));
+		if (runtime.DEBUG) {
+			for (let r = 0; r < results.length; r++) {
+				runtime.debug(`extractAllToolResults: result[${r}] id=${results[r].toolCallId}${results[r].isError ? " ERROR" : ""} preview:`, JSON.stringify(results[r].content).slice(0, 150));
+			}
 		}
 		return results;
 	}
@@ -194,7 +196,7 @@ export function createToolBridge(runtime: Pick<BridgeRuntime, "debug" | "piUI" |
 			if (id && c.pendingToolCalls.has(id)) {
 				const pending = c.pendingToolCalls.get(id)!;
 				c.pendingToolCalls.delete(id);
-				runtime.debug(`provider: resolving ${pending.toolName} [${id}]${result.isError ? " (error)" : ""}`, JSON.stringify(result.content).slice(0, 200));
+				if (runtime.DEBUG) runtime.debug(`provider: resolving ${pending.toolName} [${id}]${result.isError ? " (error)" : ""}`, JSON.stringify(result.content).slice(0, 200));
 				pending.resolve(result);
 			} else if (id) {
 				c.pendingResults.set(id, result);

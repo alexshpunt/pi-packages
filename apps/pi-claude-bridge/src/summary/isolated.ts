@@ -6,6 +6,7 @@ import { claudeCodeModelId } from "../models.js";
 import { sessionCwdFor } from "../session-cwd.js";
 import { summarySessionFor } from "../session-cwd.js";
 import { toBridgeContext } from "../transcript.js";
+import { updateUsage } from "../usage.js";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { AssistantMessageEventStream } from "@earendil-works/pi-ai";
 import type { Context } from "@earendil-works/pi-ai";
@@ -38,6 +39,7 @@ export function createIsolatedSummary(runtime: Pick<BridgeRuntime, "debug" | "er
 		// (issue #106). toBridgeContext restores the prompt/tools fields the extraction
 		// assertion below assumes; the summarization prompt still reaches CC as its systemPrompt.
 		context = toBridgeContext(context);
+		const output = runtime.newAssistantOutput(model, "", "stop");
 		let sdkQuery: ReturnType<typeof query> | undefined;
 		let wasAborted = false;
 		const onAbort = () => {
@@ -47,6 +49,7 @@ export function createIsolatedSummary(runtime: Pick<BridgeRuntime, "debug" | "er
 		};
 
 		try {
+			options?.signal?.throwIfAborted();
 			// One-off summarizer calls (compaction, branch summary, turn prefix, bug report —
 			// anything routed through pi's completeSummarization) are marked cacheRetention:
 			// "none". Any of them may appear in a future pi release without a bridge change,
@@ -92,40 +95,41 @@ export function createIsolatedSummary(runtime: Pick<BridgeRuntime, "debug" | "er
 				if (wasAborted) break;
 
 				if (message.type === "assistant") {
-					for (const block of (message as any).message?.content ?? []) {
+					if (message.message.usage) updateUsage(output, message.message.usage, model);
+					for (const block of message.message.content ?? []) {
 						if (block.type === "text" && typeof block.text === "string") assistantText += block.text;
 					}
 				} else if (message.type === "result") {
+					if (message.usage) updateUsage(output, message.usage, model);
 					runtime.logServedContextWindow("compact summary", message, model);
 					errorText = runtime.resultErrorText(message);
 					if (!errorText && message.subtype === "success") finalText = message.result || assistantText;
 				}
 			}
 
-			if (wasAborted) {
-				const output = runtime.newAssistantOutput(model, "", "aborted", "Operation aborted");
-				runtime.debug("compact summary: aborted");
-				stream.push({ type: "error", reason: "aborted", error: output });
-				stream.end();
-				return;
-			}
+			if (wasAborted || options?.signal?.aborted) throw new Error("Operation aborted");
 
 			const text = finalText || assistantText;
 			if (errorText || !text.trim()) {
 				const msg = errorText ?? "Claude Code summary returned empty text";
 				runtime.debug(`compact summary: error ${msg}`);
-				stream.push({ type: "error", reason: "error", error: runtime.newAssistantOutput(model, "", "error", msg) });
+				output.stopReason = "error";
+				output.errorMessage = msg;
+				stream.push({ type: "error", reason: "error", error: output });
 				stream.end();
 				return;
 			}
 
 			runtime.debug(`compact summary: done textLen=${text.length}`);
-			stream.push({ type: "done", reason: "stop", message: runtime.newAssistantOutput(model, text, "stop") });
+			output.content = [{ type: "text", text }];
+			stream.push({ type: "done", reason: "stop", message: output });
 			stream.end();
 		} catch (err) {
-			const msg = runtime.errorMessage(err);
+			const isAborted = wasAborted || options?.signal?.aborted === true;
+			output.stopReason = isAborted ? "aborted" : "error";
+			output.errorMessage = isAborted ? "Operation aborted" : runtime.errorMessage(err);
 			runtime.debug("runIsolatedSummary threw; pushing terminal error", err);
-			stream.push({ type: "error", reason: "error", error: runtime.newAssistantOutput(model, "", "error", msg) });
+			stream.push({ type: "error", reason: output.stopReason, error: output });
 			stream.end();
 		} finally {
 			options?.signal?.removeEventListener("abort", onAbort);

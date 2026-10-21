@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readFileSync } from "node:fs";
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
-import { claudeCodeSettings, hasRemovedToolEnabled, loadConfig, markStartupNoticeShown } from "../src/config.js";
+import { claudeCodeSettings, hasRemovedToolEnabled, loadConfig, markStartupNoticeShown, readDetectedPlan, recordDetectedPlan } from "../src/config.js";
 
 function withTempHome(fn) {
 	const oldHome = process.env.HOME;
@@ -61,6 +61,31 @@ describe("removed tool configuration", () => {
 });
 
 describe("loadConfig", () => {
+	it.each(["null", "[]", "[1]", "42", "true", '"config"'])("ignores a non-object JSON root %s without overwriting either config", (contents) => withTempHome((home) => {
+		const cwd = join(home, "project");
+		const projectDir = join(cwd, CONFIG_DIR_NAME);
+		mkdirSync(projectDir, { recursive: true });
+		mkdirSync(getAgentDir(), { recursive: true });
+		const globalPath = join(getAgentDir(), "claude-bridge.json");
+		const projectPath = join(projectDir, "claude-bridge.json");
+		writeFileSync(globalPath, contents);
+		writeFileSync(projectPath, contents);
+
+		expect(loadConfig(cwd)).toStrictEqual({ startupNoticeShown: undefined, provider: {} });
+		expect(readDetectedPlan()).toBe(undefined);
+		expect(hasRemovedToolEnabled(cwd)).toBe(false);
+		markStartupNoticeShown();
+		recordDetectedPlan("max");
+		expect(readFileSync(globalPath, "utf8")).toBe(contents);
+		expect(readFileSync(projectPath, "utf8")).toBe(contents);
+
+		writeFileSync(globalPath, JSON.stringify({ provider: { plan: "max" } }));
+		expect(loadConfig(cwd).provider).toStrictEqual({ plan: "max" });
+		writeFileSync(globalPath, contents);
+		writeFileSync(projectPath, JSON.stringify({ provider: { plan: "pro" } }));
+		expect(loadConfig(cwd).provider).toStrictEqual({ plan: "pro" });
+	}));
+
 	it("loads project config from Pi's configured project directory", () => withTempHome(() => {
 		const cwd = mkdtempSync(join(tmpdir(), "claude-bridge-project-"));
 		try {

@@ -5,10 +5,18 @@
 ### Improved
 
 - The bridge now uses Claude Code 2.1.304 (Agent SDK `^0.3.304`).
+- Avoid serializing tool results for debug previews when debugging is off.
+- Document diagnostic and CC CLI log locations and manual cleanup; logs are not rotated or deleted automatically.
 
 ### Fixed
 
 - On Pi 1.3.0, Haiku 5.5 no longer offers turning reasoning off. Claude Code keeps thinking on for this model, so choosing off had no effect.
+- Ignore non-object configuration files without blocking startup or overwriting their contents.
+- Keep diagnostic write failures from interrupting provider calls or hiding the original error.
+- Show non-streamed assistant replies only once when Claude Code repeats them in the final result.
+- Report token usage for isolated summaries, skip already canceled requests, and distinguish cancellation from other failures.
+- Release shared hooks after shutdown even when the last query or session finishes later.
+- Expand home-relative agent directory overrides in the documented manual log cleanup commands.
 
 ## 0.12.0 — 2026-10-20
 

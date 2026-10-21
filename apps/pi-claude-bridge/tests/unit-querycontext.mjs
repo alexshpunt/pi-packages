@@ -10,6 +10,7 @@ import { registerBridge } from "../src/provider/registration.js";
 
 const fakeModel = { api: "anthropic", provider: "anthropic", id: "test-model" };
 const debug = () => {};
+const registryServices = { debug, withdrawRebuildHook() {} };
 
 /** A top-level context with a query in flight, as startProviderQuery leaves it. */
 function startQuery(registry, piSessionId) {
@@ -53,20 +54,168 @@ describe("QueryContext class", () => {
 	});
 });
 
+function registeredRuntime() {
+	const runtime = createBridgeRuntime();
+	const handlers = new Map();
+	registerBridge({
+		registerProvider() {},
+		on(event, handler) {
+			const list = handlers.get(event) ?? [];
+			list.push(handler);
+			handlers.set(event, list);
+		},
+	}, runtime);
+	return {
+		runtime,
+		shutdown(sessionId) {
+			for (const handler of handlers.get("session_shutdown") ?? []) {
+				handler({ type: "session_shutdown" }, { sessionManager: { getSessionId: () => sessionId } });
+			}
+		},
+		cleanup() { runtime.withdrawRebuildHook(); runtime.withdrawReleaseHook(); },
+	};
+}
+
+function expectHooks(runtime, enlisted) {
+	expect(globalThis[Symbol.for("claude-bridge:markRebuildHooks")].has(runtime.markRebuildForSession)).toBe(enlisted);
+	expect(globalThis[Symbol.for("claude-bridge:releaseSessionQueriesHooks")].has(runtime.releaseSessionQueryContext)).toBe(enlisted);
+}
+
+function heldTurn(runtime, sessionId, fail = false) {
+	const gate = Promise.withResolvers();
+	const closed = Promise.withResolvers();
+	runtime.setQuery(() => Object.assign((async function* () {
+		await gate.promise;
+		if (fail) throw new Error("fixture transport error");
+		yield { type: "result", subtype: "success", is_error: false, result: "answer" };
+	})(), { interrupt: async () => {}, close: () => closed.resolve() }));
+	const stream = runtime.streamClaudeAgentSdk(runtime.MODELS[0], {
+		messages: [{ role: "user", content: "fixture", timestamp: 0 }],
+	}, { sessionId });
+	return {
+		async finish() {
+			gate.resolve();
+			const output = await stream.result();
+			await closed.promise;
+			return output;
+		},
+	};
+}
+
+describe("query registry hooks after runner shutdown", () => {
+	it("withdraws an idle instance and re-enlists it on the next stream entry", async () => {
+		const instance = registeredRuntime();
+		let turn;
+		try {
+			instance.shutdown("owner");
+			expectHooks(instance.runtime, false);
+			turn = heldTurn(instance.runtime, "later-session");
+			expectHooks(instance.runtime, true);
+			instance.runtime.sponsorReleaseSessionQueries("later-session");
+			expectHooks(instance.runtime, true);
+			await turn.finish();
+			expectHooks(instance.runtime, false);
+		} finally { await turn?.finish(); instance.cleanup(); }
+	});
+
+	it.each([false, true])("withdraws after the final in-flight query settles, failure=%s", async fail => {
+		const instance = registeredRuntime();
+		const turn = heldTurn(instance.runtime, "owner", fail);
+		try {
+			instance.shutdown("owner");
+			expect(instance.runtime.sessionQueryContexts.size).toBe(0);
+			expectHooks(instance.runtime, true);
+			expect((await turn.finish()).stopReason).toBe(fail ? "error" : "stop");
+			expect(instance.runtime.activeQueryContexts.size).toBe(0);
+			expectHooks(instance.runtime, false);
+		} finally { await turn.finish(); instance.cleanup(); }
+	});
+
+	it("waits for another session's idle context to be released after query completion", async () => {
+		const instance = registeredRuntime();
+		const turn = heldTurn(instance.runtime, "child");
+		try {
+			instance.shutdown("owner");
+			await turn.finish();
+			expectHooks(instance.runtime, true);
+			instance.runtime.sponsorReleaseSessionQueries("child");
+			expectHooks(instance.runtime, false);
+		} finally { await turn.finish(); instance.cleanup(); }
+	});
+
+	it("waits for the final reentrant query after the top-level query has settled", async () => {
+		const instance = registeredRuntime();
+		const first = heldTurn(instance.runtime, "owner");
+		const reentrant = heldTurn(instance.runtime, "owner");
+		try {
+			expect(instance.runtime.activeQueryContexts.size).toBe(2);
+			instance.shutdown("owner");
+			await first.finish();
+			expectHooks(instance.runtime, true);
+			await reentrant.finish();
+			expectHooks(instance.runtime, false);
+		} finally { await first.finish(); await reentrant.finish(); instance.cleanup(); }
+	});
+
+	it("keeps hooks enlisted while a discarded query is replaced in the same stream call", async () => {
+		const instance = registeredRuntime();
+		const { runtime } = instance;
+		const parked = startQuery(runtime, "owner");
+		parked.turnToolCallIds = ["toolu_old"];
+		parked.historyStale = true;
+		instance.shutdown("owner");
+		const gate = Promise.withResolvers();
+		const closed = Promise.withResolvers();
+		runtime.setQuery(() => Object.assign((async function* () {
+			await gate.promise;
+			yield { type: "result", subtype: "success", is_error: false, result: "replacement" };
+		})(), { interrupt: async () => {}, close: () => closed.resolve() }));
+		let stream;
+		try {
+			stream = runtime.streamClaudeAgentSdk(runtime.MODELS[0], { messages: [
+				{ role: "user", content: "fixture", timestamp: 0 },
+				{ role: "assistant", content: [{ type: "toolCall", id: "toolu_old", name: "read", arguments: { path: "a" } }], timestamp: 1 },
+				{ role: "toolResult", toolCallId: "toolu_old", content: [{ type: "text", text: "result" }], timestamp: 2 },
+			] }, { sessionId: "owner" });
+			expect(runtime.activeQueryContexts.has(parked)).toBe(false);
+			expect(runtime.activeQueryContexts.size).toBe(1);
+			expectHooks(runtime, true);
+			runtime.sponsorReleaseSessionQueries("owner");
+			gate.resolve();
+			await stream.result();
+			await closed.promise;
+			expectHooks(runtime, false);
+		} finally {
+			gate.resolve();
+			if (stream) { await stream.result(); await closed.promise; }
+			instance.cleanup();
+		}
+	});
+
+	it("does not withdraw a live runner when its last context is released", () => {
+		const instance = registeredRuntime();
+		try {
+			instance.runtime.sessionQueryContextFor("child");
+			instance.runtime.sponsorReleaseSessionQueries("child");
+			expectHooks(instance.runtime, true);
+		} finally { instance.cleanup(); }
+	});
+});
+
 describe("per-session query state", () => {
 	it("keeps one top-level context per pi session; calls without an id share (none)", () => {
-		const registry = createQueryRegistry({ debug });
+		const registry = createQueryRegistry(registryServices);
 		const a = registry.sessionQueryContextFor("pi-a");
 		expect(registry.sessionQueryContextFor("pi-a")).toBe(a);
 		expect(registry.sessionQueryContextFor("pi-b")).not.toBe(a);
 		expect(registry.sessionQueryContextFor(null)).toBe(registry.sessionQueryContextFor(undefined));
 		expect(registry.sessionQueryContextFor(null)).not.toBe(a);
 		expect([...registry.sessionQueryContexts.keys()]).toStrictEqual(["pi-a", "pi-b", "(none)"]);
-		expect(createQueryRegistry({ debug }).sessionQueryContextFor("pi-a"), "each runtime owns its own state").not.toBe(a);
+		expect(createQueryRegistry(registryServices).sessionQueryContextFor("pi-a"), "each runtime owns its own state").not.toBe(a);
 	});
 
 	it("judges reentrancy only from the calling session's top-level query", () => {
-		const registry = createQueryRegistry({ debug });
+		const registry = createQueryRegistry(registryServices);
 		expect(registry.isSessionQueryActive("pi-a")).toBe(false);
 		expect(registry.sessionQueryContexts.size, "asking does not create state").toBe(0);
 		startQuery(registry, "pi-a");
@@ -89,7 +238,7 @@ describe("per-session query state", () => {
 	});
 
 	it("releases only the ending session and settles its idle leftovers, once", () => {
-		const registry = createQueryRegistry({ debug });
+		const registry = createQueryRegistry(registryServices);
 		const live = startQuery(registry, "pi-live");
 		const liveReplies = parkHandler(live, "toolu_live");
 		const ending = registry.sessionQueryContextFor("pi-ending");
@@ -111,7 +260,7 @@ describe("per-session query state", () => {
 	});
 
 	it("leaves a query still in flight to its own run", () => {
-		const registry = createQueryRegistry({ debug });
+		const registry = createQueryRegistry(registryServices);
 		const running = startQuery(registry, "pi-running");
 		const replies = parkHandler(running, "toolu_running");
 		registry.releaseSessionQueryContext("pi-running");
@@ -121,8 +270,8 @@ describe("per-session query state", () => {
 	});
 
 	it("a release reaches the module instance that serves the session", () => {
-		const serving = createQueryRegistry({ debug });
-		const notified = createQueryRegistry({ debug });
+		const serving = createQueryRegistry(registryServices);
+		const notified = createQueryRegistry(registryServices);
 		serving.sessionQueryContextFor("pi-child");
 		const parent = serving.sessionQueryContextFor("pi-parent");
 		notified.sponsorReleaseSessionQueries("pi-child");

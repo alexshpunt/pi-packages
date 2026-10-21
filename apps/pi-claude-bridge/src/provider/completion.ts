@@ -28,7 +28,7 @@ export interface QueryCompletionServices {
 	readonly startProviderQuery: (input: ProviderQueryCompletionInput) => void;
 }
 
-export function createQueryCompletion(runtime: Pick<BridgeRuntime, "activeQueryContexts" | "consumeQuery" | "debug" | "detectPlanFromQuery" | "drainForAbort" | "finalizeCurrentStream" | "historyRewrittenBySession" | "invokeQuery" | "markStreamComplete" | "sessionStateFor" | "setSessionStateFor">): QueryCompletionServices {
+export function createQueryCompletion(runtime: Pick<BridgeRuntime, "activeQueryContexts" | "consumeQuery" | "debug" | "detectPlanFromQuery" | "drainForAbort" | "finalizeCurrentStream" | "historyRewrittenBySession" | "invokeQuery" | "markStreamComplete" | "sessionStateFor" | "setSessionStateFor" | "withdrawHooksIfIdle">): QueryCompletionServices {
 	/** Queries pi's history moved out from under. Their completion must not touch
 	 *  `sharedSession` or the pi stream: the query that took over the turn has
 	 *  already rebuilt both from the new history, and this one's session id names the
@@ -245,6 +245,7 @@ export function createQueryCompletion(runtime: Pick<BridgeRuntime, "activeQueryC
 					queryCtx.activeQuery = null;
 					runtime.activeQueryContexts.delete(queryCtx);
 				}
+				runtime.withdrawHooksIfIdle();
 				sdkQuery.close();
 			});
 

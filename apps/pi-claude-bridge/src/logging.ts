@@ -27,16 +27,18 @@ export function createLogging(): LoggingServices {
 
 	function debug(...args: unknown[]) {
 		if (!DEBUG) return;
-		const logPath = debugLogPath();
-		try { mkdirSync(dirname(logPath), { recursive: true }); } catch { /* ignore */ }
-		const ts = new Date().toISOString();
-		const fmt = (a: unknown): string => {
-			if (typeof a === "string") return a;
-			if (a instanceof Error) return `${a.name}: ${a.message}${a.stack ? "\n" + a.stack : ""}`;
-			return JSON.stringify(a);
-		};
-		const msg = args.map(fmt).join(" ");
-		appendFileSync(logPath, `[${ts}] [${moduleInstanceId}] ${msg}\n`);
+		try {
+			const logPath = debugLogPath();
+			mkdirSync(dirname(logPath), { recursive: true });
+			const ts = new Date().toISOString();
+			const fmt = (a: unknown): string => {
+				if (typeof a === "string") return a;
+				if (a instanceof Error) return `${a.name}: ${a.message}${a.stack ? "\n" + a.stack : ""}`;
+				return JSON.stringify(a);
+			};
+			const msg = args.map(fmt).join(" ");
+			appendFileSync(logPath, `[${ts}] [${moduleInstanceId}] ${msg}\n`);
+		} catch { /* Diagnostics must not interrupt the provider or write into pi's TUI. */ }
 	}
 
 	// Per-query CLI debug capture. When CLAUDE_BRIDGE_DEBUG=1, ask the Claude Code
@@ -49,32 +51,36 @@ export function createLogging(): LoggingServices {
 
 	function makeCliDebugOptions(tag: string): { debug?: boolean; debugFile?: string; stderr?: (data: string) => void } {
 		if (!DEBUG) return {};
-		const seq = nextCliDebugSeq++;
-		const ts = new Date().toISOString().replace(/[:.]/g, "-");
-		const logDir = join(dirname(debugLogPath()), "cc-cli-logs");
-		try { mkdirSync(logDir, { recursive: true }); } catch { /* ignore */ }
-		const debugFile = join(logDir, `${ts}-${tag}-${seq}.log`);
-		debug(`cli-debug: ${tag} #${seq} → ${debugFile}`);
-		return {
-			debug: true,
-			debugFile,
-			stderr: (data: string) => {
-				for (const line of data.split(/\r?\n/)) {
-					if (line) debug(`[cli-stderr ${tag}#${seq}] ${line}`);
-				}
-			},
-		};
+		try {
+			const seq = nextCliDebugSeq++;
+			const ts = new Date().toISOString().replace(/[:.]/g, "-");
+			const logDir = join(dirname(debugLogPath()), "cc-cli-logs");
+			mkdirSync(logDir, { recursive: true });
+			const debugFile = join(logDir, `${ts}-${tag}-${seq}.log`);
+			debug(`cli-debug: ${tag} #${seq} → ${debugFile}`);
+			return {
+				debug: true,
+				debugFile,
+				stderr: (data: string) => {
+					for (const line of data.split(/\r?\n/)) {
+						if (line) debug(`[cli-stderr ${tag}#${seq}] ${line}`);
+					}
+				},
+			};
+		} catch { return {}; }
 	}
 
-	/** Unconditional diagnostic dump — for "should never happen" paths. Creates pi's agent
-	 *  dir itself: callers run inside streamSimple, where a missing dir must not throw. */
+	/** Best-effort diagnostic dump even with DEBUG off: errors must not mask the
+	 *  provider failure that callers are trying to report. */
 	function diagDump(label: string, data: Record<string, unknown>) {
-		const ts = new Date().toISOString();
-		const entry = { ts, moduleInstanceId, label, ...data };
-		const logPath = diagLogPath();
-		mkdirSync(dirname(logPath), { recursive: true });
-		appendFileSync(logPath, JSON.stringify(entry) + "\n");
-		debug(`DIAG: ${label} (see ${logPath})`);
+		try {
+			const ts = new Date().toISOString();
+			const entry = { ts, moduleInstanceId, label, ...data };
+			const logPath = diagLogPath();
+			mkdirSync(dirname(logPath), { recursive: true });
+			appendFileSync(logPath, JSON.stringify(entry) + "\n");
+			debug(`DIAG: ${label} (see ${logPath})`);
+		} catch { /* Best-effort diagnostics only. */ }
 	}
 
 	return {

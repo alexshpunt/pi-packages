@@ -121,16 +121,19 @@ export interface QueryRegistryServices {
 	readonly enlistReleaseHook: () => void;
 	readonly hasQueryInFlightForSession: (piSessionId: string | null | undefined) => boolean;
 	readonly isSessionQueryActive: (piSessionId: string | null | undefined) => boolean;
+	readonly markRunnerShutdown: () => void;
 	readonly releaseSessionQueryContext: (piSessionId: string | null | undefined) => void;
 	readonly reportLeaks: (label: string) => void;
 	readonly sessionQueryContextFor: (piSessionId: string | null | undefined) => QueryContext;
 	readonly sessionQueryContexts: Map<string, QueryContext>;
 	readonly sponsorReleaseSessionQueries: (piSessionId: string) => void;
 	readonly withdrawReleaseHook: () => void;
+	readonly withdrawHooksIfIdle: () => void;
 }
 
-export function createQueryRegistry(runtime: Pick<BridgeRuntime, "debug">): QueryRegistryServices {
+export function createQueryRegistry(runtime: Pick<BridgeRuntime, "debug" | "withdrawRebuildHook">): QueryRegistryServices {
 	const activeQueryContexts = new Set<QueryContext>();
+	let runnerShutDown = false;
 
 	/** Same bucket as the session mirror's key: calls without options.sessionId
 	 *  cannot be told apart, so they share "(none)". */
@@ -184,6 +187,7 @@ export function createQueryRegistry(runtime: Pick<BridgeRuntime, "debug">): Quer
 		sessionQueryContexts.delete(key);
 		if (!activeQueryContexts.has(c)) c.releasePendingToolCalls("Session ended.");
 		runtime.debug(`session ${key}: released top-level query state${activeQueryContexts.has(c) ? " (query still in flight)" : ""}`);
+		withdrawHooksIfIdle();
 	}
 
 	/** Release hooks, one per module instance. The instance whose handler sees a
@@ -206,6 +210,19 @@ export function createQueryRegistry(runtime: Pick<BridgeRuntime, "debug">): Quer
 	 *  and session replacements do not accumulate one hook per module instance. */
 	function withdrawReleaseHook(): void {
 		releaseSessionQueriesHooks.delete(releaseSessionQueryContext);
+	}
+
+	/** Shutdown can precede the final query or another session's context release.
+	 *  Keep the hooks until both registries are empty, and recheck on each release. */
+	function withdrawHooksIfIdle(): void {
+		if (!runnerShutDown || sessionQueryContexts.size > 0 || activeQueryContexts.size > 0) return;
+		runtime.withdrawRebuildHook();
+		withdrawReleaseHook();
+	}
+
+	function markRunnerShutdown(): void {
+		runnerShutDown = true;
+		withdrawHooksIfIdle();
 	}
 
 	enlistReleaseHook();
@@ -253,11 +270,13 @@ export function createQueryRegistry(runtime: Pick<BridgeRuntime, "debug">): Quer
 		enlistReleaseHook,
 		hasQueryInFlightForSession,
 		isSessionQueryActive,
+		markRunnerShutdown,
 		releaseSessionQueryContext,
 		reportLeaks,
 		sessionQueryContextFor,
 		sessionQueryContexts,
 		sponsorReleaseSessionQueries,
 		withdrawReleaseHook,
+		withdrawHooksIfIdle,
 	};
 }
