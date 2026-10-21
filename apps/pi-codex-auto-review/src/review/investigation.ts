@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { open } from "node:fs/promises";
+import { lstat, open } from "node:fs/promises";
 import type { Redactor } from "@buyong/redact";
 import {
     canonicalJson,
@@ -10,7 +10,11 @@ import {
     type Json,
     type PermissionProfile,
 } from "../contracts.js";
-import { canonicalPath, isWithin } from "../policy/paths.js";
+import {
+    canonicalPath,
+    isProtectedWithin,
+    isRemoteWindowsPath,
+} from "../policy/paths.js";
 import type { ToolExecutor } from "../tools/executor.js";
 import { safeEvidence } from "./context.js";
 import { reviewRedactor } from "./redaction.js";
@@ -22,18 +26,33 @@ async function readInspectionFile(
     signal: AbortSignal,
 ): Promise<string> {
     signal.throwIfAborted();
+    // Windows defines neither flag; FIFOs do not exist there, and the identity check below
+    // replaces O_NOFOLLOW.
+    const noFollow = constants.O_NOFOLLOW ?? 0;
     const file = await open(
         path,
-        constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+        constants.O_RDONLY | noFollow | (constants.O_NONBLOCK ?? 0),
     );
     try {
-        const metadata = await file.stat();
+        const metadata = await file.stat({ bigint: true });
+        if (!noFollow) {
+            const link = await lstat(path, { bigint: true });
+            if (
+                link.isSymbolicLink() ||
+                link.dev !== metadata.dev ||
+                link.ino !== metadata.ino
+            )
+                throw new GuardError(
+                    "REVIEW_INVESTIGATION",
+                    "Inspection file changed during review",
+                );
+        }
         if (!metadata.isFile())
             throw new GuardError(
                 "REVIEW_INVESTIGATION",
                 "Inspection requires a regular text file",
             );
-        if (metadata.size > MAX_INSPECTION_BYTES)
+        if (metadata.size > BigInt(MAX_INSPECTION_BYTES))
             throw new GuardError(
                 "REVIEW_INVESTIGATION",
                 "Inspection file exceeds the 1 MiB read limit",
@@ -118,12 +137,18 @@ export class LocalInvestigation implements ReviewInvestigation {
             (args as { path: string }).path,
             this.cwd,
         );
+        // Inspection runs before approval; opening a remote share would contact its host.
+        if (isRemoteWindowsPath(path))
+            throw new GuardError(
+                "REVIEW_INVESTIGATION",
+                "Remote paths cannot be inspected",
+            );
         const denies = await Promise.all(
             this.profile.denyRead.map((value) =>
                 canonicalPath(value, this.cwd),
             ),
         );
-        if (denies.some((root) => isWithin(path, root)))
+        if (denies.some((root) => isProtectedWithin(path, root)))
             throw new GuardError(
                 "REVIEW_INVESTIGATION",
                 "Protected paths cannot be inspected",

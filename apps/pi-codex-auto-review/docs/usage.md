@@ -37,7 +37,7 @@ Run `/approve` in a TUI session, or in RPC with a client that answers Pi UI requ
 
 The first two choices persist. **Full Access is never saved** and lasts until Pi exits or you choose another approval mode. It also bypasses otherwise absolute path and command denials. Cancelling the confirmation returns to the picker without enabling it. Policy enforcement, approval reuse, and MCP review described below assume the extension is on and Full Access is off.
 
-The built-in `powershell` tool is unsupported: ordinary installation blocks it while the extension is on and Full Access is off, even with `approvalPolicy: "never"`. Use `bash` instead. PowerShell syntax is not checked with bash rules. Guarded startup excludes PowerShell in every mode.
+On Windows, the built-in `powershell` tool is guarded like `bash`. The extension registers a guarded `powershell` tool without activating it; enable it as in Pi through `defaultTools` (for example `"+powershell"`) or `--tools`. Guarded startup honors the same `defaultTools` selection. PowerShell commands are analyzed with their own grammar, never with bash rules; see [Windows and PowerShell](#windows-and-powershell). While off, Pi's original PowerShell tool runs.
 
 ### Turn the whole extension off or back on
 
@@ -217,7 +217,7 @@ All scope and denial rules below assume **the extension is on and Full Access is
 | `ruleFiles` | `[]` | Rule-file paths, resolved from the working directory |
 | `allowedDomains` | `[]` | Host patterns for interpreted network commands. `*.example.com` matches subdomains, not `example.com`. No OS network restriction is created. |
 | `writableRoots` | `[]` | Additional ordinary writable roots, resolved from the working directory |
-| `excludeSlashTmp` | `false` | Removes `/tmp` from the default writable roots |
+| `excludeSlashTmp` | `false` | Removes `/tmp` from the default writable roots. Windows has no `/tmp` root, so it has no effect there. |
 | `excludeTmpdir` | `false` | Removes `os.tmpdir()` from the default writable roots; both exclusions may be needed when paths overlap |
 | `trustedTools` | `[]` | Compatibility field; other extension tools no longer need to be listed |
 
@@ -272,10 +272,12 @@ Add its path to `ruleFiles` in your policy and reload or restart. JSON `commandR
 - Bounds input/output, evaluation steps, collection size, nesting, and time. Invalid input, unsupported syntax, or exhausted limits rejects evaluation.
 - Uses a cancellable Node.js worker for asynchronous evaluation and a bounded Node.js child process for the synchronous API. No evaluator starts when no rule files are configured.
 - Uses the strongest matching decision for compound commands. Network protocol labels merge into host allow/deny lists, not separate protocol permissions.
-- Requires review for uninterpretable shell syntax unless a trusted full-command rule allows it.
+- Requires review for uninterpretable shell syntax unless a trusted full-command rule allows it. Such bash commands match `[<shell>, "-c", command]`; such PowerShell scripts match `[<powershell executable>, "-Command", script]`.
+- Literal PowerShell scripts match their inner commands, as in Codex PR #20336. Nested `bash`/`sh`/`zsh`/`dash` `-c`/`-lc` and `powershell`/`pwsh` `-Command`/`-c` wrappers are unwrapped up to four levels. On Windows, wrapper names compare case-insensitively without `.exe`, `.cmd`, `.bat`, or `.com`.
+- A PowerShell command that starts with a known cmdlet or default alias, in any case, is matched both as written and with the documented cmdlet name, such as `Remove-Item` for `rm`, `del`, or `remove-item`. A rule from either form applies: `forbidden` and `prompt` from either one count, and `allow` still has to cover every command. Rule words compare exactly, so write cmdlet rules with their documented names; a rule written for an alias such as `["rm"]` matches only that alias. Commands from a `bash -c` script inside PowerShell keep their own names: `sort` there is not `Sort-Object`.
 - Reviews `curl`/`wget` when the destination is not an explicit HTTP URL or comes from a separate configuration file.
 
-**Keep `allow` rules narrow.** They can authorize matching commands beyond ordinary scope, but cannot override absolute denials while Full Access is off.
+**Keep `allow` rules narrow.** They can authorize matching commands beyond ordinary scope, but cannot override absolute denials while Full Access is off. A command with a target that has no checkable location, such as a wildcard or provider path in PowerShell or a WSL or POSIX-root path on Windows, is reviewed even when an `allow` rule matches.
 
 ## What happens during review
 
@@ -290,13 +292,14 @@ Eligible MCP tools and skill scripts can reuse a separate package approval:
 - MCP fingerprints include server configuration, initialization identity/version, and the tool definition.
 - Skill fingerprints include files in the directory containing `SKILL.md`. Only a single `<script>` or `<interpreter> <script>` command qualifies; symbolic-link-containing skills are not cached.
 - Automatic approvals and **Save as an allow rule** persist in `<agentDir>/guard/package-approvals.json`. **Allow for this session** is session-only; **Allow once** is not reused.
-- Changed content is reviewed again. Additional paths/domains, escalation, rule prompts, strict MCP review, and required user input always require a fresh decision.
+- Changed content is reviewed again. Additional paths/domains, shell targets without a known location (such as WSL or POSIX-root paths on Windows, wildcard, provider, or remote share paths), escalation, rule prompts, strict MCP review, and required user input always require a fresh decision.
 
 ### Read-only automatic-review cache
 
 Structured automatic approvals of reads are stored in `<agentDir>/pi-codex-auto-review.sqlite`. The default location is `~/.pi/agent/pi-codex-auto-review.sqlite`; `PI_CODING_AGENT_DIR` or an explicit `agentDir` takes precedence. Sessions and processes using the same Pi resource directory share the database.
 
-- Eligible actions are Pi's `read`, `grep`, `find`, and `ls` tools and single literal shell reads. Checked commands are `cat`, `head`, `tail`, `wc`, `rg`, `grep`, `find`, `ls`, `stat`, and `pwd`, plus `git status`, `git ls-files`, and `git rev-parse`. `git diff`, `log`, and `show` require both `--no-ext-diff` and `--no-textconv`.
+- Eligible actions are Pi's `read`, `grep`, `find`, and `ls` tools and single literal shell reads. Checked commands are `cat`, `head`, `tail`, `wc`, `rg`, `grep`, `find`, `ls`, `stat`, and `pwd`, plus `git status`, `git ls-files`, and `git rev-parse`. `git diff`, `log`, and `show` require both `--no-ext-diff` and `--no-textconv`. On Windows, path-qualified bash executables are not reused.
+- PowerShell reads qualify as one literal `Get-Content`, `Get-ChildItem`, `Get-Item`, `Test-Path`, `Resolve-Path`, `Get-FileHash`, `Select-String`, or `Get-Location` call, or a default alias such as `cat`, `ls`, or `gci`, with known parameters and no wildcard or provider path. `rg` and the git subcommands above qualify as for bash.
 - Pipes, compound commands, redirections, command substitution, interpreters, writes, and network requests are excluded. Options adding execution or writes, such as `find -exec/-delete` and `rg --pre/--hostname-bin`, are also excluded.
 - Reuse binds to the exact input, directory, source, permissions, policy, review context, and model. Only transient session and invocation identifiers are normalized; the assessment is rebound to the current invocation.
 - Denials, failures, cancellation, user approvals, explicit fresh reviews, and automatic approvals that used file investigation are not stored. Absolute denials and pre-execution policy checks still apply.
@@ -369,6 +372,27 @@ SDK `mcpToolPolicies` selects an approval mode for a `server/tool` key:
 Strict review, sensitive operations, and required user input override these normal skip paths. `codex_requires_user_input` is not approved by the model on your behalf. The adapter handles empty approval forms but rejects ordinary forms with input fields and URL authentication requests.
 
 The same rules apply to `node_repl/js`. Additional approval requests must match the original live call's tool, connection, and input; they cannot name another tool or connector instead. Caller cancellation and timeout signals reach the transport, including while Off, so authentication waits cannot later dispatch a cancelled request. Failed, cancelled, or timed-out requests release their local tracking. Already-dispatched cancellation depends on the external server.
+
+## Windows and PowerShell
+
+Bash on Windows runs through Pi's discovered shell, normally Git Bash. Path checks follow the shell that runs the command:
+
+- Git Bash, MSYS2, and Cygwin operands such as `/c/Users/...` and `/cygdrive/c/...` map to `C:\Users\...`. Other POSIX-absolute operands such as `/tmp`, `/usr`, or `/` have no known Windows location and require review.
+- WSL bash (`C:\Windows\System32\bash.exe`) receives no drive mapping; its Windows-drive and POSIX-absolute operands require review. If Pi's shell cannot be identified, drive paths are still checked against protected paths, then reviewed.
+- File tools accept `/c/...`, `/mnt/c/...`, `/cygdrive/c/...`, and `~\` as Pi does.
+- Protected-path checks compare case-insensitively on Windows and macOS, and Unicode-normalization-insensitively on macOS. Allowed write and read roots stay exact, so a differently spelled path is reviewed rather than allowed.
+- Alternate data streams (`file:stream`, `file::$DATA`), device namespaces (`\\?\`, `\\.\`), reserved device names (`CON`, `NUL`, `COM1`, ...), drive-relative paths (`C:file`), loopback or administrative shares, and missing path components with trailing dots or spaces or 8.3 short names fail with `INVALID_PATH`.
+- Paths on another host's share (`\\host\share\...`) are not resolved or probed before approval, because doing so opens an SMB connection. They are compared with protected paths as written, then reviewed.
+
+PowerShell commands use a fail-closed literal subset ported from Codex revision `80b88a700e4300022fe1893ecca9b8376d0c85d9`:
+
+- Supported: bare words, single quotes with `''`, double quotes without `$`, limited backtick escapes, `;`, `|`, newlines, PowerShell 7 `&&`/`||`, and `>`, `>>`, `N>`/`N>>` for streams 1–6, and `*>`/`*>>` redirections to a file. Merging streams (`2>&1`) requires review.
+- Review required: variables and expressions (`$`, `@`, `(`, `)`, `{`, `}`), the call and background operator `&`, dot-sourcing, comments, here-strings, attached `-Param:value`, `--%`, `~`, language keywords, version-dependent escapes, and Unicode quote or dash spellings.
+- Cmdlets and default aliases are classified like their bash counterparts: reads (`Get-Content`, `Get-ChildItem`, `Select-String`, ...), writes (`Set-Content`, `Add-Content`, `Out-File`, `New-Item`, `Remove-Item`, ...), copies and moves, and network requests (`Invoke-WebRequest`, `Invoke-RestMethod`). Every named path parameter is checked, including `-Path`, `-LiteralPath`, `-Destination`, `-FilePath`, `-OutFile`, and `New-Item -Path X -Name Y` as `X\Y`.
+- Unknown commands or parameters, path-qualified commands, provider paths (`Env:`, `HKLM:`, `FileSystem::`), pipeline input to path-taking commands, symbolic links from `New-Item`, and `curl`/`wget` (aliases of `Invoke-WebRequest` only in Windows PowerShell 5.1) require review. Wildcard paths, including redirection targets (which PowerShell resolves like `Out-File -FilePath`), are checked for protected paths up to the directory before the first wildcard, then reviewed.
+- Native `git`, `rg`, `curl`, and `wget` follow the bash rules when their arguments contain no `"`.
+
+Analysis assumes the default command table and Pi's `-NoProfile` invocation. It does not model dynamic parameter binding, aliases or functions defined at run time, module autoloading, or provider semantics; these cases require review rather than being treated as safe.
 
 ## Execution limits
 

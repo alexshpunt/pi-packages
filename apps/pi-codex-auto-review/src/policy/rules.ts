@@ -1,8 +1,9 @@
 import { spawnSync } from "node:child_process";
-import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
 import { GuardError, immutable } from "../contracts.js";
+import { commandName } from "./platform-paths.js";
+import { analyzePowerShell } from "./powershell.js";
 import { evaluateRuleSources } from "./rule-engine.js";
 import type { CompiledRules, PrefixRule, RuleSource } from "./rule-types.js";
 import { analyzeShell } from "./shell.js";
@@ -189,11 +190,57 @@ export async function evaluateRules(
         );
     }
 }
+/** Evidence identity when a caller supplies no shell; Windows has no fixed `/bin/bash`. */
+export function defaultShellIdentity(
+    tool: string,
+    platform: NodeJS.Platform = process.platform,
+): string {
+    if (tool === "powershell" || platform === "win32")
+        return "pi-default-shell-unresolved";
+    return "/bin/bash";
+}
+const MAX_WRAPPER_DEPTH = 4;
+const BASH_WRAPPERS = new Set(["bash", "sh", "zsh", "dash"]);
+const POWERSHELL_WRAPPERS = new Set(["powershell", "pwsh"]);
+/** Codex `extract_powershell_command` flags; the script must be the final argument. */
+const POWERSHELL_FLAGS = new Set(["-nologo", "-noprofile", "-command", "-c"]);
+
+function nestedBashScript(
+    argv: readonly string[],
+    platform: NodeJS.Platform,
+): string | undefined {
+    const [program, flag, script] = argv;
+    return program !== undefined &&
+        BASH_WRAPPERS.has(commandName(program, platform)) &&
+        argv.length === 3 &&
+        flag !== undefined &&
+        ["-c", "-lc"].includes(flag)
+        ? script
+        : undefined;
+}
+function nestedPowerShellScript(
+    argv: readonly string[],
+    platform: NodeJS.Platform,
+): string | undefined {
+    if (
+        argv.length < 3 ||
+        !POWERSHELL_WRAPPERS.has(commandName(argv[0] ?? "", platform))
+    )
+        return undefined;
+    const flags = argv.slice(1, -1).map((flag) => flag.toLowerCase());
+    const command = flags.at(-1);
+    return flags.every((flag) => POWERSHELL_FLAGS.has(flag)) &&
+        (command === "-command" || command === "-c") &&
+        flags.indexOf(command) === flags.length - 1
+        ? argv.at(-1)
+        : undefined;
+}
 /** Advanced scripts are matched as the real outer shell invocation, never as a safe inner prefix. */
 export function ruleCommands(
     command: string,
-    shellPath = "/bin/bash",
+    shellPath = defaultShellIdentity("bash"),
     depth = 0,
+    platform: NodeJS.Platform = process.platform,
 ): readonly (readonly string[])[] {
     const parsed = analyzeShell(command);
     if (
@@ -201,19 +248,12 @@ export function ruleCommands(
         parsed.commands.some(
             (item) => item.reads.length || item.writes.length,
         ) ||
-        depth > 4
+        depth > MAX_WRAPPER_DEPTH
     )
         return [[shellPath, "-c", command]];
     return parsed.commands.flatMap((item) => {
-        const [program, flag, script] = item.argv;
-        if (
-            program !== undefined &&
-            ["bash", "sh", "zsh", "dash"].includes(basename(program)) &&
-            item.argv.length === 3 &&
-            flag !== undefined &&
-            ["-c", "-lc"].includes(flag) &&
-            script !== undefined
-        ) {
+        const script = nestedBashScript(item.argv, platform);
+        if (script !== undefined) {
             const inner = analyzeShell(script);
             if (
                 inner.isSupported &&
@@ -221,8 +261,80 @@ export function ruleCommands(
                     (part) => !part.reads.length && !part.writes.length,
                 )
             )
-                return ruleCommands(script, program, depth + 1);
+                return ruleCommands(script, item.argv[0], depth + 1, platform);
         }
         return [item.argv];
     });
+}
+/** A rule group and whether it is a command lowered from PowerShell syntax. */
+export interface RuleGroup {
+    readonly argv: readonly string[];
+    /** False for outer invocations and commands unwrapped from bash-family scripts. */
+    readonly isPowerShellCommand: boolean;
+}
+/**
+ * Codex PR #20336: a literal PowerShell script matches its inner commands; anything
+ * else matches the outer `[shell, "-Command", script]` invocation.
+ */
+export function powershellRuleGroups(
+    script: string,
+    shellPath = defaultShellIdentity("powershell"),
+    depth = 0,
+    platform: NodeJS.Platform = process.platform,
+): readonly RuleGroup[] {
+    const parsed = analyzePowerShell(script);
+    if (
+        !parsed.isSupported ||
+        parsed.commands.some((item) => item.writes.length) ||
+        depth > MAX_WRAPPER_DEPTH
+    )
+        return [
+            {
+                argv: [shellPath, "-Command", script],
+                isPowerShellCommand: false,
+            },
+        ];
+    return parsed.commands.flatMap((item): readonly RuleGroup[] => {
+        const powershell = nestedPowerShellScript(item.argv, platform);
+        if (powershell !== undefined) {
+            const inner = analyzePowerShell(powershell);
+            if (
+                inner.isSupported &&
+                inner.commands.every((part) => !part.writes.length)
+            )
+                return powershellRuleGroups(
+                    powershell,
+                    item.argv[0],
+                    depth + 1,
+                    platform,
+                );
+        }
+        const bash = nestedBashScript(item.argv, platform);
+        if (bash !== undefined) {
+            const inner = analyzeShell(bash);
+            if (
+                inner.isSupported &&
+                inner.commands.every(
+                    (part) => !part.reads.length && !part.writes.length,
+                )
+            )
+                return ruleCommands(
+                    bash,
+                    item.argv[0],
+                    depth + 1,
+                    platform,
+                ).map((argv) => ({ argv, isPowerShellCommand: false }));
+        }
+        return [{ argv: item.argv, isPowerShellCommand: true }];
+    });
+}
+export function powershellRuleCommands(
+    script: string,
+    shellPath = defaultShellIdentity("powershell"),
+    depth = 0,
+    platform: NodeJS.Platform = process.platform,
+): readonly (readonly string[])[] {
+    return powershellRuleGroups(script, shellPath, depth, platform).map(
+        (group) => group.argv,
+    );
 }

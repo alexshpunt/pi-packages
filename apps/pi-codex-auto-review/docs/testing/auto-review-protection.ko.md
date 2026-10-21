@@ -17,6 +17,8 @@
 | 시작 | 관계없는 탐색 불가 디렉터리가 있어도 전수 탐색 없이 실행 |
 | 보호·거부 | 직접 보호 경로·금지 규칙은 검토 전 거부, 실패·취소·시간 초과는 실행으로 이어지지 않음 |
 | 네트워크 사전 검토 | 스킴 생략·설정 파일·허용 URL과 설정 파일을 함께 쓴 curl 요청도 자동·사용자 검토를 거침. 허용 대조군만 소유한 HTTP 서버에 도달 |
+| PowerShell | Codex `powershell_lowering.json` 사례를 재생하고, Codex가 해석하지 않는 스크립트와 Codex가 낮추는 주석 형태는 바깥 호출로 대조함을 확인. cmdlet·별칭의 경로·네트워크·규칙 분류, 읽기 재사용, 선택 활성화, 컨트롤러 실행 |
+| Windows 경로 | 플랫폼을 주입한 단위 검증으로 MSYS·Cygwin·WSL 인자 대응, Windows 경로 별칭, 대소문자·정규화 무시 보호, `/tmp` 루트, 실행 파일 이름을 확인. Windows 전용 검증은 실제 `canonicalPath()`와 Git Bash 판단을 확인 |
 | TypeScript 규칙 | 고정 Codex 실행 파일의 실제 결과 280건을 재생해 규칙 출력·입력 거부·취소·자원 한도·요청 형식 검증을 확인 |
 | 배포 패키지 | 실제 Pi 로더로 시작하고 압축 파일 안의 동기·작업 스레드 규칙 평가 실행. Rust 결과물·`.node`·샌드박스 결과·묶인 의존성 부재 |
 
@@ -137,6 +139,6 @@ pnpm --filter "@buyong/pi-codex-auto-review..." build
 pnpm --filter @buyong/pi-codex-auto-review test:unit
 ```
 
-`test:unit`은 현재 운영체제에서 단위·통합·적합성·실행·종단 간 검증을 실행한다. 로컬 통과는 다른 플랫폼·이미지·실모델 결과를 대신하지 않는다.
+`test:unit`은 현재 운영체제에서 단위·통합·적합성·실행·종단 간 검증을 실행한다. 로컬 통과는 다른 플랫폼·이미지·실모델 결과를 대신하지 않는다. 저장소 워크플로는 이 패키지가 선택되면 Ubuntu·macOS·Windows(Git Bash)에서, Codex 묶음만 선택되면 macOS·Windows에서만 같은 검증을 실행하며, Windows 체크아웃은 LF 줄 끝을 유지한다.
 
 위 기록을 만든 Docker(`verify:docker`), 플랫폼(`verify:platform`, `verify:windows`), 증거(`verify:guard`) 명령은 이전 [pi-codex-auto-review](https://github.com/buYoung/pi-codex-auto-review) 저장소에 남아 있으며 이 저장소에는 포함하지 않았다.

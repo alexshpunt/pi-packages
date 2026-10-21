@@ -76,7 +76,7 @@ With **the extension on and Full Access off**, the default policy distinguishes 
 
 | Target | Behavior |
 | --- | --- |
-| Built-in `powershell` calls | Blocked as unsupported; use `bash`. Ordinary installations permit PowerShell only while Off or in confirmed Full Access; guarded startup excludes it entirely. |
+| Built-in `powershell` calls (Windows) | Guarded like `bash` with a literal PowerShell grammar. Registered inactive; enable through Pi's `defaultTools` or `--tools`. See [Windows and PowerShell](docs/usage.md#windows-and-powershell). |
 | Ordinary workspace and temporary-directory writes | Allowed in `workspace-write`; writes require review in `read-only` |
 | Writes outside ordinary scope or to project `.git`, `.agents`, `.codex`, `.aws`, and `.pi` metadata | Require review rather than an unconditional block |
 | Guard control files, selected policy, and rule files | Protected from guarded reads and writes; project `.pi/guard` is write-protected |

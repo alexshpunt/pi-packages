@@ -17,6 +17,8 @@ The current source is an approval assistance extension. It does not enforce OS i
 | Startup | Execution without an exhaustive scan even when unrelated directories cannot be traversed |
 | Protection and denial | Direct protected paths and deny rules rejected before review; failures, cancellation, and timeouts never lead to execution |
 | Network review before execution | curl requests with omitted schemes, configuration files, or both allowed URLs and configuration files pass through automatic or user review. Only the allowed control reaches the owned HTTP server |
+| PowerShell | Replay the Codex `powershell_lowering.json` corpus; scripts Codex leaves opaque, and comment forms it lowers, match the outer invocation. Cmdlet and alias path, network, and rule classification, read-only reuse, opt-in activation, and controller execution |
+| Windows paths | Platform-injected unit tests of MSYS/Cygwin/WSL operand mapping, Windows path aliases, case- and normalization-insensitive protection, `/tmp` roots, and executable names. Windows-only tests cover real `canonicalPath()` and Git Bash decisions |
 | TypeScript rules | Replay 280 actual results captured from the pinned Codex helper; preserve rule outputs and rejected inputs, cancellation, budgets, and strict request validation |
 | Distribution package | Startup through the actual Pi loader; synchronous and worker-based rule evaluation from the archive; absence of Rust artifacts, `.node` files, sandbox output, and bundled dependencies |
 
@@ -137,6 +139,6 @@ pnpm --filter "@buyong/pi-codex-auto-review..." build
 pnpm --filter @buyong/pi-codex-auto-review test:unit
 ```
 
-`test:unit` runs the unit, integration, conformance, execution, and end-to-end suites on the current operating system. A local pass does not replace other platform, image, or live model results.
+`test:unit` runs the unit, integration, conformance, execution, and end-to-end suites on the current operating system. A local pass does not replace other platform, image, or live model results. The repository workflow runs these checks on Ubuntu, macOS, and Windows (with Git Bash) when this package is selected, and on macOS and Windows only when just the Codex bundle is selected; Windows checkouts keep LF line endings.
 
 The Docker (`verify:docker`), platform (`verify:platform`, `verify:windows`), and evidence (`verify:guard`) commands behind the records above remain in the previous [pi-codex-auto-review](https://github.com/buYoung/pi-codex-auto-review) repository and are not part of this repository.

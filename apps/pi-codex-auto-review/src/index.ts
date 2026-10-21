@@ -7,6 +7,7 @@ import {
     createFindToolDefinition,
     createGrepToolDefinition,
     createLsToolDefinition,
+    createPowerShellToolDefinition,
     createReadToolDefinition,
     createWriteToolDefinition,
     type ExtensionAPI,
@@ -270,6 +271,11 @@ export function createGuardExtension(options: GuardOptions = {}) {
         register(createGrepToolDefinition(cwd));
         register(createFindToolDefinition(cwd));
         register(createLsToolDefinition(cwd));
+        // Like Pi's built-in tool, PowerShell stays inactive until defaultTools or --tools names it.
+        register({
+            ...createPowerShellToolDefinition(cwd),
+            defaultActive: false,
+        });
         pi.on("session_start", async (_event, context) => {
             const guard = await ready(context.cwd);
             guard.options.shellPath = bashOptions().shellPath;
@@ -325,15 +331,6 @@ export function createGuardExtension(options: GuardOptions = {}) {
         // shell, file, network and MCP actions keep their own review paths.
         pi.on("tool_call", async (event, context) => {
             const guard = await ready(context.cwd);
-            if (
-                event.toolName === "powershell" &&
-                guard.options.settings.isEnabled &&
-                !guard.isFullAccess
-            )
-                return {
-                    block: true,
-                    reason: "PowerShell is not supported by Auto Review. Use bash instead; PowerShell requires Auto Review Off or confirmed Full Access.",
-                };
             guard.noteCall(event);
         });
         pi.on("tool_execution_end", async (event, context) => {

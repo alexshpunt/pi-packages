@@ -11,6 +11,7 @@ import {
     createFindToolDefinition,
     createGrepToolDefinition,
     createLocalBashOperations,
+    createLocalPowerShellOperations,
     createLsToolDefinition,
     createReadToolDefinition,
     createWriteToolDefinition,
@@ -69,9 +70,12 @@ export class PiExecutor implements ToolExecutor {
     ): Promise<Json> {
         if (options.delegate) return options.delegate(signal);
         if (job.kind === "shell") {
-            const result = await createLocalBashOperations({
-                shellPath: job.shellPath,
-            }).exec(job.command, job.cwd, {
+            // Pi's PowerShell operations add their UTF-8 output prefix to the executed script.
+            const operations =
+                job.shell === "powershell"
+                    ? createLocalPowerShellOperations()
+                    : createLocalBashOperations({ shellPath: job.shellPath });
+            const result = await operations.exec(job.command, job.cwd, {
                 signal,
                 timeout: options.timeoutSeconds ?? job.timeoutSeconds,
                 env: options.env ?? job.env,
@@ -126,7 +130,7 @@ export class PiExecutor implements ToolExecutor {
             find: createFindToolDefinition,
             ls: createLsToolDefinition,
         };
-        if (job.tool === "bash")
+        if (job.tool === "bash" || job.tool === "powershell")
             throw new GuardError(
                 "INVALID_EXECUTION",
                 "Use the shell execution path",

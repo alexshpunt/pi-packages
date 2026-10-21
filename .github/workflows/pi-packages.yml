@@ -67,6 +67,41 @@ jobs:
         if: matrix.slug == 'pi-ollama-cloud'
         run: pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report "$RUNNER_TEMP/ollama-offline.json"
 
+  # Auto Review's path, shell and PowerShell policy differs by OS; ubuntu already runs in `checks`.
+  # The Codex bundle ships a copy of Auto Review, so its selection runs these checks too.
+  auto-review-platforms:
+    needs: select
+    if: >-
+      contains(fromJSON(needs.select.outputs.matrix).include.*.slug, 'pi-codex-auto-review') ||
+      contains(fromJSON(needs.select.outputs.matrix).include.*.slug, 'pi-codex')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    name: Check pi-codex-auto-review on ${{ matrix.os }}
+    defaults:
+      run:
+        # Windows tests run bash commands through Git Bash, as Pi does.
+        shell: bash
+    steps:
+      # Keep LF line endings so formatting checks and fixtures match the repository.
+      - run: git config --global core.autocrlf false && git config --global core.eol lf
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter "@buyong/pi-codex-auto-review..." run build
+      - run: pnpm --filter @buyong/pi-codex-auto-review run lint
+      - run: pnpm --filter @buyong/pi-codex-auto-review typecheck
+      - run: pnpm --filter @buyong/pi-codex-auto-review run test:unit
+
   ollama-latest:
     needs: select
     if: contains(fromJSON(needs.select.outputs.matrix).include.*.slug, 'pi-ollama-cloud')
@@ -175,11 +210,14 @@ jobs:
         run: pnpm run smoke:web-tools --package-dir "$OLLAMA_PACKED_DIR"
 
   publish:
-    needs: [select, checks, ollama-latest, ollama-smoke]
+    needs: [select, checks, auto-review-platforms, ollama-latest, ollama-smoke]
     if: >-
       always() && !cancelled() && github.event_name == 'push' &&
       startsWith(github.ref, 'refs/tags/') && needs.select.outputs.is-release == 'true' &&
       needs.checks.result == 'success' &&
+      (!(contains(fromJSON(needs.select.outputs.matrix).include.*.slug, 'pi-codex-auto-review') ||
+      contains(fromJSON(needs.select.outputs.matrix).include.*.slug, 'pi-codex')) ||
+      needs.auto-review-platforms.result == 'success') &&
       (!contains(fromJSON(needs.select.outputs.matrix).include.*.slug, 'pi-ollama-cloud') ||
       (needs.ollama-latest.result == 'success' && needs.ollama-smoke.result == 'success'))
     runs-on: ubuntu-latest

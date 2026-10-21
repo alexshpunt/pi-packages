@@ -4,9 +4,10 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { environmentKeys } from "./shell.mjs";
 
 const parentTmp = tmpdir();
-const keep = new Set([
+const keep = [
     "PATH",
     "LANG",
     "LC_ALL",
@@ -18,9 +19,11 @@ const keep = new Set([
     "NODE_CHANNEL_SERIALIZATION_MODE",
     "PI_GUARD_RUN_DIR",
     "PI_GUARD_KERNEL_ARCH",
-]);
+];
+// Windows names are case-insensitive (`Path`); Git Bash, PowerShell and Node need the system set.
+const isKept = environmentKeys(keep);
 for (const key of Object.keys(process.env))
-    if (!keep.has(key) && !key.startsWith("VITEST")) delete process.env[key];
+    if (!isKept(key) && !key.startsWith("VITEST")) delete process.env[key];
 // Exercise the ambient temporary-root contract without scanning unrelated host worktrees.
 const suiteTmp = mkdtempSync(join(parentTmp, "pi-guard-suite-"));
 process.env.TMPDIR = suiteTmp;

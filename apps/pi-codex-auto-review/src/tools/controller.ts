@@ -6,7 +6,9 @@ import {
     type BashToolOptions,
     createBashToolDefinition,
     createLocalBashOperations,
+    createPowerShellToolDefinition,
     type ExtensionContext,
+    type PowerShellToolOptions,
     type ReadToolOptions,
     type ToolCallEvent,
     type ToolDefinition,
@@ -34,7 +36,7 @@ import {
     type PackageApproval,
     skillPackageApproval,
 } from "../package-approvals.js";
-import { shellIdentity } from "../pi-host.js";
+import { powershellIdentity, shellIdentity } from "../pi-host.js";
 import {
     canonicalPath,
     type GuardSettings,
@@ -65,7 +67,7 @@ type ToolSchema = ToolDefinition["parameters"];
 export function guardedToolParameters<
     T extends ToolSchema & { properties: Record<string, ToolSchema> },
 >(name: string, parameters: T): T {
-    return name === "bash"
+    return name === "bash" || name === "powershell"
         ? {
               ...parameters,
               properties: {
@@ -760,9 +762,11 @@ export class GuardController {
         const policyDecision = await this.evaluate(action, signal);
         const packageApproval =
             job.kind === "shell" && isPackageCacheEligible(policyDecision)
-                ? await skillPackageApproval(job.command, job.cwd).catch(
-                      () => undefined,
-                  )
+                ? await skillPackageApproval(
+                      job.command,
+                      job.cwd,
+                      job.shell,
+                  ).catch(() => undefined)
                 : undefined;
         const admission = await this.requestAdmission(
             action,
@@ -835,7 +839,7 @@ export class GuardController {
         TState,
     >(
         definition: ToolDefinition<TParameters, TDetails, TState>,
-        toolOptions?: ReadToolOptions | BashToolOptions,
+        toolOptions?: ReadToolOptions | BashToolOptions | PowerShellToolOptions,
     ): ToolDefinition<TParameters, TDetails, TState> {
         const tool = definition.name as (typeof TOOL_NAMES)[number];
         if (!TOOL_NAMES.includes(tool))
@@ -857,7 +861,8 @@ export class GuardController {
                         context,
                     );
                 const cwd = await canonicalPath(context.cwd, context.cwd);
-                if (tool === "bash") {
+                if (tool === "bash" || tool === "powershell") {
+                    const isPowerShell = tool === "powershell";
                     const input = params as Record<string, Json>;
                     const requested = JSON.parse(
                         canonicalJson(
@@ -872,65 +877,76 @@ export class GuardController {
                             ),
                         ),
                     ) as Record<string, Json>;
-                    const delegate = createBashToolDefinition(cwd, {
-                        ...(toolOptions as BashToolOptions),
-                        operations: {
-                            exec: async (command, finalCwd, options) => {
-                                const env = options.env;
-                                const shellPath = (
-                                    toolOptions as BashToolOptions
-                                )?.shellPath;
-                                const args = {
-                                    command,
-                                    shellPath: await shellIdentity(shellPath),
-                                    ...(options.timeout !== undefined
-                                        ? { timeout: options.timeout }
+                    const operations: BashOperations = {
+                        exec: async (command, finalCwd, options) => {
+                            const env = options.env;
+                            // Pi resolves PowerShell itself; only bash has a configurable shell path.
+                            const shellPath = isPowerShell
+                                ? undefined
+                                : (toolOptions as BashToolOptions)?.shellPath;
+                            const args = {
+                                command,
+                                shellPath: isPowerShell
+                                    ? await powershellIdentity()
+                                    : await shellIdentity(shellPath),
+                                ...(options.timeout !== undefined
+                                    ? { timeout: options.timeout }
+                                    : {}),
+                                environment: reviewEnvironment(env),
+                                redactedEnvironmentVariables:
+                                    redactedEnvironmentNames(env),
+                                ...requested,
+                            };
+                            const resolvedCwd = await canonicalPath(
+                                finalCwd,
+                                finalCwd,
+                            );
+                            const action = createAction(
+                                {
+                                    toolCallId,
+                                    tool,
+                                    args: JSON.parse(canonicalJson(args)),
+                                    cwd: resolvedCwd,
+                                    source:
+                                        this.sources.get(toolCallId) ?? "model",
+                                    sessionId:
+                                        context.sessionManager.getSessionId(),
+                                    policyRevision: this.policy.revision,
+                                },
+                                this.policy.profile,
+                            );
+                            return (await this.admitAndExecute(
+                                action,
+                                {
+                                    kind: "shell",
+                                    ...(isPowerShell
+                                        ? { shell: "powershell" as const }
                                         : {}),
-                                    environment: reviewEnvironment(env),
-                                    redactedEnvironmentVariables:
-                                        redactedEnvironmentNames(env),
-                                    ...requested,
-                                };
-                                const resolvedCwd = await canonicalPath(
-                                    finalCwd,
-                                    finalCwd,
-                                );
-                                const action = createAction(
-                                    {
-                                        toolCallId,
-                                        tool,
-                                        args: JSON.parse(canonicalJson(args)),
-                                        cwd: resolvedCwd,
-                                        source:
-                                            this.sources.get(toolCallId) ??
-                                            "model",
-                                        sessionId:
-                                            context.sessionManager.getSessionId(),
-                                        policyRevision: this.policy.revision,
-                                    },
-                                    this.policy.profile,
-                                );
-                                return (await this.admitAndExecute(
-                                    action,
-                                    {
-                                        kind: "shell",
-                                        command,
-                                        shellPath,
-                                        cwd: resolvedCwd,
-                                    },
-                                    { ...context, cwd: finalCwd },
-                                    {
-                                        signal: options.signal,
-                                        timeoutSeconds: options.timeout,
-                                        env,
-                                        onData: options.onData,
-                                    },
-                                    "",
-                                    JSON.parse(canonicalJson(params)),
-                                )) as unknown as { exitCode: number | null };
-                            },
+                                    command,
+                                    shellPath,
+                                    cwd: resolvedCwd,
+                                },
+                                { ...context, cwd: finalCwd },
+                                {
+                                    signal: options.signal,
+                                    timeoutSeconds: options.timeout,
+                                    env,
+                                    onData: options.onData,
+                                },
+                                "",
+                                JSON.parse(canonicalJson(params)),
+                            )) as unknown as { exitCode: number | null };
                         },
-                    });
+                    };
+                    const delegate = isPowerShell
+                        ? createPowerShellToolDefinition(cwd, {
+                              ...(toolOptions as PowerShellToolOptions),
+                              operations,
+                          })
+                        : createBashToolDefinition(cwd, {
+                              ...(toolOptions as BashToolOptions),
+                              operations,
+                          });
                     return delegate.execute(
                         toolCallId,
                         params as { command: string; timeout?: number },

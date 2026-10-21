@@ -10,6 +10,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
     createAction,
     createProfile,
@@ -17,10 +18,12 @@ import {
 
 export const auditDirectory =
     process.env.PI_GUARD_RUN_DIR ??
-    new URL(
-        `../../.reports/pi-guard/runs/direct-${randomUUID()}/${process.platform}-${process.arch}/`,
-        import.meta.url,
-    ).pathname;
+    fileURLToPath(
+        new URL(
+            `../../.reports/pi-guard/runs/direct-${randomUUID()}/${process.platform}-${process.arch}/`,
+            import.meta.url,
+        ),
+    );
 export const auditPopulationPath = join(auditDirectory, "owned-audits.jsonl");
 
 export async function fixture(t) {

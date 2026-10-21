@@ -194,16 +194,22 @@ export async function createGuardedRuntime(options: GuardedRuntimeOptions) {
                 sessionManager: input.sessionManager,
                 model: selectedModel,
                 sessionStartEvent: input.sessionStartEvent,
-                excludeTools: ["powershell"],
             });
             await result.session.bindExtensions({ mode: "print" });
             guard.assertReady();
             const session = result.session;
+            // PowerShell stays an opt-in: active only when defaultTools selected it.
+            const isPowerShellSelected = session
+                .getActiveToolNames()
+                .includes("powershell");
             session.setActiveToolsByName(
                 session
                     .getAllTools()
-                    .filter((tool) =>
-                        ["direct", "model-only"].includes(tool.exposure),
+                    .filter(
+                        (tool) =>
+                            ["direct", "model-only"].includes(tool.exposure) &&
+                            (tool.name !== "powershell" ||
+                                isPowerShellSelected),
                     )
                     .map((tool) => tool.name),
             );

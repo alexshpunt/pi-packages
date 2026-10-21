@@ -1,6 +1,7 @@
 // Port of the Apache-2.0 Codex execpolicy contracts at CODEX_EXECPOLICY_REVISION.
 // Attribution and upstream revision are recorded in the repository NOTICE.
 import { basename, isAbsolute, normalize, resolve } from "node:path";
+import { executableName } from "./platform-paths.js";
 import {
     CODEX_EXECPOLICY_REVISION,
     type CompiledRules,
@@ -34,13 +35,6 @@ function reason(value: Value): string | undefined {
 function list(value: Value): Value[] {
     if (!Array.isArray(value)) throw new Error("Expected a list");
     return value;
-}
-function executableName(raw: string): string {
-    return process.platform === "win32"
-        ? raw
-              .replace(/[A-Z]/g, (char) => char.toLowerCase())
-              .replace(/\.(exe|cmd|bat|com)$/, "")
-        : raw;
 }
 function absolutePath(raw: string): string {
     const path =

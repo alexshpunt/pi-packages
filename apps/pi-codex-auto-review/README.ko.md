@@ -76,7 +76,7 @@ Use bash to run exactly node --version and report the result. Do not install any
 
 | 대상 | 동작 |
 | --- | --- |
-| 내장 `powershell` 호출 | 미지원으로 차단합니다. `bash`를 사용하세요. 일반 설치에서는 Off 또는 확인한 Full Access일 때만 허용하며, 보호 시작에서는 도구 자체를 제외합니다. |
+| 내장 `powershell` 호출(Windows) | 리터럴 PowerShell 문법으로 `bash`와 같이 보호합니다. 비활성 상태로 등록되므로 Pi의 `defaultTools`나 `--tools`로 켭니다. [Windows와 PowerShell](docs/usage.ko.md#windows와-powershell)을 참고하세요. |
 | 일반 작업 공간·임시 디렉터리 쓰기 | `workspace-write`는 허용하고 `read-only`는 검토합니다. |
 | 일반 범위 밖이나 프로젝트 `.git`·`.agents`·`.codex`·`.aws`·`.pi` 메타데이터 쓰기 | 무조건 차단하지 않고 검토합니다. |
 | 가드 제어 파일·선택한 정책·규칙 파일 | 보호 도구의 읽기·쓰기를 차단합니다. 프로젝트 `.pi/guard`는 쓰기를 차단합니다. |

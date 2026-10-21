@@ -809,6 +809,60 @@ test("[startup] public startup performs no execution qualification, still reject
     await runtime.session.prompt("Check unknown.");
     expect(called).toBe(true);
 });
+test("[startup] guarded PowerShell stays opt-in through defaultTools and runs through the controller", async (t) => {
+    const f = await fixture(t),
+        jobs = [];
+    const executor = {
+        close: async () => {},
+        execute: async (job) => {
+            jobs.push(job);
+            return { exitCode: 0 };
+        },
+    };
+    const settings = (extra = {}) =>
+        pi.SettingsManager.inMemory({
+            cacheWarming: "off",
+            compaction: { enabled: false },
+            quietStartup: true,
+            ...extra,
+        });
+    const plain = await guardedFixture(t, f, {
+        executor,
+        settingsManager: settings(),
+    });
+    expect(plain.session.getActiveToolNames()).not.toContain("powershell");
+    expect(plain.session.getToolDefinition("powershell")).toBeDefined();
+    const selected = await guardedFixture(t, f, {
+        executor,
+        settingsManager: settings({ defaultTools: ["+powershell"] }),
+    });
+    expect(selected.session.getActiveToolNames()).toContain("powershell");
+    const events = [];
+    selected.session.subscribe((event) => events.push(event));
+    await planStream(selected.session, [
+        [{ name: "powershell", args: { command: "Get-Content notes.txt" } }],
+        [
+            {
+                name: "powershell",
+                args: {
+                    command: `Remove-Item -LiteralPath '${join(f.control, "protected.txt")}'`,
+                },
+            },
+        ],
+    ]);
+    await selected.session.prompt("Use the opted-in PowerShell tool.");
+    const results = events.filter(
+        (event) => event.type === "tool_execution_end",
+    );
+    expect(results.map((event) => event.isError)).toStrictEqual([
+        false,
+        true,
+    ]);
+    expect(JSON.stringify(results[1].result)).toMatch(/protected path/);
+    expect(jobs).toMatchObject([
+        { kind: "shell", shell: "powershell", command: "Get-Content notes.txt" },
+    ]);
+});
 test("[startup] explicit installed cloud provider loads through public Pi TypeScript loader without automatic discovery", async (t) => {
     const f = await fixture(t),
         previousAgentDir = process.env.PI_CODING_AGENT_DIR,

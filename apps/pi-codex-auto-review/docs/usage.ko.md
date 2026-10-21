@@ -37,7 +37,7 @@ TUI 세션이나 Pi UI 요청에 응답하는 RPC 클라이언트에서 `/approv
 
 앞의 두 선택은 저장합니다. **Full Access는 저장하지 않으며**, Pi를 종료하거나 다른 승인 방식을 선택할 때까지 적용합니다. 평소 절대 거부하는 경로·명령 제한도 우회합니다. 확인을 취소하면 활성화하지 않고 선택창으로 돌아갑니다. 아래의 정책 적용·승인 재사용·MCP 검토 설명은 확장이 켜져 있고 Full Access가 꺼진 상태를 전제로 합니다.
 
-내장 `powershell` 도구는 미지원입니다. 일반 설치는 확장이 켜져 있고 Full Access가 꺼져 있으면 `approvalPolicy: "never"`일 때도 차단합니다. 대신 `bash`를 사용하세요. PowerShell 구문을 bash 규칙으로 검사하지 않습니다. 보호 시작은 모든 모드에서 PowerShell을 제외합니다.
+Windows의 내장 `powershell` 도구는 `bash`와 같은 방식으로 보호합니다. 확장은 보호된 `powershell` 도구를 등록하되 활성화하지 않으므로, Pi에서처럼 `defaultTools`(예: `"+powershell"`)나 `--tools`로 켜세요. 보호 시작도 같은 `defaultTools` 선택을 따릅니다. PowerShell 명령은 bash 규칙이 아니라 자체 문법으로 분석합니다. [Windows와 PowerShell](#windows와-powershell)을 참고하세요. 꺼진 동안에는 Pi의 원래 PowerShell 도구가 실행됩니다.
 
 ### 확장 전체 끄기와 다시 켜기
 
@@ -217,7 +217,7 @@ SDK는 승인 UI 없이 시작합니다. 자동 검토는 호출을 승인할 �
 | `ruleFiles` | `[]` | 작업 디렉터리 기준의 규칙 파일 경로 |
 | `allowedDomains` | `[]` | 해석한 네트워크 명령의 호스트 패턴. `*.example.com`은 하위 도메인과 일치하지만 `example.com`과는 일치하지 않습니다. OS 네트워크 제한을 만들지는 않습니다. |
 | `writableRoots` | `[]` | 작업 디렉터리 기준의 추가 일반 쓰기 루트 |
-| `excludeSlashTmp` | `false` | 기본 쓰기 루트에서 `/tmp`를 제외합니다. |
+| `excludeSlashTmp` | `false` | 기본 쓰기 루트에서 `/tmp`를 제외합니다. Windows에는 `/tmp` 루트가 없으므로 영향이 없습니다. |
 | `excludeTmpdir` | `false` | 기본 쓰기 루트에서 `os.tmpdir()`를 제외합니다. 경로가 겹치면 두 설정을 모두 켜야 할 수 있습니다. |
 | `trustedTools` | `[]` | 호환용 필드. 다른 확장 도구를 여기에 나열할 필요는 없습니다. |
 
@@ -272,10 +272,12 @@ prefix_rule(["git", "push"], decision="forbidden")
 - 입출력·평가 단계·자료 크기·중첩·시간을 제한합니다. 잘못된 입력, 지원하지 않는 구문이나 한도 초과는 평가를 거부합니다.
 - 비동기 평가는 취소 가능한 Node.js 작업 스레드, 동기 API는 제한된 Node.js 자식 프로세스를 사용합니다. 규칙 파일이 없으면 평가기를 시작하지 않습니다.
 - 복합 명령에는 가장 강한 판단을 적용합니다. 네트워크 프로토콜 표시는 별도 권한이 아니라 호스트 허용·거부 목록으로 합칩니다.
-- 해석하지 못하는 셸 구문은 신뢰한 전체 명령 규칙이 허용하지 않으면 검토합니다.
+- 해석하지 못하는 셸 구문은 신뢰한 전체 명령 규칙이 허용하지 않으면 검토합니다. 이런 bash 명령은 `[<셸>, "-c", 명령]`, PowerShell 스크립트는 `[<PowerShell 실행 파일>, "-Command", 스크립트]`로 대조합니다.
+- 리터럴 PowerShell 스크립트는 Codex PR #20336처럼 내부 명령으로 대조합니다. 중첩된 `bash`·`sh`·`zsh`·`dash`의 `-c`·`-lc`와 `powershell`·`pwsh`의 `-Command`·`-c` 래퍼는 네 단계까지 풉니다. Windows에서는 래퍼 이름을 대소문자 구분 없이, `.exe`·`.cmd`·`.bat`·`.com`을 뺀 이름으로 비교합니다.
+- 알려진 cmdlet이나 기본 별칭으로 시작하는 PowerShell 명령은 대소문자와 상관없이, 쓴 그대로와 문서상의 cmdlet 이름(예: `rm`·`del`·`remove-item`에 대한 `Remove-Item`)으로 모두 대조합니다. 둘 중 어느 형태에 맞는 규칙이든 적용되므로 `forbidden`과 `prompt`는 어느 쪽에서 나와도 효력이 있고, `allow`는 여전히 모든 명령을 덮어야 합니다. 규칙 단어는 정확히 비교하므로 cmdlet 규칙은 문서상의 이름으로 쓰세요. `["rm"]`처럼 별칭으로 쓴 규칙은 그 별칭에만 맞습니다. PowerShell 안의 `bash -c` 스크립트에서 나온 명령은 자기 이름을 유지하므로, 그 안의 `sort`는 `Sort-Object`가 아닙니다.
 - `curl`·`wget`의 목적지가 명시적인 HTTP URL이 아니거나 별도 설정 파일에서 오면 검토합니다.
 
-**`allow` 규칙은 좁게 지정하세요.** 일치하는 명령을 일반 범위 밖에서도 허용할 수 있지만, Full Access가 꺼져 있으면 절대 거부를 해제하지는 못합니다.
+**`allow` 규칙은 좁게 지정하세요.** 일치하는 명령을 일반 범위 밖에서도 허용할 수 있지만, Full Access가 꺼져 있으면 절대 거부를 해제하지는 못합니다. PowerShell의 와일드카드·공급자 경로나 Windows의 WSL·POSIX 루트 경로처럼 위치를 확인할 수 없는 대상이 있는 명령은 `allow` 규칙과 맞아도 검토합니다.
 
 ## 검토 중의 동작
 
@@ -290,13 +292,14 @@ TUI·RPC 승인 창에서는 **Allow once**, **Allow for this session**, **Save 
 - MCP 지문에는 서버 설정, 초기화에서 받은 식별 정보·버전과 도구 정의를 포함합니다.
 - 스킬 지문에는 `SKILL.md`가 있는 디렉터리의 파일을 포함합니다. `<script>` 또는 `<interpreter> <script>` 단일 명령만 해당하며, 심볼릭 링크가 있는 스킬은 캐시하지 않습니다.
 - 자동 승인과 **Save as an allow rule**은 `<agentDir>/guard/package-approvals.json`에 저장합니다. **Allow for this session**은 세션에만 적용하고 **Allow once**는 재사용하지 않습니다.
-- 내용이 바뀌면 다시 검토합니다. 추가 경로·도메인, 권한 상승, 규칙의 확인 요구, 엄격한 MCP 검토와 필수 사용자 입력은 항상 새 판단을 요구합니다.
+- 내용이 바뀌면 다시 검토합니다. 추가 경로·도메인, 위치를 알 수 없는 셸 대상(Windows의 WSL·POSIX 루트 경로, 와일드카드·공급자·원격 공유 경로 등), 권한 상승, 규칙의 확인 요구, 엄격한 MCP 검토와 필수 사용자 입력은 항상 새 판단을 요구합니다.
 
 ### 읽기 자동 검토 캐시
 
 읽기 작업의 구조화된 자동 승인 결과는 `<agentDir>/pi-codex-auto-review.sqlite`에 저장합니다. 기본 위치는 `~/.pi/agent/pi-codex-auto-review.sqlite`이며 `PI_CODING_AGENT_DIR`이나 명시한 `agentDir`을 따릅니다. 같은 Pi 자원 디렉터리를 사용하는 세션과 프로세스가 공유합니다.
 
-- Pi의 `read`·`grep`·`find`·`ls` 도구와 단일 리터럴 셸 읽기 명령이 대상입니다. 셸 명령은 `cat`, `head`, `tail`, `wc`, `rg`, `grep`, `find`, `ls`, `stat`, `pwd`를 확인합니다. `git status`, `git ls-files`, `git rev-parse`도 포함합니다. `git diff`·`log`·`show`는 `--no-ext-diff`와 `--no-textconv`가 있어야 합니다.
+- Pi의 `read`·`grep`·`find`·`ls` 도구와 단일 리터럴 셸 읽기 명령이 대상입니다. 셸 명령은 `cat`, `head`, `tail`, `wc`, `rg`, `grep`, `find`, `ls`, `stat`, `pwd`를 확인합니다. `git status`, `git ls-files`, `git rev-parse`도 포함합니다. `git diff`·`log`·`show`는 `--no-ext-diff`와 `--no-textconv`가 있어야 합니다. Windows에서는 경로를 붙인 bash 실행 파일을 재사용하지 않습니다.
+- PowerShell 읽기는 알려진 매개변수만 쓰고 와일드카드나 공급자 경로가 없는 단일 리터럴 `Get-Content`·`Get-ChildItem`·`Get-Item`·`Test-Path`·`Resolve-Path`·`Get-FileHash`·`Select-String`·`Get-Location` 호출, 또는 `cat`·`ls`·`gci` 같은 기본 별칭이 대상입니다. `rg`와 위 git 하위 명령은 bash와 같은 조건으로 포함합니다.
 - 파이프, 복합 명령, 리다이렉션, 명령 치환, 인터프리터, 쓰기·네트워크 요청은 제외합니다. `find -exec/-delete`나 `rg --pre/--hostname-bin`처럼 실행·쓰기 동작을 추가하는 옵션도 제외합니다.
 - 작업 입력·디렉터리·출처·권한·정책·검토 문맥·모델이 일치해야 재사용합니다. 세션과 호출의 임시 식별자만 비교에서 제외하고 승인 결과는 현재 호출에 다시 연결합니다.
 - 거부·오류·취소·사용자 승인 결과, 명시적인 재검토와 파일 조사를 거친 자동 승인은 저장하지 않습니다. 정책의 절대 거부와 실행 전 재확인은 계속 적용합니다.
@@ -369,6 +372,27 @@ SDK `mcpToolPolicies`는 `server/tool` 키별 승인 모드를 선택합니다.
 엄격한 검토, 민감 작업과 필수 사용자 입력은 이런 일반 생략 조건보다 우선합니다. `codex_requires_user_input`을 모델이 대신 승인하지 않습니다. 빈 승인 폼은 처리하지만 입력 필드가 있는 일반 폼과 URL 인증 요청은 거부합니다.
 
 `node_repl/js`에도 같은 규칙을 적용합니다. 추가 승인 요청은 원래 유효한 호출의 도구·연결·입력과 일치해야 하며 다른 도구·커넥터를 대신 지목할 수 없습니다. Off 상태에서도 호출자의 취소·시간 초과 신호를 transport까지 전달하므로 인증 대기가 끝난 뒤 취소된 요청을 늦게 보내지 않습니다. 실패·취소·시간 초과 요청의 로컬 추적 상태도 해제합니다. 이미 전달한 요청의 취소는 외부 서버에 달려 있습니다.
+
+## Windows와 PowerShell
+
+Windows의 bash는 Pi가 찾은 셸, 보통 Git Bash로 실행합니다. 경로 검사는 명령을 실행하는 셸을 따릅니다.
+
+- Git Bash·MSYS2·Cygwin의 `/c/Users/...`, `/cygdrive/c/...` 인자는 `C:\Users\...`로 대응합니다. `/tmp`·`/usr`·`/` 같은 다른 POSIX 절대 경로는 Windows 위치를 알 수 없으므로 검토합니다.
+- WSL bash(`C:\Windows\System32\bash.exe`)에는 드라이브 대응을 적용하지 않으며 Windows 드라이브 경로와 POSIX 절대 경로 인자를 검토합니다. Pi의 셸을 식별하지 못하면 드라이브 경로를 보호 경로와 대조한 뒤 검토합니다.
+- 파일 도구는 Pi와 같이 `/c/...`, `/mnt/c/...`, `/cygdrive/c/...`, `~\`를 받습니다.
+- 보호 경로는 Windows와 macOS에서 대소문자를, macOS에서는 유니코드 정규화 차이도 구분하지 않고 비교합니다. 허용 쓰기·읽기 루트는 정확히 비교하므로 표기가 다른 경로는 허용 대신 검토로 갑니다.
+- 대체 데이터 스트림(`file:stream`, `file::$DATA`), 장치 이름공간(`\\?\`, `\\.\`), 예약 장치 이름(`CON`, `NUL`, `COM1` 등), 드라이브 상대 경로(`C:file`), 루프백·관리 공유, 끝에 점이나 공백이 있거나 8.3 짧은 이름인 없는 경로 구성 요소는 `INVALID_PATH`로 실패합니다.
+- 다른 호스트의 공유 경로(`\\host\share\...`)는 SMB 연결을 열게 되므로 승인 전에 해석하거나 확인하지 않습니다. 쓴 그대로 보호 경로와 대조한 뒤 검토합니다.
+
+PowerShell 명령은 Codex 리비전 `80b88a700e4300022fe1893ecca9b8376d0c85d9`에서 옮긴, 실패 시 닫히는 리터럴 부분 문법을 사용합니다.
+
+- 지원: 일반 단어, `''`를 쓰는 작은따옴표, `$`가 없는 큰따옴표, 제한된 백틱 이스케이프, `;`·`|`·줄바꿈, PowerShell 7의 `&&`·`||`, 파일로의 `>`·`>>`, 스트림 1–6의 `N>`·`N>>`, `*>`·`*>>` 리디렉션. 스트림 병합(`2>&1`)은 검토합니다.
+- 검토 필요: 변수와 식(`$`, `@`, `(`, `)`, `{`, `}`), 호출·백그라운드 연산자 `&`, 닷 소싱, 주석, here-string, 붙여 쓴 `-Param:value`, `--%`, `~`, 언어 키워드, 버전에 따라 다른 이스케이프, 유니코드 따옴표·대시 표기.
+- cmdlet과 기본 별칭은 대응하는 bash 명령처럼 분류합니다. 읽기(`Get-Content`, `Get-ChildItem`, `Select-String` 등), 쓰기(`Set-Content`, `Add-Content`, `Out-File`, `New-Item`, `Remove-Item` 등), 복사·이동, 네트워크 요청(`Invoke-WebRequest`, `Invoke-RestMethod`)입니다. `-Path`, `-LiteralPath`, `-Destination`, `-FilePath`, `-OutFile`, `X\Y`로 보는 `New-Item -Path X -Name Y`를 포함해 이름 있는 경로 매개변수를 모두 검사합니다.
+- 알 수 없는 명령·매개변수, 경로를 붙인 명령, 공급자 경로(`Env:`, `HKLM:`, `FileSystem::`), 경로를 받는 명령으로의 파이프라인 입력, `New-Item`의 심볼릭 링크, Windows PowerShell 5.1에서만 `Invoke-WebRequest` 별칭인 `curl`·`wget`은 검토합니다. 와일드카드 경로는 리디렉션 대상(PowerShell이 `Out-File -FilePath`처럼 해석)을 포함해, 첫 와일드카드 앞 디렉터리까지 보호 경로와 대조한 뒤 검토합니다.
+- 네이티브 `git`·`rg`·`curl`·`wget`은 인자에 `"`가 없으면 bash 규칙을 따릅니다.
+
+분석은 기본 명령 표와 Pi의 `-NoProfile` 호출을 전제로 합니다. 동적 매개변수 바인딩, 실행 중 정의한 별칭·함수, 모듈 자동 로드, 공급자 의미는 모델링하지 않으며, 이런 경우는 안전하다고 보지 않고 검토합니다.
 
 ## 실행의 한계
 

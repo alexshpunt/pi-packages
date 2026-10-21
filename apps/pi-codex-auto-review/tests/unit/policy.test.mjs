@@ -1,5 +1,7 @@
 import { mkdir, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { expect, test } from "vitest";
 import {
     createAction,
@@ -20,6 +22,7 @@ import {
     parseRules,
     ruleCommands,
 } from "../../dist/policy/rules.js";
+import { shellIdentity } from "../../dist/pi-host.js";
 import { fixture } from "../harness/fixtures.mjs";
 
 async function setup(t, settings = {}, profileOverrides = {}) {
@@ -45,7 +48,16 @@ async function setup(t, settings = {}, profileOverrides = {}) {
         profile,
         policy,
         action,
-        evaluate: (tool, args) => policy.evaluate(action(tool, args)),
+        // Controllers bind Pi's effective shell; on Windows its kind decides path mapping.
+        evaluate: async (tool, args) =>
+            policy.evaluate(
+                action(
+                    tool,
+                    tool === "bash" && process.platform === "win32"
+                        ? { shellPath: await shellIdentity(), ...args }
+                        : args,
+                ),
+            ),
     };
 }
 test("[paths] path-prefix escapes, symlink ancestors and nonexistent targets are resolved", async (t) => {
@@ -80,7 +92,7 @@ test("[paths] path-prefix escapes, symlink ancestors and nonexistent targets are
     ).toBe(true);
     for (const path of [
         `@${f.control}/protected.txt`,
-        `file://${f.control}/protected.txt`,
+        pathToFileURL(join(f.control, "protected.txt")).href,
     ])
         expect((await f.evaluate("read", { path })).isHardDeny).toBe(true);
     expect(
@@ -195,7 +207,13 @@ test("[rules] literal Codex prefix_rule grammar validates examples and strongest
         ["git", "show", "x"],
     ]);
     expect(ruleCommands("echo ok > file")).toStrictEqual([
-        ["/bin/bash", "-c", "echo ok > file"],
+        [
+            process.platform === "win32"
+                ? "pi-default-shell-unresolved"
+                : "/bin/bash",
+            "-c",
+            "echo ok > file",
+        ],
     ]);
     for (const invalid of [
         'load("x")',
@@ -298,9 +316,13 @@ test("[settings] default readable roots, temporary roots and Git worktree metada
         f.control,
     ]);
     expect(profile.readRoots).toStrictEqual(["/"]);
+    // Windows has no `/tmp`; there it would canonicalize to a drive-root `C:\tmp`.
     expect(
         profile.writeRoots.includes(await canonicalPath("/tmp", f.workspace)),
-    ).toBeTruthy();
+    ).toBe(process.platform !== "win32");
+    expect(
+        profile.writeRoots.includes(await canonicalPath(tmpdir(), f.workspace)),
+    ).toBe(true);
     for (const path of [
         join(f.workspace, ".git"),
         join(f.workspace, ".agents"),

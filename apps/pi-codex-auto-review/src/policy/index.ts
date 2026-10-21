@@ -1,6 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
     formatIssue,
@@ -22,18 +22,39 @@ import {
     TOOL_NAMES,
 } from "../contracts.js";
 import { reviewPolicy } from "../review/policy.js";
+import { bashCommandEffects, type ShellTarget } from "./command-effects.js";
 import {
     isDomainPattern,
     isNetworkHost,
     matchesDomain,
     normalizeHost,
 } from "./domains.js";
-import { canonicalPath, isWithin, resolveToolPath } from "./paths.js";
+import {
+    canonicalPath,
+    isProtectedWithin,
+    isRemoteWindowsPath,
+    isWithin,
+    resolveToolPath,
+} from "./paths.js";
+import {
+    bashFlavor,
+    hasInnerGitComponent,
+    protectedPathKey,
+    windowsBashOperandPath,
+} from "./platform-paths.js";
+import { analyzePowerShell, type PowerShellCommand } from "./powershell.js";
+import {
+    canonicalPowerShellCommand,
+    powershellCommandEffects,
+} from "./powershell-commands.js";
 import {
     type CompiledRules,
+    defaultShellIdentity,
     evaluateRules,
     matchesRule,
     type PrefixRule,
+    powershellRuleGroups,
+    type RuleGroup,
     type RuleMatch,
     type RuleSource,
     ruleCommands,
@@ -41,6 +62,7 @@ import {
 import { analyzeShell, matchesPrefix } from "./shell.js";
 
 export {
+    analyzePowerShell,
     analyzeShell,
     canonicalPath,
     isWithin,
@@ -284,6 +306,17 @@ export async function loadSettings(path: string): Promise<GuardSettings> {
         );
     }
 }
+/** Codex `/tmp` and `$TMPDIR` roots; Windows has no `/tmp`, so only its temporary directory applies. */
+export function defaultTemporaryRoots(
+    settings: Pick<GuardSettings, "excludeSlashTmp" | "excludeTmpdir">,
+    platform: NodeJS.Platform = process.platform,
+    temporaryDirectory = tmpdir(),
+): string[] {
+    return [
+        ...(!settings.excludeSlashTmp && platform !== "win32" ? ["/tmp"] : []),
+        ...(!settings.excludeTmpdir ? [temporaryDirectory] : []),
+    ];
+}
 export async function defaultProfile(
     cwd: string,
     settings: GuardSettings,
@@ -304,8 +337,7 @@ export async function defaultProfile(
                 [
                     workspace,
                     ...settings.writableRoots,
-                    ...(!settings.excludeSlashTmp ? ["/tmp"] : []),
-                    ...(!settings.excludeTmpdir ? [tmpdir()] : []),
+                    ...defaultTemporaryRoots(settings),
                 ].map((path) => canonicalPath(path, cwd)),
             ),
         ),
@@ -321,12 +353,13 @@ export async function defaultProfile(
         readOnlyPaths.push(await canonicalPath(git, cwd));
         try {
             if ((await stat(git)).isFile()) {
-                const pointer = /^gitdir:\s*(.+)\s*$/m.exec(
-                    await readFile(git, "utf8"),
-                );
-                if (pointer?.[1])
+                const pointer = /^gitdir:\s*(.+)$/m
+                    .exec(await readFile(git, "utf8"))?.[1]
+                    ?.trim();
+                // Windows checkouts may end the pointer line with CRLF.
+                if (pointer)
                     readOnlyPaths.push(
-                        await canonicalPath(resolve(root, pointer[1]), cwd),
+                        await canonicalPath(resolve(root, pointer), cwd),
                     );
             }
         } catch (error) {
@@ -456,7 +489,8 @@ export class PolicyEngine {
                 "ask",
                 "Unknown tool: annotations do not establish permission",
             );
-        if (action.tool === "bash") return this.shellDecision(action, signal);
+        if (action.tool === "bash" || action.tool === "powershell")
+            return this.shellDecision(action, signal);
         const input = action.args.path ?? action.cwd;
         if (typeof input !== "string")
             return decision(
@@ -473,8 +507,9 @@ export class PolicyEngine {
         const profile = await this.resolvedProfile(action.cwd);
         const isWrite = action.tool === "write" || action.tool === "edit";
         if (
-            profile.denyRead.some((p) => isWithin(target, p)) ||
-            (isWrite && profile.denyWrite.some((p) => isWithin(target, p)))
+            profile.denyRead.some((p) => isProtectedWithin(target, p)) ||
+            (isWrite &&
+                profile.denyWrite.some((p) => isProtectedWithin(target, p)))
         )
             return decision(
                 action,
@@ -483,12 +518,22 @@ export class PolicyEngine {
                 EMPTY_DELTA,
                 true,
             );
+        // A remote share is reviewed without resolving it before approval.
+        if (isRemoteWindowsPath(target))
+            return immutable({
+                ...decision(
+                    action,
+                    "ask",
+                    "Action outside the ordinary approval scope",
+                ),
+                unboundTargets: [isWrite ? "write" : "read"],
+            });
         const canRead = profile.readRoots.some((p) => isWithin(target, p));
         const canWrite =
             !isWrite ||
             (profile.writeRoots.some((p) => isWithin(target, p)) &&
                 !(profile.readOnlyPaths ?? []).some((p) =>
-                    isWithin(target, p),
+                    isProtectedWithin(target, p),
                 ));
         if (canRead && canWrite)
             return decision(
@@ -521,24 +566,44 @@ export class PolicyEngine {
                 EMPTY_DELTA,
                 true,
             );
-        const analysis = analyzeShell(command);
+        const isPowerShell = action.tool === "powershell";
+        const analysis = isPowerShell
+            ? analyzePowerShell(command)
+            : analyzeShell(command);
         let shouldAsk = !analysis.isSupported;
         const delta: {
             readPaths: string[];
             writePaths: string[];
             domains: string[];
         } = { readPaths: [], writePaths: [], domains: [] };
-        const commandGroups = ruleCommands(
-            command,
+        // Controllers bind the effective shell; direct callers get the platform default identity.
+        const shellPath =
             typeof action.args.shellPath === "string"
                 ? action.args.shellPath
-                : "/bin/bash",
-        );
-        const key = digest(commandGroups);
+                : defaultShellIdentity(action.tool);
+        const ruleGroups: readonly RuleGroup[] = isPowerShell
+            ? powershellRuleGroups(command, shellPath)
+            : ruleCommands(command, shellPath).map((argv) => ({
+                  argv,
+                  isPowerShellCommand: false,
+              }));
+        // Commands lowered from PowerShell also match the documented name of an alias or
+        // differently cased cmdlet; a group's matches are the union of both forms.
+        // Bash-family scripts unwrapped from PowerShell keep their own command names.
+        const ruleForms = ruleGroups.map(({ argv, isPowerShellCommand }) => {
+            const canonical = isPowerShellCommand
+                ? canonicalPowerShellCommand(argv[0] ?? "")
+                : undefined;
+            return canonical === undefined || canonical === argv[0]
+                ? [argv]
+                : [argv, [canonical, ...argv.slice(1)]];
+        });
+        const ruleInputs = ruleForms.flat();
+        const key = digest(ruleInputs);
         let compiledMatches = this.matchCache.get(key);
         if (!compiledMatches && this.ruleSources.length) {
             compiledMatches = (
-                await evaluateRules(this.ruleSources, commandGroups, signal)
+                await evaluateRules(this.ruleSources, ruleInputs, signal)
             ).matches;
             if (this.matchCache.size >= 256) {
                 const oldestKey = this.matchCache.keys().next().value;
@@ -546,10 +611,16 @@ export class PolicyEngine {
             }
             this.matchCache.set(key, compiledMatches);
         }
-        const matches = commandGroups.map((argv, index) => [
-            ...this.rules.filter((rule) => matchesRule(argv, rule)),
-            ...(compiledMatches?.[index] ?? []),
-        ]);
+        let formIndex = 0;
+        const matches = ruleForms.map((forms) =>
+            forms.flatMap((argv) => {
+                const index = formIndex++;
+                return [
+                    ...this.rules.filter((rule) => matchesRule(argv, rule)),
+                    ...(compiledMatches?.[index] ?? []),
+                ];
+            }),
+        );
         const forbidden = matches
             .flat()
             .find((rule) => rule.decision === "forbidden");
@@ -624,99 +695,66 @@ export class PolicyEngine {
             }
             shouldAsk = true;
         }
+        const flavor = isPowerShell
+            ? undefined
+            : bashFlavor(shellPath, process.platform);
+        // Resolve an operand where this shell will; undefined means the location is unknown.
+        // Remote UNC paths resolve lexically and stay protection-only.
+        const locate = async (
+            target: ShellTarget,
+        ): Promise<{ path: string; isExact: boolean } | undefined> => {
+            if (target.isUnlocatable) return undefined;
+            const mapped =
+                flavor === undefined || flavor === "posix"
+                    ? { path: target.operand, isExact: true }
+                    : windowsBashOperandPath(
+                          target.operand,
+                          action.cwd,
+                          flavor,
+                      );
+            if (!mapped) return undefined;
+            const path = await canonicalPath(mapped.path, action.cwd);
+            return {
+                path,
+                isExact:
+                    target.isExact &&
+                    mapped.isExact &&
+                    !isRemoteWindowsPath(path),
+            };
+        };
+        // Reviewed targets without a canonical location; they cannot enter `delta`.
+        const unbound = new Set<"read" | "write">();
+        const gitDirectory = protectedPathKey(join(action.cwd, ".git"));
+        const gitMetadata = (profile.readOnlyPaths ?? []).filter(
+            (path) =>
+                protectedPathKey(path) === gitDirectory ||
+                hasInnerGitComponent(path),
+        );
         for (const item of analysis.commands) {
-            const executable = basename(item.argv[0] ?? "");
-            const isSafeRead = [
-                "pwd",
-                "echo",
-                "printf",
-                "ls",
-                "cat",
-                "head",
-                "tail",
-                "wc",
-                "rg",
-                "grep",
-                "find",
-                "stat",
-                "true",
-                "false",
-            ].includes(executable);
-            if (
-                !isSafeRead &&
-                ![
-                    "touch",
-                    "mkdir",
-                    "rmdir",
-                    "rm",
-                    "truncate",
-                    "tee",
-                    "chmod",
-                    "chown",
-                    "cp",
-                    "mv",
-                    "git",
-                    "curl",
-                    "wget",
-                ].includes(executable)
-            )
-                shouldAsk = true;
-            const operands = item.argv
-                .slice(1)
-                .filter((arg) => !arg.startsWith("-"));
-            const reads = [...item.reads],
-                writes = [...item.writes];
-            if (analysis.isSupported) {
-                if (
-                    isSafeRead &&
-                    !["echo", "printf", "true", "false", "pwd"].includes(
-                        executable,
-                    )
-                )
-                    reads.push(...operands);
-                if (
-                    [
-                        "touch",
-                        "mkdir",
-                        "rmdir",
-                        "rm",
-                        "truncate",
-                        "tee",
-                        "chmod",
-                        "chown",
-                    ].includes(executable)
-                )
-                    writes.push(...operands);
-                if (["cp", "mv"].includes(executable)) {
-                    reads.push(...operands.slice(0, -1));
-                    writes.push(...operands.slice(-1));
-                    if (executable === "mv")
-                        writes.push(...operands.slice(0, -1));
+            const effects = isPowerShell
+                ? powershellCommandEffects(
+                      item as PowerShellCommand,
+                      analysis.isSupported,
+                  )
+                : bashCommandEffects(item, analysis.isSupported);
+            if (!effects.isKnown) shouldAsk = true;
+            const writes: { path: string; isExact: boolean }[] = [];
+            for (const target of effects.writes) {
+                const located = await locate(target);
+                if (located) writes.push(located);
+                else {
+                    shouldAsk = true;
+                    unbound.add("write");
                 }
-                if (
-                    executable === "git" &&
-                    ![
-                        "status",
-                        "diff",
-                        "log",
-                        "show",
-                        "ls-files",
-                        "rev-parse",
-                    ].includes(item.argv[1] ?? "")
-                )
-                    writes.push(
-                        ...(profile.readOnlyPaths ?? []).filter(
-                            (path) =>
-                                path === join(action.cwd, ".git") ||
-                                path.includes("/.git/"),
-                        ),
-                    );
             }
-            for (const path of writes) {
-                const target = await canonicalPath(path, action.cwd);
+            if (effects.writesGitMetadata)
+                writes.push(
+                    ...gitMetadata.map((path) => ({ path, isExact: true })),
+                );
+            for (const { path: target, isExact } of writes) {
                 if (
                     [...profile.denyRead, ...profile.denyWrite].some((root) =>
-                        isWithin(target, root),
+                        isProtectedWithin(target, root),
                     )
                 )
                     return decision(
@@ -726,21 +764,34 @@ export class PolicyEngine {
                         EMPTY_DELTA,
                         true,
                     );
-                if (
+                if (!isExact) {
+                    shouldAsk = true;
+                    unbound.add("write");
+                } else if (
                     !profile.writeRoots.some((root) =>
                         isWithin(target, root),
                     ) ||
                     (profile.readOnlyPaths ?? []).some((root) =>
-                        isWithin(target, root),
+                        isProtectedWithin(target, root),
                     )
                 ) {
                     shouldAsk = true;
                     delta.writePaths.push(target);
                 }
             }
-            for (const path of reads) {
-                const target = await canonicalPath(path, action.cwd);
-                if (profile.denyRead.some((root) => isWithin(target, root)))
+            for (const read of effects.reads) {
+                const located = await locate(read);
+                if (!located) {
+                    shouldAsk = true;
+                    unbound.add("read");
+                    continue;
+                }
+                const { path: target, isExact } = located;
+                if (
+                    profile.denyRead.some((root) =>
+                        isProtectedWithin(target, root),
+                    )
+                )
                     return decision(
                         action,
                         "deny",
@@ -748,24 +799,19 @@ export class PolicyEngine {
                         EMPTY_DELTA,
                         true,
                     );
-                if (!profile.readRoots.some((root) => isWithin(target, root))) {
+                if (!isExact) {
+                    shouldAsk = true;
+                    unbound.add("read");
+                } else if (
+                    !profile.readRoots.some((root) => isWithin(target, root))
+                ) {
                     shouldAsk = true;
                     delta.readPaths.push(target);
                 }
             }
-            if (analysis.isSupported && ["curl", "wget"].includes(executable)) {
-                const urls = item.argv
-                    .slice(1)
-                    .filter((arg) => /^https?:\/\//.test(arg));
-                // A destination hidden in a config file or a schemeless URL still needs review.
-                const hasIndirectDestination = item.argv
-                    .slice(1)
-                    .some((arg) =>
-                        executable === "curl"
-                            ? /^(?:--config(?:=|$)|-K)/.test(arg)
-                            : /^(?:--input-file(?:=|$)|-i)/.test(arg),
-                    );
-                if (!urls.length || hasIndirectDestination) shouldAsk = true;
+            if (effects.network) {
+                const { urls, isIndirect } = effects.network;
+                if (!urls.length || isIndirect) shouldAsk = true;
                 for (const text of urls) {
                     const domain = normalizeHost(new URL(text).hostname);
                     if (
@@ -803,11 +849,11 @@ export class PolicyEngine {
             ];
         if (
             delta.readPaths.some((path) =>
-                profile.denyRead.some((root) => isWithin(path, root)),
+                profile.denyRead.some((root) => isProtectedWithin(path, root)),
             ) ||
             delta.writePaths.some((path) =>
                 [...profile.denyRead, ...profile.denyWrite].some((root) =>
-                    isWithin(path, root),
+                    isProtectedWithin(path, root),
                 ),
             ) ||
             delta.domains.some(
@@ -829,7 +875,12 @@ export class PolicyEngine {
             ...delta,
             domains: [...new Set(delta.domains.map(normalizeHost))],
         };
-        if (isRuleAllowed)
+        const unboundTargets = unbound.size
+            ? { unboundTargets: [...unbound].sort() }
+            : {};
+        // Absolute denies precede rule allows; a target without a canonical location
+        // cannot be checked against them, so it is reviewed instead of rule-authorized.
+        if (isRuleAllowed && !unbound.size)
             return immutable({
                 ...decision(
                     action,
@@ -860,6 +911,7 @@ export class PolicyEngine {
                 boundDelta,
             ),
             approvalCategory: prompted ? "rules" : "sandbox",
+            ...unboundTargets,
             ...(isFullRequest
                 ? {
                       authority: {

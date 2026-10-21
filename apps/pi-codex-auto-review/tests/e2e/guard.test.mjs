@@ -8,7 +8,7 @@ import {
     writeFile,
 } from "node:fs/promises";
 import { createServer } from "node:http";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { expect, test } from "vitest";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
@@ -21,6 +21,21 @@ import { shellQuote, workloadEnvironment } from "../harness/shell.mjs";
 
 const exec = promisify(execFile),
     repository = fileURLToPath(new URL("../../", import.meta.url));
+// npm is a `.cmd` shim on Windows, which Node only starts through a shell.
+const npmOptions = process.platform === "win32" ? { shell: true } : {};
+/** GNU and BSD tar both accept relative forward-slash paths, unlike Windows drive paths. */
+const extract = (cwd, archive, destination, extra = []) =>
+    exec(
+        "tar",
+        [
+            "-xzf",
+            relative(cwd, archive).replaceAll("\\", "/"),
+            "-C",
+            relative(cwd, destination).replaceAll("\\", "/"),
+            ...extra,
+        ],
+        { cwd, timeout: 10000 },
+    );
 test("[workflow] model work succeeds while adversarial interpreter and protected file effects remain denied", async (t) => {
     const f = await fixture(t),
         runtime = await guardedFixture(t, f, {
@@ -478,6 +493,11 @@ test("[workflow] real MCP node_repl/js follows explicit prompt approval and neve
         );
 });
 test("[workflow] literal metacharacters remain exact review evidence and owned filenames stay usable", async (t) => {
+    // Windows file names cannot contain `*`; brackets remain literal metacharacters there.
+    const workspaceName =
+        process.platform === "win32"
+            ? "[route]/literal-[x].txt"
+            : "[route]/literal-*.txt";
     const f = await fixture(t),
         literal = join(f.outside, "literal-[ab]"),
         sibling = join(f.outside, "literal-a"),
@@ -514,7 +534,7 @@ test("[workflow] literal metacharacters remain exact review evidence and owned f
             {
                 name: "write",
                 args: {
-                    path: "[route]/literal-*.txt",
+                    path: workspaceName,
                     content: "literal-workspace-effect",
                 },
             },
@@ -527,7 +547,7 @@ test("[workflow] literal metacharacters remain exact review evidence and owned f
     expect(await readFile(sibling, "utf8")).toBe("sibling-original");
     expect(reviews).toBe(1);
     expect(
-        await readFile(join(f.workspace, "[route]/literal-*.txt"), "utf8"),
+        await readFile(join(f.workspace, workspaceName), "utf8"),
     ).toBe("literal-workspace-effect");
     const results = events.filter(
         (event) => event.type === "tool_execution_end",
@@ -982,7 +1002,13 @@ test("[package] npm tarball loads the default factory through public Pi APIs wit
                     "--pack-destination",
                     artifacts,
                 ],
-                { cwd: repository, env, timeout: 20000, maxBuffer: 2_000_000 },
+                {
+                    cwd: repository,
+                    env,
+                    timeout: 20000,
+                    maxBuffer: 2_000_000,
+                    ...npmOptions,
+                },
             )
         ).stdout,
     )[0];
@@ -1018,11 +1044,7 @@ test("[package] npm tarball loads the default factory through public Pi APIs wit
                 /^node_modules\/@earendil-works\//.test(file.path),
         ),
     ).toBeFalsy();
-    await exec(
-        "tar",
-        ["-xzf", join(artifacts, packed.filename), "-C", consumer],
-        { timeout: 10000 },
-    );
+    await extract(f.root, join(artifacts, packed.filename), consumer);
     await mkdir(join(consumer, "package/node_modules"), { recursive: true });
     // Install the runtime dependency from its own packed artifact, as npm would.
     const redactPacked = JSON.parse(
@@ -1041,6 +1063,7 @@ test("[package] npm tarball loads the default factory through public Pi APIs wit
                         env,
                         timeout: 20000,
                         maxBuffer: 2_000_000,
+                        ...npmOptions,
                     },
                 )
             ).stdout,
@@ -1052,16 +1075,11 @@ test("[package] npm tarball loads the default factory through public Pi APIs wit
         ) && redactPacked.files.some((file) => file.path === "NOTICE"),
     ).toBeTruthy();
     await mkdir(redactDirectory, { recursive: true });
-    await exec(
-        "tar",
-        [
-            "-xzf",
-            join(artifacts, redactPacked.filename),
-            "-C",
-            redactDirectory,
-            "--strip-components=1",
-        ],
-        { timeout: 10000 },
+    await extract(
+        f.root,
+        join(artifacts, redactPacked.filename),
+        redactDirectory,
+        ["--strip-components=1"],
     );
     await writeFile(
         join(f.agentDir, "mcp.json"),
@@ -1133,6 +1151,7 @@ try {
     await symlink(
         join(repository, "node_modules/@earendil-works"),
         join(consumer, "package/node_modules/@earendil-works"),
+        process.platform === "win32" ? "junction" : undefined,
     );
     const help = await exec(
         process.execPath,
