@@ -33,7 +33,7 @@ This check needs a model configured in Pi.
 
 | When | What pi-redact does |
 | --- | --- |
-| A tool returns a result (`read`, `bash`, `grep`, MCP tools, …) | Masks the result's text, `details`, and `structuredContent` before Pi stores it in the session file and shows it. A `read` result is scanned with the file's path, so `.env`, `.ini`, `.properties`, and `.cfg` values are masked to the end of the line. |
+| A tool returns a result (`read`, `bash`, `grep`, MCP tools, …) | Masks the result's text and `details` before Pi stores them in the session file and shows them, and the `structuredContent` copy that Pi passes to event listeners such as JSON-mode output and RPC clients. A `read` result, that copy included, is scanned with the file's path, so `.env`, `.ini`, `.properties`, and `.cfg` values are masked to the end of the line. |
 | Every model request | Masks user messages, assistant text, tool-call arguments, tool results, `!` shell output, extension messages, and summaries in the copy that is sent. It runs after every `context` handler, so text other extensions add is masked too. |
 | Compaction and branch summaries (made when you leave a branch with `/tree`) | Masks the conversation that Pi summarizes. Pi sends these requests without the context hooks, so they are handled separately. |
 | The model calls `write`, `edit`, `bash`, or `powershell` | The write guard blocks the call when it would write `{{REDACTED}}`: a shell command that contains it, a `write` that adds more markers than the file already has, or an `edit` whose `newText` has more markers than its `oldText`. The model receives the reason and the user sees a warning. |

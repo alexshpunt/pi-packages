@@ -9,6 +9,10 @@
 - `/redact-analytics`가 가린 내용을 나열하고, 각 기록의 원래 줄과 가린 줄을 diff나 전·후 보기로 보여 줍니다. 기록은 agent 디렉터리의 `analytics.sqlite`에 30일 동안 보관하며 원래 값이 들어 있습니다.
 - 전역 설정 파일에 `enabled`와 `disabledRules`를 쓸 수 있습니다. pi-redact 0.1.x는 이 키가 든 파일을 건너뜁니다.
 
+### 해결된 것
+
+- `pi --mode json` 출력이나 RPC 클라이언트 같은 이벤트 수신자에게 가는 `read` 결과 사본도 본문처럼 파일 경로를 반영해 가립니다. 이전에는 `.env`, `.ini`, `.properties`, `.cfg` 파일에서 공백이 든 값의 첫 단어 뒤 부분이 그 사본에 남았습니다(예: `DB_PASSWORD={{REDACTED}} db pass`). 모델과 세션 파일에는 영향이 없었습니다.
+
 ### 제거된 것
 
 - `/pi-redact`. 같은 상태를 `/redact`가 보여 줍니다.

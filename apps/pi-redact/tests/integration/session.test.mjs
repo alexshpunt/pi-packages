@@ -160,6 +160,28 @@ describe("a Pi session with pi-redact", () => {
     expect(pi.extensionErrors).toEqual([]);
   });
 
+  it("masks a read result's structured copy, which Pi passes to event listeners, like its content", async (t) => {
+    const env = "DB_PASSWORD=fixture db pass\nPORT=8080\n";
+    const pi = await startSession(t, { files: { ".env": env } });
+    const results = [];
+    pi.session.subscribe((event) => {
+      if (event.type === "tool_execution_end") results.push(structuredClone(event.result));
+    });
+    pi.plan([[{ name: "read", args: { path: ".env" } }], []]);
+    await pi.session.prompt("Read the file.");
+
+    // JSON mode and RPC clients receive this event; the model and the session file never get structuredContent.
+    expect(results).toHaveLength(1);
+    expect(results[0].content[0].text).toBe(`DB_PASSWORD=${MARKER}\nPORT=8080\n`);
+    expect(results[0].structuredContent).toBe(`DB_PASSWORD=${MARKER}\nPORT=8080\n`);
+
+    // Both copies are masked the same way, so analytics records the read once.
+    const store = new AnalyticsStore(analyticsPath(join(dirname(pi.workspace), "agent")));
+    t.onTestFinished(() => store.close());
+    expect(store.list({ sessionId: pi.session.sessionManager.getSessionId() }, 10)).toHaveLength(1);
+    expect(pi.extensionErrors).toEqual([]);
+  });
+
   it("sends tool results unmasked when the global default is off", async (t) => {
     const pi = await startSession(t, { files: { ".env": ENV_FILE }, globalSettings: { enabled: false } });
     pi.plan([[{ name: "read", args: { path: ".env" } }], []]);

@@ -4,8 +4,9 @@ import { maskContent, WITHHELD_TEXT } from "./messages.js";
 
 /**
  * Changes that mask a tool result before Pi stores and displays it, or `undefined` when
- * nothing was detected. `details` and `structuredContent` are masked too: they are saved
- * in the session file, and a hook that replaces `content` alone drops `structuredContent`.
+ * nothing was detected. `details` is saved in the session file. `structuredContent` is not,
+ * but Pi passes it to `tool_execution_end` listeners such as JSON-mode output and RPC clients,
+ * and a hook that replaces `content` alone drops it.
  */
 export function maskToolResult(engine: MaskEngine, event: ToolResultEvent): ToolResultEventResult | undefined {
   const filePath = event.toolName === "read" && typeof event.input.path === "string" ? event.input.path : undefined;
@@ -16,7 +17,12 @@ export function maskToolResult(engine: MaskEngine, event: ToolResultEvent): Tool
   const structuredContent =
     event.structuredContent === undefined
       ? undefined
-      : engine.labeled(`${label} structured content`, () => engine.maskJson(event.structuredContent));
+      : engine.labeled(`${label} structured content`, () =>
+          // `read` returns its text here too; scan it with the same path hint as `content`.
+          typeof event.structuredContent === "string"
+            ? engine.maskText(event.structuredContent, filePath)
+            : engine.maskJson(event.structuredContent),
+        );
 
   const result: ToolResultEventResult = {};
   if (content !== event.content) {
