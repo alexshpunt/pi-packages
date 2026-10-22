@@ -21,6 +21,7 @@ const failingEngine = {
     if (JSON.stringify(value)?.includes("FAIL")) throw new Error("masking failed");
     return engine.maskJson(value);
   },
+  labeled: (_label, mask) => mask(),
 };
 
 describe("maskMessage", () => {
@@ -236,8 +237,11 @@ describe("maskToolResult", () => {
       toolName: "read",
       input: { path: "conf/app.env" },
       content: [{ type: "text", text: "DB_PASSWORD=two words" }],
+      structuredContent: "DB_PASSWORD=two words",
     });
     expect(read.content).toEqual([{ type: "text", text: `DB_PASSWORD=${M}` }]);
+    // The text copy for programmatic callers gets the same path hint, not just the first word masked.
+    expect(read.structuredContent).toBe(`DB_PASSWORD=${M}`);
   });
 
   it("offers a withheld result that drops everything else", () => {

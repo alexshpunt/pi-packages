@@ -1,14 +1,28 @@
 import { createRedactor, type Redactor } from "@buyong/redact";
 import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@earendil-works/pi-coding-agent";
+import { AnalyticsStore, analyticsPath, type RedactionEvent, type RedactionSource } from "./analytics.js";
 import { TextCache } from "./cache.js";
-import { createMaskEngine, type MaskEngine } from "./engine.js";
+import { ANALYTICS_COMMAND, type RedactController, registerRedactCommands } from "./commands.js";
+import { createMaskEngine, type MaskEngine, type MaskObservation } from "./engine.js";
 import { findMaskedWrite, MASKED_WRITE_REASON } from "./guard.js";
 import { maskMessages, maskSessionEntriesInPlace, WITHHELD_TEXT } from "./messages.js";
+import { notify } from "./notify.js";
 import { REDACTION_MARKER } from "./render.js";
-import { loadSettings } from "./settings.js";
+import { restoreSessionChoice, SESSION_CHOICE_ENTRY, sessionChoiceData } from "./session-choice.js";
+import {
+  EMPTY_SETTINGS_DOCUMENT,
+  globalSettingsPath,
+  type LoadedSettings,
+  loadSettings,
+  projectSettingsPath,
+  readSettingsFile,
+  writeSettingsFile,
+} from "./settings.js";
+import { type AnalyticsCounts, emptyStats } from "./status.js";
 import { maskToolResult, withheldToolResult } from "./tool-results.js";
+import { errorText } from "./ui/common.js";
 
-const COMMAND_NAME = "pi-redact";
+const STATUS_KEY = "pi-redact";
 /** Repeated model requests reuse results for up to this many characters of distinct text. */
 const REQUEST_CACHE_CHARACTERS = 8 * 1024 * 1024;
 const REQUEST_CACHE_ENTRIES = 50_000;
@@ -24,38 +38,48 @@ interface Engines {
   readonly requests: MaskEngine;
 }
 
-function createEngines(redactor: Redactor): Engines {
-  return {
-    stored: createMaskEngine(redactor),
-    requests: createMaskEngine(redactor, new TextCache(REQUEST_CACHE_CHARACTERS, REQUEST_CACHE_ENTRIES)),
-  };
-}
-
-interface SessionStats {
-  toolResults: number;
-  requests: number;
-  summaries: number;
-  blockedCalls: number;
-  withheld: number;
-}
-
-const emptyStats = (): SessionStats => ({ toolResults: 0, requests: 0, summaries: 0, blockedCalls: 0, withheld: 0 });
-
 export default function piRedact(pi: ExtensionAPI): void {
+  let redactor: Redactor = createRedactor();
+  let disabledRules: readonly string[] = [];
   // Built-in rules apply from the first hook; session_start adds the user's settings.
-  let engines = createEngines(createRedactor());
+  let engines = createEngines();
+  let isEnabledByDefault = true;
+  /** This session's own choice from `/redact`; `undefined` follows the global default. */
+  let sessionChoice: boolean | undefined;
   let sources: readonly string[] = [];
   let problems: readonly string[] = [];
   let stats = emptyStats();
   const reported = new Set<string>();
+  let analytics: AnalyticsStore | undefined;
+  /** The step that is masking right now; observations outside a step are not recorded. */
+  let currentSource: RedactionSource | undefined;
+  let pendingEvents: RedactionEvent[] = [];
 
-  /** Never throws: a failing notification must not stop a handler from returning its masked result. */
-  function notify(ctx: ExtensionContext, message: string, level: "info" | "warning" | "error"): void {
-    try {
-      // Without a UI, Pi keeps stdout for its own output and moves other writes to stderr.
-      if (ctx.hasUI) ctx.ui.notify(message, level);
-      else process.stderr.write(`${message}\n`);
-    } catch {}
+  const isEnabled = () => sessionChoice ?? isEnabledByDefault;
+
+  function observe(observation: MaskObservation): void {
+    if (currentSource === undefined) return;
+    const { label, fieldName } = observation;
+    pendingEvents.push({
+      source: currentSource,
+      label: fieldName === undefined ? label : `${label} · ${fieldName}`,
+      before: observation.before,
+      after: observation.after,
+      ruleIds: observation.ruleIds,
+    });
+  }
+
+  function createEngines(): Engines {
+    const options = { disabledRules, observe };
+    return {
+      stored: createMaskEngine(redactor, undefined, options),
+      requests: createMaskEngine(redactor, new TextCache(REQUEST_CACHE_CHARACTERS, REQUEST_CACHE_ENTRIES), options),
+    };
+  }
+
+  function analyticsStore(): AnalyticsStore {
+    analytics ??= new AnalyticsStore(analyticsPath(getAgentDir()));
+    return analytics;
   }
 
   /** Notify once per session for each distinct problem. */
@@ -71,31 +95,81 @@ export default function piRedact(pi: ExtensionAPI): void {
     report(ctx, `masking failed for ${where}; the affected content was withheld instead of sent`, "error");
   }
 
+  /** Run one masking step and save what it changed for `/redact-analytics`. Saving never affects masking. */
+  function recorded<T>(ctx: ExtensionContext, source: RedactionSource, mask: () => T): T {
+    currentSource = source;
+    try {
+      return mask();
+    } finally {
+      currentSource = undefined;
+      const events = pendingEvents;
+      pendingEvents = [];
+      if (events.length)
+        try {
+          analyticsStore().record({ sessionId: ctx.sessionManager.getSessionId(), cwd: ctx.cwd }, events);
+        } catch (error) {
+          report(ctx, `masked content could not be saved for /${ANALYTICS_COMMAND}: ${errorText(error)}`, "warning");
+        }
+    }
+  }
+
+  function updateStatusBar(ctx: ExtensionContext): void {
+    if (!ctx.hasUI) return;
+    try {
+      const text = sessionChoice === undefined ? "redact off" : "redact off (this session)";
+      ctx.ui.setStatus(STATUS_KEY, isEnabled() ? undefined : ctx.ui.theme.fg("warning", text));
+    } catch {}
+  }
+
+  function applySettings(loaded: LoadedSettings): void {
+    redactor = loaded.redactor;
+    disabledRules = loaded.disabledRules;
+    engines = createEngines();
+    isEnabledByDefault = loaded.isEnabledByDefault;
+    sources = loaded.sources;
+    problems = loaded.problems;
+  }
+
+  async function reloadSettings(ctx: ExtensionContext): Promise<void> {
+    applySettings(
+      await loadSettings({ agentDir: getAgentDir(), cwd: ctx.cwd, isProjectTrusted: ctx.isProjectTrusted() }),
+    );
+    updateStatusBar(ctx);
+  }
+
   pi.on("session_start", async (_event, ctx) => {
     stats = emptyStats();
     reported.clear();
-    const loaded = await loadSettings({
-      agentDir: getAgentDir(),
-      cwd: ctx.cwd,
-      isProjectTrusted: ctx.isProjectTrusted(),
-    });
-    engines = createEngines(loaded.redactor);
-    sources = loaded.sources;
-    problems = loaded.problems;
+    analytics?.close();
+    analytics = undefined;
+    sessionChoice = restoreSessionChoice(ctx.sessionManager.getBranch());
+    await reloadSettings(ctx);
     for (const problem of problems) report(ctx, problem, "warning");
   });
 
+  pi.on("session_tree", (_event, ctx) => {
+    sessionChoice = restoreSessionChoice(ctx.sessionManager.getBranch());
+    updateStatusBar(ctx);
+  });
+
+  pi.on("session_shutdown", () => {
+    analytics?.close();
+    analytics = undefined;
+  });
+
   pi.on("before_agent_start", (event) => {
+    // Kept while masking is off: the history can still contain the marker, and the prompt stays cacheable.
     const guidelines = event.systemPromptOptions.promptGuidelines;
     if (!guidelines.includes(MODEL_GUIDELINE)) guidelines.push(MODEL_GUIDELINE);
   });
 
   pi.on("tool_result", (event, ctx) => {
+    if (!isEnabled()) return undefined;
     // Calls made by another tool (codemode) return to that tool, not the model;
     // the parent's own result and details are masked when it finishes.
     if (event.parentToolCallId !== undefined) return undefined;
     try {
-      const result = maskToolResult(engines.stored, event);
+      const result = recorded(ctx, "tool result", () => maskToolResult(engines.stored, event));
       if (result) stats.toolResults++;
       return result;
     } catch {
@@ -106,9 +180,10 @@ export default function piRedact(pi: ExtensionAPI): void {
 
   // Runs after every `context` handler, so text other extensions add is masked too.
   pi.on("context_with_system", (event, ctx) => {
+    if (!isEnabled()) return undefined;
     let masked: ReturnType<typeof maskMessages>;
     try {
-      masked = maskMessages(engines.requests, event.messages);
+      masked = recorded(ctx, "model request", () => maskMessages(engines.requests, event.messages));
     } catch {
       // Even withholding single messages failed: stop the run and send nothing from the conversation.
       try {
@@ -126,15 +201,21 @@ export default function piRedact(pi: ExtensionAPI): void {
 
   // Compaction and branch summaries call the model without the context hooks.
   pi.on("session_before_compact", (event, ctx) => {
+    if (!isEnabled()) return undefined;
     try {
       const preparation = event.preparation;
-      const summarized = maskMessages(engines.requests, preparation.messagesToSummarize);
-      const prefix = maskMessages(engines.requests, preparation.turnPrefixMessages);
+      const { summarized, prefix } = recorded(ctx, "compaction", () => ({
+        summarized: maskMessages(engines.requests, preparation.messagesToSummarize),
+        prefix: maskMessages(engines.requests, preparation.turnPrefixMessages),
+      }));
       // Pi's compact() reads these fields after the hook returns.
       preparation.messagesToSummarize = summarized.messages;
       preparation.turnPrefixMessages = prefix.messages;
-      if (preparation.previousSummary !== undefined)
-        preparation.previousSummary = engines.requests.maskText(preparation.previousSummary);
+      const previousSummary = preparation.previousSummary;
+      if (previousSummary !== undefined)
+        preparation.previousSummary = recorded(ctx, "compaction", () =>
+          engines.requests.labeled("previous compaction summary", () => engines.requests.maskText(previousSummary)),
+        );
       reportWithheld(ctx, summarized.withheldCount + prefix.withheldCount, "compaction");
       stats.summaries++;
       return undefined;
@@ -145,9 +226,11 @@ export default function piRedact(pi: ExtensionAPI): void {
   });
 
   pi.on("session_before_tree", (event, ctx) => {
-    if (!event.preparation.userWantsSummary) return undefined;
+    if (!isEnabled() || !event.preparation.userWantsSummary) return undefined;
     try {
-      const withheldCount = maskSessionEntriesInPlace(engines.requests, event.preparation.entriesToSummarize);
+      const withheldCount = recorded(ctx, "branch summary", () =>
+        maskSessionEntriesInPlace(engines.requests, event.preparation.entriesToSummarize),
+      );
       reportWithheld(ctx, withheldCount, "a branch summary");
       stats.summaries++;
       return undefined;
@@ -157,6 +240,7 @@ export default function piRedact(pi: ExtensionAPI): void {
     }
   });
 
+  // The write guard stays on while masking is off: earlier results in the history can still hold the marker.
   pi.on("tool_call", async (event, ctx) => {
     let target: string | undefined;
     try {
@@ -170,17 +254,87 @@ export default function piRedact(pi: ExtensionAPI): void {
     return { block: true, reason: MASKED_WRITE_REASON };
   });
 
-  pi.registerCommand(COMMAND_NAME, {
-    description: "Show pi-redact settings and what it masked in this session",
-    handler: async (_args, ctx) => {
-      const lines = [
-        `pi-redact masks detected values as ${REDACTION_MARKER}.`,
-        `Settings: ${sources.length ? sources.join(", ") : "built-in rules only"}`,
-        ...problems.map((problem) => `Skipped: ${problem}`),
-        `This session: ${stats.toolResults} tool results masked, ${stats.requests} model requests changed, ` +
-          `${stats.summaries} summaries checked, ${stats.blockedCalls} calls blocked, ${stats.withheld} items withheld.`,
-      ];
-      notify(ctx, lines.join("\n"), "info");
+  const controller: RedactController = {
+    status(ctx) {
+      let counts: AnalyticsCounts;
+      try {
+        const store = analyticsStore();
+        counts = { session: store.count({ sessionId: ctx.sessionManager.getSessionId() }), all: store.count({}) };
+      } catch (error) {
+        counts = { error: `the analytics file could not be read: ${errorText(error)}` };
+      }
+      return {
+        isEnabled: isEnabled(),
+        sessionChoice,
+        isEnabledByDefault,
+        globalSettingsPath: globalSettingsPath(getAgentDir()),
+        sources,
+        problems,
+        disabledRules,
+        stats: { ...stats },
+        analytics: counts,
+      };
     },
-  });
+
+    setSessionEnabled(ctx, isOn) {
+      pi.appendEntry(SESSION_CHOICE_ENTRY, sessionChoiceData(isOn));
+      sessionChoice = isOn;
+      updateStatusBar(ctx);
+    },
+
+    async setGlobalEnabled(ctx, isOn) {
+      const path = globalSettingsPath(getAgentDir());
+      const file = await readSettingsFile(path, "global");
+      if (file.state === "invalid")
+        throw new Error(`${path} cannot be changed: ${file.problems.join("; ")}. Fix or delete it first.`);
+      const document = file.state === "valid" ? file.document : EMPTY_SETTINGS_DOCUMENT;
+      await writeSettingsFile(path, "global", { ...document, enabled: isOn });
+      await reloadSettings(ctx);
+    },
+
+    async customTargets(ctx) {
+      const globalPath = globalSettingsPath(getAgentDir());
+      const projectPath = projectSettingsPath(ctx.cwd);
+      const isTrusted = ctx.isProjectTrusted();
+      return [
+        { scope: "global", path: globalPath, file: await readSettingsFile(globalPath, "global") },
+        {
+          scope: "project",
+          path: projectPath,
+          file: isTrusted ? await readSettingsFile(projectPath, "project") : { state: "missing" },
+          ...(isTrusted ? {} : { unavailableReason: "Trust this project in Pi (/trust) to edit its settings here." }),
+        },
+      ];
+    },
+
+    async saveSettings(ctx, scope, document) {
+      if (scope === "project" && !ctx.isProjectTrusted())
+        throw new Error("Project settings apply only in a trusted project.");
+      const path = scope === "global" ? globalSettingsPath(getAgentDir()) : projectSettingsPath(ctx.cwd);
+      await writeSettingsFile(path, scope, document);
+      await reloadSettings(ctx);
+    },
+
+    preview(text) {
+      const ruleIds = new Set<string>();
+      const engine = createMaskEngine(redactor, undefined, {
+        disabledRules,
+        observe: (observation) => {
+          for (const ruleId of observation.ruleIds) ruleIds.add(ruleId);
+        },
+      });
+      return { masked: engine.maskText(text), ruleIds: [...ruleIds] };
+    },
+
+    analytics() {
+      return {
+        list: (scope, limit) => analyticsStore().list(scope, limit),
+        summarize: (scope) => analyticsStore().summarize(scope),
+        get: (id) => analyticsStore().get(id),
+        clear: (scope) => analyticsStore().clear(scope),
+      };
+    },
+  };
+
+  registerRedactCommands(pi, controller);
 }

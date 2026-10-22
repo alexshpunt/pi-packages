@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { AnalyticsStore, analyticsPath } from "../../dist/analytics.js";
 import { ENV_FILE, leakedSecrets, SECRETS, temporaryTree } from "../support/fixtures.mjs";
 import { conversationOf, startSession, systemOf } from "../support/pi.mjs";
 
@@ -156,6 +157,61 @@ describe("a Pi session with pi-redact", () => {
     await pi.session.prompt("Read the keys.");
 
     expect(toolResultTexts(pi.session.messages)).toEqual([`OPENAI_KEY=${MARKER}\n`]);
+    expect(pi.extensionErrors).toEqual([]);
+  });
+
+  it("masks a read result's structured copy, which Pi passes to event listeners, like its content", async (t) => {
+    const env = "DB_PASSWORD=fixture db pass\nPORT=8080\n";
+    const pi = await startSession(t, { files: { ".env": env } });
+    const results = [];
+    pi.session.subscribe((event) => {
+      if (event.type === "tool_execution_end") results.push(structuredClone(event.result));
+    });
+    pi.plan([[{ name: "read", args: { path: ".env" } }], []]);
+    await pi.session.prompt("Read the file.");
+
+    // JSON mode and RPC clients receive this event; the model and the session file never get structuredContent.
+    expect(results).toHaveLength(1);
+    expect(results[0].content[0].text).toBe(`DB_PASSWORD=${MARKER}\nPORT=8080\n`);
+    expect(results[0].structuredContent).toBe(`DB_PASSWORD=${MARKER}\nPORT=8080\n`);
+
+    // Both copies are masked the same way, so analytics records the read once.
+    const store = new AnalyticsStore(analyticsPath(join(dirname(pi.workspace), "agent")));
+    t.onTestFinished(() => store.close());
+    expect(store.list({ sessionId: pi.session.sessionManager.getSessionId() }, 10)).toHaveLength(1);
+    expect(pi.extensionErrors).toEqual([]);
+  });
+
+  it("sends tool results unmasked when the global default is off", async (t) => {
+    const pi = await startSession(t, { files: { ".env": ENV_FILE }, globalSettings: { enabled: false } });
+    pi.plan([[{ name: "read", args: { path: ".env" } }], []]);
+    await pi.session.prompt("Read the file.");
+
+    expect(toolResultTexts(pi.session.messages)).toEqual([ENV_FILE]);
+    expect(leakedSecrets(conversationOf(pi.requests.at(-1)))).toContain(SECRETS.envApiKey);
+    expect(pi.extensionErrors).toEqual([]);
+  });
+
+  it("records each masked text once for /redact-analytics, outside the session file", async (t) => {
+    const pi = await startSession(t, { files: { ".env": ENV_FILE } });
+    pi.plan([[{ name: "read", args: { path: ".env" } }], []]);
+    await pi.session.prompt(`My deploy token is ${SECRETS.userToken}.`);
+
+    const store = new AnalyticsStore(analyticsPath(join(dirname(pi.workspace), "agent")));
+    t.onTestFinished(() => store.close());
+    const records = store.list({ sessionId: pi.session.sessionManager.getSessionId() }, 10);
+    // Both model requests repeat the user message; it is recorded once.
+    expect(records.map((record) => `${record.source}: ${record.label}`).sort()).toEqual([
+      "model request: user message",
+      "tool result: read .env",
+    ]);
+    const read = store.get(records.find((record) => record.label === "read .env").id);
+    expect(read.excerpt.lines).toContainEqual({
+      line: 1,
+      before: `API_KEY=${SECRETS.envApiKey}`,
+      after: `API_KEY=${MARKER}`,
+    });
+    expect(pi.sessionEntries().filter((entry) => entry.type === "custom")).toEqual([]);
     expect(pi.extensionErrors).toEqual([]);
   });
 });
