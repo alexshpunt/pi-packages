@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### New
+
+- `/redact` shows the masking state, the settings in use, and this session's counts, and turns masking on or off for the current session or as the global default. While masking is off, Pi's status bar shows `redact off`, and the write guard still blocks `{{REDACTED}}`.
+- `/redact-custom` edits the global or trusted-project settings: built-in rules, personal-information entities, field names, patterns, and exceptions. Each change is saved and applied at once, and a preview masks a typed line. Without a terminal, it edits the settings JSON in Pi's editor dialog.
+- `/redact-analytics` lists what was masked and shows each record's original and masked lines as a diff or as separate before and after views. Records are kept for 30 days in `analytics.sqlite` in the agent directory and contain the original values.
+- The global settings file accepts `enabled` and `disabledRules`. pi-redact 0.1.x skips a file that contains them.
+
+### Removed
+
+- `/pi-redact`. `/redact` shows the same status.
+
 ## [0.1.2] - 2026-10-21
 
 ### Improved

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { AnalyticsStore, analyticsPath } from "../../dist/analytics.js";
 import { ENV_FILE, leakedSecrets, SECRETS, temporaryTree } from "../support/fixtures.mjs";
 import { conversationOf, startSession, systemOf } from "../support/pi.mjs";
 
@@ -156,6 +157,39 @@ describe("a Pi session with pi-redact", () => {
     await pi.session.prompt("Read the keys.");
 
     expect(toolResultTexts(pi.session.messages)).toEqual([`OPENAI_KEY=${MARKER}\n`]);
+    expect(pi.extensionErrors).toEqual([]);
+  });
+
+  it("sends tool results unmasked when the global default is off", async (t) => {
+    const pi = await startSession(t, { files: { ".env": ENV_FILE }, globalSettings: { enabled: false } });
+    pi.plan([[{ name: "read", args: { path: ".env" } }], []]);
+    await pi.session.prompt("Read the file.");
+
+    expect(toolResultTexts(pi.session.messages)).toEqual([ENV_FILE]);
+    expect(leakedSecrets(conversationOf(pi.requests.at(-1)))).toContain(SECRETS.envApiKey);
+    expect(pi.extensionErrors).toEqual([]);
+  });
+
+  it("records each masked text once for /redact-analytics, outside the session file", async (t) => {
+    const pi = await startSession(t, { files: { ".env": ENV_FILE } });
+    pi.plan([[{ name: "read", args: { path: ".env" } }], []]);
+    await pi.session.prompt(`My deploy token is ${SECRETS.userToken}.`);
+
+    const store = new AnalyticsStore(analyticsPath(join(dirname(pi.workspace), "agent")));
+    t.onTestFinished(() => store.close());
+    const records = store.list({ sessionId: pi.session.sessionManager.getSessionId() }, 10);
+    // Both model requests repeat the user message; it is recorded once.
+    expect(records.map((record) => `${record.source}: ${record.label}`).sort()).toEqual([
+      "model request: user message",
+      "tool result: read .env",
+    ]);
+    const read = store.get(records.find((record) => record.label === "read .env").id);
+    expect(read.excerpt.lines).toContainEqual({
+      line: 1,
+      before: `API_KEY=${SECRETS.envApiKey}`,
+      after: `API_KEY=${MARKER}`,
+    });
+    expect(pi.sessionEntries().filter((entry) => entry.type === "custom")).toEqual([]);
     expect(pi.extensionErrors).toEqual([]);
   });
 });

@@ -15,8 +15,10 @@ function maskBlock<T extends ContentBlock>(engine: MaskEngine, block: T, filePat
       return text === block.text ? block : { ...block, text };
     }
     case "toolCall": {
-      const args = engine.maskJson(block.arguments);
-      const argumentsError = block.argumentsError === undefined ? undefined : engine.maskText(block.argumentsError);
+      const { args, argumentsError } = engine.labeled(`${block.name} call`, () => ({
+        args: engine.maskJson(block.arguments),
+        argumentsError: block.argumentsError === undefined ? undefined : engine.maskText(block.argumentsError),
+      }));
       if (args === block.arguments && argumentsError === block.argumentsError) return block;
       return { ...block, arguments: args, ...(argumentsError === undefined ? {} : { argumentsError }) };
     }
@@ -47,11 +49,43 @@ export function maskContent<T extends string | ContentBlock[]>(engine: MaskEngin
   return (Array.isArray(content) ? maskBlocks(engine, content, filePath) : content) as T;
 }
 
+/** What a message is called in analytics records. */
+function messageLabel(message: AgentMessage, readPaths: ReadonlyMap<string, string>): string {
+  switch (message.role) {
+    case "user":
+      return "user message";
+    case "assistant":
+      return "assistant message";
+    case "custom":
+      return `${message.customType} message`;
+    case "toolResult": {
+      const path = readPaths.get(message.toolCallId);
+      return path === undefined ? `${message.toolName} result` : `read ${path}`;
+    }
+    case "bashExecution":
+      return "! command";
+    case "branchSummary":
+      return "branch summary";
+    case "compactionSummary":
+      return "compaction summary";
+    default:
+      return `${String((message as { role?: unknown }).role)} message`;
+  }
+}
+
 /** The text of one message as the model will read it. System messages stay unchanged by design. */
 export function maskMessage(
   engine: MaskEngine,
   message: AgentMessage,
   readPaths: ReadonlyMap<string, string> = new Map(),
+): AgentMessage {
+  return engine.labeled(messageLabel(message, readPaths), () => maskMessageContent(engine, message, readPaths));
+}
+
+function maskMessageContent(
+  engine: MaskEngine,
+  message: AgentMessage,
+  readPaths: ReadonlyMap<string, string>,
 ): AgentMessage {
   switch (message.role) {
     case "system":
@@ -72,7 +106,7 @@ export function maskMessage(
     }
     case "bashExecution": {
       const command = engine.maskText(message.command);
-      const output = engine.maskText(message.output);
+      const output = engine.labeled("! output", () => engine.maskText(message.output));
       return command === message.command && output === message.output ? message : { ...message, command, output };
     }
     case "branchSummary":
@@ -161,12 +195,13 @@ function maskEntry(engine: MaskEngine, entry: SessionEntry): SessionEntry {
       return message === entry.message ? entry : { ...entry, message };
     }
     case "custom_message": {
-      const content = maskContent(engine, entry.content);
+      const content = engine.labeled(`${entry.customType} message`, () => maskContent(engine, entry.content));
       return content === entry.content ? entry : { ...entry, content };
     }
     case "branch_summary":
     case "compaction": {
-      const summary = engine.maskText(entry.summary);
+      const label = entry.type === "compaction" ? "compaction summary" : "branch summary";
+      const summary = engine.labeled(label, () => engine.maskText(entry.summary));
       return summary === entry.summary ? entry : { ...entry, summary };
     }
     default:

@@ -1,7 +1,7 @@
 {
   "name": "@buyong/pi-redact",
   "version": "0.1.2",
-  "description": "Masks credentials and private keys in Pi tool results, model requests, and summaries before they reach a language model.",
+  "description": "Masks credentials and private keys in Pi tool results, model requests, and summaries before they reach a language model, with switches, rule editing, and a record of what was masked.",
   "license": "Apache-2.0",
   "keywords": [
     "pi-package",
@@ -45,11 +45,13 @@
     "@buyong/redact": "workspace:*"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:",

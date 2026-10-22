@@ -21,6 +21,7 @@ const failingEngine = {
     if (JSON.stringify(value)?.includes("FAIL")) throw new Error("masking failed");
     return engine.maskJson(value);
   },
+  labeled: (_label, mask) => mask(),
 };
 
 describe("maskMessage", () => {

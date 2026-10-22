@@ -9,11 +9,14 @@ import { maskContent, WITHHELD_TEXT } from "./messages.js";
  */
 export function maskToolResult(engine: MaskEngine, event: ToolResultEvent): ToolResultEventResult | undefined {
   const filePath = event.toolName === "read" && typeof event.input.path === "string" ? event.input.path : undefined;
+  const label = filePath === undefined ? `${event.toolName} result` : `read ${filePath}`;
   // Untyped tools may return no content; Pi stores that as an empty list.
-  const content = maskContent(engine, event.content, filePath);
-  const details = engine.maskJson(event.details);
+  const content = engine.labeled(label, () => maskContent(engine, event.content, filePath));
+  const details = engine.labeled(`${label} details`, () => engine.maskJson(event.details));
   const structuredContent =
-    event.structuredContent === undefined ? undefined : engine.maskJson(event.structuredContent);
+    event.structuredContent === undefined
+      ? undefined
+      : engine.labeled(`${label} structured content`, () => engine.maskJson(event.structuredContent));
 
   const result: ToolResultEventResult = {};
   if (content !== event.content) {
