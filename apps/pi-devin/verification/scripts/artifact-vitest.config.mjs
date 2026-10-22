@@ -12,6 +12,7 @@ const ARTIFACT_TESTS = [
   "tests/pi-integration.test.ts",
   "tests/pi-runtime.test.ts",
   "tests/pi-lifecycle*.test.ts",
+  "tests/pi-lifetime.test.ts",
 ];
 
 const sourceRoot = realpathSync(fileURLToPath(new URL("../..", import.meta.url)));

@@ -2,7 +2,8 @@ import { readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { expect, test } from "vitest";
-import { boundReport, SIDEKICK_REPORT_CHAR_LIMIT, SIDEKICK_REPORT_TOKEN_LIMIT, truncateReport } from "../src/pi/sidekick-report.ts";
+import { boundReport, SIDEKICK_REPORT_CHAR_LIMIT, SIDEKICK_REPORT_TOKEN_LIMIT, truncateReport } from "../src/pi/features/sidekick/report.ts";
+import { runNode } from "./helpers.ts";
 
 const reportLine = "보고서 줄 ✅ verified\n";
 const longReport = () => `HEAD-MARKER\n${reportLine.repeat(Math.ceil(SIDEKICK_REPORT_CHAR_LIMIT / reportLine.length) + 100)}TAIL-MARKER`;
@@ -21,9 +22,9 @@ test("sidekick report limit: 131,072 tokens at Pi's 4 characters per token, cut 
 });
 
 test("boundReport: a short report is unchanged, a long one keeps its beginning and saves the complete text in a private file", async () => {
-  expect(await boundReport("short report")).toStrictEqual({ text: "short report" });
+  expect(await runNode(boundReport("short report"))).toStrictEqual({ text: "short report" });
   const original = longReport();
-  const bounded = await boundReport(original);
+  const bounded = await runNode(boundReport(original));
   try {
     expect(bounded.fullReportPath).toBeTruthy(); if (!bounded.fullReportPath) throw new Error("unreachable");
     expect(await readFile(bounded.fullReportPath, "utf8")).toBe(original);
@@ -44,7 +45,7 @@ test("boundReport: a failed save still returns the bounded text and never reject
   const previous = process.env.TMPDIR;
   process.env.TMPDIR = join(tmpdir(), `pi-devin-missing-${process.pid}`, "nested");
   try {
-    const bounded = await boundReport(longReport());
+    const bounded = await runNode(boundReport(longReport()));
     expect(bounded.fullReportPath).toBe(undefined);
     expect(bounded.text.length).toBeLessThanOrEqual(SIDEKICK_REPORT_CHAR_LIMIT);
     expect(bounded.text.startsWith("HEAD-MARKER")).toBe(true);

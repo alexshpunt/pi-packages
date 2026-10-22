@@ -19,15 +19,17 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 export async function startMockDevin({ sourceRoot, catalogPath }) {
   const protobuf = await import(new URL("src/core/protocol/protobuf.ts", sourceRoot).href);
-  const transport = await import(new URL("src/core/protocol/transport.ts", sourceRoot).href);
+  const frames = await import(new URL("src/core/protocol/frames.ts", sourceRoot).href);
+  const { Effect } = await import("effect");
+  const encodeFrame = (bytes, flags) => Effect.runSync(frames.encodeFrame(bytes, flags));
   const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
   const requests = [];
   const sockets = new Set();
   let chatPlan = () => ({ frames: [{ messageId: "bot", deltaText: "OK" }, { stopReason: "STOP_REASON_STOP_PATTERN" }], end: "ok" });
   let chatIndex = 0;
 
-  const encodeChat = (frame) => transport.encodeFrame(protobuf.chatResponseCodec.encode(frame));
-  const trailer = (error) => transport.encodeFrame(Buffer.from(JSON.stringify(error ? { error } : {})), 2);
+  const encodeChat = (frame) => encodeFrame(Effect.runSync(protobuf.chatResponseCodec.encode(frame)));
+  const trailer = (error) => encodeFrame(Buffer.from(JSON.stringify(error ? { error } : {})), 2);
 
   const summarizeChat = (body) => {
     const prompts = Array.isArray(body.chatMessagePrompts) ? body.chatMessagePrompts : [];
@@ -57,7 +59,7 @@ export async function startMockDevin({ sourceRoot, catalogPath }) {
     requests.push(entry);
     try {
       if (method === protobuf.CHAT_METHOD) {
-        const body = protobuf.chatRequestCodec.decode(bytes[0] & 1 ? gunzipSync(bytes.subarray(5)) : bytes.subarray(5));
+        const body = Effect.runSync(protobuf.chatRequestCodec.decode(bytes[0] & 1 ? gunzipSync(bytes.subarray(5)) : bytes.subarray(5)));
         entry.metadataKeyMatches = body.metadata?.apiKey === FAKE_OAUTH_TOKEN;
         Object.assign(entry, summarizeChat(body));
         chatIndex++;
@@ -78,8 +80,8 @@ export async function startMockDevin({ sourceRoot, catalogPath }) {
         res.end(trailer(plan.end === "ok" || plan.end === undefined ? undefined : plan.end));
         return;
       }
-      const codecs = protobuf.unaryCodecs(method);
-      const request = codecs.request.decode(bytes);
+      const codecs = Effect.runSync(protobuf.unaryCodecs(method));
+      const request = Effect.runSync(codecs.request.decode(bytes));
       entry.metadataKeyMatches = request.metadata?.apiKey === FAKE_OAUTH_TOKEN;
       let response;
       if (method === STATUS_METHOD) response = { userStatus: { userId: "host-contract-user", planStatus: {
@@ -89,7 +91,7 @@ export async function startMockDevin({ sourceRoot, catalogPath }) {
       else if (method === TEAM_METHOD) response = {};
       else throw new Error("unexpected method");
       res.writeHead(200, { "content-type": "application/proto" });
-      res.end(Buffer.from(codecs.response.encode(response)));
+      res.end(Buffer.from(Effect.runSync(codecs.response.encode(response))));
     } catch (error) {
       entry.unexpected = error instanceof Error ? error.message : String(error);
       if (!res.headersSent) res.writeHead(404);

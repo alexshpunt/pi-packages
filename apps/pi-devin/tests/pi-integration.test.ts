@@ -3,27 +3,31 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { PassThrough, Writable } from "node:stream";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { Effect } from "effect";
 import { expect, test } from "vitest";
 import { InMemoryCredentialStore, InMemoryModelsStore, normalizeContext } from "@earendil-works/pi-ai";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager, type ToolDefinition } from "@earendil-works/pi-coding-agent";
-import { registerDevinExtension } from "../src/pi/extension.ts";
-import { DEVIN_COMMAND_NAME, registerDevinCommand, updateUsageStatus, USAGE_STATUS_KEY } from "../src/pi/devin-command.ts";
-import { DevinPanel } from "../src/pi/devin-panel.ts";
-import { DEFAULT_PREFERENCES, devinSettingsPath, fileDevinSettings, memoryDevinSettings } from "../src/pi/devin-settings.ts";
-import { FusionPicker } from "../src/pi/fusion-picker.ts";
-import { formatTokens, progressBar, relativeTime, remainingTone, sessionUsage, usageReport, usageStatusText } from "../src/pi/usage.ts";
-import { accountUsagePath, fileAccountUsageStore } from "../src/pi/usage-store.ts";
+import { DEVIN_COMMAND_NAME } from "../src/pi/adapters/pi/devin-command.ts";
+import { DevinPanel } from "../src/pi/adapters/pi/ui/devin-panel.ts";
+import { FusionPicker } from "../src/pi/adapters/pi/ui/fusion-picker.ts";
+import { USAGE_STATUS_KEY } from "../src/pi/adapters/pi/usage-status.ts";
+import { accountUsagePath, devinSettingsPath, fileDisplaySettings, fileFusionSettings, fileUsageStore, fusionSettingsPath } from "../src/pi/adapters/storage/files.ts";
+import { DEFAULT_PREFERENCES, memoryDisplaySettings, memoryFusionSettings } from "../src/pi/features/settings/service.ts";
+import { formatTokens, progressBar, relativeTime, remainingTone, sessionUsage, usageReport, usageStatusText } from "../src/pi/features/usage/report.ts";
 import { visibleWidth } from "@earendil-works/pi-tui";
-import { fileFusionSettings, fusionSettingsPath, memoryFusionSettings } from "../src/pi/fusion-settings.ts";
-import { FUSION_MODEL_ID, type DevinModel } from "../src/pi/models.ts";
-import { FUSION_CHILD_ENV, SIDEKICK_REPORT_MESSAGE, type SidekickToolOptions } from "../src/pi/sidekick.ts";
-import { extensionArgs, PACKAGE_ROOT } from "../src/pi/sidekick-runtime.ts";
-import { SIDEKICK_REPORT_CHAR_LIMIT } from "../src/pi/sidekick-report.ts";
-import type { DevinProvider } from "../src/pi/provider.ts";
-import { DEVIN_STATE_ENTRY } from "../src/pi/lifecycle.ts";
+import { FUSION_MODEL_ID } from "../src/pi/features/catalog/constants.ts";
+import type { DevinModel } from "../src/pi/features/catalog/types.ts";
+import { extensionArgs, PACKAGE_ROOT } from "../src/pi/features/sidekick/command.ts";
+import { FUSION_CHILD_ENV, SIDEKICK_REPORT_MESSAGE } from "../src/pi/features/sidekick/prompts.ts";
+import { SIDEKICK_REPORT_CHAR_LIMIT } from "../src/pi/features/sidekick/report.ts";
+import type { SidekickLauncherShape } from "../src/pi/features/sidekick/types.ts";
+import type { DevinProvider } from "../src/pi/adapters/pi/types.ts";
+import { DEVIN_STATE_ENTRY } from "../src/pi/features/runs/state.ts";
+import { registerTestExtension, type TestOptions } from "./extension-harness.ts";
 import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
 import type { JsonObject } from "../src/core/types.ts";
-import { errorStreamResponse, finalFrames, MODELS_METHOD, streamResponse } from "./helpers.ts";
+import { failWith } from "../src/core/validation.ts";
+import { errorStreamResponse, finalFrames, MODELS_METHOD, runSync, streamResponse } from "./helpers.ts";
 import { providerCredential, providerFixture, type CapturedProviderRequest } from "./provider-fixture.ts";
 
 const usageFrame = { usage: { inputTokens: 3, outputTokens: 2 } };
@@ -76,8 +80,8 @@ function fakeSidekick(script: (command: JsonObject, child: FakeChild) => void) {
     const child = new FakeChild(respond);
     spawned.push({ command, args, options, child });
     return child;
-  }) as unknown as NonNullable<SidekickToolOptions["runtime"]>["spawn"];
-  return { spawned, runtime: { spawn, resolveCommand: () => ({ command: "fake-pi", args: ["fake-cli.js"] }) } };
+  }) as unknown as SidekickLauncherShape["spawn"];
+  return { spawned, launcher: { spawn, resolveCommand: Effect.succeed({ command: "fake-pi", args: ["fake-cli.js"] }) } };
 }
 const waitUntil = async (predicate: () => boolean, label: string) => {
   for (let attempt = 0; attempt < 500 && !predicate(); attempt++) await new Promise((resolve) => setTimeout(resolve, 5));
@@ -86,22 +90,23 @@ const waitUntil = async (predicate: () => boolean, label: string) => {
 
 /** Loads the Devin extension through the public loader, AgentSession and OAuth, and finds the Pi-style Fusion model. */
 async function fusionSession(chat: (request: CapturedProviderRequest, index: number) => Response | Promise<Response>, maxModelCalls?: number,
-  sidekick?: Partial<SidekickToolOptions>, catalog?: JsonObject) {
+  sidekick?: TestOptions["sidekick"], catalog?: JsonObject) {
   const directory = await mkdtemp(join(tmpdir(), "pi-devin-fusion-"));
   const fixture = await providerFixture({ chat, maxModelCalls, catalog });
-  fixture.provider.shutdown();
+  fixture.shutdown();
   const runtime = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: join(directory, "models.json"),
     modelsStore: new InMemoryModelsStore(), refreshOnCreate: false, allowModelNetwork: false });
   const settings = SettingsManager.inMemory({ defaultProjectTrust: "never", enableInstallTelemetry: false, cacheWarming: "off",
     compaction: { enabled: false }, retry: { enabled: false } });
-  let provider!: DevinProvider, ready!: () => void;
+  let extension!: ReturnType<typeof registerTestExtension>, ready!: () => void;
   const restored = new Promise<void>((resolve) => { ready = resolve; });
-  const fusionSettings = memoryFusionSettings(), devinSettings = memoryDevinSettings();
+  const fusionSettings = memoryFusionSettings(), devinSettings = memoryDisplaySettings();
   const loader = new DefaultResourceLoader({ cwd: directory, agentDir: join(directory, "agent"), settingsManager: settings,
     noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
     systemPrompt: "Use the declared tools.", extensionFactories: [(pi) => {
-      provider = registerDevinExtension(pi, { ...fixture.dependencies, fusionSettings, devinSettings,
+      extension = registerTestExtension(pi, { ...fixture.dependencies, fusionSettings, devinSettings,
         sidekick: { agentDir: () => join(directory, "agent"), ...sidekick } });
+      const { provider } = extension;
       const refresh = provider.refreshModels;
       provider.refreshModels = async (context) => { await refresh(context); if (!context.allowNetwork) ready(); };
     }],
@@ -125,8 +130,8 @@ async function fusionSession(chat: (request: CapturedProviderRequest, index: num
   const fusion = runtime.getModels("devin").find((model) => model.id === FUSION_MODEL_ID) as DevinModel;
   expect(fusion, "fusion model").toBeTruthy();
   const chats = () => fixture.requests.filter((entry) => entry.method === CHAT_METHOD);
-  return { directory, fixture, runtime, session, manager, errors, fusion, fusionSettings, devinSettings, chats, additions: () => additions, provider: () => provider,
-    dispose: async () => { provider?.shutdown(); session.dispose(); await rm(directory, { recursive: true, force: true }); } };
+  return { directory, fixture, runtime, session, manager, errors, fusion, fusionSettings, devinSettings, chats, additions: () => additions, extension: () => extension,
+    dispose: async () => { extension?.shutdown(); session.dispose(); await rm(directory, { recursive: true, force: true }); } };
 }
 
 test("public loader → OAuth → model/thinking → tool results, host retry and env headers are wired end to end", async () => {
@@ -144,7 +149,7 @@ test("public loader → OAuth → model/thinking → tool results, host retry an
     if (index === 4) expect(request.headers.get("x-env")).toBe("request-override");
     return streamResponse(finalFrames("done"));
   } });
-  fixture.provider.shutdown();
+  fixture.shutdown();
   const credentials = new InMemoryCredentialStore(), modelsStore = new InMemoryModelsStore();
   const configPath = join(directory, "models.json");
   const runtime = await ModelRuntime.create({ credentials, modelsPath: configPath, modelsStore, refreshOnCreate: false, allowModelNetwork: false });
@@ -153,12 +158,13 @@ test("public loader → OAuth → model/thinking → tool results, host retry an
     compaction: { enabled: false }, retry: { enabled: true, maxRetries: 1, baseDelayMs: 1, maxAgentDelayMs: 1 },
   });
   const events: string[] = [], errors: string[] = [];
-  let provider!: DevinProvider, ready!: () => void;
+  let provider!: DevinProvider, extension!: ReturnType<typeof registerTestExtension>, ready!: () => void;
   const restored = new Promise<void>((resolve) => { ready = resolve; });
   const loader = new DefaultResourceLoader({ cwd: directory, agentDir: join(directory, "agent"), settingsManager: settings,
     noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
     systemPrompt: "Only use the declared fixture tool.", extensionFactories: [(pi) => {
-      provider = registerDevinExtension(pi, fixture.dependencies);
+      extension = registerTestExtension(pi, fixture.dependencies);
+      provider = extension.provider;
       const refresh = provider.refreshModels;
       provider.refreshModels = async (context) => { await refresh(context); if (!context.allowNetwork) ready(); };
       pi.on("agent_start", () => { events.push("start"); });
@@ -199,7 +205,7 @@ test("public loader → OAuth → model/thinking → tool results, host retry an
     expect(JSON.stringify(finalPrompts).includes("failed-tool")).toBe(false);
     const assistant = finalPrompts.find((entry) => Array.isArray(entry.toolCalls))!;
     expect(assistant.modelUid).toBe("swe-2-high"); expect(assistant.signature).toBe("native-signature");
-    const state = provider.lifecycle.snapshot(); expect(state.execution!.used).toBe(3); expect(state.execution!.settled).toBe(true);
+    const state = runSync(extension.runs.snapshot); expect(state.execution!.used).toBe(3); expect(state.execution!.settled).toBe(true);
     const stored = manager.getBranch().filter((entry) => entry.type === "custom" && entry.customType === DEVIN_STATE_ENTRY);
     expect(stored.length > 0).toBeTruthy();
     expect(JSON.stringify(stored).includes(providerCredential.sessionToken)).toBe(false);
@@ -211,7 +217,7 @@ test("public loader → OAuth → model/thinking → tool results, host retry an
     const modelWithHeader = runtime.getModel("devin", model.id)!;
     const answer = await runtime.completeSimple(modelWithHeader, { messages: [{ role: "user", content: "env", timestamp: 2 }] }, { reasoning: "medium", env: { REQUEST_LABEL: "request-override" } });
     expect(answer.stopReason, answer.errorMessage ?? "unexpected finish").toBe("stop"); expect(fixture.chatCalls()).toBe(4);
-    provider.lifecycle.finish();
+    runSync(extension.runs.finish);
     runtime.registerNativeProvider({ ...provider });
     await session.extensionRunner.emit({ type: "session_start", reason: "reload" });
     expect(errors.length).toBe(1); expect(errors[0]).toMatch(/collides/);
@@ -220,7 +226,7 @@ test("public loader → OAuth → model/thinking → tool results, host retry an
     const closed = await provider.streamSimple(fixture.model, normalizeContext({ messages: [] }), { apiKey: providerCredential.sessionToken }).result();
     expect(closed.stopReason).toBe("aborted"); expect(fixture.chatCalls()).toBe(before);
   } finally {
-    provider?.shutdown(); session.dispose(); await rm(directory, { recursive: true, force: true });
+    extension?.shutdown(); session.dispose(); await rm(directory, { recursive: true, force: true });
   }
 });
 
@@ -235,7 +241,7 @@ test("Pi-style Fusion: the child Pi sidekick runs with the lead's tools and sess
       case 3: return streamResponse(callFrames("lead-3", "devin_sidekick", { message: "Report the earlier sum again." }));
       default: return streamResponse(finalFrames(`lead done ${index}`));
     }
-  }, undefined, { runtime: fake.runtime });
+  }, undefined, { launcher: fake.launcher });
   try {
     const { session } = f;
     expect(session.getActiveToolNames().includes("devin_sidekick")).toBe(false);
@@ -284,7 +290,7 @@ test("Pi-style Fusion: block:false, steer and user input while waiting move work
       case 9: return streamResponse(callFrames("lead-9", "devin_sidekick", { message: "Cancel me." }));
       default: return streamResponse(finalFrames(`lead done ${index}`));
     }
-  }, undefined, { runtime: fake.runtime });
+  }, undefined, { launcher: fake.launcher });
   try {
     const { session } = f;
     await session.setModel(f.fusion);
@@ -361,7 +367,7 @@ test("Pi-style Fusion: an oversized sidekick report reaches the lead bounded as 
       case 5: return streamResponse(callFrames("lead-5", "devin_sidekick", { message: "Long background report.", block: false }));
       default: return streamResponse(finalFrames(`lead done ${index}`));
     }
-  }, undefined, { runtime: fake.runtime });
+  }, undefined, { launcher: fake.launcher });
   const savedReports: string[] = [];
   const resultText = (message: { content: unknown }) => (message.content as { text?: string }[]).map((block) => block.text ?? "").join("");
   try {
@@ -411,11 +417,11 @@ test("Pi-style Fusion: an oversized sidekick report reaches the lead bounded as 
 
 test("the sidekick child Pi registers no Fusion model, sidekick tool or /devin-fusion command", async () => {
   const fixture = await providerFixture();
-  fixture.provider.shutdown();
+  fixture.shutdown();
   const registered: string[] = [];
   const pi = { registerProvider: () => {}, registerTool: (tool: { name: string }) => { registered.push(`tool:${tool.name}`); },
     registerCommand: (name: string) => { registered.push(`command:${name}`); }, getActiveTools: () => [], setActiveTools: () => {}, on: () => () => {} };
-  const provider = registerDevinExtension(pi as never, { ...fixture.dependencies, isFusionChild: true });
+  const extension = registerTestExtension(pi as never, { ...fixture.dependencies, isFusionChild: true }), { provider } = extension;
   try {
     await provider.refreshModels({ credential: { type: "oauth", access: providerCredential.sessionToken, refresh: "", expires: 0,
       devin: { version: 1, apiServerURL: providerCredential.apiServerURL, createdAt: providerCredential.createdAt } } as never,
@@ -423,10 +429,10 @@ test("the sidekick child Pi registers no Fusion model, sidekick tool or /devin-f
     expect(registered).toStrictEqual([]);
     expect(provider.getModels().length > 0).toBeTruthy();
     expect(provider.getModels().some((model) => model.id === FUSION_MODEL_ID)).toBe(false);
-    expect(provider.getFusionChoices()).toBe(undefined);
+    expect(extension.fusionChoices()).toBe(undefined);
     // Only extension selection arguments are passed so the child also gets tools from extensions loaded with `-e` in the lead CLI.
     expect(extensionArgs(["--mode", "rpc", "-e", "./ext", "--extension", "/abs/ext", "-e", "npm:@scope/pkg", "--no-extensions", "--no-mcp", "--model", "m", "-e"], "/work")).toStrictEqual(["-e", "/work/ext", "-e", "/abs/ext", "-e", "npm:@scope/pkg", "--no-extensions", "--no-mcp"]);
-  } finally { provider.shutdown(); }
+  } finally { extension.shutdown(); }
 });
 
 test("/devin-fusion: a lead/sidekick chosen by arguments is written to the global store and applied to the current Fusion model at once", async () => {
@@ -435,13 +441,13 @@ test("/devin-fusion: a lead/sidekick chosen by arguments is written to the globa
     const { session } = f;
     expect(f.runtime.getModels("devin").filter((model) => model.id === FUSION_MODEL_ID).length).toBe(1);
     await session.setModel(f.fusion);
-    const choices = f.provider().getFusionChoices()!;
+    const choices = f.extension().fusionChoices()!;
     const leadID = f.fusion.devin.fusion!.leadID;
     expect(choices.leads.some((item) => item.id === leadID)).toBeTruthy();
     await session.prompt(`/devin-fusion ${leadID} swe-2-high`);
     expect(leadID).toBe("swe-2");
     const selected = { leadID, sidekickID: "swe-2-high" };
-    expect(f.fusionSettings.read()).toStrictEqual(selected);
+    expect(runSync(f.fusionSettings.read)).toStrictEqual(selected);
     // The current session model is replaced with a new object of the same ID, so the name and pair match immediately.
     const current = session.model as DevinModel;
     expect(current.id).toBe(FUSION_MODEL_ID);
@@ -457,7 +463,7 @@ test("/devin-fusion: a lead/sidekick chosen by arguments is written to the globa
     // Models not in the list and bad arguments leave the saved value unchanged. The command sends no model request.
     await session.prompt(`/devin-fusion ${leadID} not-a-model`);
     await session.prompt("/devin-fusion only-one-argument");
-    expect(f.fusionSettings.read()).toStrictEqual(selected);
+    expect(runSync(f.fusionSettings.read)).toStrictEqual(selected);
     expect(f.chats().length).toBe(0);
     expect(f.errors).toStrictEqual([]);
   } finally { await f.dispose(); }
@@ -469,16 +475,16 @@ test("Fusion global store: corrupt or malformed files read as defaults and are n
     const path = fusionSettingsPath(join(directory, "agent"));
     expect(path).toBe(join(directory, "agent", "pi-devin", "fusion.json"));
     const store = fileFusionSettings(path);
-    expect(store.read()).toBe(undefined);
-    store.write({ leadID: "swe-2", sidekickID: "swe-2-high" });
+    expect(runSync(store.read)).toBe(undefined);
+    runSync(store.write({ leadID: "swe-2", sidekickID: "swe-2-high" }));
     expect(JSON.parse(await readFile(path, "utf8"))).toStrictEqual({ schemaVersion: 1, leadID: "swe-2", sidekickID: "swe-2-high" });
-    expect(store.read()).toStrictEqual({ leadID: "swe-2", sidekickID: "swe-2-high" });
+    expect(runSync(store.read)).toStrictEqual({ leadID: "swe-2", sidekickID: "swe-2-high" });
     // A file saved in the legacy format is read as is. effectiveFusion maps it to the new IDs.
     await writeFile(path, JSON.stringify({ schemaVersion: 1, leadID: "family:lead", sidekickID: "uid:side" }));
-    expect(store.read()).toStrictEqual({ leadID: "family:lead", sidekickID: "uid:side" });
+    expect(runSync(store.read)).toStrictEqual({ leadID: "family:lead", sidekickID: "uid:side" });
     for (const invalid of ["{broken", JSON.stringify({ schemaVersion: 2, leadID: "swe-2", sidekickID: "swe-2-high" }), JSON.stringify({ schemaVersion: 1, leadID: " ", sidekickID: "swe-2-high" }), JSON.stringify({ schemaVersion: 1, leadID: "swe-2", sidekickID: 7 })]) {
       await writeFile(path, invalid);
-      expect(store.read()).toBe(undefined);
+      expect(runSync(store.read)).toBe(undefined);
       expect(await readFile(path, "utf8")).toBe(invalid);
     }
   } finally { await rm(directory, { recursive: true, force: true }); }
@@ -500,22 +506,22 @@ test("/devin: a recommended filter changed by argument is saved globally and app
     expect(recommendedUIDs.size > 0 && hidden).toBeTruthy();
     const before = catalogRequests();
     await session.setModel(hidden);
-    const leadsBefore = f.provider().getFusionChoices()!.leads.length;
+    const leadsBefore = f.extension().fusionChoices()!.leads.length;
     await session.prompt(`/${DEVIN_COMMAND_NAME} recommended on`);
-    expect(f.devinSettings.read()).toStrictEqual({ recommendedOnly: true, showUsageStatus: false });
+    expect(runSync(f.devinSettings.read)).toStrictEqual({ recommendedOnly: true, showUsageStatus: false });
     // Recommended groups stay groups with the default list's level mappings, so `/thinking` still picks the recommended UID.
     expect(levelMaps(f.runtime.getModels("devin"))).toStrictEqual(levelMaps(expected));
     expect(levelMaps(f.runtime.getAvailableSnapshot().filter((model) => model.provider === "devin"))).toStrictEqual(levelMaps(expected));
     // The hidden current model stays in use for this session, and Fusion candidates ignore the filter.
     expect(session.model?.id).toBe(hidden.id);
-    expect(f.provider().getFusionChoices()!.leads.length).toBe(leadsBefore);
+    expect(f.extension().fusionChoices()!.leads.length).toBe(leadsBefore);
     await session.prompt(`/${DEVIN_COMMAND_NAME} recommended off`);
     expect(f.runtime.getModels("devin").map((model) => model.id)).toStrictEqual(allIDs);
     await session.prompt(`/${DEVIN_COMMAND_NAME} status on`);
-    expect(f.devinSettings.read()).toStrictEqual({ recommendedOnly: false, showUsageStatus: true });
+    expect(runSync(f.devinSettings.read)).toStrictEqual({ recommendedOnly: false, showUsageStatus: true });
     // Bad arguments leave the saved value unchanged. The command sends no catalog or model request.
     for (const invalid of ["bogus", "recommended maybe", "status on extra"]) await session.prompt(`/${DEVIN_COMMAND_NAME} ${invalid}`);
-    expect(f.devinSettings.read()).toStrictEqual({ recommendedOnly: false, showUsageStatus: true });
+    expect(runSync(f.devinSettings.read)).toStrictEqual({ recommendedOnly: false, showUsageStatus: true });
     expect(catalogRequests()).toBe(before);
     expect(f.chats().length).toBe(0);
     expect(f.errors).toStrictEqual([]);
@@ -528,8 +534,8 @@ test("usage: the status line and details come only from the last account status 
     const { session } = f;
     await session.setModel(f.runtime.getModel("devin", f.fusion.devin.fusion!.leadID)!);
     await session.prompt("hello");
-    const provider = f.provider(), requestsBefore = f.fixture.requests.length;
-    const account = provider.getAccountUsage()!;
+    const extension = f.extension(), requestsBefore = f.fixture.requests.length;
+    const account = extension.accountUsage()!;
     expect({ ...account, fetchedAtMs: typeof account.fetchedAtMs }).toStrictEqual({ billingStrategy: "BILLING_STRATEGY_QUOTA", dailyRemainingPercent: 100,
       weeklyRemainingPercent: 100, dailyResetAtMs: undefined, weeklyResetAtMs: undefined, fetchedAtMs: "number" });
     const usage = sessionUsage(f.manager.getBranch());
@@ -540,7 +546,7 @@ test("usage: the status line and details come only from the last account status 
     expect(usageStatusText(undefined, usage)).toBe("devin · ↑3 ↓2");
     expect([progressBar(98), progressBar(0), progressBar(150), progressBar(12.5)]).toStrictEqual(["▕█████████░▏", "▕░░░░░░░░░░▏", "▕██████████▏", "▕█░░░░░░░░░▏"]);
     expect([remainingTone(20), remainingTone(40), remainingTone(41)]).toStrictEqual(["error", "warning", "success"]);
-    const report = usageReport(account, usage, provider.lifecycle.budget(), account.fetchedAtMs + 5 * 60_000).map((line) => line.text);
+    const report = usageReport(account, usage, runSync(extension.runs.budget), account.fetchedAtMs + 5 * 60_000).map((line) => line.text);
     expect(report[0]).toMatch(/^Account quota · fetched \d\d\/\d\d \d\d:\d\d \(5m ago\) · not live$/);
     expect(report.slice(1)).toStrictEqual(["  Daily  ▕██████████▏ 100% left · reset time unknown", "  Weekly ▕██████████▏ 100% left · reset time unknown",
       "This session · lead conversation (sidekick excluded)", "  1 request · input 3 · output 2 · cache read 0 · cache write 0", "Run budget · last run", "  ▕█░░░░░░░░░▏ 1/8 model calls used"]);
@@ -550,17 +556,17 @@ test("usage: the status line and details come only from the last account status 
     const statuses: [string, string | undefined][] = [];
     const context = (mode: string) => ({ mode, ui: { theme: { fg: (tone: string, text: string) => `[${tone}]${text}` },
       setStatus: (key: string, text: string | undefined) => { statuses.push([key, text]); } }, sessionManager: f.manager }) as never;
-    updateUsageStatus(context("tui"), provider, f.devinSettings);
-    f.devinSettings.write({ ...DEFAULT_PREFERENCES, showUsageStatus: true });
-    updateUsageStatus(context("tui"), provider, f.devinSettings);
-    updateUsageStatus(context("rpc"), provider, f.devinSettings);
+    runSync(extension.usageStatus.update(context("tui")));
+    runSync(f.devinSettings.write({ ...DEFAULT_PREFERENCES, showUsageStatus: true }));
+    runSync(extension.usageStatus.update(context("tui")));
+    runSync(extension.usageStatus.update(context("rpc")));
     expect(statuses).toStrictEqual([[USAGE_STATUS_KEY, undefined], [USAGE_STATUS_KEY, "devin [success]day ▕██████████▏100% [success]week ▕██████████▏100% · ↑3 ↓2"]]);
     // At message_end Pi has not stored the response yet, so it is counted once; a stored response is not counted twice.
     const pending = { role: "assistant", provider: "devin", usage: { input: 10, output: 20, cacheRead: 0, cacheWrite: 0 } };
     const storedMessage = f.manager.getBranch().flatMap((entry) => entry.type === "message" && entry.message.role === "assistant" ? [entry.message] : [])[0];
     statuses.length = 0;
-    updateUsageStatus(context("tui"), provider, f.devinSettings, pending);
-    updateUsageStatus(context("tui"), provider, f.devinSettings, storedMessage);
+    runSync(extension.usageStatus.update(context("tui"), pending));
+    runSync(extension.usageStatus.update(context("tui"), storedMessage));
     expect(statuses.map(([, text]) => text?.replace(/^.* · /, ""))).toStrictEqual(["↑13 ↓22", "↑3 ↓2"]);
     expect(f.fixture.requests.length).toBe(requestsBefore);
     // Display strings contain no tokens or account identifiers.
@@ -569,7 +575,7 @@ test("usage: the status line and details come only from the last account status 
     expect(usageReport({ billingStrategy: "BILLING_STRATEGY_CREDITS", fetchedAtMs: 0 }, usage, { used: 0, limit: 8, isActive: true }, 0)[1].text).toMatch(/Not a quota-billed account \(BILLING_STRATEGY_CREDITS\)/);
     expect([formatTokens(999), formatTokens(1234), formatTokens(12_345), formatTokens(1_234_567)]).toStrictEqual(["999", "1.2k", "12k", "1.2M"]);
     expect([relativeTime(0, 20_000), relativeTime(20_000, 0), relativeTime(90 * 60_000, 0), relativeTime(3 * 86_400_000, 0), relativeTime(0, 2 * 60_000)]).toStrictEqual(["just now", "soon", "in 1h 30m", "in 3d", "2m ago"]);
-    expect(usageReport(account, usage, provider.lifecycle.budget(), account.fetchedAtMs + 10_000)[0].text).toMatch(/fetched .+ \(just now\)/);
+    expect(usageReport(account, usage, runSync(extension.runs.budget), account.fetchedAtMs + 10_000)[0].text).toMatch(/fetched .+ \(just now\)/);
     expect(f.errors).toStrictEqual([]);
   } finally { await f.dispose(); }
 });
@@ -629,7 +635,7 @@ test("/devin screen: shows usage details and toggles, saves on every toggle and 
   let isFailing = false, closed = 0;
   const panel = new DevinPanel({ theme: plainTheme, report: () => [{ text: "Account quota · not received yet", isHeading: true }],
     preferences: { recommendedOnly: false, showUsageStatus: false },
-    onChange: async (next) => { if (isFailing) throw new Error("disk full"); changes.push(next); },
+    onChange: (next) => Effect.suspend(() => isFailing ? failWith("disk full") : Effect.sync(() => { changes.push(next); })),
     requestRender: () => {}, done: () => { closed++; } });
   const settle = () => new Promise((resolve) => setImmediate(resolve));
   expect(panel.render(70).includes("Account quota · not received yet")).toBeTruthy();
@@ -649,24 +655,24 @@ test("/devin screen: shows usage details and toggles, saves on every toggle and 
 
 test("shared quota file: the newer record wins, another scope is not read, and malformed files read as nothing and are not repaired", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pi-devin-account-usage-"));
-  const path = accountUsagePath(join(directory, "agent")), store = fileAccountUsageStore(path);
+  const path = accountUsagePath(join(directory, "agent")), store = fileUsageStore(path);
   const scope = "a".repeat(64), other = "b".repeat(64);
   const usage = { billingStrategy: "BILLING_STRATEGY_QUOTA", dailyRemainingPercent: 80, weeklyRemainingPercent: 90, fetchedAtMs: 2000 };
   try {
     expect(path).toBe(join(directory, "agent", "pi-devin", "account-usage.json"));
-    expect(store.read(scope)).toBe(undefined);
-    store.write(scope, usage);
-    store.write(scope, { dailyRemainingPercent: 99, fetchedAtMs: 1000 }); // An older check from another process is ignored.
-    expect(store.read(scope)).toStrictEqual(usage);
-    expect(store.read(other)).toBe(undefined);
+    expect(runSync(store.read(scope))).toBe(undefined);
+    runSync(store.write(scope, usage));
+    runSync(store.write(scope, { dailyRemainingPercent: 99, fetchedAtMs: 1000 })); // An older check from another process is ignored.
+    expect(runSync(store.read(scope))).toStrictEqual(usage);
+    expect(runSync(store.read(other))).toBe(undefined);
     expect(JSON.parse(await readFile(path, "utf8"))).toStrictEqual({ schemaVersion: 1, scope, usage });
     // After a sign-in the new session's record replaces the old one even if its clock is older.
-    store.write(other, { fetchedAtMs: 500 });
-    expect([store.read(scope), store.read(other)]).toStrictEqual([undefined, { fetchedAtMs: 500 }]);
+    runSync(store.write(other, { fetchedAtMs: 500 }));
+    expect([runSync(store.read(scope)), runSync(store.read(other))]).toStrictEqual([undefined, { fetchedAtMs: 500 }]);
     for (const bytes of ["{", JSON.stringify({ schemaVersion: 2, scope, usage }), JSON.stringify({ schemaVersion: 1, scope: "short", usage }),
       JSON.stringify({ schemaVersion: 1, scope, usage: { ...usage, dailyRemainingPercent: "80" } }), JSON.stringify({ schemaVersion: 1, scope, usage: { ...usage, fetchedAtMs: -1 } })]) {
       await writeFile(path, bytes);
-      expect(store.read(scope)).toBe(undefined);
+      expect(runSync(store.read(scope))).toBe(undefined);
       expect(await readFile(path, "utf8")).toBe(bytes);
     }
   } finally { await rm(directory, { recursive: true, force: true }); }
@@ -677,14 +683,14 @@ test("/devin global store: corrupt or malformed files read as defaults and are n
   try {
     const path = devinSettingsPath(join(directory, "agent"));
     expect(path).toBe(join(directory, "agent", "pi-devin", "settings.json"));
-    const store = fileDevinSettings(path);
-    expect(store.read()).toStrictEqual(DEFAULT_PREFERENCES);
-    store.write({ recommendedOnly: true, showUsageStatus: false });
+    const store = fileDisplaySettings(path);
+    expect(runSync(store.read)).toStrictEqual(DEFAULT_PREFERENCES);
+    runSync(store.write({ recommendedOnly: true, showUsageStatus: false }));
     expect(JSON.parse(await readFile(path, "utf8"))).toStrictEqual({ schemaVersion: 1, recommendedOnly: true, showUsageStatus: false });
-    expect(fileDevinSettings(path).read()).toStrictEqual({ recommendedOnly: true, showUsageStatus: false });
+    expect(runSync(fileDisplaySettings(path).read)).toStrictEqual({ recommendedOnly: true, showUsageStatus: false });
     for (const invalid of ["{broken", JSON.stringify({ schemaVersion: 2, recommendedOnly: true, showUsageStatus: true }), JSON.stringify({ schemaVersion: 1, recommendedOnly: "yes", showUsageStatus: true })]) {
       await writeFile(path, invalid);
-      expect(store.read()).toStrictEqual(DEFAULT_PREFERENCES);
+      expect(runSync(store.read)).toStrictEqual(DEFAULT_PREFERENCES);
       expect(await readFile(path, "utf8")).toBe(invalid);
     }
   } finally { await rm(directory, { recursive: true, force: true }); }
@@ -692,18 +698,31 @@ test("/devin global store: corrupt or malformed files read as defaults and are n
 
 test("/devin: when the list refresh fails after saving, the saved value stays and only a warning is shown", async () => {
   const commands = new Map<string, { handler: (args: string, ctx: never) => Promise<void> }>();
-  const settings = memoryDevinSettings();
-  let rebuilds = 0;
-  const provider = { rebuildModels: () => { rebuilds++; }, getModels: () => [], getAccountUsage: () => undefined,
-    lifecycle: { budget: () => ({ used: 0, limit: 8, isActive: false }) } };
-  registerDevinCommand({ registerCommand: (name: string, definition: never) => { commands.set(name, definition); } } as never, provider as never, settings);
-  const notes: [string, string][] = [];
-  const ctx = { mode: "rpc", hasUI: true, model: undefined, sessionManager: { getBranch: () => [] },
-    ui: { notify: (message: string, type: string) => { notes.push([type, message]); } },
-    modelRegistry: { refresh: async () => { throw new Error("registry busy"); } } } as never;
-  await commands.get(DEVIN_COMMAND_NAME)!.handler("recommended on", ctx);
-  expect(settings.read()).toStrictEqual({ recommendedOnly: true, showUsageStatus: false });
-  expect(rebuilds).toBe(1);
-  expect(notes.map(([type]) => type)).toStrictEqual(["warning", "info"]);
-  expect(notes[0][1]).toMatch(/Settings were saved, but the model list could not be rebuilt: registry busy/);
+  const settings = memoryDisplaySettings();
+  // The catalog reads the Fusion selection once for each list it builds, so these reads count rebuilds.
+  const fusion = memoryFusionSettings();
+  let listBuilds = 0;
+  const fusionSettings = { ...fusion, read: Effect.suspend(() => { listBuilds++; return fusion.read; }) };
+  const fixture = await providerFixture();
+  fixture.shutdown();
+  const pi = { registerProvider: () => {}, registerTool: () => {}, getActiveTools: () => [], setActiveTools: () => {}, on: () => () => {},
+    registerCommand: (name: string, definition: never) => { commands.set(name, definition); } };
+  const extension = registerTestExtension(pi as never, { ...fixture.dependencies, devinSettings: settings, fusionSettings });
+  try {
+    await extension.provider.refreshModels({ credential: { type: "oauth", access: providerCredential.sessionToken, refresh: "", expires: 0,
+      devin: { version: 1, apiServerURL: providerCredential.apiServerURL, createdAt: providerCredential.createdAt } } as never,
+      allowNetwork: true, force: true, signal: new AbortController().signal, publish: async (value) => { value.update?.(); return true; } });
+    const listed = extension.models(), buildsBefore = listBuilds;
+    const notes: [string, string][] = [];
+    const ctx = { mode: "rpc", hasUI: true, model: undefined, sessionManager: { getBranch: () => [] },
+      ui: { notify: (message: string, type: string) => { notes.push([type, message]); } },
+      modelRegistry: { refresh: async () => { throw new Error("registry busy"); } } } as never;
+    await commands.get(DEVIN_COMMAND_NAME)!.handler("recommended on", ctx);
+    expect(runSync(settings.read)).toStrictEqual({ recommendedOnly: true, showUsageStatus: false });
+    // The provider's list was rebuilt from the current catalog before Pi's refresh failed.
+    expect(listBuilds - buildsBefore).toBe(1);
+    expect(extension.models()).not.toBe(listed);
+    expect(notes.map(([type]) => type)).toStrictEqual(["warning", "info"]);
+    expect(notes[0][1]).toMatch(/Settings were saved, but the model list could not be rebuilt: registry busy/);
+  } finally { extension.shutdown(); }
 });

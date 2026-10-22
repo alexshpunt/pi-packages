@@ -20,7 +20,7 @@ Pi's required cost numbers use a 0 placeholder, with `cost unknown` in the name 
 
 ## Per-account and per-endpoint cache
 
-`createDevinModelSource()` receives a host credential resolver and `fetchCatalog()` by injection. It does not modify 02's auth implementation or CLI files, or read credential files directly.
+The `ModelCatalog` service (`src/pi/features/catalog/service.ts`) receives the host credential conversion (`AuthState`) and the remote lookup (`RemoteCatalog`) as services. It does not modify 02's auth implementation or CLI files, or read credential files directly.
 
 - The factory and the synchronous `getModels()` do no I/O. The initial list is empty.
 - The cache stores only the needed model fields through a whitelist. Raw tokens, the request fingerprint `f` and the assignment JWT are not stored. The ownership scope is a one-way hash of the credential and the normalized RPC endpoint. A new token is treated as a separate scope even for the same person, which is a conservative policy.
@@ -35,16 +35,10 @@ Custom metadata was confirmed to survive in the in-memory store of public Pi `Mo
 ## 04 wiring example
 
 ```ts
-const source = createDevinModelSource({
-  credentialFromHost: (value) => value?.type === "oauth" ? credentialFromOAuth(value) : undefined,
-  fetchCatalog: async (credential, signal) => {
-    const client = new DevinClient(credential);
-    try { return await client.catalog(signal); }
-    finally { client.transport.close(); }
-  },
-});
-// Connect the provider's getModels/filterModels/refreshModels to the matching source methods.
-const selected = source.resolve(piModel.id, effectiveThinking, effectiveCredential);
+// RemoteCatalogLive looks the catalog up with a client that closes with its scope; ProviderLive provides it to ModelCatalogLive.
+const catalog = yield* ModelCatalog;
+// The provider adapter runs catalog.models/filter synchronously for getModels/filterModels, and catalog.refresh with the host's context.
+const selected = yield* catalog.resolve(piModel.id, effectiveThinking, effectiveCredential);
 // Apply selected.uid and the limits of selected.model to the final request.
 ```
 

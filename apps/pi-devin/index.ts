@@ -1,19 +1,13 @@
-import { getAgentDir, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { devinSettingsPath, fileDevinSettings } from "./src/pi/devin-settings.ts";
-import { registerDevinExtension } from "./src/pi/extension.ts";
-import { fileFusionSettings, fusionSettingsPath } from "./src/pi/fusion-settings.ts";
-import { modelCallLimit } from "./src/pi/lifecycle.ts";
-import { FUSION_CHILD_ENV } from "./src/pi/sidekick.ts";
-import { accountUsagePath, fileAccountUsageStore } from "./src/pi/usage-store.ts";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Effect } from "effect";
+import { registerDevinExtension } from "./src/pi/adapters/pi/registration.ts";
+import { productionEnvironment } from "./src/pi/app/environment.ts";
+import { modelCallLimit } from "./src/pi/features/runs/lifecycle.ts";
+import { FUSION_CHILD_ENV } from "./src/pi/features/sidekick/prompts.ts";
 
+/** Pi's entry point. An invalid `PI_DEVIN_MAX_MODEL_CALLS` stops loading with its error. */
 export default function devinExtension(pi: ExtensionAPI): void {
   const isFusionChild = process.env[FUSION_CHILD_ENV] === "1";
-  registerDevinExtension(pi, {
-    maxModelCalls: modelCallLimit(process.env.PI_DEVIN_MAX_MODEL_CALLS),
-    isFusionChild,
-    // The sidekick child records its quota too, so the lead's status shows what the sidekick used.
-    accountUsage: fileAccountUsageStore(accountUsagePath(getAgentDir())),
-    fusionSettings: isFusionChild ? undefined : fileFusionSettings(fusionSettingsPath(getAgentDir())),
-    devinSettings: isFusionChild ? undefined : fileDevinSettings(devinSettingsPath(getAgentDir())),
-  });
+  const maxModelCalls = Effect.runSync(modelCallLimit(process.env.PI_DEVIN_MAX_MODEL_CALLS));
+  registerDevinExtension(pi, productionEnvironment({ maxModelCalls, isFusionChild }));
 }

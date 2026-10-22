@@ -1,28 +1,5 @@
 export type JsonObject = Record<string, unknown>;
 
-export function object(value: unknown, label: string): JsonObject {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`${label}: a JSON object is required.`);
-  }
-  return value as JsonObject;
-}
-
-export function requiredString(value: unknown, label: string): string {
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error(`${label}: a non-empty string is required.`);
-  }
-  return value;
-}
-
-export function tokenCount(value: unknown, label: string): number {
-  if (typeof value !== "number" && !(typeof value === "string" && /^\d+$/.test(value))) {
-    throw new Error(`${label}: invalid token count.`);
-  }
-  const count = Number(value);
-  if (!Number.isSafeInteger(count) || count < 0) throw new Error(`${label}: invalid token count.`);
-  return count;
-}
-
 export interface Credential {
   version: 1;
   sessionToken: string;

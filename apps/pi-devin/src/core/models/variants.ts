@@ -1,4 +1,7 @@
-import { object, requiredString, tokenCount, type JsonObject, type ModelInfo } from "../types.ts";
+import { Effect, Predicate } from "effect";
+import type { DevinError } from "../errors.ts";
+import type { JsonObject, ModelInfo } from "../types.ts";
+import { failWith, object, requiredString, tokenCount } from "../validation.ts";
 import { parseModelCatalog, type ModelCatalog } from "./catalog.ts";
 import { getModelByUID } from "./select.ts";
 
@@ -43,20 +46,23 @@ export function groupModelID(family: string, dimensions: readonly ModelDimension
   return "family:" + encodeURIComponent(family) + (dimensions.length ? ":" + Buffer.from(key).toString("base64url") : "");
 }
 
-function dimensionsOf(config: JsonObject): ModelDimension[] {
-  const family = object(config.modelFamilyMetadata ?? {}, "modelFamilyMetadata");
-  if (family.entries === undefined) return [];
-  if (!Array.isArray(family.entries)) throw new Error("Model dimension entries are not an array.");
-  const seen = new Set<string>();
-  return family.entries.map((item) => {
-    const entry = object(item, "model dimension"), value = object(entry.value ?? {}, "dimension value");
-    const key = requiredString(entry.key, "dimension key");
-    if (seen.has(key)) throw new Error(`Duplicate model dimension: ${key}`);
-    seen.add(key);
-    const order = tokenCount(value.order ?? 0, "dimension order");
-    if (!Number.isSafeInteger(order)) throw new Error("The model dimension order must be an integer.");
-    return { key, order, name: typeof value.name === "string" ? value.name : "" };
-  }).sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
+function dimensionsOf(config: JsonObject): Effect.Effect<ModelDimension[], DevinError> {
+  return Effect.gen(function* () {
+    const family = yield* object(config.modelFamilyMetadata ?? {}, "modelFamilyMetadata");
+    if (family.entries === undefined) return [];
+    if (!Array.isArray(family.entries)) return yield* failWith("Model dimension entries are not an array.");
+    const seen = new Set<string>();
+    const dimensions: ModelDimension[] = [];
+    for (const item of family.entries) {
+      const entry = yield* object(item, "model dimension"), value = yield* object(entry.value ?? {}, "dimension value");
+      const key = yield* requiredString(entry.key, "dimension key");
+      if (seen.has(key)) return yield* failWith(`Duplicate model dimension: ${key}`);
+      seen.add(key);
+      const order = yield* tokenCount(value.order ?? 0, "dimension order");
+      dimensions.push({ key, order, name: Predicate.isString(value.name) ? value.name : "" });
+    }
+    return dimensions.sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
+  });
 }
 
 function classify(model: ModelInfo, dimensions: readonly ModelDimension[]): Pick<ModelVariant, "level" | "unsupported"> {
@@ -73,8 +79,7 @@ function classify(model: ModelInfo, dimensions: readonly ModelDimension[]): Pick
   return { unsupported: "thinking strength metadata is unknown" };
 }
 
-function sanitizedConfig(config: JsonObject, model: ModelInfo, familyName: string, dimensions: readonly ModelDimension[]): JsonObject {
-  const info = object(config.modelInfo, "modelInfo");
+function sanitizedConfig(info: JsonObject, model: ModelInfo, familyName: string, dimensions: readonly ModelDimension[]): JsonObject {
   return {
     modelUid: model.id, label: model.name, disabled: model.isDisabled, maxTokens: model.contextWindow,
     supportsImages: model.supportsImages,
@@ -83,7 +88,7 @@ function sanitizedConfig(config: JsonObject, model: ModelInfo, familyName: strin
     modelInfo: {
       modelUid: model.id, modelFamilyUid: model.familyId || model.id,
       maxTokens: model.contextWindow, maxOutputTokens: model.maxOutputTokens,
-      ...(typeof info.modelType === "string" ? { modelType: info.modelType } : {}),
+      ...(Predicate.isString(info.modelType) ? { modelType: info.modelType } : {}),
       isModelRouter: model.isRouter, aliases: [...(model.aliases ?? [])],
       modelFeatures: {
         supportsImages: model.supportsImages, supportsToolCalls: model.supportsToolCalls,
@@ -98,66 +103,74 @@ function capabilityKey(model: ModelInfo): string {
   return JSON.stringify([model.contextWindow, model.maxOutputTokens, model.supportsImages, model.supportsToolCalls, model.supportsParallelToolCalls]);
 }
 
-export function projectModelVariants(catalog: ModelCatalog): VariantProjection {
-  const configs = catalog.raw.clientModelConfigs;
-  if (!Array.isArray(configs) || configs.length !== catalog.models.length) throw new Error("The raw and projected model lists do not match.");
-  const ids = new Set<string>();
-  const variants = catalog.models.map((original, index): ModelVariant => {
-    if (ids.has(original.id)) throw new Error(`Duplicate model UID: ${original.id}`);
-    ids.add(original.id);
-    const config = object(configs[index], "model config"), info = object(config.modelInfo, "modelInfo");
-    if (config.modelUid !== original.id) throw new Error("Model UIDs do not match the raw order.");
-    const allDimensions = dimensionsOf(config);
-    const family = object(config.modelFamilyMetadata ?? {}, "modelFamilyMetadata");
-    const model = { ...original, aliases: [...(original.aliases ?? [])], contextWindow: tokenCount(config.maxTokens ?? original.contextWindow, "context window") };
-    const familyName = typeof family.modelFamilyLabel === "string" && family.modelFamilyLabel ? family.modelFamilyLabel : model.familyId || model.name;
-    const classification = typeof info.modelType === "string" && info.modelType !== "MODEL_TYPE_CHAT"
-      ? { unsupported: "not a chat model" } : classify(model, allDimensions);
+export function projectModelVariants(catalog: ModelCatalog): Effect.Effect<VariantProjection, DevinError> {
+  return Effect.gen(function* () {
+    const configs = catalog.raw.clientModelConfigs;
+    if (!Array.isArray(configs) || configs.length !== catalog.models.length) return yield* failWith("The raw and projected model lists do not match.");
+    const ids = new Set<string>();
+    const variants: ModelVariant[] = [];
+    for (const [index, original] of catalog.models.entries()) {
+      if (ids.has(original.id)) return yield* failWith(`Duplicate model UID: ${original.id}`);
+      ids.add(original.id);
+      const config = yield* object(configs[index], "model config"), info = yield* object(config.modelInfo, "modelInfo");
+      if (config.modelUid !== original.id) return yield* failWith("Model UIDs do not match the raw order.");
+      const allDimensions = yield* dimensionsOf(config);
+      const family = yield* object(config.modelFamilyMetadata ?? {}, "modelFamilyMetadata");
+      const model = { ...original, aliases: [...(original.aliases ?? [])], contextWindow: yield* tokenCount(config.maxTokens ?? original.contextWindow, "context window") };
+      const familyName = Predicate.isString(family.modelFamilyLabel) && family.modelFamilyLabel ? family.modelFamilyLabel : model.familyId || model.name;
+      const classification = Predicate.isString(info.modelType) && info.modelType !== "MODEL_TYPE_CHAT"
+        ? { unsupported: "not a chat model" } : classify(model, allDimensions);
+      variants.push({
+        model, family: model.familyId || model.id, familyName,
+        dimensions: allDimensions.filter((entry) => !thinkingDimensions.has(entry.key)), ...classification,
+        config: sanitizedConfig(info, model, familyName, allDimensions),
+      });
+    }
+    const groupMap = new Map<string, VariantGroup>();
+    for (const variant of variants) {
+      const id = groupModelID(variant.family, variant.dimensions);
+      let group = groupMap.get(id);
+      if (!group) {
+        group = { id, family: variant.family, name: variant.familyName, dimensions: variant.dimensions, variants: [], mappings: {}, canPublish: true };
+        groupMap.set(id, group);
+      }
+      group.variants.push(variant);
+      if (variant.level === undefined || variant.unsupported) continue;
+      if (group.mappings[variant.level]) { group.canPublish = false; group.reason = "ambiguous UID for thinking level"; }
+      else group.mappings[variant.level] = variant.model.id;
+    }
+    for (const group of groupMap.values()) {
+      const supported = group.variants.filter((variant) => variant.level !== undefined && !variant.unsupported);
+      if (!supported.length) { group.canPublish = false; group.reason = "no verified thinking mapping"; }
+      else if (new Set(supported.map((variant) => capabilityKey(variant.model))).size !== 1) {
+        group.canPublish = false; group.reason = "variant capabilities differ; use exact UID";
+      }
+    }
     return {
-      model, family: model.familyId || model.id, familyName,
-      dimensions: allDimensions.filter((entry) => !thinkingDimensions.has(entry.key)), ...classification,
-      config: sanitizedConfig(config, model, familyName, allDimensions),
+      variants, groups: [...groupMap.values()],
+      unsupported: variants.flatMap((variant) => variant.unsupported ? [{ uid: variant.model.id, reason: variant.unsupported }] : []),
     };
   });
-  const groupMap = new Map<string, VariantGroup>();
-  for (const variant of variants) {
-    const id = groupModelID(variant.family, variant.dimensions);
-    let group = groupMap.get(id);
-    if (!group) {
-      group = { id, family: variant.family, name: variant.familyName, dimensions: variant.dimensions, variants: [], mappings: {}, canPublish: true };
-      groupMap.set(id, group);
-    }
-    group.variants.push(variant);
-    if (variant.level === undefined || variant.unsupported) continue;
-    if (group.mappings[variant.level]) { group.canPublish = false; group.reason = "ambiguous UID for thinking level"; }
-    else group.mappings[variant.level] = variant.model.id;
-  }
-  for (const group of groupMap.values()) {
-    const supported = group.variants.filter((variant) => variant.level !== undefined && !variant.unsupported);
-    if (!supported.length) { group.canPublish = false; group.reason = "no verified thinking mapping"; }
-    else if (new Set(supported.map((variant) => capabilityKey(variant.model))).size !== 1) {
-      group.canPublish = false; group.reason = "variant capabilities differ; use exact UID";
-    }
-  }
-  return { variants, groups: [...groupMap.values()], unsupported: variants.filter((variant) => variant.unsupported).map((variant) => ({ uid: variant.model.id, reason: variant.unsupported! })) };
 }
 
-export function restoreModelVariants(configs: readonly JsonObject[]): VariantProjection {
-  return projectModelVariants(parseModelCatalog({ clientModelConfigs: [...configs] }));
+export function restoreModelVariants(configs: readonly JsonObject[]): Effect.Effect<VariantProjection, DevinError> {
+  return Effect.flatMap(parseModelCatalog({ clientModelConfigs: [...configs] }), projectModelVariants);
 }
 
 /** Accepts only the effective level that Pi already clamped or selected. Never falls back to an alias, price or default model. */
-export function resolveBackendSelection(projection: VariantProjection, modelID: string, level: EffectiveThinkingLevel): BackendModelSelection {
-  if (!EFFECTIVE_THINKING_LEVELS.includes(level)) throw new Error(`Unsupported thinking level: ${level}`);
-  let variant = projection.variants.find((entry) => modelIDForUID(entry.model.id) === modelID);
-  if (variant) {
-    if (variant.unsupported || variant.level !== level) throw new Error(`This exact UID does not support the requested thinking level: ${modelID} (${level})`);
-  } else {
-    const group = projection.groups.find((entry) => entry.id === modelID);
-    const uid = group?.canPublish ? group.mappings[level] : undefined;
-    if (!uid) throw new Error(`Model or thinking level unavailable: ${modelID} (${level})`);
-    variant = projection.variants.find((entry) => entry.model.id === uid)!;
-  }
-  const model = getModelByUID(projection.variants.map((entry) => entry.model), variant.model.id);
-  return { uid: model.id, model, level, variant };
+export function resolveBackendSelection(projection: VariantProjection, modelID: string, level: EffectiveThinkingLevel): Effect.Effect<BackendModelSelection, DevinError> {
+  return Effect.gen(function* () {
+    if (!EFFECTIVE_THINKING_LEVELS.includes(level)) return yield* failWith(`Unsupported thinking level: ${level}`);
+    let variant = projection.variants.find((entry) => modelIDForUID(entry.model.id) === modelID);
+    if (variant) {
+      if (variant.unsupported || variant.level !== level) return yield* failWith(`This exact UID does not support the requested thinking level: ${modelID} (${level})`);
+    } else {
+      const group = projection.groups.find((entry) => entry.id === modelID);
+      const uid = group?.canPublish ? group.mappings[level] : undefined;
+      variant = uid === undefined ? undefined : projection.variants.find((entry) => entry.model.id === uid);
+      if (!variant) return yield* failWith(`Model or thinking level unavailable: ${modelID} (${level})`);
+    }
+    const model = yield* getModelByUID(projection.variants.map((entry) => entry.model), variant.model.id);
+    return { uid: model.id, model, level, variant };
+  });
 }

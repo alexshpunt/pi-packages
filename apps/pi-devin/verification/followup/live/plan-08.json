@@ -1,0 +1,305 @@
+{
+  "planHash": "13b34fb82fa6050844c1456d80b6d3fd62a5444ecc88acf7141e3a781ef4c078",
+  "plan": {
+    "schemaVersion": 1,
+    "task": "08",
+    "artifactSha256": "89b92e7c2ee7372305fe09949caa4d49ba23724eee7fe7159b6f91640b868f5c",
+    "runtimeDigest": "086c67ea82b31f554eaf267c3d0df39ee68c793c8e266adf6092c51862f83bcf",
+    "allowedUIDs": [
+      "swe-2-medium",
+      "swe-2-high"
+    ],
+    "maxModelCalls": 80,
+    "requireFreeTier": true,
+    "hosts": [
+      "server.codeium.com",
+      "api.devin.ai"
+    ],
+    "cases": [
+      {
+        "id": "catalog",
+        "mode": "rpc",
+        "expectModelCalls": 0,
+        "purpose": "OAuth account status and catalog lookup; check that the approved UIDs are active and free tier"
+      },
+      {
+        "id": "devin-settings",
+        "mode": "rpc-devin",
+        "model": "swe-2",
+        "level": "medium",
+        "prompt": "Please say hello briefly.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectModelCalls": 1,
+        "purpose": "Real list change when the /devin recommended filter is turned on and off; real quota and session usage in the bare /devin notification after one turn"
+      },
+      {
+        "id": "plain-medium",
+        "mode": "json",
+        "model": "swe-2",
+        "level": "medium",
+        "prompt": "Please say hello briefly.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectModelCalls": 1
+      },
+      {
+        "id": "level-high",
+        "mode": "json",
+        "model": "swe-2",
+        "level": "high",
+        "prompt": "Please say hello briefly.",
+        "expectUIDs": [
+          "swe-2-high"
+        ],
+        "expectModelCalls": 1
+      },
+      {
+        "id": "add-tool",
+        "mode": "json",
+        "model": "swe-2",
+        "level": "medium",
+        "prompt": "Add 2 and 3 with the add tool, then reply with only the resulting number.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectTool": "add",
+        "expectModelCalls": 2
+      },
+      {
+        "id": "fusion",
+        "mode": "json",
+        "model": "fusion",
+        "level": "medium",
+        "prompt": "Ask the sidekick tool to 'add 2 and 3 with the add tool and report the result', then reply with only the reported number.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectTool": "devin_sidekick",
+        "expectModelCalls": 4
+      },
+      {
+        "id": "session",
+        "mode": "session",
+        "model": "swe-2",
+        "levelUIDs": {
+          "medium": "swe-2-medium",
+          "high": "swe-2-high"
+        },
+        "pauseMs": 1000,
+        "expectModelCalls": 53,
+        "purpose": "45 prompts in one Pi session: add tool calls, medium/high level changes, a cancelled response, a Pi restart resuming the same session file, code word recalls across them, then the /devin report",
+        "turns": [
+          {
+            "prompt": "Remember this code word for later in our conversation: heron. Reply with only OK.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 7 times 8? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is the capital of France? Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Use the add tool to add 12 and 30, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b42\\b"
+          },
+          {
+            "prompt": "Name one primary color. Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 15 minus 6? Reply with only the number.",
+            "level": "high"
+          },
+          {
+            "prompt": "What code word did I ask you to remember? Reply with only the word.",
+            "level": "high",
+            "expect": "heron"
+          },
+          {
+            "prompt": "Use the add tool to add 100 and 250, then reply with only the result.",
+            "level": "high",
+            "tool": "add",
+            "expect": "\\b350\\b"
+          },
+          {
+            "prompt": "How many days are in a week? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Spell the word 'cat' backwards. Reply with only the result.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 9 squared? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Use the add tool to add 7 and 8, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b15\\b"
+          },
+          {
+            "prompt": "Which is larger, 17 or 71? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is the opposite of 'cold'? Reply with one word.",
+            "level": "high"
+          },
+          {
+            "prompt": "Name the planet we live on. Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Count from 1 to 300, writing every number on its own line.",
+            "level": "medium",
+            "abort": true
+          },
+          {
+            "prompt": "Reply with only the word ready.",
+            "level": "medium",
+            "expect": "ready"
+          },
+          {
+            "prompt": "What is 144 divided by 12? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Use the add tool to add 45 and 55, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b100\\b"
+          },
+          {
+            "prompt": "What color is a clear daytime sky? Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 3 plus 4 times 2? Reply with only the number.",
+            "level": "high"
+          },
+          {
+            "prompt": "Repeat the code word from the start of our conversation. Reply with only the word.",
+            "level": "medium",
+            "expect": "heron"
+          },
+          {
+            "prompt": "We just resumed this session. What code word did I ask you to remember? Reply with only the word.",
+            "level": "medium",
+            "expect": "heron",
+            "restartBefore": true
+          },
+          {
+            "prompt": "What is 2 to the power of 10? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Use the add tool to add 64 and 36, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b100\\b"
+          },
+          {
+            "prompt": "Name a fruit that is yellow. Reply with one word.",
+            "level": "high"
+          },
+          {
+            "prompt": "What is 1000 minus 1? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "How many sides does a triangle have? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Remember this code word for later in our conversation: falcon. Reply with only OK.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 6 times 7? Reply with only the number.",
+            "level": "high"
+          },
+          {
+            "prompt": "Use the add tool to add 321 and 123, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b444\\b"
+          },
+          {
+            "prompt": "What is the plural of 'mouse'? Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 50 percent of 80? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Name the largest ocean on Earth. Reply with at most two words.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 11 times 11? Reply with only the number.",
+            "level": "high"
+          },
+          {
+            "prompt": "Use the add tool to add 9 and 91, then reply with only the result.",
+            "level": "high",
+            "tool": "add",
+            "expect": "\\b100\\b"
+          },
+          {
+            "prompt": "Which month comes after March? Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 81 divided by 9? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "List both code words I asked you to remember, separated by a comma.",
+            "level": "medium",
+            "expect": [
+              "heron",
+              "falcon"
+            ]
+          },
+          {
+            "prompt": "What is 5 factorial? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Use the add tool to add 250 and 750, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b1000\\b"
+          },
+          {
+            "prompt": "At sea level, what is the boiling point of water in Celsius? Reply with only the number.",
+            "level": "high"
+          },
+          {
+            "prompt": "How many minutes are in an hour? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 2 plus 2? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "In one short sentence, summarize what we did in this conversation.",
+            "level": "medium"
+          }
+        ]
+      }
+    ]
+  }
+}

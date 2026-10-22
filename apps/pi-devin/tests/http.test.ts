@@ -6,10 +6,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test, type TestContext } from "vitest";
 import type { TLSSocket } from "node:tls";
-import { createHTTPTransport } from "../src/core/protocol/http.ts";
+import { Effect } from "effect";
+import { HttpClientRequest } from "effect/http";
+import { isAuthenticationError, RPCError } from "../src/core/errors.ts";
+import { fromHttpClientError, makeNodeHttpClient } from "../src/core/protocol/http.ts";
 import { unaryCodecs } from "../src/core/protocol/protobuf.ts";
-import { ConnectClient, isAuthenticationError, RPCError } from "../src/core/protocol/transport.ts";
-import { STATUS_METHOD, statusResponse } from "./helpers.ts";
+import { close, connectClient, run, runSync, STATUS_METHOD, statusResponse } from "./helpers.ts";
 
 async function localCertificate(t: TestContext): Promise<{ key: Buffer; cert: Buffer }> {
   const directory = await mkdtemp(join(tmpdir(), "devin-poc-tls-"));
@@ -33,22 +35,22 @@ test("real TLS certificate and host verification, SNI/ALPN HTTP/1.1, sequential 
     records.push({ version: req.httpVersion, alpn: socket.alpnProtocol, protocol: socket.getProtocol(), servername: socket.servername,
       socket, auth: req.headers.authorization, cookie: req.headers.cookie });
     if (req.url === "/v3/self") res.writeHead(200, { "content-type": "application/json", "set-cookie": "never-send-this=1" }).end("{}");
-    else res.writeHead(200, { "content-type": "application/proto" }).end(unaryCodecs(STATUS_METHOD).response.encode(statusResponse()));
+    else res.writeHead(200, { "content-type": "application/proto" }).end(runSync(Effect.flatMap(unaryCodecs(STATUS_METHOD), (codecs) => codecs.response.encode(statusResponse()))));
   });
   server.keepAliveTimeout = 10_000;
   await new Promise<void>((resolve) => server.listen(0, resolve));
   t.onTestFinished(async () => { server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); });
   const address = server.address(); expect(address && typeof address !== "string").toBeTruthy(); if (!address || typeof address === "string") throw new Error("unreachable");
   const base = `https://localhost:${address.port}`;
-  const trusted = new ConnectClient({ baseURL: base, token: "offline-tls-token", http: { ca: certificate.cert }, timeoutMs: 5000 });
-  const untrusted = new ConnectClient({ baseURL: base, timeoutMs: 5000 });
-  const wrongHost = new ConnectClient({ baseURL: `https://127.0.0.1:${address.port}`, http: { ca: certificate.cert }, timeoutMs: 5000 });
-  t.onTestFinished(() => { trusted.close(); untrusted.close(); wrongHost.close(); });
-  await expect(untrusted.unary(STATUS_METHOD, {})).rejects.toThrow(/self.signed|certificate/i);
-  await expect(wrongHost.unary(STATUS_METHOD, {})).rejects.toThrow(/Hostname|IP|altname/i);
+  const trusted = connectClient({ baseURL: base, token: "offline-tls-token", http: { ca: certificate.cert }, timeoutMs: 5000 });
+  const untrusted = connectClient({ baseURL: base, timeoutMs: 5000 });
+  const wrongHost = connectClient({ baseURL: `https://127.0.0.1:${address.port}`, http: { ca: certificate.cert }, timeoutMs: 5000 });
+  t.onTestFinished(() => { close(trusted); close(untrusted); close(wrongHost); });
+  await expect(run(untrusted.unary(STATUS_METHOD, {}))).rejects.toThrow(/self.signed|certificate/i);
+  await expect(run(wrongHost.unary(STATUS_METHOD, {}))).rejects.toThrow(/Hostname|IP|altname/i);
   expect(records.length).toBe(0);
-  await trusted.getJSON(base, "/v3/self");
-  await trusted.unary(STATUS_METHOD, {});
+  await run(trusted.getJSON(base, "/v3/self"));
+  await run(trusted.unary(STATUS_METHOD, {}));
   expect(records.length).toBe(2);
   expect(records[0].socket).toBe(records[1].socket);
   expect(records.map((record) => record.auth)).toStrictEqual(["Bearer offline-tls-token", "Basic offline-tls-token-offline-tls-token"]);
@@ -60,9 +62,9 @@ test("real TLS certificate and host verification, SNI/ALPN HTTP/1.1, sequential 
     expect(record.cookie).toBe(undefined);
   }
   const closed = new Promise<void>((resolve) => records[0].socket.once("close", resolve));
-  trusted.close();
+  close(trusted);
   await closed;
-  await expect(trusted.unary(STATUS_METHOD, {})).rejects.toThrow(/closed/);
+  await expect(run(trusted.unary(STATUS_METHOD, {}))).rejects.toThrow(/closed/);
   expect(records.length).toBe(2);
 });
 
@@ -75,9 +77,9 @@ test("RPC credentials are not forwarded on redirects", async (t) => {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.onTestFinished(async () => { server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); });
   const address = server.address(); expect(address && typeof address !== "string").toBeTruthy(); if (!address || typeof address === "string") throw new Error("unreachable");
-  const client = new ConnectClient({ baseURL: `http://127.0.0.1:${address.port}`, token: "offline-redirect-token" });
-  t.onTestFinished(() => client.close());
-  await expect(client.unary(STATUS_METHOD, {})).rejects.toThrow(expect.toSatisfy((error: unknown) => error instanceof RPCError && error.httpStatus === 302));
+  const client = connectClient({ baseURL: `http://127.0.0.1:${address.port}`, token: "offline-redirect-token" });
+  t.onTestFinished(() => close(client));
+  await expect(run(client.unary(STATUS_METHOD, {}))).rejects.toThrow(expect.toSatisfy((error: unknown) => error instanceof RPCError && error.httpStatus === 302));
   expect(paths).toStrictEqual([`/${STATUS_METHOD}`]);
 });
 
@@ -89,15 +91,15 @@ test("unsupported error body compression does not hide 401/429 statuses", async 
   const address = server.address(); expect(address && typeof address !== "string").toBeTruthy(); if (!address || typeof address === "string") throw new Error("unreachable");
   for (const value of [401, 429, 200]) {
     status = value;
-    const client = new ConnectClient({ baseURL: `http://127.0.0.1:${address.port}`, token: "offline-token" });
-    t.onTestFinished(() => client.close());
-    await expect(client.unary(STATUS_METHOD, {})).rejects.toThrow(expect.toSatisfy((error: unknown) => {
+    const client = connectClient({ baseURL: `http://127.0.0.1:${address.port}`, token: "offline-token" });
+    t.onTestFinished(() => close(client));
+    await expect(run(client.unary(STATUS_METHOD, {}))).rejects.toThrow(expect.toSatisfy((error: unknown) => {
       if (status === 401) expect(isAuthenticationError(error)).toBeTruthy();
       else if (status === 429) { expect(error instanceof RPCError).toBeTruthy(); if (!(error instanceof RPCError)) throw new Error("unreachable"); expect(error.kind).toBe("rate_limit"); expect(error.retryAfterMs).toBe(3000); }
       else expect((error as Error).message).toMatch(/response compression/);
       return true;
     }));
-    expect(client.isAuthenticationInvalid).toBe(status === 401);
+    expect(runSync(client.isAuthenticationInvalid)).toBe(status === 401);
   }
 });
 
@@ -107,9 +109,8 @@ test("HTTP upgrade is rejected and its socket is closed", async (t) => {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.onTestFinished(() => new Promise<void>((resolve) => server.close(() => resolve())));
   const address = server.address(); expect(address && typeof address !== "string").toBeTruthy(); if (!address || typeof address === "string") throw new Error("unreachable");
-  const http = createHTTPTransport();
-  t.onTestFinished(() => http.close());
-  // requestHTTP does not add Connection itself, so the server answers a plain request with 101.
+  // The transport does not add Connection itself, so the server answers a plain request with 101.
   server.on("request", (_req, res) => res.writeHead(101, { connection: "upgrade", upgrade: "websocket" }).end());
-  await expect(http.fetch(`http://127.0.0.1:${address.port}/`, { method: "GET", redirect: "error" })).rejects.toThrow(/upgrade/);
+  const request = Effect.scoped(Effect.flatMap(makeNodeHttpClient(), (http) => http.execute(HttpClientRequest.get(`http://127.0.0.1:${address.port}/`)))).pipe(Effect.mapError(fromHttpClientError));
+  await expect(run(request)).rejects.toThrow(/upgrade/);
 });

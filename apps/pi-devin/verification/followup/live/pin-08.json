@@ -1,0 +1,9 @@
+{
+  "artifact": {
+    "sha256": "89b92e7c2ee7372305fe09949caa4d49ba23724eee7fe7159b6f91640b868f5c",
+    "runtimeDigest": {
+      "files": 167,
+      "sha256": "086c67ea82b31f554eaf267c3d0df39ee68c793c8e266adf6092c51862f83bcf"
+    }
+  }
+}

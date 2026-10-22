@@ -6,23 +6,21 @@ import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import {
   InMemoryCredentialStore, InMemoryModelsStore, type Api, type Credential as HostCredential, type Model, type Provider, type SimpleStreamOptions,
 } from "@earendil-works/pi-ai";
-import { createDevinAccountAuth, OAUTH_ONLY_MESSAGE } from "../src/pi/auth.ts";
-import { createDevinProvider } from "../src/pi/provider.ts";
-import { DevinClient } from "../src/core/client.ts";
-import { createFingerprintProvider } from "../src/core/protocol/fingerprint.ts";
+import { OAUTH_ONLY_MESSAGE } from "../src/pi/features/auth/credential.ts";
 import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
 import type { JsonObject } from "../src/core/types.ts";
-import { identity, STATUS_METHOD, statusResponse, unaryResponse } from "./helpers.ts";
+import { makeTestProvider, type TestProvider } from "./extension-harness.ts";
+import { STATUS_METHOD, statusResponse, unaryResponse } from "./helpers.ts";
 import { providerCredential, providerFixture } from "./provider-fixture.ts";
 
 test("OAuth only: Pi API key resolution paths are rejected without a Devin request and only the OAuth session uses models", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pi-devin-oauth-only-"));
   const fixture = await providerFixture();
-  fixture.provider.shutdown();
+  fixture.shutdown();
   const serviceKey = "cog_fake-service-key", windsurfKey = "sk-ws-01-fake-key";
   const previous = { DEVIN_API_KEY: process.env.DEVIN_API_KEY, WINDSURF_API_KEY: process.env.WINDSURF_API_KEY };
   process.env.DEVIN_API_KEY = serviceKey; process.env.WINDSURF_API_KEY = windsurfKey;
-  const providers: Provider[] = [];
+  const providers: TestProvider[] = [];
   let configIndex = 0;
   async function host(options: { models?: JsonObject; stored?: HostCredential } = {}) {
     const credentials = new InMemoryCredentialStore();
@@ -30,9 +28,9 @@ test("OAuth only: Pi API key resolution paths are rejected without a Devin reque
     const modelsPath = join(directory, `models-${configIndex++}.json`);
     if (options.models) await writeFile(modelsPath, JSON.stringify(options.models));
     const runtime = await ModelRuntime.create({ credentials, modelsPath, modelsStore: new InMemoryModelsStore(), refreshOnCreate: false, allowModelNetwork: false });
-    const provider = createDevinProvider(fixture.dependencies);
-    providers.push(provider);
-    runtime.registerNativeProvider(provider);
+    const opened = makeTestProvider(fixture.dependencies);
+    providers.push(opened);
+    runtime.registerNativeProvider(opened.provider);
     return runtime;
   }
   async function attempt(runtime: ModelRuntime, options: SimpleStreamOptions = {}, model: Model<Api> = fixture.model) {
@@ -80,7 +78,7 @@ test("OAuth only: Pi API key resolution paths are rejected without a Devin reque
     expect((chat.body.metadata as JsonObject).apiKey).toBe(providerCredential.sessionToken);
     expect(accepted.requests.every((request) => !JSON.stringify(request.body).includes(serviceKey) && !JSON.stringify(request.body).includes(windsurfKey))).toBe(true);
   } finally {
-    for (const provider of providers) (provider as ReturnType<typeof createDevinProvider>).shutdown();
+    for (const opened of providers) opened.shutdown();
     for (const [name, value] of Object.entries(previous)) { if (value === undefined) delete process.env[name]; else process.env[name] = value; }
     await rm(directory, { recursive: true, force: true });
   }
@@ -94,15 +92,12 @@ test("coding-agent public ModelRuntime real file storage is bounded and Pi logou
   await writeFile(authPath, JSON.stringify({ unrelated: other }), { mode: 0o600 });
   await writeFile(cliPath, cliBytes, { mode: 0o600 });
   let queries = 0;
-  const auth = createDevinAccountAuth({
+  const opened = makeTestProvider({
     loginOptions: { fetch: async (url) => unaryResponse(new URL(String(url)).pathname.slice(1), { sessionToken: "file-backed-fake-token" }) },
-    createClient: (credential) => new DevinClient(credential, {
-      fingerprint: createFingerprintProvider(credential.sessionToken, { collectIdentity: () => identity }),
-      fetch: async () => { queries++; return unaryResponse(STATUS_METHOD, statusResponse()); },
-    }),
+    fetch: async () => { queries++; return unaryResponse(STATUS_METHOD, statusResponse()); },
   });
   const provider: Provider = {
-    id: "devin", name: "Devin", auth: { oauth: auth }, getModels: () => [],
+    id: "devin", name: "Devin", auth: { oauth: opened.provider.auth.oauth }, getModels: () => [],
     refreshModels: async () => {},
     stream: () => { throw new Error("No inference in auth test"); },
     streamSimple: () => { throw new Error("No inference in auth test"); },
@@ -114,18 +109,19 @@ test("coding-agent public ModelRuntime real file storage is bounded and Pi logou
       notify: () => {}, prompt: async (prompt) => prompt.type === "select" ? "manual" : "plain-file-code",
     });
     expect(runtime.isUsingOAuth("devin")).toBe(true);
-    expect(queries).toBe(0);
+    // Sign-in records the new session's account once; it does not touch auth.json for that.
+    expect(queries).toBe(1);
     const saved = await readFile(authPath, "utf8");
     expect(JSON.parse(saved)).toStrictEqual({ unrelated: other, devin: credential });
     // Until the session check interval passes, resolving auth neither checks the session nor rewrites the shared auth.json.
     for (let i = 0; i < 3; i++) await runtime.getAuth("devin");
-    expect(queries).toBe(0);
+    expect(queries).toBe(1);
     expect(await readFile(authPath, "utf8")).toBe(saved);
     await runtime.logout("devin");
     expect(await runtime.getAuth("devin")).toBe(undefined);
-    expect(queries).toBe(0);
+    expect(queries).toBe(1);
     expect(JSON.parse(await readFile(authPath, "utf8"))).toStrictEqual({ unrelated: other });
     expect(await readFile(cliPath, "utf8")).toBe(cliBytes);
     runtime.unregisterProvider("devin");
-  } finally { await rm(directory, { recursive: true, force: true }); }
+  } finally { opened.shutdown(); await rm(directory, { recursive: true, force: true }); }
 });

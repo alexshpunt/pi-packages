@@ -1,21 +1,21 @@
 import { expect, test, vi } from "vitest";
 import { normalizeContext, type OAuthCredential } from "@earendil-works/pi-ai";
-import { createDevinProvider } from "../src/pi/provider.ts";
-import { chatResponseCodec } from "../src/core/protocol/protobuf.ts";
-import { encodeFrame } from "../src/core/protocol/transport.ts";
+import { makeTestProvider } from "./extension-harness.ts";
 import type { JsonObject } from "../src/core/types.ts";
-import { finalFrames, STATUS_METHOD, streamResponse } from "./helpers.ts";
+import { encodeResponse, finalFrames, frameBytes, runSync, STATUS_METHOD, streamResponse } from "./helpers.ts";
 import { providerCredential, providerFixture, providerHostCredential } from "./provider-fixture.ts";
 
 const context = () => normalizeContext({ messages: [{ role: "user", content: "fixture", timestamp: 1 }] });
 const options = { apiKey: providerCredential.sessionToken, reasoning: "high" as const };
+/** Resolves to undefined long before a request blocked on a never-settling cleanup could end. Effect fibers take a few event-loop turns. */
+const hangGuard = () => new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 1_000));
 function gate<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>((done) => { resolve = done; }); return { promise, resolve }; }
 
 test("the body is not read before onResponse completes and the payload UID replacement is kept", async () => {
   let hasObservedResponse = false, reads = 0;
   const fixture = await providerFixture({ chat: (request) => {
     expect(request.body.chatModelUid).toBe("swe-2-max");
-    const bytes = Buffer.concat([...finalFrames("replacement").map((frame) => encodeFrame(chatResponseCodec.encode(frame))), encodeFrame(Buffer.from("{}"), 2)]);
+    const bytes = Buffer.concat([...finalFrames("replacement").map((frame) => frameBytes(encodeResponse(frame))), frameBytes(Buffer.from("{}"), 2)]);
     return new Response(new ReadableStream({ pull(controller) { expect(hasObservedResponse).toBe(true); reads++; controller.enqueue(bytes); controller.close(); } }, { highWaterMark: 0 }), { headers: { "content-type": "application/connect+proto" } });
   } });
   try {
@@ -24,7 +24,7 @@ test("the body is not read before onResponse completes and the payload UID repla
       onResponse: async () => { expect(reads).toBe(0); await Promise.resolve(); hasObservedResponse = true; },
     }).result();
     expect(result.stopReason, result.errorMessage ?? "").toBe("stop"); expect(result.providerThinkingLevel).toBe("swe-2-max"); expect(reads).toBe(1);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("a response hook failure strips tokens, fingerprints and headers and does not wait for an uncooperative body cancel", async () => {
@@ -37,24 +37,24 @@ test("a response hook failure strips tokens, fingerprints and headers and does n
     const stream = fixture.provider.streamSimple(fixture.model, context(), { ...options, headers: { "x-sensitive": "fake-sensitive-header" },
       onResponse: () => { throw new Error(`${providerCredential.sessionToken} ${fingerprint} fake-sensitive-header`); },
     });
-    const result = await Promise.race([stream.result(), new Promise<undefined>((resolve) => setImmediate(() => resolve(undefined)))]);
+    const result = await Promise.race([stream.result(), hangGuard()]);
     expect(result, "an uncooperative cleanup blocked the response from ending").toBeTruthy(); if (!result) throw new Error("unreachable"); expect(result.stopReason).toBe("error"); expect(cancels).toBe(1);
     const serialized = JSON.stringify(result);
     for (const secret of [providerCredential.sessionToken, fingerprint, "fake-sensitive-header"]) expect(serialized.includes(secret)).toBe(false);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("a frame observer failure stops the open reader and does not wait for an uncooperative cancel", async () => {
   let sent = false, cancels = 0;
   const fixture = await providerFixture({ chat: () => new Response(new ReadableStream({
-    pull(controller) { if (!sent) { sent = true; controller.enqueue(encodeFrame(chatResponseCodec.encode({ deltaText: "partial" }))); } },
+    pull(controller) { if (!sent) { sent = true; controller.enqueue(frameBytes(encodeResponse({ deltaText: "partial" }))); } },
     cancel() { cancels++; return new Promise(() => {}); },
   }, { highWaterMark: 0 })) });
   try {
     const stream = fixture.provider.streamSimple(fixture.model, context(), { ...options, onProviderStreamEvent: () => { throw new Error("observer failed"); } });
-    const result = await Promise.race([stream.result(), new Promise<undefined>((resolve) => setImmediate(() => resolve(undefined)))]);
+    const result = await Promise.race([stream.result(), hangGuard()]);
     expect(result).toBeTruthy(); if (!result) throw new Error("unreachable"); expect(result.stopReason).toBe("error"); expect(cancels).toBe(1);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("even an uncooperative payload hook ends within the RPC deadline", async (context) => {
@@ -64,7 +64,7 @@ test("even an uncooperative payload hook ends within the RPC deadline", async (c
       onPayload: () => { vi.advanceTimersByTime(5000); return new Promise(() => {}); },
     }).result();
     expect(result.stopReason).toBe("error"); expect(result.errorMessage!).toMatch(/5000/); expect(fixture.chatCalls()).toBe(0);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("server redaction clears the final text/thinking/tool payload and does not turn failure into success", async () => {
@@ -75,34 +75,35 @@ test("server redaction clears the final text/thinking/tool payload and does not 
   try {
     const result = await fixture.provider.streamSimple(fixture.model, context(), options).result();
     expect(result.stopReason).toBe("error"); expect(JSON.stringify(result).includes("private")).toBe(false);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("a 401 blocks waiting requests of the same run and later direct calls", async () => {
   const started = gate<void>(), response = gate<Response>();
   const fixture = await providerFixture({ chat: () => { started.resolve(); return response.promise; } });
-  fixture.provider.lifecycle.begin("agent");
+  runSync(fixture.runs.begin("agent"));
   try {
     const first = fixture.provider.streamSimple(fixture.model, context(), options), second = fixture.provider.streamSimple(fixture.model, context(), options);
     await started.promise; response.resolve(Response.json({}, { status: 401 }));
     const results = await Promise.all([first.result(), second.result()]);
     expect(results.every((result) => result.stopReason === "error")).toBe(true); expect(fixture.chatCalls()).toBe(1);
-    fixture.provider.lifecycle.finish(); fixture.provider.lifecycle.begin("agent");
+    runSync(fixture.runs.finish); runSync(fixture.runs.begin("agent"));
     const before = fixture.requests.length;
     const rejected = await fixture.provider.streamSimple(fixture.model, context(), options).result();
     expect(rejected.stopReason).toBe("error"); expect(rejected.errorMessage!).toMatch(/login/); expect(fixture.requests.length).toBe(before);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("a late 401 from an older auth generation does not cancel runs after a new login", async () => {
-  const f = await providerFixture(); f.provider.shutdown();
+  const f = await providerFixture(); f.shutdown();
   const statusStarted = gate<void>(), oldStatus = gate<Response>(), chatStarted = gate<void>(), chatResponse = gate<Response>();
   let statusCalls = 0, chatSignal!: AbortSignal;
-  const provider = createDevinProvider({ ...f.dependencies, fetch: async (url, init) => {
+  const late = makeTestProvider({ ...f.dependencies, fetch: async (url, init) => {
     if (String(url).endsWith(STATUS_METHOD) && ++statusCalls === 1) { statusStarted.resolve(); return oldStatus.promise; }
     if (String(url).endsWith("/GetChatMessage")) { chatSignal = init!.signal!; chatStarted.resolve(); return chatResponse.promise; }
     return f.dependencies.fetch(url, init);
   } });
+  const { provider } = late;
   const refreshCatalog = (credential: OAuthCredential) => provider.refreshModels({ credential, allowNetwork: true, force: true, signal: new AbortController().signal, publish: async (value) => { value.update?.(); return true; } });
   try {
     await refreshCatalog(providerHostCredential);
@@ -118,7 +119,7 @@ test("a late 401 from an older auth generation does not cancel runs after a new 
     chatResponse.resolve(streamResponse(finalFrames()));
     expect((await stream.result()).stopReason).toBe("stop");
     expect((await provider.auth.oauth!.toAuth(credential)).apiKey).toBe(credential.access);
-  } finally { provider.shutdown(); }
+  } finally { late.shutdown(); }
 });
 
 test("thinking redaction clears only the final thinking and keeps the raw stream length stop", async () => {
@@ -131,5 +132,5 @@ test("thinking redaction clears only the final thinking and keeps the raw stream
     const result = await fixture.provider.stream(fixture.model, context(), { apiKey: providerCredential.sessionToken, maxTokens: 5 }).result();
     expect(result.stopReason).toBe("length"); expect(JSON.stringify(result).includes("hidden thought")).toBe(false);
     expect(result.content.find((block) => block.type === "text")?.text).toBe("visible");
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });

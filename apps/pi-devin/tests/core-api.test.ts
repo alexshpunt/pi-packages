@@ -1,29 +1,30 @@
 import { expect, test } from "vitest";
-import { CORE_CONTRACT_VERSION, DevinClient, ChatAccumulator, getModelByUID } from "../src/core/index.ts";
+import { CORE_CONTRACT_VERSION, ChatAccumulator, getModelByUID } from "../src/core/index.ts";
 import { chatResponseCodec } from "../src/core/protocol/protobuf.ts";
-import { object, type JsonObject } from "../src/core/types.ts";
-import { credential, fingerprint, model, modelResponse, MODELS_METHOD, unaryResponse } from "./helpers.ts";
+import type { JsonObject } from "../src/core/types.ts";
+import { object } from "../src/core/validation.ts";
+import { close, credential, devinClient, fingerprint, model, modelResponse, MODELS_METHOD, run, runSync, unaryResponse } from "./helpers.ts";
 
 test("the shared API raw catalog and the CLI model projection use the same lookup", async () => {
-  expect(CORE_CONTRACT_VERSION).toBe(1);
+  expect(CORE_CONTRACT_VERSION).toBe(3);
   let calls = 0;
-  const client = new DevinClient(credential, { fingerprint: fingerprint(), fetch: async (url) => {
+  const client = devinClient(credential, { fingerprint: fingerprint(), fetch: async (url) => {
     calls++; expect(new URL(String(url)).pathname).toBe("/" + MODELS_METHOD);
     return unaryResponse(MODELS_METHOD, modelResponse());
   } });
   try {
-    const catalog = await client.catalog();
+    const catalog = await run(client.catalog);
     expect(calls).toBe(1);
     expect(catalog.defaultModelUid).toBe(model.id);
-    expect(client.defaultModelUid).toBe(model.id);
-    expect(getModelByUID(catalog.models, model.id).supportsThinking).toBe(true);
+    expect(runSync(client.defaultModelUid)).toBe(model.id);
+    expect(runSync(getModelByUID(catalog.models, model.id)).supportsThinking).toBe(true);
     const raw = (catalog.raw.clientModelConfigs as JsonObject[])[0];
-    expect(object(raw.modelInfo, "modelInfo").modelFamilyUid).toBe(model.familyId);
-    expect(await client.models()).toStrictEqual(catalog.models);
+    expect(runSync(object(raw.modelInfo, "modelInfo")).modelFamilyUid).toBe(model.familyId);
+    expect(await run(client.models)).toStrictEqual(catalog.models);
     expect(calls).toBe(2);
-    await expect(client.catalog(AbortSignal.abort(new DOMException("cancel", "AbortError")))).rejects.toThrow(expect.objectContaining({ name: "AbortError" }));
+    await expect(run(client.catalog, AbortSignal.abort(new DOMException("cancel", "AbortError")))).rejects.toThrow(expect.objectContaining({ name: "AbortError" }));
     expect(calls).toBe(2);
-  } finally { client.transport.close(); }
+  } finally { close(client); }
 });
 
 test("JSON argument fragments recorded as numbers are converted to protobuf strings and joined", () => {
@@ -33,7 +34,7 @@ test("JSON argument fragments recorded as numbers are converted to protobuf stri
     { deltaToolCalls: [{ argumentsJson: 42 }] },
     { deltaToolCalls: [{ argumentsJson: "}" }], stopReason: "STOP_REASON_FUNCTION_CALL" },
   ];
-  for (const frame of frames) acc.accept(chatResponseCodec.decode(chatResponseCodec.encode(frame)));
-  acc.accept({}, true);
-  expect(JSON.parse(acc.finish().message.toolCalls![0].argumentsJson)).toStrictEqual({ value: 42 });
+  for (const frame of frames) runSync(acc.accept(runSync(chatResponseCodec.decode(runSync(chatResponseCodec.encode(frame))))));
+  runSync(acc.accept({}, true));
+  expect(JSON.parse(runSync(acc.finish).message.toolCalls![0].argumentsJson)).toStrictEqual({ value: 42 });
 });
