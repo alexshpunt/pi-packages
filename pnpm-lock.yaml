@@ -290,6 +290,9 @@ importers:
 
   apps/pi-ollama-cloud:
     dependencies:
+      effect:
+        specifier: 4.0.6
+        version: 4.0.6
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -1640,6 +1643,9 @@ packages:
 
   effect@4.0.5:
     resolution: {integrity: sha512-BY4/28NlpOd99yzmV741xbVGmp+1U7tks4oB7F/Png64bTa5tm5eCA6W0RiXsnuLDDoJpjfVSo4Dnq4BZb/89Q==}
+
+  effect@4.0.6:
+    resolution: {integrity: sha512-Tc3mkzuLR6t6P9dhLt0D2GrxYtmU5td4XEJEiXCmILz53IRIfJyHsKZWjTA3xEjiwpNTtXBgI4iqYPxMztBDrw==}
 
   encodeurl@2.0.0:
     resolution: {integrity: sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==}
@@ -3971,6 +3977,8 @@ snapshots:
   ee-first@1.1.1: {}
 
   effect@4.0.5: {}
+
+  effect@4.0.6: {}
 
   encodeurl@2.0.0: {}
 

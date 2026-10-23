@@ -1,6 +1,8 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
+import { Effect } from "effect";
 import { OLLAMA_BASE } from "../models/base.ts";
-import { fetchJsonWithTimeout, httpError } from "../shared/http.ts";
+import { fromSync } from "../shared/effects.ts";
+import { fetchJsonWithTimeoutEffect, httpError } from "../shared/http.ts";
 
 export interface BalanceWindow {
   remaining_percent: number;
@@ -101,42 +103,58 @@ export function isUsageStats(data: unknown): data is UsageStats {
   );
 }
 
-export async function fetchUsage(apiKey: string, externalSignal?: AbortSignal): Promise<UsageData> {
-  const res = await fetchJsonWithTimeout<UsageData>(
-    `${OLLAMA_BASE}/api/balance`,
-    { method: "GET", headers: { Authorization: `Bearer ${apiKey}` } },
-    USAGE_TIMEOUT_MS,
-    externalSignal,
-  );
-  if (!res.ok) {
-    if (res.status === 0) {
-      throw new Error(`Ollama Cloud balance failed: transport error (${res.error ?? "unknown"}). Try again shortly.`);
-    }
-    if (res.status === 404) {
-      throw new Error("Ollama Cloud balance failed: the /api/balance endpoint is unavailable (status 404).");
-    }
-    httpError("balance", res.status, res.error);
-  }
-  if (!isUsageResponse(res.data))
-    throw new Error("Ollama Cloud balance failed: unexpected response shape from the API.");
-  return res.data;
+export function fetchUsageEffect(apiKey: string, externalSignal?: AbortSignal) {
+  return Effect.gen(function* () {
+    const res = yield* fetchJsonWithTimeoutEffect<UsageData>(
+      `${OLLAMA_BASE}/api/balance`,
+      { method: "GET", headers: { Authorization: `Bearer ${apiKey}` } },
+      USAGE_TIMEOUT_MS,
+      externalSignal,
+    );
+    return yield* fromSync(() => {
+      if (!res.ok) {
+        if (res.status === 0) {
+          throw new Error(
+            `Ollama Cloud balance failed: transport error (${res.error ?? "unknown"}). Try again shortly.`,
+          );
+        }
+        if (res.status === 404) {
+          throw new Error("Ollama Cloud balance failed: the /api/balance endpoint is unavailable (status 404).");
+        }
+        httpError("balance", res.status, res.error);
+      }
+      if (!isUsageResponse(res.data))
+        throw new Error("Ollama Cloud balance failed: unexpected response shape from the API.");
+      return res.data;
+    });
+  });
+}
+export function fetchUsage(...args: Parameters<typeof fetchUsageEffect>): Promise<UsageData> {
+  return Effect.runPromise(fetchUsageEffect(...args));
 }
 
-export async function fetchUsageStats(
+export function fetchUsageStatsEffect(
   apiKey: string,
   range: "24h" | "7d" | "30d" = "7d",
   externalSignal?: AbortSignal,
-): Promise<UsageStats> {
-  const res = await fetchJsonWithTimeout<UsageStats>(
-    `${OLLAMA_BASE}/api/usage?range=${range}`,
-    { method: "GET", headers: { Authorization: `Bearer ${apiKey}` } },
-    USAGE_TIMEOUT_MS,
-    externalSignal,
-  );
-  if (!res.ok) httpError("usage stats", res.status, res.error);
-  if (!isUsageStats(res.data))
-    throw new Error("Ollama Cloud usage stats failed: unexpected response shape from the API.");
-  return res.data;
+) {
+  return Effect.gen(function* () {
+    const res = yield* fetchJsonWithTimeoutEffect<UsageStats>(
+      `${OLLAMA_BASE}/api/usage?range=${range}`,
+      { method: "GET", headers: { Authorization: `Bearer ${apiKey}` } },
+      USAGE_TIMEOUT_MS,
+      externalSignal,
+    );
+    return yield* fromSync(() => {
+      if (!res.ok) httpError("usage stats", res.status, res.error);
+      if (!isUsageStats(res.data))
+        throw new Error("Ollama Cloud usage stats failed: unexpected response shape from the API.");
+      return res.data;
+    });
+  });
+}
+export function fetchUsageStats(...args: Parameters<typeof fetchUsageStatsEffect>): Promise<UsageStats> {
+  return Effect.runPromise(fetchUsageStatsEffect(...args));
 }
 
 function usedPercent(remaining: number): number {

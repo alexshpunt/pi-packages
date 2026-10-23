@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { Effect } from "effect";
+import { runAbortable } from "../shared/effects.ts";
 import { EMPTY_CACHE_BYTES, pruneCache } from "./budget.ts";
 import {
   CACHE_PATH,
@@ -10,7 +12,7 @@ import {
   MAX_PERSISTED_ENTRY_BYTES,
 } from "./constants.ts";
 import { getCacheFileRevision, readCacheFile, writeCacheFile } from "./disk.ts";
-import { CACHE_LOCK_TIMEOUT_MS, type CacheLockResult, withCacheLock, withCacheLockSync } from "./lock.ts";
+import { CACHE_LOCK_TIMEOUT_MS, type CacheLockResult, withCacheLockEffect, withCacheLockSync } from "./lock.ts";
 import { type CacheSnapshot, entryFingerprint, mergeCache, replaceCache, snapshotCache } from "./merge.ts";
 import type { CacheData, CacheDiagnostics, CacheOptions, CacheStore } from "./types.ts";
 
@@ -94,26 +96,31 @@ export function createCache(options: Partial<CacheOptions> = {}): CacheStore {
     loadCache();
     record(withCacheLockSync(path, persist, lockTimeoutMs));
   }
-  async function updateCache(mutation: (cache: CacheData) => void, signal?: AbortSignal): Promise<void> {
-    let hasApplied = false;
-    const result = await withCacheLock(
-      path,
-      () => {
-        signal?.throwIfAborted();
-        mutation(loadCache());
-        hasApplied = true;
-        return persist();
-      },
+  function updateCache(mutation: (cache: CacheData) => void, signal?: AbortSignal): Promise<void> {
+    return runAbortable(
+      Effect.gen(function* () {
+        let hasApplied = false;
+        const result = yield* withCacheLockEffect(
+          path,
+          () => {
+            signal?.throwIfAborted();
+            mutation(loadCache());
+            hasApplied = true;
+            return persist();
+          },
+          signal,
+          lockTimeoutMs,
+        );
+        if (!hasApplied) {
+          // A lock timeout must not lose a successful response from this process's memory.
+          signal?.throwIfAborted();
+          mutation(loadCache());
+          boundMemory(loadCache());
+        }
+        record(result);
+      }),
       signal,
-      lockTimeoutMs,
     );
-    if (!hasApplied) {
-      // A lock timeout must not lose a successful response from this process's memory.
-      signal?.throwIfAborted();
-      mutation(loadCache());
-      boundMemory(loadCache());
-    }
-    record(result);
   }
   return {
     loadCache,

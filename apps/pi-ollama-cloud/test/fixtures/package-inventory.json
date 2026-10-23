@@ -73,6 +73,7 @@
     "src/render/secret-input.ts",
     "src/render/settings-panel.ts",
     "src/shared/concurrent.ts",
+    "src/shared/effects.ts",
     "src/shared/http.ts",
     "src/usage/api.ts",
     "src/usage/status-controller.ts",

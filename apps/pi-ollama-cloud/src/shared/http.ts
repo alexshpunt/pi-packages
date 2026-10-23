@@ -1,48 +1,75 @@
-export async function fetchJsonWithTimeout<T>(
+import { Effect, Exit } from "effect";
+import { fromPromise, fromSync } from "./effects.ts";
+
+export interface JsonResponse<T> {
+  ok: boolean;
+  status: number;
+  data: T | null;
+  error?: string;
+}
+
+/** Own the deadline and abort subscription for the entire response body, not only response headers. */
+export function fetchJsonWithTimeoutEffect<T>(
   url: string,
   init: RequestInit,
   timeoutMs: number,
   externalSignal?: AbortSignal,
-): Promise<{ ok: boolean; status: number; data: T | null; error?: string }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+): Effect.Effect<JsonResponse<T>> {
+  return Effect.acquireUseRelease(
+    Effect.sync(() => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const onExternalAbort = () => controller.abort();
+      if (externalSignal?.aborted) controller.abort();
+      else externalSignal?.addEventListener("abort", onExternalAbort, { once: true });
+      return { controller, timeout, onExternalAbort };
+    }),
+    ({ controller }) =>
+      Effect.gen(function* () {
+        const res = yield* fromPromise(() => fetch(url, { ...init, signal: controller.signal }));
+        const text = yield* fromPromise(() => res.text());
+        return yield* fromSync(() => {
+          let data: T | null = null;
+          try {
+            data = text ? (JSON.parse(text) as T) : null;
+          } catch {
+            /* Preserve malformed response text. */
+          }
+          const error =
+            data && typeof data === "object" && "error" in data
+              ? typeof (data as { error: unknown }).error === "object"
+                ? JSON.stringify((data as { error: unknown }).error)
+                : String((data as { error: unknown }).error)
+              : text;
+          return { ok: res.ok, status: res.status, data, error: res.ok ? undefined : error };
+        });
+      }),
+    ({ controller, timeout, onExternalAbort }, exit) =>
+      Effect.sync(() => {
+        if (Exit.hasInterrupts(exit)) controller.abort();
+        clearTimeout(timeout);
+        externalSignal?.removeEventListener("abort", onExternalAbort);
+      }),
+  ).pipe(
+    Effect.catch((error) =>
+      Effect.succeed({
+        ok: false,
+        status: 0,
+        data: null,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    ),
+  );
+}
 
-  // Link an external abort signal (e.g. a tool's cancellation signal) so the
-  // request aborts on either the timeout or the caller aborting. Cleanup runs
-  // in the finally block on both the happy and error paths.
-  const onExternalAbort = () => controller.abort();
-  if (externalSignal) {
-    if (externalSignal.aborted) {
-      controller.abort();
-    } else {
-      externalSignal.addEventListener("abort", onExternalAbort, { once: true });
-    }
-  }
-
-  try {
-    const res = await fetch(url, { ...init, signal: controller.signal });
-    const text = await res.text();
-    let data: T | null = null;
-    try {
-      data = text ? (JSON.parse(text) as T) : null;
-    } catch {
-      // Keep data null and report text below.
-    }
-    const error =
-      data && typeof data === "object" && "error" in data
-        ? typeof (data as { error: unknown }).error === "object"
-          ? JSON.stringify((data as { error: unknown }).error)
-          : String((data as { error: unknown }).error)
-        : text;
-    return { ok: res.ok, status: res.status, data, error: res.ok ? undefined : error };
-  } catch (error) {
-    return { ok: false, status: 0, data: null, error: error instanceof Error ? error.message : String(error) };
-  } finally {
-    clearTimeout(timeout);
-    if (externalSignal && !externalSignal.aborted) {
-      externalSignal.removeEventListener("abort", onExternalAbort);
-    }
-  }
+/** Existing Promise contract for Pi, CLI and injected consumers. */
+export function fetchJsonWithTimeout<T>(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  externalSignal?: AbortSignal,
+): Promise<JsonResponse<T>> {
+  return Effect.runPromise(fetchJsonWithTimeoutEffect<T>(url, init, timeoutMs, externalSignal));
 }
 const USAGE_LIMIT_PATTERN = /\busage limit\b/i;
 const MAX_ERROR_DETAIL_CHARS = 512;

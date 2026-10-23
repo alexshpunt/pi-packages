@@ -251,6 +251,37 @@ pnpm --dir apps/pi-ollama-cloud pack --pack-destination "$verification_dir/packa
 
 `check` runs lint and type checks without changing files. Unit tests and `--offline` verification make no requests to the real service. `--offline` verification also packs and unpacks the real pnpm archive, prepares only the production dependencies already installed, and compares registration, tools, cancellation, reload, and request payloads between the source and the archive. The last command writes the archive to `$verification_dir/package` so you can inspect it. Confirm exit code 0 and that every check in the report passed. Tests, the CLI, Inquirer, and verification records are not shipped, and there is no compile or bundle step.
 
+### Compare a refactor with its baseline
+
+Asynchronous execution, shared requests, and resource cleanup use Effect `4.0.6`. Existing Promise APIs, provider/command/tool names, settings, and storage formats are unchanged. Pure policy and synchronous updates inside file locks remain synchronous.
+
+Set `BEFORE_PACKAGE` and `AFTER_PACKAGE` to absolute paths of the baseline and candidate packages, each with its production dependencies installed. From the monorepo root, run the same fixture against both installations to compare registration, commands, tools, cancellation, reload, and final request payloads. This makes no live API requests.
+
+```bash
+verification_dir="$(mktemp -d)"
+pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/parity-offline.ts \
+  --before "${BEFORE_PACKAGE:?Set the baseline package path}" \
+  --after "${AFTER_PACKAGE:?Set the candidate package path}" \
+  --report "$verification_dir/parity.json"
+```
+
+### Run 50 live model requests
+
+**This check consumes real quota.** Supply a test `OLLAMA_API_KEY` privately in the execution environment; personal credential files are not used. The command below checks the source. To check an archive, point `--package-dir` at its extracted directory with production dependencies installed.
+
+```bash
+verification_dir="$(mktemp -d)"
+pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/parity-live.ts \
+  --live-50 --package-dir "$PWD/apps/pi-ollama-cloud" \
+  --report "$verification_dir/live-50.json"
+```
+
+The fixed `glm-5.3-flash:cloud` plan includes 10 single replies, 10 context-retention requests, 10 requests alternating omitted thinking settings and low, and 20 requests for registered web-tool round trips. Model follow-ups after tool execution count toward the 50. Each request is capped at 1,024 output tokens and 120 seconds. Separate limits allow at most two searches, two page fetches, four balance reads, and one model-detail request. Counts are persisted before dispatch, including failures. Retries, redirects, and requests outside the budget are blocked.
+
+Expect exit code 0 and report fields `status: "pass"`, `counts.chat: 50`, and `blocked: 0`. The runner stops on failure and rejects an existing report path. A new report starts a new budget, so track cumulative usage before rerunning. Reports omit keys, authorization headers, and complete responses. Running once before and once after a refactor makes 100 model requests.
+
+Live comparisons do not require identical generated wording or thinking blocks. Omitting a thinking setting does not necessarily disable reasoning under the model's policy; check the transmitted value in the report's `payload.reasoning`. The checks cover request options, stream termination, context retention, tool calls, and cache reuse. Offline tests cover failure, concurrency, and multi-account boundaries.
+
 ### Interactive check CLI
 
 Run in an interactive terminal at the monorepo root. This command is for a source checkout, not an npm installation.

@@ -13,7 +13,7 @@
 
 Pi는 TypeScript 소스를 직접 로드하므로 별도 빌드는 없습니다. `package.json`의 `files`는 `src/`와 배포 문서만 포함합니다. 루트 `.ts` 파일과 generated 재노출 파일은 제거했으며, 직접 import하는 소비자는 `src/`의 구현 경로를 사용합니다. 개발 스크립트와 검증 코드를 `src/`로 옮기지 않습니다.
 
-Pi 호스트 패키지와 `typebox`는 `peerDependencies: "*"`, 개발 의존성은 `catalog:`로 선언합니다. `proper-lockfile`은 생산 의존성이고 Inquirer·tsx·검증 라이브러리는 개발 전용입니다. 공통 TypeScript 설정은 개발 의존성으로만 참조합니다. 배포용 archive는 `pnpm pack`으로 만들어 `workspace:`와 `catalog:`가 해석되게 합니다.
+Pi 호스트 패키지와 `typebox`는 `peerDependencies: "*"`, 개발 의존성은 `catalog:`로 선언합니다. `effect`(`4.0.6`)와 `proper-lockfile`은 생산 의존성이고 Inquirer·tsx·검증 라이브러리는 개발 전용입니다. 공통 TypeScript 설정은 개발 의존성으로만 참조합니다. 배포용 archive는 `pnpm pack`으로 만들어 `workspace:`와 `catalog:`가 해석되게 합니다.
 
 ## 키 없이 검증
 
@@ -27,6 +27,20 @@ pnpm --dir apps/pi-ollama-cloud pack --pack-destination "$verification_dir/packa
 ```
 
 모든 검사는 종료 코드 0이어야 합니다. `check`는 파일을 수정하지 않습니다. 생성 데이터 재조회는 이 검증의 일부가 아닙니다. 로드·명령 확인은 [README의 격리 실행](../README.ko.md#개발과-검증)을 따릅니다.
+
+## Effect 실행 경계와 전후 비교
+
+기능별 폴더와 소유권은 [공통 코드 구조 규칙](../../../docs/code-organization.ko.md)을 따릅니다. 파일 수를 늘리려고 별도 서비스 계층이나 전역 실행기를 만들지 않습니다.
+
+- `shared/effects.ts`는 Promise·동기 예외를 원본 오류로 보존하고, 공유 작업의 구독 취소와 외부 `AbortSignal.reason`을 연결합니다. `Effect.callback`의 반환 정리는 중단 경로용이므로, 정상 완료·실패에도 필요한 구독 해제는 `Effect.ensuring`에서 합니다.
+- HTTP와 CLI 채팅은 `Effect.acquireUseRelease`로 타이머·취소 구독·임시 디렉터리를 정리합니다. HTTP 제한 시간은 응답 본문을 다 읽을 때까지 적용합니다.
+- 계정 선택은 인스턴스별 `Semaphore`로 직렬화합니다. 공유 잔액 검사는 구독자 하나의 취소로 중단하지 않습니다.
+- 캐시의 공유 작업은 별도 실행 수명을 가지며 마지막 구독자가 끝날 때 전송을 중단합니다. 기존 자원별 세대 검사와 동기 저장 임계구역은 유지합니다.
+- 모델·사용량·웹 흐름은 Effect로 조합하며, Pi와 CLI, 기존 사용량 API에는 Promise 반환을 유지합니다. 폴링 주기·재시도 정책·카탈로그 생성 데이터는 바꾸지 않습니다.
+
+[README의 전후 비교](../README.ko.md#리팩토링-전후-비교)는 같은 fixture를 두 설치본에 실행합니다. 활성·설정 비활성·환경 변수 강제 비활성의 세 경우를 비교하며, 각 설치본의 독립 검증을 대신하지 않습니다. 단위 테스트에서 생성기를 검사할 때도 임시 소비자에 선언된 운영 의존성을 준비합니다.
+
+[50회 실서비스 검사](../README.ko.md#실제-모델-요청-50회)는 명시적으로 선택한 개발용 검사이며 기존 최소 검사나 CI 배포 조건을 대체하지 않습니다. 실제 사용량과 부가 요청 상한을 실행 전에 확인합니다. 변경 전·후를 각각 검사하면 모델 요청은 총 100회이며, 새 보고서명으로 재실행하면 예산이 다시 시작됩니다. 오류·계정 전환·취소를 실서비스에서 억지로 유발하지 않고 오프라인 fixture로 확인합니다.
 
 ## 생성 데이터 갱신
 

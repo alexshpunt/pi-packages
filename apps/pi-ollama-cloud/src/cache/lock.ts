@@ -1,7 +1,8 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
+import { Effect } from "effect";
 import lockfile from "proper-lockfile";
+import { runAbortable } from "../shared/effects.ts";
 import type { CacheLockState } from "./types.ts";
 
 export const CACHE_LOCK_TIMEOUT_MS = 1000;
@@ -59,24 +60,25 @@ export function withCacheLockSync(
     Atomics.wait(waitArray, 0, 0, Math.min(RETRY_INTERVAL_MS, remainingMs));
   }
 }
-export async function withCacheLock(
+export function withCacheLockEffect(
   path: string,
   action: () => boolean,
   signal?: AbortSignal,
   timeoutMs = CACHE_LOCK_TIMEOUT_MS,
-): Promise<CacheLockResult> {
-  const deadline = performance.now() + timeoutMs;
-  for (;;) {
-    signal?.throwIfAborted();
-    const result = attempt(path, action);
-    if (result) return result;
-    const remainingMs = deadline - performance.now();
-    if (remainingMs <= 0) return { ok: false, state: "timeout" };
-    try {
-      await delay(Math.min(RETRY_INTERVAL_MS, remainingMs), undefined, { signal });
-    } catch (error) {
+): Effect.Effect<CacheLockResult> {
+  return Effect.gen(function* () {
+    const deadline = performance.now() + timeoutMs;
+    for (;;) {
       signal?.throwIfAborted();
-      throw error;
+      const result = attempt(path, action);
+      if (result) return result;
+      const remainingMs = deadline - performance.now();
+      if (remainingMs <= 0) return { ok: false, state: "timeout" };
+      yield* Effect.sleep(Math.min(RETRY_INTERVAL_MS, remainingMs));
     }
-  }
+  });
+}
+
+export function withCacheLock(...args: Parameters<typeof withCacheLockEffect>): Promise<CacheLockResult> {
+  return runAbortable(withCacheLockEffect(...args), args[2]);
 }

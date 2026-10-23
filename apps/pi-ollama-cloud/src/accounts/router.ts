@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { statSync } from "node:fs";
+import { Effect, Semaphore } from "effect";
 import { isSafeKey } from "../cache/data.ts";
+import { awaitShared, fromPromise } from "../shared/effects.ts";
 import { fetchUsage, type UsageData } from "../usage/api.ts";
 import { type AccountCredentialStore, createAccountCredentialStore, type StoredAccountKey } from "./credentials.ts";
 import { classifyThrownError } from "./failure.ts";
@@ -89,20 +91,7 @@ function fileRevision(path: string): string | undefined {
 function waitWithSignal<T>(promise: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
   if (!signal) return promise;
   signal.throwIfAborted();
-  return new Promise<T>((resolve, reject) => {
-    const onAbort = () => reject(signal.reason);
-    signal.addEventListener("abort", onAbort, { once: true });
-    promise.then(
-      (value) => {
-        signal.removeEventListener("abort", onAbort);
-        resolve(value);
-      },
-      (error: unknown) => {
-        signal.removeEventListener("abort", onAbort);
-        reject(error);
-      },
-    );
-  });
+  return Effect.runPromise(awaitShared(promise, signal));
 }
 
 function touchHealth(state: AccountState, account: OllamaAccount, nowMs: number): AccountHealth {
@@ -154,7 +143,7 @@ export function createAccountRouter(options: AccountRouterOptions = {}): Account
   let storedLoad: { path: string; revision: string | undefined; promise: Promise<StoredAccountKey[]> } | undefined;
   const balanceRequests = new Map<string, Promise<UsageData | undefined>>();
   const background = new Set<Promise<unknown>>();
-  let acquireTail: Promise<unknown> = Promise.resolve();
+  const acquisitionGate = Semaphore.makeUnsafe(1);
 
   async function storedAccounts(signal?: AbortSignal): Promise<StoredAccountKey[]> {
     const path = credentials.path;
@@ -222,22 +211,28 @@ export function createAccountRouter(options: AccountRouterOptions = {}): Account
     let request = balanceRequests.get(account.fingerprint);
     if (!request) {
       // Shared by concurrent callers, so it is not tied to one caller's cancellation.
-      request = (async () => {
-        try {
-          const data = await fetchBalance(account.apiKey);
-          await recordBalance(account, data);
+      request = Effect.runPromise(
+        Effect.gen(function* () {
+          const data = yield* fromPromise(() => fetchBalance(account.apiKey));
+          yield* fromPromise(() => recordBalance(account, data));
           return data;
-        } catch (error) {
-          const failure = classifyThrownError(error);
-          await stateStore.update((state) => {
-            const health = touchHealth(state, account, now());
-            health.balanceFailedAtMs = now();
-            if (failure?.kind === "unauthorized") health.isUnauthorized = true;
-          });
-          if (failure?.kind === "unauthorized") storedCache = undefined;
-          return undefined;
-        }
-      })();
+        }).pipe(
+          Effect.catch((error) =>
+            Effect.gen(function* () {
+              const failure = classifyThrownError(error);
+              yield* fromPromise(() =>
+                stateStore.update((state) => {
+                  const health = touchHealth(state, account, now());
+                  health.balanceFailedAtMs = now();
+                  if (failure?.kind === "unauthorized") health.isUnauthorized = true;
+                }),
+              );
+              if (failure?.kind === "unauthorized") storedCache = undefined;
+              return undefined;
+            }),
+          ),
+        ),
+      );
       const pending = request;
       balanceRequests.set(account.fingerprint, pending);
       void pending.finally(() => {
@@ -253,65 +248,65 @@ export function createAccountRouter(options: AccountRouterOptions = {}): Account
     void tracked.finally(() => background.delete(tracked));
   }
 
-  function serialized<T>(run: () => Promise<T>): Promise<T> {
-    const result = acquireTail.then(run, run);
-    acquireTail = result.catch(() => {});
-    return result;
-  }
-
-  async function acquire(request: AcquireRequest): Promise<AccountAcquisition> {
+  function acquire(request: AcquireRequest): Promise<AccountAcquisition> {
     const { primaryKey, binding, modelId, excludedIds, signal } = request;
-    return serialized(async () => {
-      signal?.throwIfAborted();
-      const { accounts } = await listAccounts(primaryKey, signal);
-      if (accounts.length === 0) return { ok: false, message: NO_ACCOUNT_MESSAGE };
-      // Each pass either returns or records a balance check, so a few passes per account suffice.
-      for (let pass = 0; pass <= accounts.length * 2; pass++) {
-        signal?.throwIfAborted();
-        const previousAccountId = binding.accountId;
-        const snapshot = stateStore.read();
-        const nowMs = now();
-        const input = { accounts, boundAccountId: previousAccountId, excludedIds, modelId, nowMs };
-        const tentative = chooseAccount({ ...input, state: snapshot });
-        if (!tentative) {
-          return { ok: false, message: unavailableMessage(accounts, snapshot, nowMs, modelId, excludedIds) };
-        }
-        if (evaluatePurchaseGuard(healthOf(snapshot, tentative.account), nowMs).action === "refresh") {
-          await refreshBalance(tentative.account, signal);
-          continue;
-        }
-        if (!tentative.isNewAssignment) return { ok: true, account: tentative.account };
+    return Effect.runPromise(
+      acquisitionGate.withPermit(
+        Effect.gen(function* (): Generator<Effect.Effect<unknown, unknown>, AccountAcquisition, never> {
+          signal?.throwIfAborted();
+          const { accounts } = yield* fromPromise(() => listAccounts(primaryKey, signal));
+          if (accounts.length === 0) return { ok: false, message: NO_ACCOUNT_MESSAGE };
+          // Each pass either returns or records a balance check, so a few passes per account suffice.
+          for (let pass = 0; pass <= accounts.length * 2; pass++) {
+            signal?.throwIfAborted();
+            const previousAccountId = binding.accountId;
+            const snapshot = stateStore.read();
+            const nowMs = now();
+            const input = { accounts, boundAccountId: previousAccountId, excludedIds, modelId, nowMs };
+            const tentative = chooseAccount({ ...input, state: snapshot });
+            if (!tentative) {
+              return { ok: false, message: unavailableMessage(accounts, snapshot, nowMs, modelId, excludedIds) };
+            }
+            if (evaluatePurchaseGuard(healthOf(snapshot, tentative.account), nowMs).action === "refresh") {
+              yield* fromPromise(() => refreshBalance(tentative.account, signal));
+              continue;
+            }
+            if (!tentative.isNewAssignment) return { ok: true, account: tentative.account };
 
-        // Re-choose under the lock so concurrent processes advance one shared rotation.
-        const assigned = await stateStore.update<AccountChoice | undefined>((state) => {
-          const choice = chooseAccount({ ...input, state });
-          if (!choice || evaluatePurchaseGuard(healthOf(state, choice.account), nowMs).action === "refresh") {
-            return choice;
+            // Re-choose under the lock so concurrent processes advance one shared rotation.
+            const assigned = yield* fromPromise(() =>
+              stateStore.update<AccountChoice | undefined>((state) => {
+                const choice = chooseAccount({ ...input, state });
+                if (!choice || evaluatePurchaseGuard(healthOf(state, choice.account), nowMs).action === "refresh") {
+                  return choice;
+                }
+                if (choice.isNewAssignment) state.lastAssignedAccountId = choice.account.id;
+                return choice;
+              }, signal),
+            );
+            if (!assigned) continue;
+            const latest = stateStore.read();
+            if (evaluatePurchaseGuard(healthOf(latest, assigned.account), nowMs).action === "refresh") {
+              yield* fromPromise(() => refreshBalance(assigned.account, signal));
+              continue;
+            }
+            binding.bind(assigned.account.id);
+            if (previousAccountId !== undefined && previousAccountId !== assigned.account.id) {
+              const previous = accounts.find((account) => account.id === previousAccountId);
+              const reason = previous
+                ? accountReason(previous, latest, nowMs, modelId, excludedIds)
+                : "no longer configured";
+              binding.notify(
+                `Ollama Cloud account "${previousAccountId}" is unavailable (${reason}); ` +
+                  `this session now uses "${assigned.account.id}".`,
+              );
+            }
+            return { ok: true, account: assigned.account };
           }
-          if (choice.isNewAssignment) state.lastAssignedAccountId = choice.account.id;
-          return choice;
-        }, signal);
-        if (!assigned) continue;
-        const latest = stateStore.read();
-        if (evaluatePurchaseGuard(healthOf(latest, assigned.account), nowMs).action === "refresh") {
-          await refreshBalance(assigned.account, signal);
-          continue;
-        }
-        binding.bind(assigned.account.id);
-        if (previousAccountId !== undefined && previousAccountId !== assigned.account.id) {
-          const previous = accounts.find((account) => account.id === previousAccountId);
-          const reason = previous
-            ? accountReason(previous, latest, nowMs, modelId, excludedIds)
-            : "no longer configured";
-          binding.notify(
-            `Ollama Cloud account "${previousAccountId}" is unavailable (${reason}); ` +
-              `this session now uses "${assigned.account.id}".`,
-          );
-        }
-        return { ok: true, account: assigned.account };
-      }
-      return { ok: false, message: "Ollama Cloud account selection did not settle; try again shortly." };
-    });
+          return { ok: false, message: "Ollama Cloud account selection did not settle; try again shortly." };
+        }),
+      ),
+    );
   }
 
   async function reportFailure(
