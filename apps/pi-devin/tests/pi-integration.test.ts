@@ -554,13 +554,17 @@ test("usage: the status line and details come only from the last account status 
     expect(tones).toStrictEqual([null, "success", "success", null, null, null, "error"]);
     // The status line is written only in the TUI and only with the toggle on. Off clears only this package's key.
     const statuses: [string, string | undefined][] = [];
-    const context = (mode: string) => ({ mode, ui: { theme: { fg: (tone: string, text: string) => `[${tone}]${text}` },
+    const context = (mode: string, provider = "devin") => ({ mode, model: { provider }, ui: { theme: { fg: (tone: string, text: string) => `[${tone}]${text}` },
       setStatus: (key: string, text: string | undefined) => { statuses.push([key, text]); } }, sessionManager: f.manager }) as never;
     runSync(extension.usageStatus.update(context("tui")));
     runSync(f.devinSettings.write({ ...DEFAULT_PREFERENCES, showUsageStatus: true }));
     runSync(extension.usageStatus.update(context("tui")));
     runSync(extension.usageStatus.update(context("rpc")));
     expect(statuses).toStrictEqual([[USAGE_STATUS_KEY, undefined], [USAGE_STATUS_KEY, "devin [success]day ▕██████████▏100% [success]week ▕██████████▏100% · ↑3 ↓2"]]);
+    // With the toggle on, another provider's model clears only this package's key.
+    statuses.length = 0;
+    runSync(extension.usageStatus.update(context("tui", "anthropic")));
+    expect(statuses).toStrictEqual([[USAGE_STATUS_KEY, undefined]]);
     // At message_end Pi has not stored the response yet, so it is counted once; a stored response is not counted twice.
     const pending = { role: "assistant", provider: "devin", usage: { input: 10, output: 20, cacheRead: 0, cacheWrite: 0 } };
     const storedMessage = f.manager.getBranch().flatMap((entry) => entry.type === "message" && entry.message.role === "assistant" ? [entry.message] : [])[0];
@@ -578,6 +582,31 @@ test("usage: the status line and details come only from the last account status 
     expect(usageReport(account, usage, runSync(extension.runs.budget), account.fetchedAtMs + 10_000)[0].text).toMatch(/fetched .+ \(just now\)/);
     expect(f.errors).toStrictEqual([]);
   } finally { await f.dispose(); }
+});
+
+test("usage: the status line follows the selected model and shows only for Devin models, while /devin reports usage with any model", async () => {
+  const handlers = new Map<string, (event: unknown, context: unknown) => unknown>();
+  const commands = new Map<string, { handler: (args: string, ctx: never) => Promise<void> }>();
+  const pi = { registerProvider: () => {}, registerTool: () => {}, getActiveTools: () => [], setActiveTools: () => {},
+    on: (name: string, handler: (event: unknown, context: unknown) => unknown) => { handlers.set(name, handler); return () => {}; },
+    registerCommand: (name: string, definition: never) => { commands.set(name, definition); } };
+  const extension = registerTestExtension(pi as never, { devinSettings: memoryDisplaySettings({ showUsageStatus: true }) });
+  const statuses: (string | undefined)[] = [];
+  const context = (provider: string) => ({ mode: "tui", model: { provider, id: "selected" }, sessionManager: { getBranch: () => [] },
+    ui: { theme: plainTheme, setStatus: (key: string, text: string | undefined) => { if (key === USAGE_STATUS_KEY) statuses.push(text); } } });
+  const selectModel = (provider: string) => handlers.get("model_select")!({ type: "model_select", model: { provider, id: "selected" } }, context(provider));
+  try {
+    selectModel("devin");
+    selectModel("anthropic");
+    // A turn of another provider's model keeps it hidden.
+    handlers.get("turn_end")!({ type: "turn_end" }, context("anthropic"));
+    selectModel("devin");
+    expect(statuses).toStrictEqual(["devin · ↑0 ↓0", undefined, undefined, "devin · ↑0 ↓0"]);
+    let notice = "";
+    await commands.get(DEVIN_COMMAND_NAME)!.handler("", { mode: "rpc", model: { provider: "anthropic", id: "selected" }, sessionManager: { getBranch: () => [] },
+      ui: { notify: (message: string) => { notice = message; } } } as never);
+    expect(notice.split("\n")[0]).toBe("Account quota · not received yet");
+  } finally { extension.shutdown(); }
 });
 
 const plainTheme = { fg: (_color: string, text: string) => text, bold: (text: string) => text } as never;

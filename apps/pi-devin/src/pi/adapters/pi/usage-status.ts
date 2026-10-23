@@ -17,8 +17,9 @@ export interface UsageStatusShape {
   /** Newest quota for the credential of the last model refresh. Makes no request. */
   readonly accountUsage: Effect.Effect<AccountUsage | undefined>;
   /**
-   * Draws the status in the TUI only, from the last account status and the session records. `pendingMessage` is a response
-   * Pi has not stored yet. Turning the toggle off clears only this package's key.
+   * Draws the status in the TUI only, while the session's current model is a Devin model, from the last account status and
+   * the session records. `pendingMessage` is a response Pi has not stored yet. Another provider's model or turning the toggle
+   * off clears only this package's key; `/devin` reports usage whatever the model.
    */
   readonly update: (context: ExtensionContext, pendingMessage?: unknown) => Effect.Effect<void>;
   /** The session whose status line follows quota changes that happen outside event handlers. */
@@ -49,7 +50,8 @@ export const UsageStatusLive = Layer.effect(UsageStatus, Effect.gen(function* ()
   // The sidekick child shows no status line.
   const update = (context: ExtensionContext, pendingMessage?: unknown) => config.isFusionChild ? Effect.void : Effect.gen(function* () {
     if (context.mode !== "tui") return;
-    const text = (yield* settings.read).showUsageStatus
+    const isShown = context.model?.provider === "devin" && (yield* settings.read).showUsageStatus;
+    const text = isShown
       ? usageStatusText(yield* accountUsage, sessionUsage(branchWith(context, pendingMessage)), (tone, segment) => context.ui.theme.fg(tone, segment)) : undefined;
     context.ui.setStatus(USAGE_STATUS_KEY, text);
   });

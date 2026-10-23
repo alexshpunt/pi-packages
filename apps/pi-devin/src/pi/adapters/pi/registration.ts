@@ -45,7 +45,11 @@ export function registerDevinExtension(pi: ExtensionAPI, environment: Layer.Laye
     if (shouldBeActive && !isActive) pi.setActiveTools([...active, SIDEKICK_TOOL_NAME]);
     else if (!shouldBeActive && isActive) pi.setActiveTools(active.filter((name) => name !== SIDEKICK_TOOL_NAME));
   };
-  pi.on("model_select", (event) => { syncSidekick(event.model); });
+  // Pi sets the new model before this event, so the status line follows it at once.
+  pi.on("model_select", (event, context) => {
+    syncSidekick(event.model);
+    run(status.update(context));
+  });
   pi.on("input", (event) => { if (isLead) run(sidekicks.userInput(event.source)); });
   pi.on("session_start", (_event, context) => {
     if (context.modelRegistry.getRegisteredNativeProvider("devin") !== provider) {
