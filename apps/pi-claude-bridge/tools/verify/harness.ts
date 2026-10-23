@@ -43,6 +43,9 @@ export function createHarness(workspace: VerificationWorkspace, requestedModel =
 			// Test-only reset of this harness's own runtime, not the production
 			// per-session release a session_shutdown performs.
 			runtime.sessionQueryContexts.clear();
+			runtime.withdrawRebuildHook();
+			runtime.withdrawReleaseHook();
+			await runtime.runtime.dispose();
 		}
 	}
 	return { runtime, model, cliModel, turn, waitForIdle, close };

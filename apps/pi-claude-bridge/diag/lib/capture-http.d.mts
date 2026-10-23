@@ -11,10 +11,12 @@ export interface CapturedHttpExchange extends CapturedHttpRequest {
 	status: number;
 	responseHeaders: Record<string, string>;
 	text: string;
+	isAborted?: boolean;
 }
 export function createCaptureServer(options?: {
 	maxRequestBytes?: number;
 	abortOnDisconnect?: boolean;
+	shouldStreamResponses?: boolean;
 	beforeForward?: (request: CapturedHttpRequest) => void | Promise<void>;
 	onRejected?: (error: unknown, request: CapturedHttpRequest) => void;
 	onError?: (error: unknown, request: CapturedHttpRequest) => void;

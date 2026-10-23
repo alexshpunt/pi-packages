@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import type { AddressInfo } from "node:net";
 import type { Context, SimpleStreamOptions } from "@earendil-works/pi-ai";
-import type { Options, Query, SpawnedProcess } from "@anthropic-ai/claude-agent-sdk";
+import type { Options, Query, SDKMessage, SpawnedProcess } from "@anthropic-ai/claude-agent-sdk";
 import { createCaptureServer, usageFromSse } from "../../diag/lib/capture-http.mjs";
 import { createSdkQueryClient } from "../../src/adapters/claude/client.js";
 import { createHarness } from "./harness.js";
@@ -17,10 +17,12 @@ export interface CapturedRequest {
 	messageCount: number;
 	toolCount: number;
 	status: number | null;
+	isResponseComplete: boolean;
+	isResponseAborted: boolean;
 	usage: { input: number; cacheRead: number; cacheWrite: number } | null;
 }
 
-export type ResultFault = "error-result" | "exception";
+export type ResultFault = "error-result" | "exception" | "process-exit";
 export type ExpectedTurnOutcome = "success" | "error" | "aborted";
 
 export interface LiveRunner {
@@ -32,6 +34,8 @@ export interface LiveRunner {
 	turn(context: Context, options?: SimpleStreamOptions, expectedOutcome?: ExpectedTurnOutcome): ReturnType<ReturnType<typeof createHarness>["turn"]>;
 	/** Inject a controlled SDK failure after the next real response; no auth/init rewriting. */
 	faultNextResult(fault: ResultFault): void;
+	/** Drop only this owned capture server's connections; never abort the caller signal. */
+	disconnectResponses(): void;
 	queryOptions(): readonly Options[];
 	/** Private input for fidelity assertions. Never include it in a report. */
 	payloadFor(request: CapturedRequest): Record<string, unknown>;
@@ -45,6 +49,7 @@ export async function withLiveRunner(
 	ownedWorkspace?: VerificationWorkspace,
 	/** Diagnostic intervention on the model request body; returns the same object when unchanged. */
 	transformPayload?: (payload: Record<string, unknown>) => Record<string, unknown>,
+	transport: { shouldStreamResponses?: boolean; onSdkMessage?: (message: SDKMessage) => void } = {},
 ): Promise<Facts> {
 	if (!context.isLive) throw new EnvironmentError("live-query-not-authorized");
 	assertLiveEnvironment(process.env, context.modelId);
@@ -72,6 +77,7 @@ export async function withLiveRunner(
 		const server = createCaptureServer({
 			maxRequestBytes: 32 * 1024 * 1024,
 			abortOnDisconnect: true,
+			shouldStreamResponses: transport.shouldStreamResponses ?? false,
 			async beforeForward(request) {
 				if (request.method !== "POST" || request.path?.split("?")[0] !== "/v1/messages") return;
 				if (fatal) throw fatal;
@@ -91,7 +97,7 @@ export async function withLiveRunner(
 					sequence: request.n, model: payload.model, input: fingerprint(request.body),
 					messageCount: Array.isArray(payload.messages) ? payload.messages.length : 0,
 					toolCount: Array.isArray(payload.tools) ? payload.tools.length : 0,
-					status: null, usage: null,
+					status: null, usage: null, isResponseComplete: false, isResponseAborted: false,
 				};
 				payloads.set(captured, payload);
 				requests.push(captured);
@@ -102,7 +108,12 @@ export async function withLiveRunner(
 			onError() { fail(new VerificationError("capture-upstream-failed")); },
 			onExchange(exchange) {
 				const captured = bySequence.get(exchange.n);
-				if (captured) { captured.status = exchange.status; captured.usage = usageFromSse(exchange.text); }
+				if (captured) {
+					captured.status = exchange.status;
+					captured.usage = usageFromSse(exchange.text);
+					captured.isResponseAborted = exchange.isAborted === true;
+					captured.isResponseComplete = !captured.isResponseAborted;
+				}
 			},
 		});
 		await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
@@ -116,10 +127,11 @@ export async function withLiveRunner(
 			const resultFault = nextResultFault;
 			nextResultFault = undefined;
 			let nativeExit: Promise<{ code: number | null; signal: NodeJS.Signals | null }> | undefined;
+			let nativeProcess: SpawnedProcess | undefined;
 			const actual = client.invokeQuery({ ...input, options: {
 				...options, env: { ...options.env, ANTHROPIC_BASE_URL: url },
 				stderr: options.stderr ?? (() => {}),
-				...(resultFault === "exception" ? { spawnClaudeCodeProcess(parameters) {
+				...(["exception", "process-exit"].includes(resultFault ?? "") ? { spawnClaudeCodeProcess(parameters) {
 					const child: SpawnedProcess = options.spawnClaudeCodeProcess?.(parameters) ?? (() => {
 						const spawned = spawn(parameters.command, parameters.args, { cwd: parameters.cwd, env: parameters.env, signal: parameters.signal, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
 						spawned.stderr.on("data", data => options.stderr?.(data.toString()));
@@ -130,6 +142,7 @@ export async function withLiveRunner(
 						child.once("error", reject);
 					});
 					void nativeExit.catch(() => {});
+					nativeProcess = child;
 					return child;
 				} } satisfies Partial<Options> : {}),
 			} });
@@ -145,6 +158,7 @@ export async function withLiveRunner(
 			void auth.catch(() => {});
 			authGates.push(auth);
 			const stream = (async function* () {
+				let hasKilledProcess = false;
 				try {
 					for await (const message of actual) {
 						if (message.type === "system" && message.subtype === "init") {
@@ -157,7 +171,7 @@ export async function withLiveRunner(
 							model, contextWindow: usage.contextWindow, maxOutputTokens: usage.maxOutputTokens,
 							inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, cacheReadInputTokens: usage.cacheReadInputTokens, cacheCreationInputTokens: usage.cacheCreationInputTokens,
 						})) });
-						if (message.type === "result" && resultFault) {
+						if (message.type === "result" && (resultFault === "error-result" || resultFault === "exception")) {
 							await auth;
 							if (resultFault === "exception") {
 								actual.close();
@@ -170,7 +184,16 @@ export async function withLiveRunner(
 							yield { ...message, subtype: "error_during_execution" as const, is_error: true, errors: ["Controlled verification error result"] };
 							continue;
 						}
+						transport.onSdkMessage?.(message);
 						yield message;
+						if (resultFault === "process-exit" && !hasKilledProcess && message.type === "stream_event" &&
+							message.event.type === "content_block_delta" && message.event.delta.type === "text_delta") {
+							expect(nativeProcess && nativeExit && !requests.at(-1)?.isResponseComplete, "native-process-exit-not-inflight");
+							hasKilledProcess = true;
+							nativeProcess.kill("SIGKILL");
+							const exit = await nativeExit;
+							injectedFaults.push({ kind: resultFault, nativeProcessExited: true, ...exit });
+						}
 					}
 				} finally { active.delete(actual); }
 			})();
@@ -194,6 +217,7 @@ export async function withLiveRunner(
 					return result;
 				},
 				faultNextResult(fault) { expect(!nextResultFault, "verification-fault-already-armed"); nextResultFault = fault; },
+				disconnectResponses() { server.closeAllConnections(); },
 				queryOptions: () => inputs,
 				payloadFor: request => payloads.get(request)!,
 			});

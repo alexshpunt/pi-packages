@@ -53,6 +53,74 @@ test("shared capture transport preserves bytes, forwarding headers and cache usa
 	} finally { await close(server); globalThis.fetch = originalFetch; }
 });
 
+test("streaming capture forwards an early chunk before upstream completion and preserves split UTF-8", async () => {
+	const originalFetch = globalThis.fetch;
+	const bytes = Buffer.from("data: 한글 fixture\n\n");
+	const split = Buffer.from("data: ").length + 1;
+	let upstream;
+	let exchange;
+	globalThis.fetch = async () => new Response(new ReadableStream({ start(controller) {
+		upstream = controller;
+		controller.enqueue(bytes.subarray(0, split));
+	} }), { headers: { "content-type": "text/event-stream" } });
+	const server = createCaptureServer({ shouldStreamResponses: true, abortOnDisconnect: true, onExchange(value) { exchange = value; } });
+	try {
+		const port = await listen(server);
+		const observed = await new Promise((resolve, reject) => {
+			let hasReceivedEarlyChunk = false;
+			const chunks = [];
+			const req = request({ hostname: "127.0.0.1", port, path: "/v1/messages", method: "POST" }, res => {
+				res.on("error", reject);
+				res.on("data", chunk => {
+					chunks.push(chunk);
+					if (!hasReceivedEarlyChunk) {
+						hasReceivedEarlyChunk = true;
+						expect(exchange).toBeUndefined();
+						upstream.enqueue(bytes.subarray(split));
+						upstream.close();
+					}
+				});
+				res.on("end", () => resolve({ hasReceivedEarlyChunk, text: Buffer.concat(chunks).toString("utf8") }));
+			});
+			req.on("error", reject);
+			req.end("{}");
+		});
+		expect(observed).toStrictEqual({ hasReceivedEarlyChunk: true, text: bytes.toString("utf8") });
+		expect(exchange.text).toBe(bytes.toString("utf8"));
+		expect(exchange.isAborted).toBe(false);
+	} finally { await close(server); globalThis.fetch = originalFetch; }
+});
+
+test("streaming capture cancels upstream on disconnect without reporting a server failure", async () => {
+	const originalFetch = globalThis.fetch;
+	let hasAborted = false;
+	let errors = 0;
+	let record;
+	const recorded = new Promise(resolve => { record = resolve; });
+	globalThis.fetch = async (_url, options) => new Response(new ReadableStream({ start(controller) {
+		controller.enqueue(Buffer.from("data: partial\n\n"));
+		options.signal.addEventListener("abort", () => {
+			hasAborted = true;
+			controller.error(new Error("fixture aborted"));
+		}, { once: true });
+	} }), { headers: { "content-type": "text/event-stream" } });
+	const server = createCaptureServer({ shouldStreamResponses: true, abortOnDisconnect: true,
+		onError() { errors++; }, onExchange(value) { record(value); } });
+	try {
+		const port = await listen(server);
+		const req = request({ hostname: "127.0.0.1", port, path: "/v1/messages", method: "POST" }, res => {
+			res.once("data", () => res.destroy());
+		});
+		req.on("error", () => {});
+		req.end("{}");
+		const exchange = await recorded;
+		expect(hasAborted).toBe(true);
+		expect(exchange.isAborted).toBe(true);
+		expect(exchange.text).toBe("data: partial\n\n");
+		expect(errors).toBe(0);
+	} finally { await close(server); globalThis.fetch = originalFetch; }
+});
+
 test("capture request guards reject before any upstream request", async () => {
 	const originalFetch = globalThis.fetch;
 	let forwards = 0;

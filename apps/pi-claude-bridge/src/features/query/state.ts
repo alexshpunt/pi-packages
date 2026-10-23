@@ -71,6 +71,9 @@ export class QueryContext {
 	 *  open is Claude Code's non-streaming fallback for a stalled stream. */
 	turnStreamMessageId: string | undefined;
 	turnStreamOpen = false;
+	/** SDK may synthesize message_stop after a broken HTTP stream. Until a real
+	 *  stop_reason arrives, its content remains replaceable by a retry. */
+	hasUnconfirmedStreamContent = false;
 	/** turnBlocks length at that message_start: where an abandoned attempt's blocks begin. */
 	turnStreamBlockStart = 0;
 
@@ -103,6 +106,7 @@ export class QueryContext {
 		this.turnSawToolCall = false;
 		this.turnStreamMessageId = undefined;
 		this.turnStreamOpen = false;
+		this.hasUnconfirmedStreamContent = false;
 		this.turnStreamBlockStart = 0;
 		// turnToolCallIds is NOT reset — it persists across tool-result delivery
 		// callbacks within the same assistant message so results can be routed to

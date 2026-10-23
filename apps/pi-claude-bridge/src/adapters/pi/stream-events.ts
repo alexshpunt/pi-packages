@@ -146,12 +146,13 @@ export function createStreamEvents({ diagnostics, tools }: StreamEventsDependenc
 		const event = (message as SDKMessage & { event: any }).event;
 
 		if (event?.type === "message_start") {
-			// Still open from an earlier message_start: Claude Code gave up on that
-			// stream and is retrying it. Its blocks were never completed.
-			if (c.turnStreamOpen) dropAbandonedStreamBlocks(c, `restreamed as ${event.message?.id}`);
+			// A broken HTTP stream can get synthetic block/message stops without a
+			// message_delta stop_reason. Those blocks also belong to the failed attempt.
+			if (c.turnStreamOpen || c.hasUnconfirmedStreamContent) dropAbandonedStreamBlocks(c, `restreamed as ${event.message?.id}`);
 			c.turnToolCallIds = [];
 			c.turnStreamMessageId = event.message?.id;
 			c.turnStreamOpen = true;
+			c.hasUnconfirmedStreamContent = true;
 			c.turnStreamBlockStart = c.turnBlocks.length;
 			if (event.message?.usage) recordUsage(c.turnOutput, event.message.usage, model);
 			return;
@@ -228,6 +229,7 @@ export function createStreamEvents({ diagnostics, tools }: StreamEventsDependenc
 		}
 
 		if (event?.type === "message_delta") {
+			if (event.delta?.stop_reason) c.hasUnconfirmedStreamContent = false;
 			c.turnOutput.stopReason = mapStopReason(event.delta?.stop_reason);
 			if (event.usage) recordUsage(c.turnOutput, event.usage, model);
 			return;
@@ -288,11 +290,10 @@ export function createStreamEvents({ diagnostics, tools }: StreamEventsDependenc
 		c.turnSawToolCall = c.turnBlocks.some((b: any) => b.type === "toolCall");
 	}
 
-	/** Remove the blocks a stream Claude Code abandoned mid-message. Their own
-	 *  content_block_stop never came, so a thinking block has no signature and a tool
-	 *  call is one CC will never dispatch; left in, pi would run the tool and the turn
-	 *  would wait on a handler that never comes, or the next request would replay a
-	 *  broken block.
+	/** Remove a failed attempt before Claude Code retries it. The SDK can omit
+	 *  terminators or synthesize them without a message_delta stop_reason. Keeping
+	 *  the attempt duplicates text, can replay unsigned thinking, and can leave a
+	 *  tool call whose handler will never run.
 	 *  The fallback then restarts those indices. pi's normal provider path tolerates that;
 	 *  pi-agent-core's experimental harness frame encoder keys blocks by contentIndex and
 	 *  rejects a repeated start, so it would need a change there to drive this provider. */
@@ -302,6 +303,7 @@ export function createStreamEvents({ diagnostics, tools }: StreamEventsDependenc
 		c.turnToolCallIds = [];
 		c.turnSawToolCall = c.turnBlocks.some((b: any) => b.type === "toolCall");
 		c.turnStreamOpen = false;
+		c.hasUnconfirmedStreamContent = false;
 	}
 
 	// The SDK always yields `assistant` messages (completed content blocks) after streaming.
@@ -332,7 +334,7 @@ export function createStreamEvents({ diagnostics, tools }: StreamEventsDependenc
 			// The report can follow a stalled stream whose non-streaming retry also failed;
 			// drop the abandoned partial blocks (unsigned thinking, a tool call CC will never
 			// dispatch) the way the fallback path below would.
-			if (c.turnSawStreamEvent && c.turnStreamOpen) dropAbandonedStreamBlocks(c, "synthetic failure report");
+			if (c.turnSawStreamEvent && (c.turnStreamOpen || c.hasUnconfirmedStreamContent)) dropAbandonedStreamBlocks(c, "synthetic failure report");
 			diagnostics.debug(`processAssistantMessage: <synthetic> message, keeping ${assistantMsg.content.length} block(s) off the stream`);
 			for (const block of assistantMsg.content) {
 				if (block.type === "text" && block.text) c.turnBlocks.push({ type: "text", text: block.text });
@@ -343,11 +345,11 @@ export function createStreamEvents({ diagnostics, tools }: StreamEventsDependenc
 		}
 		if (c.turnSawStreamEvent) {
 			// Same id was already delivered; a new id is CC's non-streaming fallback.
-			// Drop the stalled stream's partial blocks if it never stopped. Deliberately
-			// deliver even if it stopped, at the risk of duplication if CC renumbers it.
+			// A synthetic stop without a terminal stop_reason is not confirmation:
+			// the non-streaming fallback must replace that attempt too.
 			const id = assistantMsg.id;
 			if (!id || !c.turnStreamMessageId || id === c.turnStreamMessageId) return;
-			if (c.turnStreamOpen) dropAbandonedStreamBlocks(c, `non-streaming fallback ${id}`);
+			if (c.turnStreamOpen || c.hasUnconfirmedStreamContent) dropAbandonedStreamBlocks(c, `non-streaming fallback ${id}`);
 		}
 		c.turnToolCallIds = [];
 		diagnostics.debug(`processAssistantMessage fallback: ${assistantMsg.content.length} blocks, types=${assistantMsg.content.map((b: any) => b.type).join(",")}`);

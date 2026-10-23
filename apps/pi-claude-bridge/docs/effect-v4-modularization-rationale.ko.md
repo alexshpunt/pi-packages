@@ -644,6 +644,68 @@ pnpm test:unit tests/unit-queue.mjs tests/unit-deliver-tool-results.mjs tests/un
 
 이번 검증은 실제 stdin·MCP 왕복과 도구 경계의 취소·복구를 포함하지만, 캡처 프록시가 upstream SSE 응답을 버퍼링한다. 따라서 실제 토큰 간 지연과 네트워크 스트리밍 도중 취소의 시간 동작을 검증한 결과는 아니다. 다른 모델·계정 정책, 최소 Node.js 22.19.0 실행, 재설계 전후 성능·메모리 비교, 캐시 차이의 원인 규명도 남아 있다.
 
+### 9.6 캐시 대조, 실제 수명 검증과 SDK 갱신
+
+9.5까지의 변경을 `db2419b`로 먼저 커밋한 뒤, 캐시 차이 분석·실시간 스트리밍과 취소·실제 Pi 수명·SDK 장애 복구를 보완했다. 운영 코드에서 확인한 결함은 **연결이 끊긴 시도의 부분 출력이 SDK 재시도 결과 앞에 남는 문제**였다. 이를 수정하고 Claude Agent SDK를 **0.3.304 → 0.3.309**로 갱신했다. 내장 Claude Code는 2.1.309이며, Effect 4.0.5와 기존 Pi 의존성은 유지했다.
+
+#### 캐시 차이는 재설계 전과 SDK 자체 재개에서도 나타났다
+
+이전 구현 `bdb11fb46bebe4ac130f3be9c982741ba77e1265`의 임시 스냅샷과 재설계 구현을 SDK 0.3.304, 같은 검증 시나리오로 대조했다. 부족분은 이전 **캐시 가능 입력**에서 다음 요청의 캐시 읽기를 뺀 값이다. 캐시되지 않은 입력 2토큰까지 포함하는 옛 지표와 구분한다.
+
+| 대조 조건 | 관측한 캐시 재사용 부족분 |
+| --- | --- |
+| 이전 구현, Pi 재시작 2회 | 341 / 342토큰 |
+| 재설계 구현, Pi 재시작 2회 | 341 / 342토큰 |
+| 검증 프록시에서 시스템 문자열을 text block 배열로 복원, 2회 | 342 / 343토큰 |
+| 기존 캐시 지점까지 보존하는 추가 실험 | 342토큰 |
+| Bridge 재구성 없이 SDK 자체 `resume` 사용 | 첫 재개 342토큰, 다음 재개 25토큰 |
+| SDK 0.3.309로 갱신한 뒤 Pi 재시작 | 342토큰 |
+
+관측한 차이를 **Effect 재설계의 회귀로 볼 근거는 없었다**. 문자열 표현이나 캐시 지점을 복원하는 것만으로도 해소되지 않았다. SDK·서비스 경계의 공통 현상으로 범위를 좁혔지만 정확한 내부 원인은 확정하지 못했다. 따라서 운영 요청의 표현이나 `cache_control`을 임의로 바꾸는 수정은 넣지 않았다. 위 결과는 캐시 차이를 없앴다는 의미가 아니다.
+
+#### 실제 연결 단절에서 재시도 중복을 수정했다
+
+[캡처 전송 계층](../diag/lib/capture-http.mjs)에 선택적 실시간 전달 모드를 추가했다. 기존 버퍼링 방식은 기본값으로 유지한다. 새 모드는 응답 완료를 기다리지 않고 청크를 전달하고, 쓰기 대기와 UTF-8 청크 경계를 처리하며, 연결 종료 시 upstream 취소를 관측한다.
+
+실제 연결을 첫 텍스트 델타 뒤에 끊자 SDK는 정상 `message_delta.stop_reason` 없이 `content_block_stop`과 `message_stop`을 합성했다. 기존 변환기는 이를 완료된 출력으로 보고, 실패한 시도의 `1`을 재시도 결과 `1…600` 앞에 남겼다. [쿼리 상태](../src/features/query/state.ts)에 완료가 확인되지 않은 내용의 존재를 추적하고, [스트림 변환기](../src/adapters/pi/stream-events.ts)가 재시도·비스트리밍 대체 응답·합성 실패 보고 전에 해당 시도의 블록만 제거하도록 수정했다. 앞서 정상 완료된 내용은 보존한다. [회귀 테스트](../tests/unit-nonstreaming-fallback.mjs)에서 두 경계를 함께 확인했다.
+
+SDK 갱신 뒤 실제 연결 단절에서도 최종 숫자는 중복 없이 `1…600`이었다. 소유한 SDK 프로세스를 출력 도중 `SIGKILL`로 종료한 경우는 호출자 취소가 아닌 일반 오류로 끝났고, 다음 요청은 복구됐다. 후속 기억 검사는 질문에 정답을 다시 넣지 않고 처음 전달한 무작위 코드를 회상하게 해 통과했다.
+
+#### 실제 Pi와 스트리밍에서 확인한 경계
+
+| 검사 | 실제로 확인한 동작 |
+| --- | --- |
+| [`09-stream-lifecycle`](../tools/verify/checks/09-stream-lifecycle.ts) | 응답 완료 전 델타 전달, 총 150개 델타, 시작·종료 순서, 첫 델타에서 취소, terminal 1개, Scope와 대기 상태 정리, 다음 요청 복구 |
+| [`09-query-recovery`](../tools/verify/checks/09-query-recovery.ts) | 실제 응답 연결 단절과 SDK 내부 재시도, 출력 도중 소유한 SDK 프로세스 종료, 일반 오류와 취소의 구분, 이후 기록 복원 |
+| [`09-pi-lifecycle`](../tools/verify/checks/09-pi-lifecycle.ts) | 실제 Pi RPC의 tree 이동·압축·fork·세션 전환·새 세션·reload·도구 대기 중 abort, 모델 문맥 검사 5개, 6개 실행 단계의 쿼리·hook 정리, 강제 종료 없는 정상 종료 |
+| 도구 대기 중 세션 전환 보완 실험 | `new_session`이 대기 중 도구를 취소하고 새 문맥에서 이전 표식을 제외함. 원래 세션으로 돌아오면 무작위 표식을 회상함. 3개 실행 단계의 정리와 종료 코드 0 확인 |
+
+Pi 1.4.0에는 별도로 구분해야 할 취소 표시가 있었다. 도구 취소 뒤 이미 중단된 다음 요청이 호스트의 준비 단계에서 실패하면 빈 assistant 메시지를 `stopReason: "error"`, `errorMessage: "This operation was aborted"`로 보냈다. 도구의 취소 신호, `agent_settled.aborted`, 추가 Bridge 쿼리 진입이 없다는 관측을 함께 확인했다. 검증 장치는 취소를 예상한 해당 사례에서만 이 정확한 형태를 별도로 집계하며, 일반 오류를 성공으로 바꾸지 않는다. Pi 호스트 자체의 표시는 수정하지 않았다.
+
+검증 장치의 잘못된 가정도 운영 결함과 구분했다. 짧은 대화에서 압축 대상이 남도록 설정을 조정했고, `-nt` 대신 대기 도구만 허용했다. RPC는 LF 단위로 읽고 `agent_settled`까지 기다린다. 종료 통지는 부모가 준비 응답을 받은 뒤 stdin을 닫도록 바꿔 실제 Pi 정리 절차와 정상 종료를 확인했다. 검증용 런타임은 자신이 등록한 hook만 철회한 뒤 dispose하며, 운영 런타임의 재호출 계약은 바꾸지 않았다.
+
+#### SDK 갱신 후 검증 결과와 남은 한계
+
+Node.js 24.14.0에서 다음을 확인했다. 직접 공급자 검증은 Pi 1.3.0 라이브러리를, 실제 RPC와 격리 설치 로딩은 Pi 1.4.0을 사용했다.
+
+- 타입 검사와 전체 단위 테스트 **45개 파일 / 427개** 통과.
+- `verify --all --live`: **25개 통과, 실패·건너뜀 0개, 모델 요청 54회**. 선택적 캐시 검사 전체를 실행한 결과는 아니다.
+- 기억 검사를 강화한 `09-query-recovery`: **6회 요청으로 재검증 통과**.
+- 도구 대기 중 세션 전환 보완 실험: **4회 요청으로 통과**. 위 세 실행 묶음의 SDK 0.3.309 요청 합계는 **64회**이며, 취소·장애 주입 요청도 포함한다. 앞선 SDK 0.3.304 조사까지 합한 총횟수는 아니다.
+- 아카이브 **63개 파일** 검사 통과. 격리 환경에 오프라인 설치한 뒤 Pi 1.4.0에서 진단 없이 로딩됐고, 소스 **59개 파일**이 작업 트리와 바이트 단위로 일치했다. 설치된 SDK도 0.3.309였다.
+- SDK 업데이트가 부수적으로 바꾼 `rolldown`·`postcss` 계열은 기존 잠금 버전으로 되돌렸다. 그 상태에서 타입 검사와 전체 단위 테스트를 다시 통과했다. live 실행 경로와 운영 의존성은 이 정리로 바뀌지 않았다.
+
+저장소에 추가한 세 live 검사는 다음 명령으로 재실행할 수 있다. 사용량이 발생하며, 검증 장치는 구독 인증과 Haiku 모델 제한을 유지한다.
+
+```bash
+# apps/pi-claude-bridge
+pnpm verify 09-stream-lifecycle 09-query-recovery 09-pi-lifecycle --live --report /tmp/cc-bridge-lifecycle.json
+```
+
+근거는 `/tmp/pi-claude-bridge-followup.nsyb2v/`의 `baseline-*.json`, `current-*.json`, `intervention-*.json`, `native-control.json`, `cache-point-probe.json`, `final-sdk309-verification.json`, `final-sdk309-recovery.json`, `pending-history-sdk309.json`, `final-package.json`, `final-installed.json`에 있다. 운영 결함을 드러낸 `stream-recovery-sdk304.json`과 초기 Pi 시나리오의 실패 보고서도 보존했다. 임시 세션 전환 실험은 같은 디렉터리의 `pending-history-probe.mjs`이며, 저장소의 기본 검사 목록에는 포함하지 않았다.
+
+캐시 내부 원인과 Pi 호스트의 취소 오류 표시는 남아 있다. 실제 동시 다중 인스턴스와 강제로 지연시킨 옛 쿼리 완료까지 이번 live 검증으로 입증한 것은 아니며, 해당 소유권 경계의 기존 단위 검증과 구분한다. 최소 Node.js 22.19.0 실행, 다른 모델·계정, 장시간 성능·메모리 비교, 설치본에서의 실제 모델 호출은 확인하지 않았다. 청구 내역도 조회하지 않았다.
+
 [source-runtime]: https://github.com/buYoung/pi-packages/blob/bdb11fb46bebe4ac130f3be9c982741ba77e1265/apps/pi-claude-bridge/src/runtime.ts#L19-L50
 [source-mirror]: https://github.com/buYoung/pi-packages/blob/bdb11fb46bebe4ac130f3be9c982741ba77e1265/apps/pi-claude-bridge/src/session/mirror-store.ts#L45-L159
 [source-registry]: https://github.com/buYoung/pi-packages/blob/bdb11fb46bebe4ac130f3be9c982741ba77e1265/apps/pi-claude-bridge/src/provider/query-context.ts#L134-L232
