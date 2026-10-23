@@ -10,6 +10,8 @@ import {
   SettingsList,
   truncateToWidth,
 } from "@earendil-works/pi-tui";
+import { Effect } from "effect";
+import { fromPromise, fromSync } from "../shared/effects.ts";
 import { formatUsageDetails, formatUsageStatusColored, type UsageData, type UsageStats } from "../usage/api.ts";
 import { SecretInput } from "./secret-input.ts";
 
@@ -474,20 +476,30 @@ export class OllamaSettingsPanel implements Component, Focusable {
     const controller = new AbortController();
     this.reportAbort = controller;
     let delayMs = this.reportIntervalMs;
-    try {
-      const report = await this.actions.fetchUsageReport(controller.signal);
-      if (this.isClosed) return;
-      this.report = report;
-      this.reportError = undefined;
-      if (report.entries.some((entry) => entry.isRateLimited)) delayMs = this.rateLimitedIntervalMs;
-      // Account rows show the balances the report just recorded.
-      await this.reload();
-    } catch (error) {
-      if (this.isClosed) return;
-      this.reportError = errorText(error);
-    } finally {
-      if (this.reportAbort === controller) this.reportAbort = undefined;
-    }
+    await Effect.runPromise(
+      fromPromise(() => this.actions.fetchUsageReport(controller.signal)).pipe(
+        Effect.flatMap((report) =>
+          fromPromise(async () => {
+            if (this.isClosed) return;
+            this.report = report;
+            this.reportError = undefined;
+            if (report.entries.some((entry) => entry.isRateLimited)) delayMs = this.rateLimitedIntervalMs;
+            // Account rows show the balances the report just recorded.
+            await this.reload();
+          }),
+        ),
+        Effect.catch((error) =>
+          fromSync(() => {
+            if (!this.isClosed) this.reportError = errorText(error);
+          }),
+        ),
+        Effect.ensuring(
+          Effect.sync(() => {
+            if (this.reportAbort === controller) this.reportAbort = undefined;
+          }),
+        ),
+      ),
+    );
     if (this.isClosed) return;
     this.nextReportDelayMs = delayMs;
     this.renderer.requestRender();

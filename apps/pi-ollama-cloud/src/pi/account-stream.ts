@@ -1,4 +1,3 @@
-import { setTimeout as delay } from "node:timers/promises";
 import type {
   Api,
   AssistantMessage,
@@ -10,9 +9,11 @@ import type {
   TranscriptContext,
 } from "@earendil-works/pi-ai";
 import { getApiProvider, lazyStream } from "@earendil-works/pi-ai/compat";
+import { Effect } from "effect";
 import { classifyProviderMessage, isConcurrencyLimitMessage } from "../accounts/failure.ts";
 import type { AccountAcquisition, AccountRouter } from "../accounts/router.ts";
 import type { SessionAccountBinding } from "../accounts/session.ts";
+import { fromPromise, runAbortable } from "../shared/effects.ts";
 
 export type StreamSimpleFunction = (
   model: Model<Api>,
@@ -38,7 +39,7 @@ export interface AccountStreamDependencies {
  */
 export const CONCURRENCY_RETRY_DELAYS_MS: readonly number[] = [1000, 2000, 4000, 8000, 16000];
 
-const defaultWait = (delayMs: number, signal?: AbortSignal) => delay(delayMs, undefined, { signal });
+const defaultWait = (delayMs: number, signal?: AbortSignal) => runAbortable(Effect.sleep(delayMs), signal);
 
 /** Pi loads the OpenAI-compatible API implementation on the first request. After Pi is upgraded under a running
  *  session, that file no longer exists; name the cause instead of only the missing path. */
@@ -141,50 +142,54 @@ export function createAccountStreamSimple(dependencies: AccountStreamDependencie
         router.acquire({ primaryKey: options?.apiKey, binding, modelId: model.id, excludedIds, signal });
       let concurrencyRetries = 0;
       try {
-        let acquisition = await acquire();
-        for (;;) {
-          if (!acquisition.ok) throw new Error(acquisition.message);
-          const { account } = acquisition;
-          excludedIds.add(account.id);
-          const stream = delegate(model, context, {
-            ...options,
-            apiKey: account.apiKey,
-            headers: withAccountAuthorization(options?.headers, account.apiKey),
-          });
-          const iterator = stream[Symbol.asyncIterator]();
-          const first = await iterator.next();
-          if (!first.done && first.value.type === "error" && first.value.reason === "error") {
-            const errorMessage = first.value.error.errorMessage;
-            const failure = classifyProviderMessage(errorMessage);
-            if (failure) {
-              await router.reportFailure(account, failure, { modelId: model.id });
-              const next = await acquire();
-              if (next.ok) {
-                acquisition = next;
-                continue;
+        return await Effect.runPromise(
+          Effect.gen(function* () {
+            let acquisition = yield* fromPromise(acquire);
+            for (;;) {
+              if (!acquisition.ok) throw new Error(acquisition.message);
+              const { account } = acquisition;
+              excludedIds.add(account.id);
+              const stream = delegate(model, context, {
+                ...options,
+                apiKey: account.apiKey,
+                headers: withAccountAuthorization(options?.headers, account.apiKey),
+              });
+              const iterator = stream[Symbol.asyncIterator]();
+              const first = yield* fromPromise(() => iterator.next());
+              if (!first.done && first.value.type === "error" && first.value.reason === "error") {
+                const errorMessage = first.value.error.errorMessage;
+                const failure = classifyProviderMessage(errorMessage);
+                if (failure) {
+                  yield* fromPromise(() => router.reportFailure(account, failure, { modelId: model.id }));
+                  const next = yield* fromPromise(acquire);
+                  if (next.ok) {
+                    acquisition = next;
+                    continue;
+                  }
+                } else if (
+                  isConcurrencyLimitMessage(errorMessage) &&
+                  concurrencyRetries < CONCURRENCY_RETRY_DELAYS_MS.length
+                ) {
+                  const delayMs = Math.round(CONCURRENCY_RETRY_DELAYS_MS[concurrencyRetries] * (0.5 + random()));
+                  concurrencyRetries++;
+                  if (concurrencyRetries === 1) {
+                    binding.notify(
+                      `Ollama Cloud account "${account.id}" is at its concurrent request limit; waiting for a free slot.`,
+                    );
+                  }
+                  yield* fromPromise(() => wait(delayMs, signal));
+                  // Nothing reached Pi yet, so the same account is asked again once the wait ends.
+                  excludedIds.delete(account.id);
+                  acquisition = yield* fromPromise(acquire);
+                  continue;
+                }
               }
-            } else if (
-              isConcurrencyLimitMessage(errorMessage) &&
-              concurrencyRetries < CONCURRENCY_RETRY_DELAYS_MS.length
-            ) {
-              const delayMs = Math.round(CONCURRENCY_RETRY_DELAYS_MS[concurrencyRetries] * (0.5 + random()));
-              concurrencyRetries++;
-              if (concurrencyRetries === 1) {
-                binding.notify(
-                  `Ollama Cloud account "${account.id}" is at its concurrent request limit; waiting for a free slot.`,
-                );
-              }
-              await wait(delayMs, signal);
-              // Nothing reached Pi yet, so the same account is asked again once the wait ends.
-              excludedIds.delete(account.id);
-              acquisition = await acquire();
-              continue;
+              if (!first.done && first.value.type === "error") explainStalePiBundle(first.value.error);
+              // With no other account available, Pi receives the provider's own error.
+              return replay(first, iterator, stream);
             }
-          }
-          if (!first.done && first.value.type === "error") explainStalePiBundle(first.value.error);
-          // With no other account available, Pi receives the provider's own error.
-          return replay(first, iterator, stream);
-        }
+          }),
+        );
       } catch (error) {
         if (signal?.aborted) return abortedEvents(model);
         throw error;

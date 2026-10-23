@@ -1,8 +1,10 @@
 import type { RefreshModelsContext } from "@earendil-works/pi-ai";
 import type { ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import { Effect } from "effect";
 import { GENERATED_CATALOG_INFO, GENERATED_MODELS } from "../generated/catalog.generated.ts";
+import { fromPromise } from "../shared/effects.ts";
 import { envInt } from "../shared/http.ts";
-import { collectModelDetails, fetchModelDetails, fetchModelIds, modelFailureReason } from "./api.ts";
+import { collectModelDetailsEffect, fetchModelDetails, fetchModelIds, modelFailureReason } from "./api.ts";
 import { OLLAMA_BASE } from "./base.ts";
 import type { CatalogDiagnostics, CatalogDiagnosticsStore } from "./catalog-diagnostics.ts";
 import { assembleModels, resolveModelMetadata } from "./metadata.ts";
@@ -27,9 +29,8 @@ export function createCatalogService(options: CatalogOptions) {
     state = next;
     options.diagnostics.write(next);
   }
-  return {
-    getDiagnostics: () => state ?? options.diagnostics.read(),
-    async refresh(context: RefreshModelsContext): Promise<ProviderModelConfig[]> {
+  function refreshEffect(context: RefreshModelsContext): Effect.Effect<ProviderModelConfig[], unknown> {
+    return Effect.gen(function* () {
       const disk = options.diagnostics.read();
       if (disk && (!state || (disk.lastAttemptAtMs ?? 0) > (state.lastAttemptAtMs ?? 0))) state = disk;
       const isKnownSnapshot =
@@ -104,29 +105,38 @@ export function createCatalogService(options: CatalogOptions) {
             });
         }
       };
-      let ids: string[];
-      try {
-        ids = await fetchIds(context.signal);
-      } catch (error) {
+      const listed = yield* fromPromise(() => fetchIds(context.signal)).pipe(
+        Effect.match({
+          onSuccess: (ids) => ({ ok: true as const, ids }),
+          onFailure: (error) => ({ ok: false as const, error }),
+        }),
+      );
+      if (!listed.ok) {
         if (!isCurrent()) return fallback;
-        await failure("failure", [{ reason: modelFailureReason(error) }]);
-        throw error;
+        yield* fromPromise(() => failure("failure", [{ reason: modelFailureReason(listed.error) }]));
+        return yield* Effect.fail(listed.error);
       }
       if (!isCurrent()) return fallback;
-      const result = await collectModelDetails(ids, context.signal, options.fetchDetails ?? fetchModelDetails);
+      const result = yield* collectModelDetailsEffect(
+        listed.ids,
+        context.signal,
+        options.fetchDetails ?? fetchModelDetails,
+      );
       if (!isCurrent()) return fallback;
       if (result.failures.length > 0) {
         const isPartial = Object.keys(result.models).length > 0;
-        await failure(isPartial ? "partial" : "failure", result.failures);
-        throw new Error(
-          isPartial
-            ? `Ollama Cloud catalog refresh incomplete: ${result.failures.length} model(s) failed; retry after ${retryMs}ms.`
-            : `Failed to fetch model details (${result.failures.length} failed); retry after ${retryMs}ms.`,
+        yield* fromPromise(() => failure(isPartial ? "partial" : "failure", result.failures));
+        return yield* Effect.fail(
+          new Error(
+            isPartial
+              ? `Ollama Cloud catalog refresh incomplete: ${result.failures.length} model(s) failed; retry after ${retryMs}ms.`
+              : `Failed to fetch model details (${result.failures.length} failed); retry after ${retryMs}ms.`,
+          ),
         );
       }
       const models = assembleModels(result.models);
       if (models.length === 0) {
-        await failure("empty", [{ reason: "No tools-capable models returned." }]);
+        yield* fromPromise(() => failure("empty", [{ reason: "No tools-capable models returned." }]));
         return fallback;
       }
       const persisted = models.map((model) => ({
@@ -139,8 +149,8 @@ export function createCatalogService(options: CatalogOptions) {
       const nativeThinkingIds = Object.entries(result.models)
         .filter(([id, raw]) => resolveModelMetadata(id, raw).sources.thinking === "api")
         .map(([id]) => id);
-      try {
-        const accepted = await context.publish({
+      const published = yield* fromPromise(() =>
+        context.publish({
           persist: { models: persisted, checkedAt },
           update: () => {
             if (isCurrent())
@@ -157,9 +167,16 @@ export function createCatalogService(options: CatalogOptions) {
                 persistence: "saved",
               });
           },
-        });
-        if (!accepted || !isCurrent()) return fallback;
-      } catch {
+        }),
+      ).pipe(
+        Effect.match({
+          onSuccess: (accepted) => ({ ok: true as const, accepted }),
+          onFailure: () => ({ ok: false as const }),
+        }),
+      );
+      if (published.ok) {
+        if (!published.accepted || !isCurrent()) return fallback;
+      } else {
         if (!isCurrent()) return fallback;
         record({
           ...prior,
@@ -172,6 +189,12 @@ export function createCatalogService(options: CatalogOptions) {
         });
       }
       return persisted;
-    },
+    });
+  }
+  return {
+    getDiagnostics: () => state ?? options.diagnostics.read(),
+    refreshEffect,
+    refresh: (context: RefreshModelsContext): Promise<ProviderModelConfig[]> =>
+      Effect.runPromise(refreshEffect(context)),
   };
 }

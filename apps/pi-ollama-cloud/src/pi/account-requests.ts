@@ -1,8 +1,10 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { Effect } from "effect";
 import { classifyThrownError } from "../accounts/failure.ts";
 import { type AccountRouter, NO_ACCOUNT_MESSAGE } from "../accounts/router.ts";
 import type { SessionAccountBinding } from "../accounts/session.ts";
 import { getCloudApiKey } from "../auth/context.ts";
+import { fromPromise } from "../shared/effects.ts";
 
 export type ResolveApiKey = (signal?: AbortSignal) => Promise<string | undefined>;
 
@@ -24,30 +26,36 @@ export function createAccountRequestRunner(
   router: AccountRouter,
   binding: SessionAccountBinding,
 ): AccountRequestRunner {
-  return async (ctx, signal, run) => {
-    const primaryKey = await getCloudApiKey(ctx);
-    const excludedIds = new Set<string>();
-    let lastError: unknown;
-    let hasLastError = false;
-    for (;;) {
-      const acquisition = await router.acquire({ primaryKey, binding, excludedIds, signal });
-      if (!acquisition.ok) {
-        if (hasLastError) throw lastError;
-        // Keep each tool's own missing-key error.
-        if (acquisition.message === NO_ACCOUNT_MESSAGE) return run(async () => undefined);
-        throw new Error(acquisition.message);
-      }
-      const { account } = acquisition;
-      excludedIds.add(account.id);
-      try {
-        return await run(async () => account.apiKey);
-      } catch (error) {
-        const failure = signal?.aborted ? undefined : classifyThrownError(error);
-        if (!failure || failure.kind === "forbidden") throw error;
-        await router.reportFailure(account, failure);
-        lastError = error;
-        hasLastError = true;
-      }
-    }
-  };
+  return (ctx, signal, run) =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const primaryKey = yield* fromPromise(() => getCloudApiKey(ctx));
+        const excludedIds = new Set<string>();
+        let lastError: unknown;
+        let hasLastError = false;
+        for (;;) {
+          const acquisition = yield* fromPromise(() => router.acquire({ primaryKey, binding, excludedIds, signal }));
+          if (!acquisition.ok) {
+            if (hasLastError) throw lastError;
+            // Keep each tool's own missing-key error.
+            if (acquisition.message === NO_ACCOUNT_MESSAGE) return yield* fromPromise(() => run(async () => undefined));
+            throw new Error(acquisition.message);
+          }
+          const { account } = acquisition;
+          excludedIds.add(account.id);
+          const outcome = yield* fromPromise(() => run(async () => account.apiKey)).pipe(
+            Effect.match({
+              onSuccess: (value) => ({ ok: true as const, value }),
+              onFailure: (error) => ({ ok: false as const, error }),
+            }),
+          );
+          if (outcome.ok) return outcome.value;
+          const failure = signal?.aborted ? undefined : classifyThrownError(outcome.error);
+          if (!failure || failure.kind === "forbidden") return yield* Effect.fail(outcome.error);
+          yield* fromPromise(() => router.reportFailure(account, failure));
+          lastError = outcome.error;
+          hasLastError = true;
+        }
+      }),
+    );
 }

@@ -251,6 +251,37 @@ pnpm --dir apps/pi-ollama-cloud pack --pack-destination "$verification_dir/packa
 
 `check`는 파일을 수정하지 않는 린트와 타입 검사입니다. 단위 테스트와 `--offline` 검증은 실제 서비스에 요청하지 않습니다. `--offline` 검증은 실제 pnpm 압축 파일을 만들어 풀고, 이미 설치된 운영 의존성만 준비해 소스와 배포물의 등록·도구·취소·reload·요청 본문도 비교합니다. 마지막 명령은 압축 파일을 `$verification_dir/package`에 남겨 직접 확인할 수 있게 합니다. 종료 코드가 0이고 보고서의 모든 검사가 통과했는지 확인하세요. 테스트·CLI·Inquirer·검증 기록은 배포물에 포함하지 않으며, 컴파일·번들 단계는 없습니다.
 
+### 리팩토링 전후 비교
+
+비동기 실행·공유 요청·자원 정리에 Effect `4.0.6`을 사용합니다. 기존 Promise 함수, 공급자·명령·도구 이름, 설정과 저장 형식은 유지합니다. 순수 정책과 파일 잠금 안의 동기 갱신은 비동기로 바꾸지 않습니다.
+
+`BEFORE_PACKAGE`와 `AFTER_PACKAGE`에 운영 의존성이 설치된 변경 전·후 패키지 디렉터리의 절대 경로를 지정합니다. 모노레포 루트에서 같은 fixture를 두 설치본에 실행해 등록·명령·도구·취소·reload·최종 요청 본문의 계약을 비교합니다. 실제 API는 호출하지 않습니다.
+
+```bash
+verification_dir="$(mktemp -d)"
+pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/parity-offline.ts \
+  --before "${BEFORE_PACKAGE:?변경 전 패키지 경로 필요}" \
+  --after "${AFTER_PACKAGE:?변경 후 패키지 경로 필요}" \
+  --report "$verification_dir/parity.json"
+```
+
+### 실제 모델 요청 50회
+
+**이 검사는 실제 사용량을 소비합니다.** 실행 환경에 테스트용 `OLLAMA_API_KEY`를 비공개로 설정한 뒤 실행합니다. 개인 인증 파일은 사용하지 않습니다. 아래 명령은 현재 소스를 검사하며, `--package-dir`에 압축 파일을 풀고 운영 의존성을 설치한 디렉터리를 지정하면 배포물을 검사합니다.
+
+```bash
+verification_dir="$(mktemp -d)"
+pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/parity-live.ts \
+  --live-50 --package-dir "$PWD/apps/pi-ollama-cloud" \
+  --report "$verification_dir/live-50.json"
+```
+
+`glm-5.3-flash:cloud`에 단일 응답 10회, 문맥 유지 10회, thinking 설정 생략/low 10회, 등록된 웹 도구 왕복 20회를 보냅니다. 도구 실행 뒤의 모델 요청도 50회에 포함합니다. 요청당 최대 1,024토큰·120초이며, 검색·fetch는 각각 최대 2회, 잔액은 최대 4회, 모델 상세는 1회로 별도 제한합니다. 횟수는 전송 전에 기록하고 실패도 차감합니다. 재시도·redirect·예산 외 전송은 차단합니다.
+
+종료 코드 0과 보고서의 `status: "pass"`, `counts.chat: 50`, `blocked: 0`을 확인합니다. 실패하면 중단하며, 기존 보고서 경로로 재실행할 수 없습니다. 새 보고서로 다시 실행하면 새 요청 예산을 사용하므로 총사용량을 별도로 확인해야 합니다. 보고서에는 키·인증 헤더·전체 응답을 남기지 않습니다. 변경 전후 각각 실행하면 채팅은 총 100회입니다.
+
+실서비스 비교는 생성 문장이나 thinking 블록의 동일성을 보장하지 않습니다. thinking 설정을 생략해도 모델 정책에 따라 추론이 꺼지지 않을 수 있으므로, 보고서의 `payload.reasoning`에서 실제 전달값을 확인합니다. 요청 옵션과 스트림 종료, 문맥 유지, 도구 호출·캐시 재사용을 확인하며, 오류·동시성·다중 계정 경계는 오프라인 테스트로 검증합니다.
+
 ### 대화형 기능 확인 CLI
 
 모노레포 루트의 대화형 터미널에서 실행합니다. npm 설치본이 아니라 소스 체크아웃에서 쓰는 명령입니다.
