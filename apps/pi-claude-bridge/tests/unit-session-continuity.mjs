@@ -4,10 +4,10 @@ import { readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "
 import { join } from "node:path";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { createSession, openSession } from "cc-session-io";
-import { bindSessionLinks, lookupSessionLink, recordSessionLink, SESSION_LINK_TYPE } from "../src/session/continuity.js";
-import { createMirrorStore } from "../src/session/mirror-store.js";
-import { createBridgeRuntime } from "../src/runtime.js";
-import { registerBridge } from "../src/provider/registration.js";
+import { bindSessionLinks, lookupSessionLink, recordSessionLink, SESSION_LINK_TYPE } from "../src/features/session/continuity.js";
+import { createMirrorStore } from "../src/features/session/mirror-store.js";
+import { createBridgeHarness } from "../tools/verify/bridge-runtime.js";
+import { registerBridge } from "../tools/verify/bridge-runtime.js";
 import { createHarness, fixtureUser } from "../tools/verify/harness.js";
 import { withWorkspace } from "../tools/verify/workspace.js";
 
@@ -31,7 +31,7 @@ async function withSessions(run) {
 			return release;
 		};
 		bind();
-		const mirror = createMirrorStore({ activeQueryContexts: new Set(), debug });
+		const mirror = createMirrorStore({ diagnostics: { debug } });
 		try { return await run({ workspace, manager, bind, writes, logs, debug, mirror }); }
 		finally { for (const release of releases.reverse()) release(); }
 	});
@@ -173,7 +173,7 @@ it("falls back to a fresh rebuild when the branch link points to a missing file"
 
 it("binds on session_start/tree and releases on session_shutdown through production registration", () => withSessions(({ workspace, manager }) => {
 	const handlers = new Map();
-	const runtime = createBridgeRuntime();
+	const runtime = createBridgeHarness();
 	const pi = { registerProvider() {}, on(event, handler) { const all = handlers.get(event) ?? []; all.push(handler); handlers.set(event, all); },
 		appendEntry(type, data) { manager.appendCustomEntry(type, data); } };
 	const context = { cwd: workspace.cwd, mode: "rpc", sessionManager: manager, modelRegistry: { getProvider: () => ({}) }, ui: undefined };

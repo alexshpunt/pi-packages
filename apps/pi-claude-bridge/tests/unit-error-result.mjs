@@ -6,9 +6,9 @@
  * turn finalizes as a normal stop and the failure never reaches pi.
  */
 import { describe, expect, it } from "vitest";
-import { QueryContext } from "../src/provider/query-context.js";
+import { QueryContext } from "../src/features/query/state.js";
 
-const { __test } = await import("../src/index.js");
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
 
 const fakeModel = { api: "anthropic-messages", provider: "anthropic", id: "test-model" };
 const toolMap = new Map([["mcp__custom-tools__bash", "bash"]]);
@@ -27,7 +27,7 @@ function makeCtx() {
 
 async function consume(c, messages) {
 	async function* gen() { for (const m of messages) yield m; }
-	await __test.consumeQuery(gen(), toolMap, fakeModel, () => false, c);
+	await testBridge.consumeQuery(gen(), toolMap, fakeModel, () => false, c);
 }
 
 const errorResult = {
@@ -40,23 +40,23 @@ const errorResult = {
 // accept an errored result as a valid summary, writing "Prompt is too long" into history.
 describe("resultErrorText", () => {
 	it("treats is_error on a success-shaped result as a failure", () => {
-		expect(__test.resultErrorText(errorResult)).toBe(errorResult.result);
+		expect(testBridge.resultErrorText(errorResult)).toBe(errorResult.result);
 	});
 
 	it("returns undefined for a genuine success", () => {
-		expect(__test.resultErrorText({ type: "result", subtype: "success", is_error: false, result: "a summary" })).toBe(undefined);
+		expect(testBridge.resultErrorText({ type: "result", subtype: "success", is_error: false, result: "a summary" })).toBe(undefined);
 	});
 
 	it("joins errors[] for the dedicated error subtypes", () => {
-		expect(__test.resultErrorText({ type: "result", subtype: "error_during_execution", errors: ["boom", "bang"] })).toBe("boom\nbang");
+		expect(testBridge.resultErrorText({ type: "result", subtype: "error_during_execution", errors: ["boom", "bang"] })).toBe("boom\nbang");
 	});
 
 	it("never returns an empty message for a failure", () => {
-		expect(__test.resultErrorText({ type: "result", subtype: "success", is_error: true, result: "" })).toBeTruthy();
-		expect(__test.resultErrorText({ type: "result", subtype: "error_max_budget_usd" })).toBeTruthy();
+		expect(testBridge.resultErrorText({ type: "result", subtype: "success", is_error: true, result: "" })).toBeTruthy();
+		expect(testBridge.resultErrorText({ type: "result", subtype: "error_max_budget_usd" })).toBeTruthy();
 		// errors[] is typed string[], with no promise of being non-empty; joining an
 		// empty one marks the turn errored with nothing to show the user.
-		expect(__test.resultErrorText({ type: "result", subtype: "error_during_execution", errors: [] })).toBeTruthy();
+		expect(testBridge.resultErrorText({ type: "result", subtype: "error_during_execution", errors: [] })).toBeTruthy();
 	});
 });
 
@@ -111,7 +111,7 @@ describe("error results", () => {
 		expect(c.turnOutput.errorMessage).toBe(errorResult.result);
 
 		const stream = c.currentPiStream;
-		__test.finalizeCurrentStream(c, c.turnOutput.stopReason);
+		testBridge.finalizeCurrentStream(c, c.turnOutput.stopReason);
 		const terminal = stream.events.at(-2);
 		expect(terminal.type).toBe("error");
 		expect(terminal.reason).toBe("error");
@@ -142,7 +142,7 @@ describe("error results", () => {
 		]);
 
 		const stream = c.currentPiStream;
-		__test.finalizeCurrentStream(c, c.turnOutput.stopReason);
+		testBridge.finalizeCurrentStream(c, c.turnOutput.stopReason);
 
 		const beforeTerminal = stream.events.slice(0, -2);
 		expect(beforeTerminal.every((e) => e.type === "start" || e.type.startsWith("thinking_")), `synthetic report must not commit output, got: ${stream.events.map((e) => e.type).join(",")}`).toBeTruthy();
@@ -187,7 +187,7 @@ describe("error results", () => {
 		expect(c.turnOutput.content).toStrictEqual([{ type: "text", text: "done" }]);
 
 		const stream = c.currentPiStream;
-		__test.finalizeCurrentStream(c, c.turnOutput.stopReason);
+		testBridge.finalizeCurrentStream(c, c.turnOutput.stopReason);
 		expect(stream.events.at(-2).type).toBe("done");
 	});
 

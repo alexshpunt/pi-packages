@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Options, Query } from "@anthropic-ai/claude-agent-sdk";
-import { createSdkQueryClient } from "../../src/cc/query.js";
+import { createSdkQueryClient } from "../../src/adapters/claude/client.js";
 import { OBSERVED_ENV_KEYS } from "./capture.js";
 import { expect } from "./types.js";
 import type { VerificationWorkspace } from "./workspace.js";

@@ -1,15 +1,15 @@
 import { setTimeout as delay } from "node:timers/promises";
 import type { Context, Model, SimpleStreamOptions } from "@earendil-works/pi-ai";
-import { PROVIDER_ID } from "../../src/convert.js";
-import { applyLongContext, resolveClaudeCodeRuntimeModel } from "../../src/models.js";
-import { createBridgeRuntime } from "../../src/runtime.js";
+import { PROVIDER_ID } from "../../src/features/session/convert.js";
+import { applyLongContext, resolveClaudeCodeRuntimeModel } from "../../src/features/models/policy.js";
+import { createBridgeHarness } from "./bridge-runtime.js";
 import { EnvironmentError, expect } from "./types.js";
 import { assertAllowedModel, MODEL_ID } from "./policy.js";
 import type { VerificationWorkspace } from "./workspace.js";
 
 export function createHarness(workspace: VerificationWorkspace, requestedModel = MODEL_ID) {
 	// A fresh runtime owns fresh per-session query state; nothing to reset first.
-	const runtime = createBridgeRuntime();
+	const runtime = createBridgeHarness();
 	// A check must install either an offline double or the guarded live runner.
 	runtime.setQuery(() => { throw new EnvironmentError("live-query-not-authorized"); });
 	const requested = requestedModel.replace(/^claude-bridge\//, "");
@@ -39,10 +39,13 @@ export function createHarness(workspace: VerificationWorkspace, requestedModel =
 		try { await waitForIdle(); }
 		finally {
 			runtime.setQuery(() => { throw new EnvironmentError("verification-runtime-closed"); });
-			runtime.sharedSessions.clear();
+			runtime.clearSessions();
 			// Test-only reset of this harness's own runtime, not the production
 			// per-session release a session_shutdown performs.
 			runtime.sessionQueryContexts.clear();
+			runtime.withdrawRebuildHook();
+			runtime.withdrawReleaseHook();
+			await runtime.runtime.dispose();
 		}
 	}
 	return { runtime, model, cliModel, turn, waitForIdle, close };

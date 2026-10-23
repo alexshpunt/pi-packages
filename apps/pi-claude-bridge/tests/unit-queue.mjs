@@ -14,11 +14,11 @@
  * mispaired as soon as Claude's call order diverged from its emission order.
  */
 import { describe, expect, it } from "vitest";
-import { QueryContext } from "../src/provider/query-context.js";
-import { extractAllToolResults } from "../src/extract-tool-results.js";
-import { makePromptStream } from "../src/prompt-stream.js";
+import { QueryContext } from "../src/features/query/state.js";
+import { extractAllToolResults } from "../src/features/tool-bridge/results.js";
+import { makePromptStream } from "../src/adapters/claude/prompt-input.js";
 
-const { __test } = await import("../src/index.js");
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
 
 // Mirrors the SDK's connectSdkMcpServer: hand the instance a transport, push
 // requests into transport.onmessage, read replies out of transport.send.
@@ -63,13 +63,13 @@ const TOOLS = ["alpha", "beta", "gamma"].map((name) => ({
 async function startQuery(turnToolCallIds) {
 	const c = new QueryContext();
 	c.turnToolCallIds = [...turnToolCallIds];
-	const servers = __test.buildMcpServers(TOOLS, c);
+	const servers = testBridge.buildMcpServers(TOOLS, c);
 	return { c, callTool: await connectClient(Object.values(servers)[0]) };
 }
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 const result = (toolCallId, text, isError) => ({ toolCallId, content: [{ type: "text", text }], isError });
-const deliver = (c, ...results) => __test.deliverToolResults(c, results, null, 4);
+const deliver = (c, ...results) => testBridge.deliverToolResults(c, results, null, 4);
 const replyText = (response) => response.result.content[0].text;
 
 describe("tool result queue", () => {
@@ -120,6 +120,30 @@ describe("tool result queue", () => {
 		expect(replyText(await third)).toBe("r3");
 		expect(c.pendingToolCalls.size).toBe(0);
 		expect(c.pendingResults.size).toBe(0);
+	});
+
+	it("does not report disjoint queues as a bug during reversed parallel delivery", async () => {
+		const { c, callTool } = await startQuery(["toolu_1", "toolu_2"]);
+		const logs = [];
+		const debug = testBridge.debug;
+		testBridge.debug = (...values) => logs.push(values.map(String).join(" "));
+		try {
+			const first = callTool("alpha", "toolu_1");
+			await tick();
+			expect([...c.pendingToolCalls.keys()]).toStrictEqual(["toolu_1"]);
+
+			// The first result queues toolu_2 while toolu_1 still has a handler.
+			await deliver(c, result("toolu_2", "r2"), result("toolu_1", "r1"));
+
+			expect(replyText(await first)).toBe("r1");
+			expect([...c.pendingResults.keys()]).toStrictEqual(["toolu_2"]);
+			expect(replyText(await callTool("beta", "toolu_2"))).toBe("r2");
+			expect(c.pendingToolCalls.size).toBe(0);
+			expect(c.pendingResults.size).toBe(0);
+			expect(logs.filter(line => line.includes("BUG:"))).toStrictEqual([]);
+		} finally {
+			testBridge.debug = debug;
+		}
 	});
 
 	// The invariant the two maps exist to keep: an id is waiting in at most one.
@@ -192,11 +216,11 @@ describe("abandoning a query", () => {
 		// Real stream, no consumer: the push parks exactly as it does when the CLI
 		// stops reading stdin.
 		c.promptStream = makePromptStream();
-		const delivery = __test.deliverToolResults(c, [result("toolu_1", "r1")], [{ type: "text", text: "stop" }], 4);
+		const delivery = testBridge.deliverToolResults(c, [result("toolu_1", "r1")], [{ type: "text", text: "stop" }], 4);
 		await tick();
 		expect(c.pendingToolCalls.size, "delivery must still be parked on the ack").toBe(1);
 
-		__test.drainForAbort(c, c.promptStream);
+		testBridge.drainForAbort(c, c.promptStream);
 
 		await delivery; // resolves rather than throwing: the steer is lost, not the turn
 		expect(replyText(await call)).toBe("Operation aborted");
@@ -270,7 +294,7 @@ describe("delivering an extracted turn to its handlers", () => {
 			{ role: "user", content: "steer" },
 			{ role: "toolResult", toolCallId: "toolu_2", content: "ran the command" },
 		]);
-		await __test.deliverToolResults(c, results, null, 5);
+		await testBridge.deliverToolResults(c, results, null, 5);
 
 		expect(replyText(await alpha)).toBe("read the file");
 		expect(replyText(await beta)).toBe("ran the command");

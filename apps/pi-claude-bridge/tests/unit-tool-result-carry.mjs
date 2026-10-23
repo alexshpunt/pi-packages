@@ -4,9 +4,9 @@ import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSyn
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createSession, openSession } from "cc-session-io";
-import { convertPiMessages } from "../src/convert.js";
-import { deleteSessionKeepingToolResults } from "../src/session/sync.js";
-import { applyCarriedToolResults, collectCarriedToolResults, readSavedOutput } from "../src/session/tool-result-carry.js";
+import { convertPiMessages } from "../src/features/session/convert.js";
+import { deleteSessionKeepingToolResults } from "../src/features/session/service.js";
+import { applyCarriedToolResults, collectCarriedToolResults, readSavedOutput } from "../src/features/session/tool-result-carry.js";
 import { createHarness, fixtureUser } from "../tools/verify/harness.js";
 import { withWorkspace } from "../tools/verify/workspace.js";
 import { VERIFICATION_PNG_BASE64 } from "../tools/verify/fixtures/image.js";

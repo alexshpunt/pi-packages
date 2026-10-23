@@ -1,4 +1,4 @@
-import { buildProviderQueryOptions, buildSummaryQueryOptions } from "../../../src/cc/query-options.js";
+import { buildProviderQueryOptions, buildSummaryQueryOptions } from "../../../src/adapters/claude/query-options.js";
 import { createHarness } from "../harness.js";
 import { captureSpawn, flagValues } from "../spawn.js";
 import { expect, type VerificationCheck } from "../types.js";

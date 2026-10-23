@@ -46,7 +46,7 @@ export interface CLIHost {
 export async function runCLI(argv: string[], host: CLIHost = {}): Promise<number> {
 	const appDir = host.appDir ?? APP_DIR;
 	const print = host.print ?? console.log;
-	let args: ReturnType<typeof parseCLI>;
+	let args: ReturnType<typeof parseCLI> | undefined;
 	let report: ReturnType<typeof makeReport> | undefined;
 	const context: CheckContext = { appDir, modelId: MODEL_ID, isLive: false, apiCalls: 0 };
 	try {

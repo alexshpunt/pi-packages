@@ -2,7 +2,7 @@
  * Tests for session integrity helpers:
  *   - repairToolPairing (from cc-session-io): pairs orphan tool_use blocks
  *     with synthetic tool_result so imported history never starts mid-turn.
- *   - verifyWrittenSession (from session-verify.js): warns if the JSONL file
+ *   - verifyWrittenSession (from features/session/verify.ts): warns if the JSONL file
  *     doesn't round-trip (missing file, record-count mismatch, sessionId drift).
  */
 import { afterAll, describe, expect, it } from "vitest";
@@ -10,7 +10,7 @@ import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { repairToolPairing } from "cc-session-io";
-import { verifyWrittenSession } from "../src/session-verify.js";
+import { verifyWrittenSession } from "../src/features/session/verify.js";
 
 // --- repairToolPairing ---
 

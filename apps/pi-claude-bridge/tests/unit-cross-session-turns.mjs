@@ -30,13 +30,13 @@ const claudeDir = mkdtempSync(join(tmpdir(), "claude-bridge-cross-session-cc-"))
 process.env.CLAUDE_CONFIG_DIR = claudeDir;
 process.on("exit", () => rmSync(claudeDir, { recursive: true, force: true }));
 
-const { __test } = await import("../src/index.js");
-const { setQuery, getSharedSession, resetSharedSession } = __test;
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
+const { setQuery, getSharedSession, resetSharedSession } = testBridge;
 
 // Build the provider entry the way pi hands it to the extension: call the
 // module's default export with stub registration hooks, keep the real
 // streamSimple that lands in the provider config.
-const mod = await import("../src/index.js");
+const mod = await import("../tools/verify/fixture-entry.js");
 let providerConfig;
 mod.default({
 	on: () => {},
@@ -82,8 +82,8 @@ const settle = () => new Promise((r) => setTimeout(r, 20));
 const tools = [{ name: "read", description: "Read a fixture file.", parameters: Type.Object({ path: Type.String() }) }];
 const callWithTool = (sessionId, messages, signal) => streamSimple(model, { messages, tools }, { sessionId, signal });
 const settled = async (sessionId) => {
-	for (let i = 0; i < 400 && [...__test.activeQueryContexts].some((c) => c.piSessionId === sessionId); i++) await new Promise((r) => setTimeout(r, 5));
-	expect([...__test.activeQueryContexts].some((c) => c.piSessionId === sessionId), `${sessionId} settled`).toBeFalsy();
+	for (let i = 0; i < 400 && [...testBridge.activeQueryContexts].some((c) => c.piSessionId === sessionId); i++) await new Promise((r) => setTimeout(r, 5));
+	expect([...testBridge.activeQueryContexts].some((c) => c.piSessionId === sessionId), `${sessionId} settled`).toBeFalsy();
 };
 
 beforeEach(() => {
@@ -183,10 +183,10 @@ describe("cross-session conversation isolation", () => {
 		// The CLI has stopped accepting input, but still returns a successful
 		// result. Model the provider's tool-result path counting the steer before
 		// the next turn, so cursor-based sync alone cannot recover it.
-		const context = [...__test.activeQueryContexts].find((c) => c.piSessionId === P);
+		const context = [...testBridge.activeQueryContexts].find((c) => c.piSessionId === P);
 		expect(context, "second turn is still active").toBeTruthy();
 		context.promptStream.fail(new Error("prompt stream closed"));
-		await __test.deliverToolResults(context, [], [{ type: "text", text: "missed steer" }], 4);
+		await testBridge.deliverToolResults(context, [], [{ type: "text", text: "missed steer" }], 4);
 		getSharedSession(P).cursor = 4;
 		context.latestCursor = 4;
 		expect(getSharedSession(P).needsRebuild).toBe(true);
@@ -213,10 +213,10 @@ describe("cross-session conversation isolation", () => {
 		await settle();
 		expect(getSharedSession(P), "clean start has no mirror until completion").toBe(null);
 
-		const context = [...__test.activeQueryContexts].find((c) => c.piSessionId === P);
+		const context = [...testBridge.activeQueryContexts].find((c) => c.piSessionId === P);
 		expect(context, "first turn is still active").toBeTruthy();
 		context.promptStream.fail(new Error("prompt stream closed"));
-		await __test.deliverToolResults(context, [], [{ type: "text", text: "missed first-turn steer" }], 2);
+		await testBridge.deliverToolResults(context, [], [{ type: "text", text: "missed first-turn steer" }], 2);
 		context.latestCursor = 2;
 		g.open();
 		await first.result();

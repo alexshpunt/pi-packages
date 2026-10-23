@@ -27,7 +27,7 @@
 //                not arrived — so those lengths are reported, not failed.
 
 import { repairToolPairing } from "cc-session-io";
-import { convertPiMessages } from "../src/convert.js";
+import { convertPiMessages } from "../src/features/session/convert.js";
 import { loadPiMessages, settledPrefixes, transcript } from "./lib/write-path.mjs";
 
 // A long session makes the prefix sweep quadratic; sample evenly past this.

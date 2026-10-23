@@ -3,7 +3,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import type { Query, query } from "@anthropic-ai/claude-agent-sdk";
 import type { AssistantMessage, Message } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
-import { forgetSessionCwd, rememberSessionCwd } from "../../src/session-cwd.js";
+import { forgetSessionCwd, rememberSessionCwd } from "../../src/adapters/pi/session-cwd.js";
 import { createHarness, fixtureUser } from "./harness.js";
 import { expect, type CheckContext, type Facts } from "./types.js";
 import { withWorkspace, type VerificationWorkspace } from "./workspace.js";
@@ -74,14 +74,11 @@ function installScriptedQueries(harness: Harness) {
 function observeSyncPaths(harness: Harness): string[] {
 	const paths: string[] = [];
 	const debug = harness.runtime.debug;
-	Object.defineProperty(harness.runtime, "debug", {
-		configurable: true, writable: true,
-		value: (...args: unknown[]) => {
-			const match = typeof args[0] === "string" ? /^syncResult: path=(clean-start preserve-shared|clean-start|reuse|rebuild)\b/.exec(args[0]) : null;
-			if (match) paths.push(match[1]);
-			debug(...args);
-		},
-	});
+	harness.runtime.debug = (...args: unknown[]) => {
+		const match = typeof args[0] === "string" ? /^syncResult: path=(clean-start preserve-shared|clean-start|reuse|rebuild)\b/.exec(args[0]) : null;
+		if (match) paths.push(match[1]);
+		debug(...args);
+	};
 	return paths;
 }
 

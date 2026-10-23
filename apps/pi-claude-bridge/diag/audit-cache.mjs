@@ -55,7 +55,7 @@ if (Number.isNaN(since) || Number.isNaN(ceiling)) {
 	console.error("usage: audit-cache.mjs [log] [--since YYYY-MM-DD] [--ceiling 0.30]");
 	process.exit(2);
 }
-// Same resolution as src/log-paths.ts, without pulling pi's runtime into a diag
+// Same resolution as src/diagnostics/paths.ts, without pulling pi's runtime into a diag
 // script: PI_CODING_AGENT_DIR wins, ~/.pi/agent is only the default.
 const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
 const logPath = args.filter((a, i) => !a.startsWith("--") && !args[i - 1]?.startsWith("--"))[0]

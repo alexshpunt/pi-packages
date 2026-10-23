@@ -1,7 +1,7 @@
 /**
  * Unit-suite setup file: isolate tests from the developer's real HOME/pi/claude state.
  *
- * Must run before test files import src modules — src/log-paths.ts resolves
+ * Must run before test files import src modules — src/diagnostics/paths.ts resolves
  * paths lazily now, but keep the preload so tests never touch real HOME state
  * even when they forget to swap env themselves.
  *

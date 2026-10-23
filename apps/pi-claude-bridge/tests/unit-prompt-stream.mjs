@@ -8,7 +8,7 @@
  * rather than a bare `for await`.
  */
 import { describe, expect, it } from "vitest";
-import { makePromptStream, userMessage } from "../src/prompt-stream.js";
+import { makePromptStream, userMessage } from "../src/adapters/claude/prompt-input.js";
 
 const text = (msg) => msg.message.content[0].text;
 

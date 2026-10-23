@@ -10,9 +10,9 @@
  * "Working" until the user aborted it.
  */
 import { describe, expect, it } from "vitest";
-import { QueryContext } from "../src/provider/query-context.js";
+import { QueryContext } from "../src/features/query/state.js";
 
-const { __test } = await import("../src/index.js");
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
 
 const fakeModel = { api: "anthropic-messages", provider: "anthropic", id: "test-model" };
 const toolMap = new Map([["mcp__custom-tools__bash", "bash"]]);
@@ -31,7 +31,7 @@ function makeCtx() {
 
 async function consume(c, messages) {
 	async function* gen() { for (const m of messages) yield m; }
-	await __test.consumeQuery(gen(), toolMap, fakeModel, () => false, c);
+	await testBridge.consumeQuery(gen(), toolMap, fakeModel, () => false, c);
 }
 
 const streamEvent = (event) => ({ type: "stream_event", event });
@@ -63,7 +63,7 @@ describe("non-streaming assistant and result fallback", () => {
 			{ type: "assistant", message: { id: "msg_plain", content: [{ type: "text", text: "OK" }] } },
 			{ type: "result", subtype: "success", is_error: false, result: "OK" },
 		]);
-		__test.finalizeCurrentStream(c);
+		testBridge.finalizeCurrentStream(c);
 		expect(c.turnOutput.content).toStrictEqual([{ type: "text", text: "OK" }]);
 		expect(stream.events.map(e => e.type)).toStrictEqual(["start", "text_start", "text_delta", "text_end", "done", "end"]);
 	});
@@ -130,6 +130,53 @@ describe("non-streaming fallback after a stalled stream", () => {
 
 		expect(c.turnOutput.content.map((b) => [b.type, b.id])).toStrictEqual([["toolCall", "toolu_retry"]]);
 		expect(c.turnOutput.stopReason).toBe("toolUse");
+	});
+
+	it.each(["streaming", "non-streaming"])("replaces synthetically closed content on a %s retry", async mode => {
+		const c = makeCtx();
+		const failed = [
+			streamEvent({ type: "message_start", message: { id: "msg_failed" } }),
+			streamEvent({ type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } }),
+			streamEvent({ type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "failed attempt" } }),
+			streamEvent({ type: "content_block_delta", index: 0, delta: { type: "signature_delta", signature: "failed-signature" } }),
+			streamEvent({ type: "content_block_stop", index: 0 }),
+			streamEvent({ type: "content_block_start", index: 1, content_block: { type: "text", text: "" } }),
+			streamEvent({ type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "1" } }),
+			// Real SDK 0.3.304 closes these after HTTP loss, without message_delta.
+			streamEvent({ type: "content_block_stop", index: 1 }),
+			streamEvent({ type: "message_stop" }),
+		];
+		const retry = mode === "streaming" ? [
+			streamEvent({ type: "message_start", message: { id: "msg_retry" } }),
+			streamEvent({ type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }),
+			streamEvent({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "1\n2" } }),
+			streamEvent({ type: "content_block_stop", index: 0 }),
+			streamEvent({ type: "message_delta", delta: { stop_reason: "end_turn" } }),
+			streamEvent({ type: "message_stop" }),
+		] : [{ type: "assistant", message: { id: "msg_retry", content: [{ type: "text", text: "1\n2" }] } }];
+
+		await consume(c, [...failed, ...retry]);
+		expect(c.turnOutput.content).toStrictEqual([{ type: "text", text: "1\n2" }]);
+		expect(c.hasUnconfirmedStreamContent).toBe(false);
+	});
+
+	it("keeps earlier content when its stream has an authoritative stop reason", async () => {
+		const c = makeCtx();
+		await consume(c, [
+			streamEvent({ type: "message_start", message: { id: "msg_first" } }),
+			streamEvent({ type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }),
+			streamEvent({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "kept" } }),
+			streamEvent({ type: "content_block_stop", index: 0 }),
+			streamEvent({ type: "message_delta", delta: { stop_reason: "end_turn" } }),
+			streamEvent({ type: "message_stop" }),
+			streamEvent({ type: "message_start", message: { id: "msg_next" } }),
+			streamEvent({ type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }),
+			streamEvent({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "next" } }),
+			streamEvent({ type: "content_block_stop", index: 0 }),
+			streamEvent({ type: "message_delta", delta: { stop_reason: "end_turn" } }),
+			streamEvent({ type: "message_stop" }),
+		]);
+		expect(c.turnOutput.content).toStrictEqual([{ type: "text", text: "kept" }, { type: "text", text: "next" }]);
 	});
 
 	it("still skips the assistant message that repeats a completed stream", async () => {

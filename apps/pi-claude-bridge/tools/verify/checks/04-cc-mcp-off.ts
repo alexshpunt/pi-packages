@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { loadConfig } from "../../../src/config.js";
+import { loadConfig } from "../../../src/adapters/storage/configuration.js";
 import { withCapturedQueries } from "../capture.js";
 import { fixtureUser } from "../harness.js";
 import { captureSpawn, flagValues } from "../spawn.js";

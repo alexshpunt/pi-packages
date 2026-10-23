@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { buildChildEnv } from "../../../src/cc/env.js";
+import { buildChildEnv } from "../../../src/adapters/claude/environment.js";
 import { expect, type VerificationCheck } from "../types.js";
 import { withWorkspace } from "../workspace.js";
 

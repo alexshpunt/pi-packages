@@ -6,12 +6,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-const { __test } = await import("../src/index.js");
-const { buildChildEnv } = await import("../src/cc/env.js");
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
+const { buildChildEnv } = await import("../src/adapters/claude/environment.js");
 
 describe("Claude Code child environment", () => {
 	it("disables auto-compaction and claude.ai MCP servers", () => {
-		expect(__test.CC_CHILD_ENV).toStrictEqual({
+		expect(testBridge.CC_CHILD_ENV).toStrictEqual({
 			CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
 			ENABLE_CLAUDEAI_MCP_SERVERS: "0",
 			DISABLE_AUTO_COMPACT: "1",

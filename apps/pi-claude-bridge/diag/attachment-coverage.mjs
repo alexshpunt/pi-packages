@@ -23,7 +23,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { collectCarriedAttachments, placeCarriedAttachments } from "../src/attachments.js";
+import { collectCarriedAttachments, placeCarriedAttachments } from "../src/features/session/attachments.js";
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {

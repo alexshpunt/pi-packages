@@ -10,12 +10,12 @@ import { createSession, deleteSession, openSession } from "cc-session-io";
 import { withCapturedQueries } from "../tools/verify/capture.js";
 import { fixtureUser } from "../tools/verify/harness.js";
 
-const { __test } = await import("../src/index.js");
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
 
 describe("syncSharedSession", () => {
 	afterEach(() => {
-		__test.resetSharedSession();
-		__test.setPiUI(null);
+		testBridge.resetSharedSession();
+		testBridge.setPiUI(null);
 	});
 
 	// Fresh-session transcript: the system prompt arrives as a leading system message
@@ -25,14 +25,14 @@ describe("syncSharedSession", () => {
 	it("takes the clean-start path when a transcript system message precedes the first user message", () => {
 		const cwd = mkdtempSync(join(tmpdir(), "sync-shared-session-"));
 		try {
-			const result = __test.syncSharedSession([
+			const result = testBridge.syncSharedSession([
 				{ role: "system", content: "You are Claude Code.", timestamp: Date.now() },
 				{ role: "user", content: "Hello", timestamp: Date.now() },
 			], cwd);
 
 			expect(result.sessionId, "a fresh session with only prompt state as priors is a clean start").toBe(null);
 			expect(result.preserveSharedSession).toBe(undefined);
-			expect(__test.getSharedSession(null), "a clean start must not create a session state").toBe(null);
+			expect(testBridge.getSharedSession(null), "a clean start must not create a session state").toBe(null);
 		} finally {
 			rmSync(cwd, { recursive: true, force: true });
 		}
@@ -50,9 +50,9 @@ describe("syncSharedSession", () => {
 				{ role: "assistant", content: [{ type: "text", text: "Hello." }] },
 			]);
 			seeded.save();
-			__test.setSharedSession(null, { sessionId, cursor: 2, cwd });
+			testBridge.setSharedSession(null, { sessionId, cursor: 2, cwd });
 
-			const result = __test.syncSharedSession([
+			const result = testBridge.syncSharedSession([
 				{ role: "user", content: "Hi", timestamp: Date.now() },
 				{ role: "assistant", content: [{ type: "text", text: "Hello." }], timestamp: Date.now() },
 				{ role: "system", content: "", toolsAdded: [{ name: "grep", description: "", parameters: {} }], timestamp: Date.now() },
@@ -60,7 +60,7 @@ describe("syncSharedSession", () => {
 			], cwd);
 
 			expect(result.sessionId, "2 priors at cursor 2 must resume, not rebuild").toBe(sessionId);
-			expect(__test.getSharedSession(null)?.cursor, "cursor counts non-system messages only").toBe(2);
+			expect(testBridge.getSharedSession(null)?.cursor, "cursor counts non-system messages only").toBe(2);
 			const session = openSession({ sessionId, projectPath: cwd });
 			expect(session.messages.map((m) => m.type), "the resumed session file must hold the non-system history").toStrictEqual(["user", "assistant"]);
 		} finally {
@@ -83,9 +83,9 @@ describe("syncSharedSession", () => {
 				cursor: 42,
 				cwd,
 			};
-			__test.setSharedSession(null, mainSession);
+			testBridge.setSharedSession(null, mainSession);
 
-			const result = __test.syncSharedSession([
+			const result = testBridge.syncSharedSession([
 				{
 					role: "user",
 					content: "Summarize this conversation.",
@@ -95,7 +95,7 @@ describe("syncSharedSession", () => {
 
 			expect(result.sessionId, "a reentrant context shorter than the cursor must start a fresh Claude Code session instead of resuming the parent's").toBe(null);
 			expect(result.preserveSharedSession, "the fresh session must not replace the parent's when it completes").toBe(true);
-			expect(__test.getSharedSession(null)).toStrictEqual(mainSession);
+			expect(testBridge.getSharedSession(null)).toStrictEqual(mainSession);
 		} finally {
 			rmSync(cwd, { recursive: true, force: true });
 		}
@@ -130,9 +130,9 @@ describe("syncSharedSession", () => {
 			);
 			seeded.save();
 
-			__test.setSharedSession(null, { sessionId, cursor: 0, cwd });
-			__test.setPiUI({ notify: (message) => notices.push(message) });
-			__test.syncSharedSession([
+			testBridge.setSharedSession(null, { sessionId, cursor: 0, cwd });
+			testBridge.setPiUI({ notify: (message) => notices.push(message) });
+			testBridge.syncSharedSession([
 				{ role: "user", content: prompt, timestamp: Date.now() },
 				{ role: "assistant", content: [{ type: "text", text: "Noted." }], timestamp: Date.now() },
 				{ role: "user", content: "Now what did it say?", timestamp: Date.now() },

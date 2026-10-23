@@ -10,9 +10,9 @@
  * retry's id was never released and CC stalled until it aborted.
  */
 import { describe, expect, it } from "vitest";
-import { QueryContext } from "../src/provider/query-context.js";
+import { QueryContext } from "../src/features/query/state.js";
 
-const { __test } = await import("../src/index.js");
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
 
 const fakeModel = { api: "anthropic-messages", provider: "anthropic", id: "test-model" };
 const toolMap = new Map([["mcp__custom-tools__bash", "bash"]]);
@@ -31,7 +31,7 @@ function makeCtx() {
 
 async function consume(c, messages) {
 	async function* gen() { for (const m of messages) yield m; }
-	await __test.consumeQuery(gen(), toolMap, fakeModel, () => false, c);
+	await testBridge.consumeQuery(gen(), toolMap, fakeModel, () => false, c);
 }
 
 const streamEvent = (event) => ({ type: "stream_event", event });

@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { repairToolPairing } from "cc-session-io";
-import { convertPiMessages } from "../src/convert.js";
+import { convertPiMessages } from "../src/features/session/convert.js";
 // Shared with diag/replay-write-path.mjs so the diagnostic and this test cannot
 // drift into disagreeing about what "stable" means.
 import { settledPrefixes, transcript } from "../diag/lib/write-path.mjs";

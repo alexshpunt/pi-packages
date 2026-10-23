@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderSkillsBlock } from "../src/skills.js";
+import { renderSkillsBlock } from "../src/features/prompt/skills.js";
 
 function skill(name, { disabled = false } = {}) {
 	return {

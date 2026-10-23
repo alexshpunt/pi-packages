@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { PI_PREAMBLE, projectPromptCapture, PromptCaptures } from "../src/prompt-capture.js";
+import { PI_PREAMBLE, projectPromptCapture, PromptCaptures } from "../src/features/prompt/capture.js";
 
 const PI_SYSTEM_PROMPT = fileURLToPath(new URL("../node_modules/@earendil-works/pi-coding-agent/dist/core/system-prompt.js", import.meta.url));
 
@@ -87,9 +87,9 @@ describe("prompt guard", () => {
 		expect(existsSync(PI_SYSTEM_PROMPT), `pi's system prompt module is not at ${PI_SYSTEM_PROMPT}; if pi moved it, update this test`).toBeTruthy();
 		const { buildSystemPrompt } = await import(PI_SYSTEM_PROMPT);
 		const harness = buildSystemPrompt({ cwd: "/tmp" });
-		expect(harness.includes(PI_PREAMBLE), "pi reworded its preamble, so the harness guard matches nothing; update PI_PREAMBLE in src/prompt-capture.ts").toBeTruthy();
+		expect(harness.includes(PI_PREAMBLE), "pi reworded its preamble, so the harness guard matches nothing; update PI_PREAMBLE in src/features/prompt/capture.ts").toBeTruthy();
 		for (const trigger of ["docs/custom-provider.md", "docs/packages.md"]) {
-			expect(harness.includes(trigger), `pi's rendered prompt no longer carries ${trigger}, so the third-party trigger pair may have moved; update ANTHROPIC_THIRD_PARTY_TRIGGERS in src/prompt-capture.ts`).toBeTruthy();
+			expect(harness.includes(trigger), `pi's rendered prompt no longer carries ${trigger}, so the third-party trigger pair may have moved; update ANTHROPIC_THIRD_PARTY_TRIGGERS in src/features/prompt/capture.ts`).toBeTruthy();
 		}
 		// A custom prompt replaces the harness in full, which is what makes these strings'
 		// presence mean "this prompt carries pi's harness or its gate fingerprint".

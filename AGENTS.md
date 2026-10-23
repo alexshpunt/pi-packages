@@ -26,3 +26,7 @@ This monorepo develops independently installable Pi extensions and supporting li
 - Add lint rules or formatter configuration only when explicitly requested. Do not broaden a documentation task into tooling changes.
 - After code changes, use the relevant package's type check or the root `pnpm typecheck` for cross-package changes. Keep package-specific verification guidance in package-level documents. Distinguish checks actually run from unverified runtime behavior.
 - Keep new functions and modules focused on one responsibility and close to their consumers. Introduce external dependencies only when necessary and explain the reason.
+
+## 추가 지침
+
+- 신규 코드를 작성하거나 책임·의존성 경계, 파일·폴더 구조, 타입·공용화 또는 상태·자원 소유권을 설계·변경·검토할 때는 [코드 분리와 폴더 구조 규칙](docs/code-organization.ko.md)을 읽고 적용한다. 단순 버그 수정에 무관한 구조 개편을 추가하지 않는다.

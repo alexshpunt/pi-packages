@@ -9,7 +9,7 @@ import { assertLiveEnvironment, assertSubscriptionAccount } from "../tools/verif
 import { isReportSafe, sourceRevision } from "../tools/verify/report.js";
 import { withWorkspace } from "../tools/verify/workspace.js";
 import { withCapturedQueries } from "../tools/verify/capture.js";
-import { fixtureUser } from "../tools/verify/harness.js";
+import { createHarness, fixtureUser } from "../tools/verify/harness.js";
 import { VerificationError } from "../tools/verify/types.js";
 
 async function fixtures(run) {
@@ -150,6 +150,22 @@ test("verification harness preserves an explicitly selected Pi session", async (
 		await harness.waitForIdle();
 		expect(harness.runtime.sessionStateFor(selected)).toBeTruthy();
 		expect(harness.runtime.sessionStateFor(workspace.sessionId)).toBe(null);
+		return {};
+	});
+});
+
+test("closing a verification runtime withdraws only its own hooks", async () => {
+	await withWorkspace(false, async workspace => {
+		const first = createHarness(workspace), sibling = createHarness(workspace);
+		const rebuild = globalThis[Symbol.for("claude-bridge:markRebuildHooks")];
+		const release = globalThis[Symbol.for("claude-bridge:releaseSessionQueriesHooks")];
+		try {
+			await first.close();
+			expect(rebuild.has(first.runtime.markRebuildForSession)).toBe(false);
+			expect(release.has(first.runtime.releaseSessionQueryContext)).toBe(false);
+			expect(rebuild.has(sibling.runtime.markRebuildForSession)).toBe(true);
+			expect(release.has(sibling.runtime.releaseSessionQueryContext)).toBe(true);
+		} finally { await sibling.close(); }
 		return {};
 	});
 });

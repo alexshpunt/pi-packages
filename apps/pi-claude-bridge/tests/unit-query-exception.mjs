@@ -47,7 +47,7 @@ async function exceptionThenRetry(isAborted) {
 			await harness.waitForIdle();
 			return {
 				originalId: session.sessionId, afterFailure, afterRetry: runtime.sessionStateFor(workspace.sessionId),
-				failedReason: failed.stopReason, retryReason: retried.stopReason,
+				failedReason: failed.stopReason, failedMessage: failed.errorMessage, retryReason: retried.stopReason,
 				siblingUnchanged: runtime.sessionStateFor(siblingId) === sibling,
 				resumeIds, logs, closeCount, previousFileExists: existsSync(session.jsonlPath),
 			};
@@ -58,6 +58,7 @@ async function exceptionThenRetry(isAborted) {
 it("keeps the owning mirror after an exception and rebuilds the retry at the same CC id", async () => {
 	const result = await exceptionThenRetry(false);
 	expect(result.failedReason).toBe("error");
+	expect(result.failedMessage).toBe("Query transport ended");
 	expect(result.afterFailure?.sessionId).toBe(result.originalId);
 	expect(result.afterFailure?.cursor).toBe(2);
 	expect(result.afterFailure?.needsRebuild).toBe(true);
@@ -74,6 +75,7 @@ it("keeps the owning mirror after an exception and rebuilds the retry at the sam
 it("still marks aborted queries for rotation and preserves their old file", async () => {
 	const result = await exceptionThenRetry(true);
 	expect(result.failedReason).toBe("aborted");
+	expect(result.failedMessage).toBe("Operation aborted");
 	expect(result.afterFailure?.sessionId).toBe(result.originalId);
 	expect(result.afterFailure?.needsRebuild).toBe(true);
 	expect(result.afterFailure?.forceRotate).toBe(true);

@@ -19,7 +19,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createSession, repairToolPairing } from "cc-session-io";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { convertPiMessages } from "../src/convert.js";
+import { convertPiMessages } from "../src/features/session/convert.js";
 
 const CWD = process.cwd();
 const MODEL = "claude-haiku-5-5";

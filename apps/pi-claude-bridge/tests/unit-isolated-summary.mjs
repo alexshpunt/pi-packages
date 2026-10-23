@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createBridgeRuntime } from "../src/runtime.js";
+import { createBridgeHarness } from "../tools/verify/bridge-runtime.js";
 
 let runtime, model;
 const context = { messages: [{ role: "user", content: "Summarize the fixture", timestamp: 0 }] };
@@ -10,7 +10,7 @@ const query = (messages, close = vi.fn()) => Object.assign((async function* () {
 const summary = (options = {}) => runtime.isolatedStreamFn(model, context, { cacheRetention: "none", ...options });
 
 beforeEach(() => {
-	runtime = createBridgeRuntime();
+	runtime = createBridgeHarness();
 	model = { ...runtime.MODELS[0], api: "claude-bridge", provider: "claude-bridge", baseUrl: "claude-bridge" };
 	runtime.setQuery(() => { throw new Error("No fake query installed"); });
 });

@@ -44,7 +44,7 @@ export default {
 			expect(calls.length === 1 && final && textOf(final).includes(marker), "tool-result-not-in-final-answer");
 			await runner.harness.waitForIdle();
 			expect(runner.requests.length >= 3, "model-requests-not-observed");
-			const usage = Object.fromEntries(["input", "output", "cacheRead", "cacheWrite", "totalTokens"].map(key => [key, turns.reduce((sum, turn) => sum + turn.usage[key], 0)]));
+			const usage = Object.fromEntries((["input", "output", "cacheRead", "cacheWrite", "totalTokens"] as const).map(key => [key, turns.reduce((sum, turn) => sum + turn.usage[key], 0)]));
 			expect(usage.totalTokens > 0, "model-usage-missing");
 			return { plainAnswer: fingerprint(textOf(plain)), finalAnswer: fingerprint(textOf(final)), returnedValueInFinalAnswer: true, toolCalls: calls, usage };
 		});

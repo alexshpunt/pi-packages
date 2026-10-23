@@ -6,7 +6,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSession, repairToolPairing } from "cc-session-io";
-import { sanitizeToolId, convertPiMessages, matchLiveToolResultKeyOrder } from "../src/convert.js";
+import { sanitizeToolId, convertPiMessages, matchLiveToolResultKeyOrder } from "../src/features/session/convert.js";
 
 /** Shorthand: convert pi messages and return just the anthropic messages. */
 function convert(messages, customToolNameToSdk) {

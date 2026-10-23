@@ -12,9 +12,9 @@
 // pi's builder puts every custom section.
 import { describe, expect, it } from "vitest";
 
-import { __test } from "../src/index.js";
+import { testBridge } from "../tools/verify/fixture-entry.js";
 
-const { toBridgeContext } = __test;
+const { toBridgeContext } = testBridge;
 
 function systemMessage(overrides) {
 	return { role: "system", content: "", timestamp: 0, ...overrides };

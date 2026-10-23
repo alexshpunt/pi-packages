@@ -1,7 +1,7 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import bridge, { __test } from "../../../src/index.js";
+import bridge, { testBridge } from "../fixture-entry.js";
 import { captureRequestPrefix, messageShapes, systemTextAsBlocks } from "../fidelity.js";
 import { withLiveRunner, type LiveRunner } from "../live.js";
 import { MODEL_ID } from "../policy.js";
@@ -33,11 +33,11 @@ export default async function (pi: ExtensionAPI) {
 		resolveReady(runner);
 		await finished;
 		const deadlineMs = Date.now() + 10000;
-		while (__test.activeQueryContexts.size && Date.now() < deadlineMs) await delay(10);
-		expect(__test.activeQueryContexts.size === 0, "pi-query-did-not-settle");
+		while (testBridge.activeQueryContexts.size && Date.now() < deadlineMs) await delay(10);
+		expect(testBridge.activeQueryContexts.size === 0, "pi-query-did-not-settle");
 		return {
 			piSessionId: currentContext?.sessionManager.getSessionId(), startingBranchLinkCount, finishingBranchLinkCount: linkCount(),
-			finalMirror: __test.getSharedSession(currentContext?.sessionManager.getSessionId()),
+			finalMirror: testBridge.getSharedSession(currentContext?.sessionManager.getSessionId()),
 			queries: observedQueries,
 			capturedPrefixes: runner.requests.map(request => captureRequestPrefix(runner.payloadFor(request))),
 			capturedShapePrefixes: runner.requests.map(request => captureRequestPrefix(runner.payloadFor(request), false)),
@@ -49,7 +49,7 @@ export default async function (pi: ExtensionAPI) {
 	void engine.catch(rejectReady);
 	const runner = await ready;
 	bridge(pi);
-	__test.setQuery(input => {
+	testBridge.setQuery(input => {
 		observedQueries.push({ resume: input.options?.resume ?? null });
 		return runner.harness.runtime.invokeQuery(input);
 	});
@@ -69,7 +69,7 @@ export default async function (pi: ExtensionAPI) {
 		} catch (error) {
 			send({ kind: "bridge-verification-error", apiCalls: context.apiCalls, code: error instanceof VerificationError ? error.code : "pi-verification-failed" });
 		} finally {
-			__test.setQuery(() => { throw new VerificationError("verification-process-finished"); });
+			testBridge.setQuery(() => { throw new VerificationError("verification-process-finished"); });
 		}
 	});
 }

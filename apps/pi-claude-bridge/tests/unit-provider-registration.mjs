@@ -17,7 +17,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
-import { summarySessionFor } from "../src/session-cwd.js";
+import { summarySessionFor } from "../src/adapters/pi/session-cwd.js";
 
 const PROVIDER_ID = "claude-bridge";
 

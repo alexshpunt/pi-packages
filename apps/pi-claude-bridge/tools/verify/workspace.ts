@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync } fr
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { getProjectDir } from "cc-session-io";
-import { forgetSessionCwd, rememberSessionCwd } from "../../src/session-cwd.js";
+import { forgetSessionCwd, rememberSessionCwd } from "../../src/adapters/pi/session-cwd.js";
 import { expect, VerificationError, type Facts } from "./types.js";
 
 export interface VerificationWorkspace {
