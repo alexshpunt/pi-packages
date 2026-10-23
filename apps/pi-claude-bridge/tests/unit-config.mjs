@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { lstatSync, readdirSync, readFileSync, statSync, symlinkSync } from "node:fs";
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
-import { claudeCodeSettings, hasRemovedToolEnabled, loadConfig, markStartupNoticeShown, readDetectedPlan, recordDetectedPlan } from "../src/config.js";
+import { claudeCodeSettings, hasRemovedToolEnabled, loadConfig, markStartupNoticeShown, readDetectedPlan, recordDetectedPlan } from "../src/adapters/storage/configuration.js";
 
 function withTempHome(fn) {
 	const oldHome = process.env.HOME;

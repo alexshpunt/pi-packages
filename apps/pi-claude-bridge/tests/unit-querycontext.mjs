@@ -4,13 +4,15 @@
  * using the real modules — no API calls, no extension activation.
  */
 import { describe, expect, it } from "vitest";
-import { createQueryRegistry, QueryContext } from "../src/provider/query-context.js";
-import { createBridgeRuntime } from "../src/runtime.js";
-import { registerBridge } from "../src/provider/registration.js";
+import { QueryContext } from "../src/features/query/state.js";
+import { createQueryRegistry } from "../src/features/query/registry.js";
+import { createInstanceRegistry } from "../src/adapters/pi/instance-registry.js";
+import { createBridgeHarness } from "../tools/verify/bridge-runtime.js";
+import { registerBridge } from "../tools/verify/bridge-runtime.js";
 
 const fakeModel = { api: "anthropic", provider: "anthropic", id: "test-model" };
 const debug = () => {};
-const registryServices = { debug, withdrawRebuildHook() {} };
+const registryServices = { diagnostics: { debug }, get instances() { return createInstanceRegistry(); } };
 
 /** A top-level context with a query in flight, as startProviderQuery leaves it. */
 function startQuery(registry, piSessionId) {
@@ -55,7 +57,7 @@ describe("QueryContext class", () => {
 });
 
 function registeredRuntime() {
-	const runtime = createBridgeRuntime();
+	const runtime = createBridgeHarness();
 	const handlers = new Map();
 	registerBridge({
 		registerProvider() {},
@@ -160,8 +162,19 @@ describe("query registry hooks after runner shutdown", () => {
 	it("keeps hooks enlisted while a discarded query is replaced in the same stream call", async () => {
 		const instance = registeredRuntime();
 		const { runtime } = instance;
-		const parked = startQuery(runtime, "owner");
-		parked.turnToolCallIds = ["toolu_old"];
+		const oldGate = Promise.withResolvers();
+		const tools = [{ name: "read", description: "fixture", parameters: { type: "object", properties: { path: { type: "string" } } } }];
+		runtime.setQuery(() => Object.assign((async function* () {
+			yield { type: "assistant", message: { id: "parked", content: [
+				{ type: "tool_use", id: "toolu_old", name: "mcp__custom-tools__read", input: { path: "a" } },
+			] } };
+			await oldGate.promise;
+		})(), { interrupt: async () => {}, close: () => oldGate.resolve() }));
+		const opening = runtime.streamClaudeAgentSdk(runtime.MODELS[0], {
+			messages: [{ role: "user", content: "fixture", timestamp: 0 }], tools,
+		}, { sessionId: "owner" });
+		expect((await opening.result()).stopReason).toBe("toolUse");
+		const parked = runtime.sessionQueryContextFor("owner");
 		parked.historyStale = true;
 		instance.shutdown("owner");
 		const gate = Promise.withResolvers();
@@ -286,8 +299,8 @@ describe("per-session query state", () => {
 			on(event, handler) { const all = handlers.get(event) ?? []; all.push(handler); handlers.set(event, all); },
 		};
 		// The instance whose handlers see the event is not the one serving the calls.
-		const notified = createBridgeRuntime();
-		const serving = createBridgeRuntime();
+		const notified = createBridgeHarness();
+		const serving = createBridgeHarness();
 		registerBridge(pi, notified);
 		const ending = serving.sessionQueryContextFor("pi-ending");
 		const endingReplies = parkHandler(ending, "toolu_ending");

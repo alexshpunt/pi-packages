@@ -24,10 +24,10 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { PI_PREAMBLE, projectPromptCapture } from "../src/prompt-capture.js";
+import { PI_PREAMBLE, projectPromptCapture } from "../src/features/prompt/capture.js";
 import { activateWithMockPi } from "./lib/mock-pi.mjs";
 
-const { __test } = await import("../src/index.js");
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
 
 const section = (name, content) => `<${name}>\n${content}\n</${name}>`;
 const parentSections = [
@@ -49,7 +49,7 @@ describe("agent_start capture — documented gaps", () => {
 		const parent = activateWithMockPi();
 		// An isolated agent re-evaluates the module; its records land in the same
 		// process-wide registry the pinned stream resolves against.
-		const { default: activateFresh, __test: freshTest } = await import("../src/index.js?isolated-child");
+		const { default: activateFresh, testBridge: freshTest } = await import("../tools/verify/fixture-entry.js?isolated-child");
 		const child = activateWithMockPi(activateFresh);
 
 		const isolatedPrompt = "You are an isolated smoke-test agent. Respond with ZZ_ISO_OK.";
@@ -57,8 +57,8 @@ describe("agent_start capture — documented gaps", () => {
 		child.get("agent_start")({}, { getSystemPrompt: () => isolatedPrompt });
 
 		expect(freshTest.promptCaptures.resolve(isolatedPrompt), "the child instance recorded its own prompt").toBeTruthy();
-		expect(__test.promptCaptures.resolveOrDerive(isolatedPrompt), "the shared registry the pinned stream resolves against resolves the child's prompt").toBeTruthy();
-		expect(freshTest.promptCaptures, "both instances share one capture registry").toBe(__test.promptCaptures);
+		expect(testBridge.promptCaptures.resolveOrDerive(isolatedPrompt), "the shared registry the pinned stream resolves against resolves the child's prompt").toBeTruthy();
+		expect(freshTest.promptCaptures, "both instances share one capture registry").toBe(testBridge.promptCaptures);
 	});
 
 	it("does not match a child embedding a tail-stripped parent prompt (#88)", () => {
@@ -67,7 +67,7 @@ describe("agent_start capture — documented gaps", () => {
 		handlers.get("agent_start")({}, { getSystemPrompt: () => PARENT_PROMPT });
 
 		// gotgenes/pi-subagents inheritedIdentity embeds the parent minus the per-session tail.
-		expect(() => __test.promptCaptures.resolveOrDerive(STRIPPED_CHILD), "the full assembled prompt is not a substring of its tail-stripped embedding").toThrow(/no capture/);
+		expect(() => testBridge.promptCaptures.resolveOrDerive(STRIPPED_CHILD), "the full assembled prompt is not a substring of its tail-stripped embedding").toThrow(/no capture/);
 	});
 
 	it("fails loudly when a recorded tail-stripped child has no inheritance edge (#88)", () => {
@@ -83,7 +83,7 @@ describe("agent_start capture — documented gaps", () => {
 		});
 		handlers.get("agent_start")({}, { getSystemPrompt: () => STRIPPED_CHILD });
 
-		const capture = __test.promptCaptures.resolve(STRIPPED_CHILD);
+		const capture = testBridge.promptCaptures.resolve(STRIPPED_CHILD);
 		expect(capture, "the tail-stripped child must be recorded before projection").toBeTruthy();
 		expect(capture.inherited.length, "the unsupported embedding must not invent an inheritance edge").toBe(0);
 		expect(() => projectPromptCapture(capture, { skillReadTool: "none" }), "an unmatched recorded child must fail before its harness reaches Claude Code").toThrow(/prompt-capture: refusing to send this prompt/);
@@ -97,7 +97,7 @@ describe("agent_start capture — documented gaps", () => {
 		// (buildSystemPromptState returns forceSystemPrompt verbatim).
 		handlers.get("agent_start")({}, { getSystemPrompt: () => "forced replacement prompt owning the request head" });
 
-		const capture = __test.promptCaptures.resolve("forced replacement prompt owning the request head");
+		const capture = testBridge.promptCaptures.resolve("forced replacement prompt owning the request head");
 		expect(capture, "the forced text becomes a capture key at agent_start").toBeTruthy();
 		// Caveat pinned by design: only the portable parts are projected for Claude Code;
 		// the forced text's own novel prose is not forwarded (forwarding pi-harness-shaped
@@ -111,7 +111,7 @@ describe("agent_start capture — documented gaps", () => {
 
 		// A host composing the prompt from its own template outside pi's pipeline —
 		// neither a rendered-options key, a handler-returned force, nor an embedding.
-		expect(() => __test.promptCaptures.resolveOrDerive("host-composed prompt owning the request head"), "out-of-pipeline composition is neither a recorded key nor an embedding of one").toThrow(/no capture/);
+		expect(() => testBridge.promptCaptures.resolveOrDerive("host-composed prompt owning the request head"), "out-of-pipeline composition is neither a recorded key nor an embedding of one").toThrow(/no capture/);
 	});
 
 	it("does not see a prompt replaced between turn_start and the stream call (#91 remaining shape)", () => {
@@ -119,11 +119,11 @@ describe("agent_start capture — documented gaps", () => {
 		handlers.get("before_agent_start")({ systemPrompt: "turn-1 prompt", systemPromptOptions: {} });
 		handlers.get("agent_start")({}, { getSystemPrompt: () => "turn-1 prompt" });
 		handlers.get("turn_start")({}, { getSystemPrompt: () => "turn-2 rendered prompt" });
-		expect(__test.promptCaptures.resolveOrDerive("turn-2 rendered prompt"), "the turn_start record resolves").toBeTruthy();
+		expect(testBridge.promptCaptures.resolveOrDerive("turn-2 rendered prompt"), "the turn_start record resolves").toBeTruthy();
 
 		// A rewrite landing after turn_start — a context-event handler replacing the
 		// system message, or a forced-prompt projection on newer pi — is seen by no
 		// recording boundary. When it neither is nor embeds a known key, it throws.
-		expect(() => __test.promptCaptures.resolveOrDerive("replacement head installed by a context handler"), "post-turn_start rewrites are seen by no recording boundary").toThrow(/no capture/);
+		expect(() => testBridge.promptCaptures.resolveOrDerive("replacement head installed by a context handler"), "post-turn_start rewrites are seen by no recording boundary").toThrow(/no capture/);
 	});
 });

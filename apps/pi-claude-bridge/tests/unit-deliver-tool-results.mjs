@@ -7,9 +7,10 @@
  * only the (slow, API-dependent) integration test would notice.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import { QueryContext } from "../src/provider/query-context.js";
+import { QueryContext } from "../src/features/query/state.js";
+import { Effect } from "effect";
 
-const { __test } = await import("../src/index.js");
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
 
 /** Records the interleaving of stdin writes and handler releases.
  *
@@ -22,7 +23,7 @@ function makeRecorder() {
 		order,
 		promptStream(behavior = "ack") {
 			return {
-				push: (msg) => {
+				enqueue: (msg) => Effect.tryPromise({ try: () => {
 					const label = msg.message.content.map((b) => b.text ?? `[${b.type}]`).join(",");
 					order.push(`push:${label}`);
 					if (behavior === "reject") {
@@ -34,7 +35,7 @@ function makeRecorder() {
 					// Ack on a later turn of the event loop: resolving synchronously
 					// would let a caller that forgot to await it still look correct.
 					return new Promise((resolve) => setTimeout(resolve, 5)).then(() => { order.push("ack"); });
-				},
+				}, catch: error => error }),
 			};
 		},
 		handler(name) {
@@ -46,7 +47,7 @@ function makeRecorder() {
 const steerText = [{ type: "text", text: "actually stop" }];
 const result = (toolCallId) => ({ toolCallId, content: [{ type: "text", text: "ok" }] });
 
-beforeEach(() => __test.resetSharedSession());
+beforeEach(() => testBridge.resetSharedSession());
 
 describe("deliverToolResults", () => {
 	it("writes the steer to stdin before releasing any tool result", async () => {
@@ -56,7 +57,7 @@ describe("deliverToolResults", () => {
 		c.pendingToolCalls.set("call-1", rec.handler("read"));
 		c.pendingToolCalls.set("call-2", rec.handler("bash"));
 
-		await __test.deliverToolResults(c, [result("call-1"), result("call-2")], steerText, 4);
+		await testBridge.deliverToolResults(c, [result("call-1"), result("call-2")], steerText, 4);
 
 		expect(rec.order).toStrictEqual(["push:actually stop", "ack", "resolve:read", "resolve:bash"]);
 	});
@@ -64,10 +65,10 @@ describe("deliverToolResults", () => {
 	it("sends the steer with priority next so CC drains it at the tool boundary", async () => {
 		const sent = [];
 		const c = new QueryContext();
-		c.promptStream = { push: (msg) => { sent.push(msg); return Promise.resolve(); } };
+		c.promptStream = { enqueue: (msg) => Effect.promise(() => { sent.push(msg); return Promise.resolve(); }) };
 		c.pendingToolCalls.set("call-1", { toolName: "read", resolve: () => {} });
 
-		await __test.deliverToolResults(c, [result("call-1")], steerText, 4);
+		await testBridge.deliverToolResults(c, [result("call-1")], steerText, 4);
 
 		expect(sent.length).toBe(1);
 		expect(sent[0].priority).toBe("next");
@@ -77,13 +78,13 @@ describe("deliverToolResults", () => {
 	it("keeps image blocks in the steer", async () => {
 		const sent = [];
 		const c = new QueryContext();
-		c.promptStream = { push: (msg) => { sent.push(msg); return Promise.resolve(); } };
+		c.promptStream = { enqueue: (msg) => Effect.promise(() => { sent.push(msg); return Promise.resolve(); }) };
 		const withImage = [
 			{ type: "text", text: "look at this" },
 			{ type: "image", source: { type: "base64", media_type: "image/png", data: "iVBOR" } },
 		];
 
-		await __test.deliverToolResults(c, [], withImage, 4);
+		await testBridge.deliverToolResults(c, [], withImage, 4);
 
 		expect(sent[0].message.content).toStrictEqual(withImage);
 	});
@@ -95,28 +96,28 @@ describe("deliverToolResults", () => {
 		const c = new QueryContext();
 		c.promptStream = rec.promptStream("reject");
 		c.pendingToolCalls.set("call-1", rec.handler("read"));
-		__test.setSharedSession(null, { sessionId: "abc", cursor: 3, cwd: "/tmp", needsRebuild: false });
+		testBridge.setSharedSession(null, { sessionId: "abc", cursor: 3, cwd: "/tmp", needsRebuild: false });
 
-		await __test.deliverToolResults(c, [result("call-1")], steerText, 4);
+		await testBridge.deliverToolResults(c, [result("call-1")], steerText, 4);
 
 		expect(rec.order).toStrictEqual(["push:actually stop", "push-rejected", "resolve:read"]);
-		expect(__test.getSharedSession(null).needsRebuild).toBe(true);
+		expect(testBridge.getSharedSession(null).needsRebuild).toBe(true);
 	});
 
 	it("marks the session for rebuild when there is no prompt stream", async () => {
 		const c = new QueryContext();
 		c.promptStream = null;
-		__test.setSharedSession(null, { sessionId: "abc", cursor: 3, cwd: "/tmp", needsRebuild: false });
+		testBridge.setSharedSession(null, { sessionId: "abc", cursor: 3, cwd: "/tmp", needsRebuild: false });
 
-		await __test.deliverToolResults(c, [], steerText, 4);
+		await testBridge.deliverToolResults(c, [], steerText, 4);
 
-		expect(__test.getSharedSession(null).needsRebuild).toBe(true);
+		expect(testBridge.getSharedSession(null).needsRebuild).toBe(true);
 	});
 
 	it("queues a result whose handler has not arrived yet", async () => {
 		const c = new QueryContext();
 
-		await __test.deliverToolResults(c, [result("call-late")], null, 4);
+		await testBridge.deliverToolResults(c, [result("call-late")], null, 4);
 
 		expect(c.pendingResults.get("call-late").toolCallId).toBe("call-late");
 		expect(c.pendingToolCalls.size).toBe(0);
@@ -128,7 +129,7 @@ describe("deliverToolResults", () => {
 		c.pendingToolCalls.set("call-1", rec.handler("read"));
 		c.pendingToolCalls.set("call-2", rec.handler("bash"));
 
-		await __test.deliverToolResults(c, [result("call-2"), result("call-1")], null, 4);
+		await testBridge.deliverToolResults(c, [result("call-2"), result("call-1")], null, 4);
 
 		expect(rec.order).toStrictEqual(["resolve:bash", "resolve:read"]);
 	});

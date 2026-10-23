@@ -41,7 +41,7 @@ if (Number.isNaN(since)) {
 // The log reaches back to April; without a window every historical warning keeps
 // the check red forever. Everything is still printed — only the exit narrows.
 const inWindow = (iso) => since === null || Date.parse(iso) >= since;
-// Same resolution as src/log-paths.ts, without pulling pi's runtime into a diag
+// Same resolution as src/diagnostics/paths.ts, without pulling pi's runtime into a diag
 // script: PI_CODING_AGENT_DIR wins, ~/.pi/agent is only the default.
 const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
 const logPath = args.filter((a, i) => !a.startsWith("--") && i !== sinceArg + 1)[0]

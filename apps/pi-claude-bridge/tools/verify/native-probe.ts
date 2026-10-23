@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { Options, Query } from "@anthropic-ai/claude-agent-sdk";
-import { createSdkQueryClient } from "../../src/cc/query.js";
+import { createSdkQueryClient } from "../../src/adapters/claude/client.js";
 import { VerificationError, type Facts } from "./types.js";
 
 /** Start the real CC against an owned rejecting endpoint, never a model service.

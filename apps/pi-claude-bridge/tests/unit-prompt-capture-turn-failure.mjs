@@ -20,8 +20,8 @@ process.env.PI_CODING_AGENT_DIR = agentDir;
 delete process.env.CLAUDE_BRIDGE_DEBUG;
 process.on("exit", () => rmSync(tmpRoot, { recursive: true, force: true }));
 
-const { default: activate, __test } = await import("../src/index.js");
-const { PI_PREAMBLE } = await import("../src/prompt-capture.js");
+const { default: activate, testBridge } = await import("../tools/verify/fixture-entry.js");
+const { PI_PREAMBLE } = await import("../src/features/prompt/capture.js");
 
 let providerConfig;
 activate({
@@ -39,9 +39,9 @@ const turn = (systemPrompt) => providerConfig.streamSimple(
 let queries;
 beforeEach(() => {
 	queries = 0;
-	__test.setQuery(() => { queries++; throw new Error("no query should start"); });
+	testBridge.setQuery(() => { queries++; throw new Error("no query should start"); });
 });
-afterEach(() => __test.setQuery(null));
+afterEach(() => testBridge.setQuery(null));
 
 describe("a prompt the bridge refuses", () => {
 	it("fails the turn on the stream when no capture accounts for the prompt", async () => {
@@ -49,13 +49,13 @@ describe("a prompt the bridge refuses", () => {
 		expect(result.stopReason).toBe("error");
 		expect(result.errorMessage).toMatch(/prompt-capture: no capture/);
 		expect(queries).toBe(0);
-		expect(__test.activeQueryContexts.size).toBe(0);
+		expect(testBridge.activeQueryContexts.size).toBe(0);
 		expect(existsSync(join(agentDir, "claude-bridge-diag.log"))).toBeTruthy();
 	});
 
 	it("fails the turn on the stream when the sendability guard refuses the capture", async () => {
 		const prompt = `${PI_PREAMBLE}, recorded with pi's harness in its custom prompt.`;
-		__test.promptCaptures.record(prompt, { custom: prompt, contextFiles: [], skills: [] });
+		testBridge.promptCaptures.record(prompt, { custom: prompt, contextFiles: [], skills: [] });
 		const result = await turn(prompt).result();
 		expect(result.stopReason).toBe("error");
 		expect(result.errorMessage).toMatch(/prompt-capture: refusing to send this prompt/);

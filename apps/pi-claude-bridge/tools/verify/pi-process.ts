@@ -33,7 +33,8 @@ export async function withPiProcess(
 	const exited = new Promise<void>(resolve => { resolveExit = resolve; });
 	let stderrBytes = 0;
 	let forwardedRequestCount = 0;
-	child.stderr.on("data", data => { stderrBytes += data.length; });
+	// This owned process is always spawned with three pipe streams.
+	child.stderr!.on("data", data => { stderrBytes += data.length; });
 	child.on("message", raw => {
 		if (!raw || typeof raw !== "object") return;
 		const message = raw as Facts;
@@ -62,7 +63,7 @@ export async function withPiProcess(
 		fail("pi-process-start-failed");
 	});
 	child.once("exit", () => { hasExited = true; resolveExit(); fail("pi-process-exited"); });
-	const lines = createInterface({ input: child.stdout });
+	const lines = createInterface({ input: child.stdout! });
 	lines.on("line", line => {
 		let message: Facts;
 		try { message = JSON.parse(line); } catch { return; }
@@ -85,7 +86,7 @@ export async function withPiProcess(
 		return new Promise((resolve, reject) => {
 			const timer = setTimeout(() => { responses.delete(id); reject(new VerificationError("pi-rpc-timeout")); }, 30000);
 			responses.set(id, { resolve, reject, timer });
-			child.stdin.write(JSON.stringify({ id, type, ...fields }) + "\n");
+			child.stdin!.write(JSON.stringify({ id, type, ...fields }) + "\n");
 		});
 	}
 	const startupTimeout = setTimeout(() => fail("pi-startup-timeout"), 15000);

@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createLogging } from "../src/logging.js";
-import { createBridgeRuntime } from "../src/runtime.js";
+import { createLogging } from "../src/diagnostics/service.js";
+import { createBridgeHarness } from "../tools/verify/bridge-runtime.js";
 
 let directory;
 beforeEach(() => {
@@ -68,8 +68,8 @@ describe("best-effort logging", () => {
 
 	it("does not prevent extension registration when the debug log is unwritable", async () => {
 		vi.stubEnv("CLAUDE_BRIDGE_DEBUG_PATH", directory);
-		const { registerBridge } = await import("../src/provider/registration.js");
-		const runtime = createBridgeRuntime();
+		const { registerBridge } = await import("../tools/verify/bridge-runtime.js");
+		const runtime = createBridgeHarness();
 		try {
 			expect(() => registerBridge({ on() {}, registerProvider() {} }, runtime)).not.toThrow();
 		} finally {
@@ -80,7 +80,7 @@ describe("best-effort logging", () => {
 
 	it("preserves the original terminal error when diagnostic logging fails", async () => {
 		mkdirSync(join(directory, "claude-bridge-diag.log"));
-		const runtime = createBridgeRuntime();
+		const runtime = createBridgeHarness();
 		runtime.setQuery(() => { throw new Error("must not launch"); });
 		try {
 			const stream = runtime.streamClaudeAgentSdk(runtime.MODELS[0], {
@@ -98,7 +98,7 @@ describe("best-effort logging", () => {
 
 	it("does not interrupt stream consumption when diagnostic recording fails", async () => {
 		vi.stubEnv("CLAUDE_BRIDGE_RECORD_STREAM", directory);
-		const runtime = createBridgeRuntime();
+		const runtime = createBridgeHarness();
 		runtime.setQuery(() => Object.assign((async function* () {
 			yield { type: "result", subtype: "success", is_error: false, result: "answer" };
 		})(), { close() {}, interrupt: async () => {} }));

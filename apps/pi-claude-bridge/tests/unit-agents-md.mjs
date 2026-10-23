@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatProjectContext } from "../src/agents-md.js";
+import { formatProjectContext } from "../src/features/prompt/project-context.js";
 
 describe("project context forwarding", () => {
 	it("preserves Pi's file order and labels each with its path", () => {

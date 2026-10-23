@@ -7,7 +7,7 @@
  * the counters it actually carries.
  */
 import { describe, expect, it } from "vitest";
-import { updateUsage } from "../src/usage.js";
+import { updateUsage } from "../src/adapters/pi/usage.js";
 
 const model = {
 	api: "anthropic-messages", provider: "anthropic", id: "claude-haiku-4-5",

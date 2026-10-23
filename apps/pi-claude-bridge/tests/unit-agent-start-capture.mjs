@@ -18,7 +18,7 @@
 import { describe, expect, it } from "vitest";
 import { activateWithMockPi } from "./lib/mock-pi.mjs";
 
-const { __test } = await import("../src/index.js");
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
 
 const PRE_WIDEN = "You are pi.\n# Tools\n- read: Read a file\n\npi packages (docs/packages.md)";
 // Same prefix, then the MCP tool descriptions that only appear post-connect.
@@ -30,10 +30,10 @@ describe("agent_start widened-prompt capture", () => {
 		handlers.get("before_agent_start")({ systemPrompt: PRE_WIDEN, systemPromptOptions: {} });
 
 		// Before agent_start, only the pre-widen prompt is known; the widened one is not.
-		expect(() => __test.promptCaptures.resolveOrDerive(WIDENED), "the widened prompt must not resolve off the pre-widen record alone").toThrow(/no capture/);
+		expect(() => testBridge.promptCaptures.resolveOrDerive(WIDENED), "the widened prompt must not resolve off the pre-widen record alone").toThrow(/no capture/);
 
 		handlers.get("agent_start")({}, { getSystemPrompt: () => WIDENED });
-		expect(__test.promptCaptures.resolveOrDerive(WIDENED), "after agent_start the widened prompt resolves exactly").toBeTruthy();
+		expect(testBridge.promptCaptures.resolveOrDerive(WIDENED), "after agent_start the widened prompt resolves exactly").toBeTruthy();
 	});
 
 	it("lets a child embedding the widened parent resolve by inheritance", () => {
@@ -43,7 +43,7 @@ describe("agent_start widened-prompt capture", () => {
 
 		// pi-subagents embeds the widened parent prompt verbatim as the child's prefix.
 		const child = `${WIDENED}\n\n<sub_agent_context>be concise</sub_agent_context>\n\n<active_agent name="worker"/>`;
-		const resolved = __test.promptCaptures.resolveOrDerive(child);
+		const resolved = testBridge.promptCaptures.resolveOrDerive(child);
 		expect(resolved, "child embedding the widened parent must resolve, not fall to a side request").toBeTruthy();
 		expect(resolved.inherited.length >= 1, "resolution must be via an inheritance edge onto the widened parent capture").toBeTruthy();
 	});
@@ -57,7 +57,7 @@ describe("agent_start widened-prompt capture", () => {
 		});
 		handlers.get("agent_start")({}, { getSystemPrompt: () => WIDENED });
 
-		const capture = __test.promptCaptures.resolve(WIDENED);
+		const capture = testBridge.promptCaptures.resolve(WIDENED);
 		expect(capture, "widened key must be recorded").toBeTruthy();
 		expect(capture.contextFiles, "the widened capture must carry the before_agent_start context files, not empty ones").toStrictEqual([{ path: "/AGENTS.md", content: "project rules" }]);
 	});
@@ -78,7 +78,7 @@ describe("turn_start prompt capture", () => {
 		const turnTwo = `${WIDENED}\n# Tools\n- git_status: Report repo state\n`;
 		handlers.get("turn_start")({}, { getSystemPrompt: () => turnTwo });
 
-		const capture = __test.promptCaptures.resolve(turnTwo);
+		const capture = testBridge.promptCaptures.resolve(turnTwo);
 		expect(capture, "the rebuilt prompt must resolve after turn_start").toBeTruthy();
 		expect(capture.contextFiles, "the mid-run capture must carry the stashed portable parts").toStrictEqual([{ path: "/AGENTS.md", content: "project rules" }]);
 	});
@@ -88,11 +88,11 @@ describe("turn_start prompt capture", () => {
 		handlers.get("before_agent_start")({ systemPrompt: PRE_WIDEN, systemPromptOptions: {} });
 		handlers.get("agent_start")({}, { getSystemPrompt: () => WIDENED });
 
-		const before = __test.promptCaptures.size;
+		const before = testBridge.promptCaptures.size;
 		handlers.get("turn_start")({}, { getSystemPrompt: () => WIDENED });
 		handlers.get("turn_start")({}, { getSystemPrompt: () => WIDENED });
 
-		expect(__test.promptCaptures.resolve(WIDENED), "the prompt still resolves").toBeTruthy();
-		expect(__test.promptCaptures.size, "re-firing an unchanged prompt must not grow the registry").toBe(before);
+		expect(testBridge.promptCaptures.resolve(WIDENED), "the prompt still resolves").toBeTruthy();
+		expect(testBridge.promptCaptures.size, "re-firing an unchanged prompt must not grow the registry").toBe(before);
 	});
 });

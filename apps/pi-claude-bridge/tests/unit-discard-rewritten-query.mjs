@@ -20,15 +20,22 @@
  * markRebuildForSession arms and discards only the rewriting session's queries,
  * and its teardown marks touch only that session's mirror.
  */
-import { beforeEach, describe, expect, it } from "vitest";
-import { QueryContext } from "../src/provider/query-context.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { Effect, Exit, Scope } from "effect";
+import { QueryContext } from "../src/features/query/state.js";
+import { QueryExecution } from "../src/features/query/lifecycle.js";
 
-const { __test } = await import("../src/index.js");
+const scopes = [];
+afterEach(async () => {
+	for (const scope of scopes.splice(0)) await Effect.runPromise(Scope.close(scope, Exit.void));
+});
+
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
 const {
 	activeQueryContexts, armStaleContexts, contextForToolResults, discardRewrittenQuery,
 	historyRewrittenBySession, isQueryAbandoned, markRebuildForSession,
 	getSharedSession, resetSharedSession, setSharedSession,
-} = __test;
+} = testBridge;
 
 /** A query parked mid-turn: CC asked for a tool and is waiting on the answer. */
 function parkedQuery(toolCallId = "call_1", piSessionId = "pi-parent") {
@@ -39,6 +46,9 @@ function parkedQuery(toolCallId = "call_1", piSessionId = "pi-parent") {
 	};
 	const c = new QueryContext();
 	c.activeQuery = sdkQuery;
+	const scope = Scope.makeUnsafe("sequential");
+	scopes.push(scope);
+	c.execution = new QueryExecution(sdkQuery, scope);
 	c.piSessionId = piSessionId;
 	c.turnToolCallIds = [toolCallId];
 	c.pendingToolCalls.set(toolCallId, {
@@ -131,6 +141,15 @@ describe("markRebuildForSession", () => {
 });
 
 describe("discardRewrittenQuery", () => {
+	it.each(["missing", "closing", "closed", "mismatched"])("does not route a result to a %s resource owner", (state) => {
+		const { c } = parkedQuery();
+		if (state === "missing") c.execution = null;
+		else if (state === "closing") c.execution.beginClosing();
+		else if (state === "closed") c.execution.closed("completed");
+		else c.activeQuery = {};
+		expect(contextForToolResults(toolResults)).toBeUndefined();
+	});
+
 	it("stops the parked query being a routing target for the turn's result", () => {
 		const { c } = parkedQuery();
 		expect(contextForToolResults(toolResults), "precondition: the result routes to the parked query").toBe(c);

@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
 import type { AddressInfo } from "node:net";
 import type { Context, SimpleStreamOptions } from "@earendil-works/pi-ai";
-import type { Options, Query } from "@anthropic-ai/claude-agent-sdk";
+import type { Options, Query, SpawnedProcess } from "@anthropic-ai/claude-agent-sdk";
 import { createCaptureServer, usageFromSse } from "../../diag/lib/capture-http.mjs";
-import { createSdkQueryClient } from "../../src/cc/query.js";
+import { createSdkQueryClient } from "../../src/adapters/claude/client.js";
 import { createHarness } from "./harness.js";
 import { assertLiveEnvironment, assertSubscriptionAccount, MODEL_ID } from "./policy.js";
 import { fingerprint, versions } from "./report.js";
@@ -73,7 +73,7 @@ export async function withLiveRunner(
 			maxRequestBytes: 32 * 1024 * 1024,
 			abortOnDisconnect: true,
 			async beforeForward(request) {
-				if (request.method !== "POST" || request.path.split("?")[0] !== "/v1/messages") return;
+				if (request.method !== "POST" || request.path?.split("?")[0] !== "/v1/messages") return;
 				if (fatal) throw fatal;
 				const received = JSON.parse(request.body.toString("utf8"));
 				if (received.model !== MODEL_ID && received.model !== `${MODEL_ID}[1m]`) throw new EnvironmentError("non-haiku-request-blocked");
@@ -120,7 +120,7 @@ export async function withLiveRunner(
 				...options, env: { ...options.env, ANTHROPIC_BASE_URL: url },
 				stderr: options.stderr ?? (() => {}),
 				...(resultFault === "exception" ? { spawnClaudeCodeProcess(parameters) {
-					const child = options.spawnClaudeCodeProcess?.(parameters) ?? (() => {
+					const child: SpawnedProcess = options.spawnClaudeCodeProcess?.(parameters) ?? (() => {
 						const spawned = spawn(parameters.command, parameters.args, { cwd: parameters.cwd, env: parameters.env, signal: parameters.signal, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
 						spawned.stderr.on("data", data => options.stderr?.(data.toString()));
 						return spawned;

@@ -2,7 +2,7 @@
 // Unit tests for carrying CC attachments across a rebuild (attachments.ts).
 
 import { describe, expect, it } from "vitest";
-import { collectCarriedAttachments, placeCarriedAttachments } from "../src/attachments.js";
+import { collectCarriedAttachments, placeCarriedAttachments } from "../src/features/session/attachments.js";
 
 const user = (uuid, text) => ({ type: "user", uuid, message: { role: "user", content: [{ type: "text", text }] } });
 const toolResultUser = (uuid) => ({

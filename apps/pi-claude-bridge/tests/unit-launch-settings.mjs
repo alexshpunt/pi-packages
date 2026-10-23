@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { buildProviderLaunchSettings, buildSummaryLaunchSettings } from "../src/cc/launch-settings.js";
+import { buildProviderLaunchSettings, buildSummaryLaunchSettings } from "../src/adapters/claude/launch-settings.js";
 
 test("provider launches with only bridge MCP pre-approved and always-strict config", () => {
 	const options = buildProviderLaunchSettings({ strictMcpConfig: false });

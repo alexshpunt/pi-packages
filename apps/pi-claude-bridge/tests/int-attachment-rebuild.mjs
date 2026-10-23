@@ -25,7 +25,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSession, openSession, deleteSession } from "cc-session-io";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { collectCarriedAttachments, placeCarriedAttachments } from "../src/attachments.js";
+import { collectCarriedAttachments, placeCarriedAttachments } from "../src/features/session/attachments.js";
 
 const CWD = mkdtempSync(join(tmpdir(), "cc-attachment-project-"));
 afterAll(() => rmSync(CWD, { recursive: true, force: true }));

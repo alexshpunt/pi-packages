@@ -9,8 +9,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import { globalConfigPath } from "../src/config.js";
-import { debugLogPath, diagLogPath } from "../src/log-paths.js";
+import { globalConfigPath } from "../src/adapters/storage/configuration.js";
+import { debugLogPath, diagLogPath } from "../src/diagnostics/paths.js";
 
 describe("test harness", () => {
 	it("redirects the bridge debug log away from the real one", () => {
@@ -95,7 +95,7 @@ describe("log paths", () => {
 		// debug-path override, resolved against a probe agent dir.
 		const env = { ...process.env, PI_CODING_AGENT_DIR: "/tmp/pi-agent-dir-probe" };
 		delete env.CLAUDE_BRIDGE_DEBUG_PATH;
-		const src = new URL("../src/log-paths.ts", import.meta.url).href;
+		const src = new URL("../src/diagnostics/paths.ts", import.meta.url).href;
 		const out = execFileSync(process.execPath, [
 			"--import", "tsx", "--input-type=module", "-e",
 			`const p = await import(${JSON.stringify(src)}); console.log(JSON.stringify({ DEBUG_LOG_PATH: p.debugLogPath(), DIAG_LOG_PATH: p.diagLogPath() }));`,

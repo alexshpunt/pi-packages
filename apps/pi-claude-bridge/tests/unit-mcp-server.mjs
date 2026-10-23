@@ -8,7 +8,7 @@
  * actually receives rather than an intermediate representation.
  */
 import { beforeAll, describe, expect, it } from "vitest";
-import { createToolServer } from "../src/mcp-server.js";
+import { createToolServer } from "../src/adapters/claude/mcp-server.js";
 
 const NESTED_TOOL_SCHEMA = {
 	type: "object",

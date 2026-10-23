@@ -14,9 +14,9 @@
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { QueryContext } from "../src/provider/query-context.js";
+import { QueryContext } from "../src/features/query/state.js";
 
-const { __test } = await import("../src/index.js");
+const { testBridge } = await import("../tools/verify/fixture-entry.js");
 
 // `cost` matters: a recorded stream carries real usage, so consumeQuery reaches
 // pi-ai's cost calculation, which the hand-built streams never exercise. Zeros are
@@ -42,7 +42,7 @@ async function replay(name, { toolNames = ["read"] } = {}) {
 
 	const messages = fixture(name);
 	async function* stream() { for (const m of messages) yield m; }
-	const { capturedSessionId } = await __test.consumeQuery(stream(), customToolNameToPi, model, () => false, c);
+	const { capturedSessionId } = await testBridge.consumeQuery(stream(), customToolNameToPi, model, () => false, c);
 	return { events, ctx: c, messages, capturedSessionId };
 }
 

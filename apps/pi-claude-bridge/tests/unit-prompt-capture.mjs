@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { collectPromptSkills, PI_PREAMBLE, projectPromptCapture, PromptCaptures } from "../src/prompt-capture.js";
+import { collectPromptSkills, PI_PREAMBLE, projectPromptCapture, PromptCaptures } from "../src/features/prompt/capture.js";
 
 const PI_SYSTEM_PROMPT = fileURLToPath(new URL("../node_modules/@earendil-works/pi-coding-agent/dist/core/system-prompt.js", import.meta.url));
 

@@ -5,7 +5,7 @@
 
 import { readFileSync } from "node:fs";
 import { createSession, repairToolPairing } from "cc-session-io";
-import { convertPiMessages } from "../../src/convert.js";
+import { convertPiMessages } from "../../src/features/session/convert.js";
 
 /** Record fields that legitimately differ between two builds of the same
  *  history: identity and clock, none of which reaches the Anthropic prompt. */

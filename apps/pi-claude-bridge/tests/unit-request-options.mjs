@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getBridgeModels } from "../src/models.js";
+import { getBridgeModels } from "../src/features/models/policy.js";
 import {
 	buildProviderRequestOptions, buildSummaryRequestOptions, effortForReasoning, thinkingForReasoning,
-} from "../src/cc/request-options.js";
+} from "../src/adapters/claude/request-options.js";
 
 const models = getBridgeModels();
 const model = id => { const found = models.find(item => item.id === id); expect(found, id).toBeTruthy(); return found; };
