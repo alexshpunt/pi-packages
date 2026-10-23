@@ -1,14 +1,15 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Effect } from "effect";
 import { expect, test, vi } from "vitest";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { InMemoryCredentialStore, InMemoryModelsStore, type Provider } from "@earendil-works/pi-ai";
-import { createDevinModelSource, DEVIN_API } from "../src/pi/models.ts";
-import { createDevinProvider } from "../src/pi/provider.ts";
+import { DEVIN_API } from "../src/pi/features/catalog/constants.ts";
+import { makeTestCatalog, makeTestProvider } from "./extension-harness.ts";
 import { parseModelCatalog } from "../src/core/models/catalog.ts";
 import type { JsonObject } from "../src/core/types.ts";
-import { credential, MODELS_METHOD, STATUS_METHOD, statusResponse, unaryResponse } from "./helpers.ts";
+import { credential, MODELS_METHOD, run, runSync, STATUS_METHOD, statusResponse, unaryResponse } from "./helpers.ts";
 import { providerCredential, providerFixture } from "./provider-fixture.ts";
 
 const raw = JSON.parse(await readFile(new URL("./fixtures/model-catalog.json", import.meta.url), "utf8"));
@@ -24,12 +25,13 @@ test("the real coding-agent catalog file is restored after restart and not appli
   const createProvider = () => {
     let restored!: () => void;
     const ready = new Promise<void>((resolve) => { restored = resolve; });
-    const source = createDevinModelSource({
-      credentialFromHost: (value) => value?.type === "oauth" ? { ...credential, sessionToken: value.access } : undefined,
-      fetchCatalog: async () => { calls++; return parseModelCatalog(raw); },
+    const source = makeTestCatalog({
+      credentialFromHost: (value) => Effect.succeed(value?.type === "oauth" ? { ...credential, sessionToken: value.access } : undefined),
+      fetchCatalog: () => Effect.suspend(() => { calls++; return parseModelCatalog(raw); }),
     });
-    const provider: Provider<typeof DEVIN_API> = { id: "devin", name: "Devin", getModels: source.getModels, filterModels: source.filterModels,
-      refreshModels: async (context) => { await source.refreshModels(context); if (!context.allowNetwork) restored(); },
+    const provider: Provider<typeof DEVIN_API> = { id: "devin", name: "Devin", getModels: () => runSync(source.models),
+      filterModels: (models, current) => runSync(source.filter(models, current)),
+      refreshModels: async (context) => { await run(source.refresh(context)); if (!context.allowNetwork) restored(); },
       auth: { oauth: { name: "fixture", login: async () => { throw new Error("No login"); }, refresh: async (value) => value, toAuth: async (value) => ({ apiKey: value.access }) } },
       stream: () => { throw new Error("No inference"); }, streamSimple: () => { throw new Error("No inference"); },
     };
@@ -71,7 +73,7 @@ test("signing in again to the same account lists the stored catalog at once; ano
     body.userStatus.userId = userId;
     return unaryResponse(STATUS_METHOD, body);
   } });
-  fixture.provider.shutdown();
+  fixture.shutdown();
   // Every sign-in issues a new session token, as a real re-login does.
   const loginFetch: typeof fetch = async (url, init) => {
     const method = new URL(String(url)).pathname.slice(1);
@@ -79,7 +81,7 @@ test("signing in again to the same account lists the stored catalog at once; ano
     if (method.endsWith("/ExchangePKCEAuthorizationCode")) return unaryResponse(method, { apiKey: `fake-session-${++sessions}`, apiServerUrl: providerCredential.apiServerURL });
     return fixture.dependencies.fetch(url, init);
   };
-  const provider = createDevinProvider({ ...fixture.dependencies, loginOptions: { ...fixture.dependencies.loginOptions, fetch: loginFetch } });
+  const opened = makeTestProvider({ ...fixture.dependencies, loginOptions: { ...fixture.dependencies.loginOptions, fetch: loginFetch } }), { provider } = opened;
   const runtime = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: null, modelsStore: new InMemoryModelsStore(), refreshOnCreate: false, allowModelNetwork: false });
   runtime.registerNativeProvider(provider);
   const login = () => runtime.login("devin", "oauth", { notify: () => {}, prompt: async (prompt) => prompt.type === "select" ? "manual" : "fake-code" });
@@ -99,5 +101,5 @@ test("signing in again to the same account lists the stored catalog at once; ano
     await login();
     expect(await runtime.getAvailable("devin")).toStrictEqual([]);
     expect(catalogs()).toBe(1);
-  } finally { provider.shutdown(); runtime.unregisterProvider("devin"); }
+  } finally { opened.shutdown(); runtime.unregisterProvider("devin"); }
 });

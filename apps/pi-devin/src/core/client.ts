@@ -1,9 +1,15 @@
-import { parseModelCatalog, type ModelCatalog } from "./models/catalog.ts";
 import { createHash } from "node:crypto";
-import { ConnectClient, ASSIGN_MODEL_METHOD, endpoint, type ConnectClientOptions } from "./protocol/transport.ts";
-import { createFingerprintProvider, type FingerprintProvider } from "./protocol/fingerprint.ts";
+import { Effect, Predicate, type Scope } from "effect";
+import type { DevinError, DevinFailure } from "./errors.ts";
 import { wireMessages } from "./inference/messages.ts";
-import { object, requiredString, type ChatMessage, type Credential, type JsonObject, type ModelInfo } from "./types.ts";
+import { parseModelCatalog, type ModelCatalog } from "./models/catalog.ts";
+import { ASSIGN_MODEL_METHOD, makeConnectClient, type ConnectClient, type ConnectClientOptions } from "./protocol/connect-client.ts";
+import { endpoint, isLoopbackHost } from "./protocol/endpoint.ts";
+import { makeFingerprintProvider, type FingerprintProvider } from "./protocol/fingerprint.ts";
+import { DeviceIdentitySource } from "./services/device-identity.ts";
+import type { HttpTransport } from "./services/http-transport.ts";
+import type { ChatMessage, Credential, JsonObject, ModelInfo } from "./types.ts";
+import { failWith, object, requiredString } from "./validation.ts";
 
 export const CLIENT_VERSION = "3000.11.92";
 export type MetadataProfile = "agent" | "standalone" | "login";
@@ -11,143 +17,142 @@ const MODEL_DISPLAYS = [
   "DISPLAY_OPTION_MODEL_ROUTER", "DISPLAY_OPTION_QUICK_REVIEW", "DISPLAY_OPTION_HIDDEN_TOOL",
   "DISPLAY_OPTION_WIRE_7", "DISPLAY_OPTION_MODERN_AGENT_CHAT",
 ];
+const STATUS_METHOD = "exa.seat_management_pb.SeatManagementService/GetUserStatus";
+const MODELS_METHOD = "exa.api_server_pb.ApiServerService/GetCliModelConfigs";
 
 export interface DevinClientOptions extends Omit<ConnectClientOptions, "baseURL" | "token"> {
   profile?: MetadataProfile;
   restBaseURL?: string;
+  /** A provider shared with other clients of the same credential. Otherwise this client collects device values once for itself. */
   fingerprint?: FingerprintProvider;
 }
 
-export class DevinClient {
+export interface StatusOptions {
+  /** Rejects a different signed-in user before anything else is sent. */
+  expectedUserId?: string;
+  profile?: MetadataProfile;
+}
+
+export interface DevinClient {
   readonly credential: Credential;
   readonly transport: ConnectClient;
   readonly profile: MetadataProfile;
   readonly fingerprint: FingerprintProvider;
-  defaultModelUid?: string;
-  accountIdentityHash?: string;
-  private organizationId?: string;
-  private restBaseURL: string;
-  private readonly hasExplicitRestURL: boolean;
-  constructor(credential: Credential, options: DevinClientOptions = {}) {
-    this.credential = credential;
-    const { profile, fingerprint, restBaseURL, ...transportOptions } = options;
-    const rpcOrigin = endpoint(credential.apiServerURL);
-    const isLoopback = ["localhost", "127.0.0.1", "[::1]"].includes(new URL(rpcOrigin).hostname);
-    this.hasExplicitRestURL = restBaseURL !== undefined;
-    this.restBaseURL = endpoint(restBaseURL ?? (isLoopback ? rpcOrigin : "https://api.devin.ai"));
-    this.profile = profile ?? "agent";
-    this.fingerprint = fingerprint ?? createFingerprintProvider(credential.sessionToken);
-    this.transport = new ConnectClient({ baseURL: credential.apiServerURL, token: credential.sessionToken, ...transportOptions });
-  }
-
-  metadata(options: { profile?: MetadataProfile; includeModelDisplays?: boolean } = {}): JsonObject {
-    const profile = options.profile ?? this.profile;
-    const version = profile === "standalone" ? "0.0.0-dev" : CLIENT_VERSION;
-    return {
-      apiKey: this.credential.sessionToken,
-      ideName: profile === "agent" ? "devin-cli" : "chisel",
-      ideVersion: version,
-      extensionName: "chisel",
-      extensionVersion: version,
-      locale: "en",
-      os: process.platform,
-      ...(profile === "agent" ? { ideType: "chisel" } : {}),
-      ...(options.includeModelDisplays ? { supportedModelDisplays: [...MODEL_DISPLAYS] } : {}),
-      f: this.fingerprint.create(),
-    };
-  }
-
-  async status(signal?: AbortSignal, expectedUserId?: string, profile = this.profile): Promise<JsonObject> {
-    signal?.throwIfAborted();
-    const response = await this.transport.unary(
-      "exa.seat_management_pb.SeatManagementService/GetUserStatus", { metadata: this.metadata({ profile }) }, signal,
-    );
-    const user = object(response.userStatus, "userStatus");
-    if (expectedUserId && user.userId !== expectedUserId) {
-      throw new Error("The signed-in user ID differs from the requested account. Sign in again; no inference was run.");
-    }
-    const plan = object(user.planStatus ?? {}, "planStatus");
-    const info = object(plan.planInfo ?? {}, "planInfo");
-    const devin = object(info.devinInfo ?? {}, "devinInfo");
-    const userId = requiredString(user.userId, "userStatus.userId");
-    this.accountIdentityHash = createHash("sha256").update(`${this.transport.baseURL}\0${userId}`).digest("hex");
-    this.organizationId = typeof devin.orgId === "string" ? devin.orgId : undefined;
-    if (!this.hasExplicitRestURL && typeof devin.apiUrl === "string" && devin.apiUrl) {
-      const candidate = endpoint(devin.apiUrl);
-      if (candidate !== this.restBaseURL && candidate !== this.transport.baseURL) throw new Error("Unverified REST server. Specify it explicitly with --rest-server.");
-      this.restBaseURL = candidate;
-    }
-    const hasQuota = info.billingStrategy === "BILLING_STRATEGY_QUOTA";
-    // Name, email, organization ID and the raw response are not exposed.
-    return {
-      ...(expectedUserId ? { identityVerified: true } : {}),
-      teamsTier: user.teamsTier,
-      canUseCli: info.devinInfo ? devin.canUseCli === true : undefined,
-      billingStrategy: info.billingStrategy,
-      dailyQuotaRemainingPercent: plan.dailyQuotaRemainingPercent ?? (hasQuota ? 0 : undefined),
-      weeklyQuotaRemainingPercent: plan.weeklyQuotaRemainingPercent ?? (hasQuota ? 0 : undefined),
-      dailyQuotaResetAtUnix: plan.dailyQuotaResetAtUnix,
-      weeklyQuotaResetAtUnix: plan.weeklyQuotaResetAtUnix,
-    };
-  }
-
-  async catalog(signal?: AbortSignal): Promise<ModelCatalog> {
-    signal?.throwIfAborted();
-    const response = await this.transport.unary(
-      "exa.api_server_pb.ApiServerService/GetCliModelConfigs", { metadata: this.metadata({ includeModelDisplays: true }) }, signal,
-    );
-    const catalog = parseModelCatalog(response);
-    this.defaultModelUid = catalog.defaultModelUid;
-    return catalog;
-  }
-
-  async models(signal?: AbortSignal): Promise<ModelInfo[]> {
-    return (await this.catalog(signal)).models;
-  }
-
-  async teamSettings(signal?: AbortSignal): Promise<JsonObject> {
-    signal?.throwIfAborted();
-    return this.transport.unary("exa.seat_management_pb.SeatManagementService/GetCliTeamSettings",
-      { metadata: this.metadata({ includeModelDisplays: true }) }, signal);
-  }
-
-  async managedPlugins(signal?: AbortSignal): Promise<JsonObject> {
-    signal?.throwIfAborted();
-    // Only fetches the manifest. This does not mean installing a remote plugin or running its commands is approved.
-    return this.transport.unary("exa.api_server_pb.ApiServerService/GetAccountManagedPlugins", { metadata: this.metadata() }, signal);
-  }
-
-  async assignModel(routerUid: string, cascadeId: string, message: ChatMessage | undefined, signal?: AbortSignal): Promise<{ modelUid: string; assignmentJwt: string }> {
-    signal?.throwIfAborted();
-    const prompt = message ? wireMessages([message])[0] : undefined;
-    if (prompt) delete prompt.promptCacheOptions;
-    const response = await this.transport.unary(ASSIGN_MODEL_METHOD, {
-      metadata: this.metadata(), modelRouterUid: routerUid, cascadeId, ...(prompt ? { chatMessagePrompt: prompt } : {}),
-    }, signal);
-    const assignment = object(response.assignment, "assignment");
-    return {
-      modelUid: requiredString(assignment.modelUid, "assignment.modelUid"),
-      assignmentJwt: message ? requiredString(assignment.assignmentJwt, "assignment.assignmentJwt") : String(assignment.assignmentJwt ?? ""),
-    };
-  }
-
-  async self(signal?: AbortSignal): Promise<JsonObject> {
-    return this.transport.getJSON(this.restBaseURL, "/v3/self", signal);
-  }
-
-  async integrations(signal?: AbortSignal): Promise<JsonObject | undefined> {
-    if (!this.organizationId) return undefined;
-    return this.transport.getJSON(this.restBaseURL, `/v3/organizations/${encodeURIComponent(this.organizationId)}/integrations`, signal);
-  }
-
-  async analytics(events: JsonObject[], signal?: AbortSignal): Promise<void> {
-    signal?.throwIfAborted();
-    if (events.length === 0) return;
-    await this.transport.unary("exa.product_analytics_pb.ProductAnalyticsService/BatchRecordAnalyticsEvents", {
-      events, apiKey: this.credential.sessionToken,
-    }, signal);
-  }
+  /** Default model of the last fetched catalog. */
+  readonly defaultModelUid: Effect.Effect<string | undefined>;
+  /** Hash of the endpoint and user ID from the last status check. */
+  readonly accountIdentityHash: Effect.Effect<string | undefined>;
+  readonly close: Effect.Effect<void>;
+  metadata(options?: { profile?: MetadataProfile; includeModelDisplays?: boolean }): Effect.Effect<JsonObject, DevinError>;
+  status(options?: StatusOptions): Effect.Effect<JsonObject, DevinFailure>;
+  readonly catalog: Effect.Effect<ModelCatalog, DevinFailure>;
+  readonly models: Effect.Effect<ModelInfo[], DevinFailure>;
+  readonly teamSettings: Effect.Effect<JsonObject, DevinFailure>;
+  readonly managedPlugins: Effect.Effect<JsonObject, DevinFailure>;
+  assignModel(routerUid: string, cascadeId: string, message: ChatMessage | undefined): Effect.Effect<{ modelUid: string; assignmentJwt: string }, DevinFailure>;
+  readonly self: Effect.Effect<JsonObject, DevinFailure>;
+  readonly integrations: Effect.Effect<JsonObject | undefined, DevinFailure>;
+  analytics(events: readonly JsonObject[]): Effect.Effect<void, DevinFailure>;
 }
 
+/** A client for one credential. It closes with the scope, or earlier through `close`. */
+export function makeDevinClient(credential: Credential, options: DevinClientOptions = {}): Effect.Effect<DevinClient, DevinError, HttpTransport | DeviceIdentitySource | Scope.Scope> {
+  return Effect.gen(function* () {
+    const { profile = "agent", fingerprint: providedFingerprint, restBaseURL: explicitRestURL, ...transportOptions } = options;
+    const rpcOrigin = yield* endpoint(credential.apiServerURL);
+    const hasExplicitRestURL = explicitRestURL !== undefined;
+    let restBaseURL = yield* endpoint(explicitRestURL ?? (isLoopbackHost(new URL(rpcOrigin).hostname) ? rpcOrigin : "https://api.devin.ai"));
+    const device = yield* DeviceIdentitySource;
+    const fingerprint = providedFingerprint ?? (yield* makeFingerprintProvider(credential.sessionToken, { collectIdentity: device.collect }));
+    const transport = yield* makeConnectClient({ baseURL: credential.apiServerURL, token: credential.sessionToken, ...transportOptions });
+    let defaultModelUid: string | undefined, accountIdentityHash: string | undefined, organizationId: string | undefined;
+
+    const metadata: DevinClient["metadata"] = (metadataOptions = {}) => Effect.map(fingerprint.create, (f) => {
+      const selected = metadataOptions.profile ?? profile;
+      const version = selected === "standalone" ? "0.0.0-dev" : CLIENT_VERSION;
+      return {
+        apiKey: credential.sessionToken,
+        ideName: selected === "agent" ? "devin-cli" : "chisel",
+        ideVersion: version,
+        extensionName: "chisel",
+        extensionVersion: version,
+        locale: "en",
+        os: process.platform,
+        ...(selected === "agent" ? { ideType: "chisel" } : {}),
+        ...(metadataOptions.includeModelDisplays ? { supportedModelDisplays: [...MODEL_DISPLAYS] } : {}),
+        f,
+      };
+    });
+
+    const status: DevinClient["status"] = (statusOptions = {}) => Effect.gen(function* () {
+      const response = yield* transport.unary(STATUS_METHOD, { metadata: yield* metadata({ profile: statusOptions.profile }) });
+      const user = yield* object(response.userStatus, "userStatus");
+      if (statusOptions.expectedUserId && user.userId !== statusOptions.expectedUserId) {
+        return yield* failWith("The signed-in user ID differs from the requested account. Sign in again; no inference was run.");
+      }
+      const plan = yield* object(user.planStatus ?? {}, "planStatus");
+      const info = yield* object(plan.planInfo ?? {}, "planInfo");
+      const devin = yield* object(info.devinInfo ?? {}, "devinInfo");
+      const userId = yield* requiredString(user.userId, "userStatus.userId");
+      accountIdentityHash = createHash("sha256").update(`${transport.baseURL}\0${userId}`).digest("hex");
+      organizationId = Predicate.isString(devin.orgId) ? devin.orgId : undefined;
+      if (!hasExplicitRestURL && Predicate.isString(devin.apiUrl) && devin.apiUrl) {
+        const candidate = yield* endpoint(devin.apiUrl);
+        if (candidate !== restBaseURL && candidate !== transport.baseURL) return yield* failWith("Unverified REST server. Specify it explicitly with --rest-server.");
+        restBaseURL = candidate;
+      }
+      const hasQuota = info.billingStrategy === "BILLING_STRATEGY_QUOTA";
+      // Name, email, organization ID and the raw response are not exposed.
+      return {
+        ...(statusOptions.expectedUserId ? { identityVerified: true } : {}),
+        teamsTier: user.teamsTier,
+        canUseCli: info.devinInfo ? devin.canUseCli === true : undefined,
+        billingStrategy: info.billingStrategy,
+        dailyQuotaRemainingPercent: plan.dailyQuotaRemainingPercent ?? (hasQuota ? 0 : undefined),
+        weeklyQuotaRemainingPercent: plan.weeklyQuotaRemainingPercent ?? (hasQuota ? 0 : undefined),
+        dailyQuotaResetAtUnix: plan.dailyQuotaResetAtUnix,
+        weeklyQuotaResetAtUnix: plan.weeklyQuotaResetAtUnix,
+      };
+    });
+
+    const catalog = Effect.gen(function* () {
+      const response = yield* transport.unary(MODELS_METHOD, { metadata: yield* metadata({ includeModelDisplays: true }) });
+      const parsed = yield* parseModelCatalog(response);
+      defaultModelUid = parsed.defaultModelUid;
+      return parsed;
+    });
+
+    const assignModel: DevinClient["assignModel"] = (routerUid, cascadeId, message) => Effect.gen(function* () {
+      const prompt = message ? wireMessages([message])[0] : undefined;
+      if (prompt) delete prompt.promptCacheOptions;
+      const response = yield* transport.unary(ASSIGN_MODEL_METHOD, {
+        metadata: yield* metadata(), modelRouterUid: routerUid, cascadeId, ...(prompt ? { chatMessagePrompt: prompt } : {}),
+      });
+      const assignment = yield* object(response.assignment, "assignment");
+      return {
+        modelUid: yield* requiredString(assignment.modelUid, "assignment.modelUid"),
+        assignmentJwt: message ? yield* requiredString(assignment.assignmentJwt, "assignment.assignmentJwt") : String(assignment.assignmentJwt ?? ""),
+      };
+    });
+
+    return {
+      credential, transport, profile, fingerprint, metadata, status, catalog, assignModel,
+      close: transport.close,
+      defaultModelUid: Effect.sync(() => defaultModelUid),
+      accountIdentityHash: Effect.sync(() => accountIdentityHash),
+      models: Effect.map(catalog, (parsed) => parsed.models),
+      teamSettings: Effect.flatMap(metadata({ includeModelDisplays: true }), (value) =>
+        transport.unary("exa.seat_management_pb.SeatManagementService/GetCliTeamSettings", { metadata: value })),
+      // Only fetches the manifest. This does not mean installing a remote plugin or running its commands is approved.
+      managedPlugins: Effect.flatMap(metadata(), (value) => transport.unary("exa.api_server_pb.ApiServerService/GetAccountManagedPlugins", { metadata: value })),
+      self: Effect.suspend(() => transport.getJSON(restBaseURL, "/v3/self")),
+      integrations: Effect.suspend(() => organizationId
+        ? transport.getJSON(restBaseURL, `/v3/organizations/${encodeURIComponent(organizationId)}/integrations`) : Effect.succeed(undefined)),
+      analytics: (events) => events.length === 0 ? Effect.void : Effect.asVoid(transport.unary("exa.product_analytics_pb.ProductAnalyticsService/BatchRecordAnalyticsEvents", {
+        events: [...events], apiKey: credential.sessionToken,
+      })),
+    };
+  });
+}
 
 export { getModelByUID, selectModel } from "./models/select.ts";

@@ -4,10 +4,12 @@ import { readFile, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import { PassThrough, Writable } from "node:stream";
 import type { ExtensionAPI, ExtensionToolContext } from "@earendil-works/pi-coding-agent";
+import { Effect } from "effect";
 import { expect, test } from "vitest";
-import type { DevinProvider } from "../src/pi/provider.ts";
-import { createSidekickTool, type SidekickDetails, type SidekickToolOptions } from "../src/pi/sidekick.ts";
-import { SIDEKICK_REPORT_CHAR_LIMIT } from "../src/pi/sidekick-report.ts";
+import type { DevinModel, FusionChoices } from "../src/pi/features/catalog/types.ts";
+import { SIDEKICK_REPORT_CHAR_LIMIT } from "../src/pi/features/sidekick/report.ts";
+import type { SidekickDetails, SidekickLauncherShape } from "../src/pi/features/sidekick/types.ts";
+import { makeTestSidekickTool } from "./extension-harness.ts";
 
 function fixture(onTools?: () => void) {
   const commands: Record<string, unknown>[] = [];
@@ -26,15 +28,14 @@ function fixture(onTools?: () => void) {
   } });
   const process = Object.assign(child, { stdin, kill: (signal: string) => { child.signalCode = signal; child.emit("close"); return true; } });
   const model = { id: "fusion", provider: "devin", api: "devin-connect", devin: { fusion: { leadID: "lead", sidekickID: "side" } } };
-  const tool = createSidekickTool({
+  const tool = makeTestSidekickTool({
     getActiveTools: () => { onTools?.(); return []; },
     sendMessage: (message: { content: string; details: SidekickDetails }) => { reports.push(message); for (const resolve of reportWaiters.splice(0)) resolve(); },
   } as unknown as ExtensionAPI, {
-    getModels: () => [model], getFusionChoices: () => ({ sidekicks: [{ id: "side", level: "medium" }] }),
-  } as unknown as DevinProvider, {
-    agentDir: () => "/unused-agent-dir",
-    runtime: { resolveCommand: () => ({ command: "fake-pi", args: [] }),
-      spawn: (() => { spawned++; return process as unknown as ChildProcess; }) as NonNullable<SidekickToolOptions["runtime"]>["spawn"] },
+    models: [model as unknown as DevinModel], fusionChoices: { sidekicks: [{ id: "side", level: "medium" }] } as unknown as FusionChoices,
+  }, {
+    resolveCommand: Effect.succeed({ command: "fake-pi", args: [] }),
+    spawn: (() => { spawned++; return process as unknown as ChildProcess; }) as SidekickLauncherShape["spawn"],
   });
   const ctx = { model, cwd: "/fixture", sessionManager: { getSessionId: () => "fixture", getSessionFile: () => undefined } } as unknown as ExtensionToolContext;
   return {

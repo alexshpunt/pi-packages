@@ -31,3 +31,26 @@ node verification/scripts/live/live-check.mjs cleanup --state "$state"
 ```
 
 The `login` session has a model request cap of 0, so it cannot send inference. `run` does not start if the approval record's `planHash` differs from the current plan. If any case fails, the remaining cases are not run. `cleanup` deletes only the temporary state holding the newly issued credentials. It does not revoke the session on the server.
+
+## 08: live check after the Effect Layer redesign
+
+The 08 plan runs the six 07 cases plus one long RPC session against the archive of the redesign (`89b92e7c…`, runtime digest `086c67ea…`, `pin-08.json`). The session sends 45 prompts in one Pi session: add tool calls, medium/high thinking level changes, a cancelled response, and a Pi restart that resumes the same session file, with code word recalls across them, then the `/devin` report. Together with the five single-prompt cases that makes 50 prompts. The cap is 80 model requests, on `swe-2-medium`/`swe-2-high` only, free tier required.
+
+| File | Content |
+|---|---|
+| `pin-08.json` | Archive hash and runtime digest the plan is pinned to. Output of `live-check.mjs pin` |
+| `plan-08.json` | The 08 plan and its `planHash` |
+| `dry-run-08.json` | The same plan against the mock service, plus the negative controls |
+| `authorization-08.json` | The approval the run used |
+| `run-08.json` | Live results |
+
+```bash
+node verification/scripts/live/live-check.mjs pin --archive "$archive" > pin.json
+node verification/scripts/live/live-check.mjs dry-run --plan 08 --pin pin.json --archive "$archive" --report dry-run.json
+node verification/scripts/live/live-check.mjs prepare --plan 08 --pin pin.json --archive "$archive" --state "$state"
+node verification/scripts/live/live-check.mjs login --plan 08 --pin pin.json --state "$state"
+node verification/scripts/live/live-check.mjs run --plan 08 --pin pin.json --state "$state" --authorization <approval record> --report run.json
+node verification/scripts/live/live-check.mjs cleanup --plan 08 --pin pin.json --state "$state"
+```
+
+Since the Effect migration the codec returns Effect values, so `live-guard.mjs` runs them with the effect copy the codec loads. Without `--plan`, the 07 plan pinned to the 06 archive is used unchanged.

@@ -1,17 +1,20 @@
+import { Effect } from "effect";
 import { expect, test } from "vitest";
 import { runConversation } from "../src/cli/conversation.ts";
-import { DevinClient } from "../src/core/client.ts";
-import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
-import { createSession } from "../src/cli/session-store.ts";
 import { addTool, executeTools } from "../src/cli/registered-tools.ts";
-import { ASSIGN_MODEL_METHOD } from "../src/core/protocol/transport.ts";
-import { object, type JsonObject } from "../src/core/types.ts";
-import { credential, finalFrames, fingerprint, model, requestBody, streamResponse, unaryResponse } from "./helpers.ts";
+import { createSession } from "../src/cli/services/sessions.ts";
+import { ASSIGN_MODEL_METHOD } from "../src/core/protocol/connect-client.ts";
+import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
+import type { JsonObject } from "../src/core/types.ts";
+import { object as objectEffect } from "../src/core/validation.ts";
+import { credential, devinClient, finalFrames, fingerprint, model, requestBody, run, runSync, streamResponse, unaryResponse } from "./helpers.ts";
+
+const object = (value: unknown, label: string) => runSync(objectEffect(value, label));
 
 test("multiple tools, parallel execution, title and next-turn steps and IDs are checked in the final requests", async () => {
   const requests: JsonObject[] = [];
   let primary = 0;
-  const client = new DevinClient(credential, { fingerprint: fingerprint(), fetch: async (_url, init) => {
+  const client = devinClient(credential, { fingerprint: fingerprint(), fetch: async (_url, init) => {
     const body = requestBody(CHAT_METHOD, init!); requests.push(body);
     if (body.chatModelUid === "swe-1-6-fast") {
       expect(body.executionId).toBe(undefined);
@@ -40,8 +43,8 @@ test("multiple tools, parallel execution, title and next-turn steps and IDs are 
   } });
   const state = createSession(model.id, "/fixture/workspace");
   const catalog = [{ ...model, id: "alias-shadow", familyId: "shadow", aliases: [model.id] }, model];
-  await runConversation(client, state, catalog, { prompt: "add numbers", tools: [addTool] });
-  await runConversation(client, state, catalog, { prompt: "next turn", tools: [addTool] });
+  await run(runConversation(client, state, catalog, { prompt: "add numbers", tools: [addTool] }));
+  await run(runConversation(client, state, catalog, { prompt: "next turn", tools: [addTool] }));
   expect(requests.map((r) => object(r.trajectoryReference, "trajectory").stepIndex ?? 0)).toStrictEqual([0, 1, 2, 3]);
   expect(state.nextStepIndex).toBe(4);
   expect(state.title).toBe("Small sums");
@@ -61,7 +64,7 @@ test("multiple tools, parallel execution, title and next-turn steps and IDs are 
 
 test("router preliminary and input-based assignment and the JWT apply to the real inference", async () => {
   const records: JsonObject[] = [];
-  const client = new DevinClient(credential, { fingerprint: fingerprint(), fetch: async (url, init) => {
+  const client = devinClient(credential, { fingerprint: fingerprint(), fetch: async (url, init) => {
     const method = new URL(String(url)).pathname.slice(1);
     const body = requestBody(method, init!); records.push(body);
     if (method === ASSIGN_MODEL_METHOD) {
@@ -77,7 +80,7 @@ test("router preliminary and input-based assignment and the JWT apply to the rea
   const state = createSession("adaptive");
   const catalog = [{ ...model, id: "alias-shadow", familyId: "shadow", aliases: ["adaptive", model.id] },
     model, { ...model, id: "adaptive", isRouter: true }];
-  await runConversation(client, state, catalog, { prompt: "route this", maxTokens: 5000, generateTitle: false });
+  await run(runConversation(client, state, catalog, { prompt: "route this", maxTokens: 5000, generateTitle: false }));
   expect(records.length).toBe(3);
   expect(records[0].chatMessagePrompt).toBe(undefined);
   expect(object(records[1].chatMessagePrompt, "routing prompt").prompt).toBe("route this");
@@ -87,11 +90,11 @@ test("router preliminary and input-based assignment and the JWT apply to the rea
 
 test("the title request starts even on a primary auth error and neither is retried", async () => {
   const models: unknown[] = [];
-  const client = new DevinClient(credential, { fingerprint: fingerprint(), fetch: async (_url, init) => {
+  const client = devinClient(credential, { fingerprint: fingerprint(), fetch: async (_url, init) => {
     models.push(requestBody(CHAT_METHOD, init!).chatModelUid);
     return Response.json({ code: "unauthenticated", message: "mock failure" }, { status: 401 });
   } });
-  await expect(runConversation(client, createSession(model.id), [model], { prompt: "hello" })).rejects.toThrow(/unauthenticated/);
+  await expect(run(runConversation(client, createSession(model.id), [model], { prompt: "hello" }))).rejects.toThrow(/unauthenticated/);
   expect(models).toStrictEqual([model.id, "swe-1-6-fast"]);
 });
 
@@ -100,7 +103,7 @@ test("the cancel signal reaches the concurrently running primary and title reque
   const signals: AbortSignal[] = [];
   let started!: () => void;
   const bothStarted = new Promise<void>((resolve) => { started = resolve; });
-  const client = new DevinClient(credential, { fingerprint: fingerprint(), fetch: async (_url, init) => {
+  const client = devinClient(credential, { fingerprint: fingerprint(), fetch: async (_url, init) => {
     const signal = init!.signal!; signals.push(signal);
     if (signals.length === 2) started();
     return new Promise<Response>((_resolve, reject) => {
@@ -108,7 +111,7 @@ test("the cancel signal reaches the concurrently running primary and title reque
       else signal.addEventListener("abort", () => reject(signal.reason), { once: true });
     });
   } });
-  const pending = runConversation(client, createSession(model.id), [model], { prompt: "hello", signal: controller.signal });
+  const pending = run(runConversation(client, createSession(model.id), [model], { prompt: "hello" }), controller.signal);
   const rejected = expect(pending).rejects.toThrow(/stop both/);
   await bothStarted;
   controller.abort(new Error("stop both"));
@@ -120,13 +123,13 @@ test("the cancel signal reaches the concurrently running primary and title reque
 test("tool parallelism, error results, unregistered tools and duplicate ID boundaries", async () => {
   const calls = [{ id: "one", name: "add", argumentsJson: '{"a":1,"b":2}' }, { id: "two", name: "add", argumentsJson: '{"a":3,"b":4}' }];
   let active = 0; let peak = 0;
-  const tool = { ...addTool, execute: async () => { peak = Math.max(peak, ++active); await Promise.resolve(); active--; return "result"; } };
-  await executeTools(calls, [tool], { allowParallel: true });
+  const tool = { ...addTool, execute: () => Effect.gen(function* () { peak = Math.max(peak, ++active); yield* Effect.yieldNow; active--; return "result"; }) };
+  await run(executeTools(calls, [tool], { allowParallel: true }));
   expect(peak).toBe(2);
-  peak = 0; await executeTools(calls, [tool], { allowParallel: false }); expect(peak).toBe(1);
-  const errors = await executeTools([{ ...calls[0], argumentsJson: '{"a":"bad","b":2}' }], [addTool]);
+  peak = 0; await run(executeTools(calls, [tool], { allowParallel: false })); expect(peak).toBe(1);
+  const errors = await run(executeTools([{ ...calls[0], argumentsJson: '{"a":"bad","b":2}' }], [addTool]));
   expect(errors[0].toolResultIsError).toBe(true);
   expect(errors[0].toolCallId).toBe("one");
-  await expect(executeTools([...calls, { ...calls[0], id: "three", name: "bash" }], [tool])).rejects.toThrow(/Arbitrary/);
-  await expect(executeTools([calls[0], calls[0]], [tool])).rejects.toThrow(/Duplicate/);
+  await expect(run(executeTools([...calls, { ...calls[0], id: "three", name: "bash" }], [tool]))).rejects.toThrow(/Arbitrary/);
+  await expect(run(executeTools([calls[0], calls[0]], [tool]))).rejects.toThrow(/Duplicate/);
 });

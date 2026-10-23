@@ -7,14 +7,14 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import { parseCLIOptions } from "../src/cli/options.ts";
-import { credential, requestBody, unaryResponse } from "./helpers.ts";
+import { credential, requestBody, runSync, unaryResponse } from "./helpers.ts";
 
 const cli = fileURLToPath(new URL("../cli.ts", import.meta.url));
 // Changes only the child CLI's platform. Automatic browser opening checks this value and refuses before spawning a process.
 const LINUX_PLATFORM = "data:text/javascript,Object.defineProperty(process,%22platform%22,{value:%22linux%22})";
 
 test("the CLI does not block login by OS name and never uses API key options or environment variables for auth", { timeout: 20000 }, async () => {
-  expect(() => parseCLIOptions(["status", "--api-key", "cog_fake-service-key"])).toThrow(expect.objectContaining({ code: "ERR_PARSE_ARGS_UNKNOWN_OPTION" }));
+  expect(() => runSync(parseCLIOptions(["status", "--api-key", "cog_fake-service-key"]))).toThrow(expect.objectContaining({ code: "ERR_PARSE_ARGS_UNKNOWN_OPTION" }));
   const directory = await mkdtemp(join(tmpdir(), "pi-devin-portable-"));
   const state = join(directory, "state");
   let requests = 0;

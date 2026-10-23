@@ -5,11 +5,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
-import { saveCredential } from "../src/cli/credentials.ts";
-import { CHAT_METHOD, chatResponseCodec, unaryCodecs } from "../src/core/protocol/protobuf.ts";
-import { encodeFrame } from "../src/core/protocol/transport.ts";
-import { object, type JsonObject } from "../src/core/types.ts";
-import { credential, finalFrames, modelResponse, requestBody, STATUS_METHOD, MODELS_METHOD, statusResponse } from "./helpers.ts";
+import { Effect } from "effect";
+import { CHAT_METHOD, unaryCodecs } from "../src/core/protocol/protobuf.ts";
+import type { JsonObject } from "../src/core/types.ts";
+import { object as objectEffect } from "../src/core/validation.ts";
+import { stateFiles } from "./cli-helpers.ts";
+import { credential, encodeResponse, finalFrames, frameBytes, modelResponse, requestBody, run as runEffect, runSync, STATUS_METHOD, MODELS_METHOD, statusResponse } from "./helpers.ts";
+
+const object = (value: unknown, label: string) => runSync(objectEffect(value, label));
+const encodeUnary = (method: string, body: JsonObject) => runSync(Effect.flatMap(unaryCodecs(method), (codecs) => codecs.response.encode(body)));
 
 const cwd = fileURLToPath(new URL("..", import.meta.url));
 function run(directory: string, args: string[]): Promise<{ code: number | null; stdout: string; stderr: string }> {
@@ -39,7 +43,7 @@ test("CLI image → real HTTP request, session resume in a new process, account 
       if (method === CHAT_METHOD) {
         chats.push(decoded);
         res.writeHead(200, { "content-type": "application/connect+proto" });
-        res.end(Buffer.concat([...finalFrames().map((frame) => encodeFrame(chatResponseCodec.encode(frame))), encodeFrame(Buffer.from("{}"), 2)]));
+        res.end(Buffer.concat([...finalFrames().map((frame) => frameBytes(encodeResponse(frame))), frameBytes(Buffer.from("{}"), 2)]));
         return;
       }
       let response: JsonObject = {};
@@ -53,14 +57,14 @@ test("CLI image → real HTTP request, session resume in a new process, account 
         const high = structuredClone(configs[0]); high.modelUid = "swe-2-high"; high.label = "SWE-2 High";
         object(high.modelInfo, "modelInfo").modelUid = "swe-2-high"; configs.push(high);
       }
-      res.writeHead(200, { "content-type": "application/proto" }).end(unaryCodecs(method).response.encode(response));
+      res.writeHead(200, { "content-type": "application/proto" }).end(encodeUnary(method, response));
     } catch (error) { serverErrors.push(String(error)); res.writeHead(500).end(); }
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   try {
     const address = server.address(); expect(address && typeof address !== "string").toBeTruthy(); if (!address || typeof address === "string") throw new Error("unreachable");
     base = `http://127.0.0.1:${address.port}`;
-    await saveCredential({ ...credential, apiServerURL: base }, join(directory, "credentials.json"));
+    await runEffect(stateFiles(join(directory, "credentials.json")).saveCredential({ ...credential, apiServerURL: base }));
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jK9sAAAAASUVORK5CYII=", "base64");
     const image = join(directory, "fixture.png"); await writeFile(image, png);
     const output = join(directory, "report.json");
@@ -108,15 +112,15 @@ test("CLI auth/permission/429 classification, initialization and analytics event
       if (method === failure.method) {
         if (failure.status === 200) {
           res.writeHead(200, { "content-type": "application/connect+proto" }).end(Buffer.concat([
-            encodeFrame(chatResponseCodec.encode({ deltaText: "partial" })),
-            encodeFrame(Buffer.from('{"error":{"code":"unauthenticated","message":"offline invalid token"}}'), 2),
+            frameBytes(encodeResponse({ deltaText: "partial" })),
+            frameBytes(Buffer.from('{"error":{"code":"unauthenticated","message":"offline invalid token"}}'), 2),
           ]));
         } else res.writeHead(failure.status, { "content-type": "application/json", "retry-after": "2" }).end("{}");
         return;
       }
       if (method.startsWith("v3/")) { res.writeHead(200, { "content-type": "application/json" }).end("{}"); return; }
       const response = method === STATUS_METHOD ? statusResponse(base) : method === MODELS_METHOD ? modelResponse() : {};
-      res.writeHead(200, { "content-type": "application/proto" }).end(unaryCodecs(method).response.encode(response));
+      res.writeHead(200, { "content-type": "application/proto" }).end(encodeUnary(method, response));
     } catch (error) { serverErrors.push(String(error)); res.writeHead(500).end(); }
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -124,7 +128,7 @@ test("CLI auth/permission/429 classification, initialization and analytics event
     const address = server.address(); expect(address && typeof address !== "string").toBeTruthy(); if (!address || typeof address === "string") throw new Error("unreachable");
     base = `http://127.0.0.1:${address.port}`;
     const file = join(directory, "credentials.json");
-    await saveCredential({ ...credential, apiServerURL: base }, file);
+    await runEffect(stateFiles(file).saveCredential({ ...credential, apiServerURL: base }));
     const original = await readFile(file, "utf8");
     const analyticsMethod = "exa.product_analytics_pb.ProductAnalyticsService/BatchRecordAnalyticsEvents";
     for (const current of [

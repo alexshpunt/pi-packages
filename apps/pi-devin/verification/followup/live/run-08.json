@@ -1,0 +1,1731 @@
+{
+  "schemaVersion": 1,
+  "kind": "pi-devin-live-run",
+  "completedAt": "2026-10-23T07:18:23.737Z",
+  "node": "v24.14.0",
+  "piVersion": "1.3.0",
+  "planHash": "13b34fb82fa6050844c1456d80b6d3fd62a5444ecc88acf7141e3a781ef4c078",
+  "authorization": {
+    "approvedAt": "2026-10-23T07:14:32.837932Z",
+    "scope": {
+      "artifactSha256": "89b92e7c2ee7372305fe09949caa4d49ba23724eee7fe7159b6f91640b868f5c",
+      "runtimeDigest": "086c67ea82b31f554eaf267c3d0df39ee68c793c8e266adf6092c51862f83bcf",
+      "allowedUIDs": [
+        "swe-2-medium",
+        "swe-2-high"
+      ],
+      "maxModelCalls": 80,
+      "requireFreeTier": true,
+      "hosts": [
+        "server.codeium.com",
+        "api.devin.ai"
+      ],
+      "cases": [
+        "catalog",
+        "devin-settings",
+        "plain-medium",
+        "level-high",
+        "add-tool",
+        "fusion",
+        "session"
+      ],
+      "sessionTurns": 45,
+      "login": "assistant started /login in the temporary Pi TUI and opened the authorization page in Chrome; the user signed in",
+      "cleanup": "temporary state removed after the run; server-side session not revoked"
+    }
+  },
+  "prepared": {
+    "archiveSha256": "89b92e7c2ee7372305fe09949caa4d49ba23724eee7fe7159b6f91640b868f5c",
+    "runtimeDigest": {
+      "files": 167,
+      "sha256": "086c67ea82b31f554eaf267c3d0df39ee68c793c8e266adf6092c51862f83bcf"
+    },
+    "packageDir": "artifact/package"
+  },
+  "results": [
+    {
+      "id": "catalog",
+      "durationMs": 1012,
+      "exitCode": 0,
+      "devinModels": 56,
+      "ledger": {
+        "modelCalls": [],
+        "modelStatuses": [],
+        "readCalls": {},
+        "readStatuses": [],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "devin-settings",
+      "durationMs": 4710,
+      "exitCode": 0,
+      "defaultCount": 56,
+      "restoredCount": 56,
+      "filtered": {
+        "count": 13,
+        "uids": [
+          "claude-fable-5-1",
+          "claude-opus-5-5",
+          "claude-sonnet-5-5",
+          "gemini-3-8-flash",
+          "gemini-4-argon",
+          "glm-5-3",
+          "glm-5.2",
+          "gpt-6-astra",
+          "gpt-6-luna",
+          "gpt-6-sol",
+          "kimi-k3",
+          "swe-2"
+        ],
+        "hasFusion": true,
+        "allRecommendedExact": true
+      },
+      "stopReasons": [
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-medium"
+      ],
+      "usage": [
+        {
+          "input": 801,
+          "output": 28
+        }
+      ],
+      "report": [
+        "Account quota · fetched 10/23 16:14 (just now) · not live",
+        "  Daily  ▕██████████▏ 100% left · resets 10/23 17:00 (in 45m)",
+        "  Weekly ▕███████░░░▏ 77% left · resets 10/25 17:00 (in 2d)",
+        "This session · lead conversation (sidekick excluded)",
+        "  1 request · input 801 · output 28 · cache read 0 · cache write 0",
+        "Run budget · last run",
+        "  ▕█░░░░░░░░░▏ 1/8 model calls used",
+        "Settings: Recommended models only off · Usage in status line off"
+      ],
+      "hasQuotaLine": true,
+      "hasSessionLine": true,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-medium"
+        ],
+        "modelStatuses": [
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 1
+        },
+        "readStatuses": [
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "plain-medium",
+      "durationMs": 2770,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-medium"
+      ],
+      "usage": [
+        {
+          "input": 801,
+          "output": 27
+        }
+      ],
+      "tools": [],
+      "finalTextLength": 35,
+      "finalHasFive": false,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-medium"
+        ],
+        "modelStatuses": [
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 1
+        },
+        "readStatuses": [
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "level-high",
+      "durationMs": 3533,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-high"
+      ],
+      "usage": [
+        {
+          "input": 804,
+          "output": 68
+        }
+      ],
+      "tools": [],
+      "finalTextLength": 6,
+      "finalHasFive": false,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-high"
+        ],
+        "modelStatuses": [
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 1
+        },
+        "readStatuses": [
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "add-tool",
+      "durationMs": 5051,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "toolUse",
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-medium",
+        "swe-2-medium"
+      ],
+      "usage": [
+        {
+          "input": 818,
+          "output": 87
+        },
+        {
+          "input": 935,
+          "output": 28
+        }
+      ],
+      "tools": [
+        {
+          "tool": "add",
+          "isError": false,
+          "result": "5"
+        }
+      ],
+      "finalTextLength": 1,
+      "finalHasFive": true,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-medium",
+          "swe-2-medium"
+        ],
+        "modelStatuses": [
+          200,
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 2
+        },
+        "readStatuses": [
+          "GetUserStatus:200",
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "fusion",
+      "durationMs": 12023,
+      "exitCode": 0,
+      "timedOut": false,
+      "invalidJsonLines": 0,
+      "agentSettled": 1,
+      "stopReasons": [
+        "toolUse",
+        "stop"
+      ],
+      "responseUIDs": [
+        "swe-2-medium",
+        "swe-2-medium"
+      ],
+      "usage": [
+        {
+          "input": 1163,
+          "output": 92
+        },
+        {
+          "input": 1312,
+          "output": 23
+        }
+      ],
+      "tools": [
+        {
+          "tool": "devin_sidekick",
+          "isError": false
+        }
+      ],
+      "finalTextLength": 1,
+      "finalHasFive": true,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium"
+        ],
+        "modelStatuses": [
+          200,
+          200,
+          200,
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 4
+        },
+        "readStatuses": [
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": null,
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    },
+    {
+      "id": "session",
+      "durationMs": 194381,
+      "exitCodes": [
+        0,
+        0
+      ],
+      "devinModels": 56,
+      "sessionResumed": true,
+      "turns": [
+        {
+          "turn": 1,
+          "level": "medium",
+          "durationMs": 2831,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "OK",
+          "usage": {
+            "input": 814,
+            "output": 37
+          }
+        },
+        {
+          "turn": 2,
+          "level": "medium",
+          "durationMs": 2222,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "56",
+          "usage": {
+            "input": 118,
+            "output": 20
+          }
+        },
+        {
+          "turn": 3,
+          "level": "medium",
+          "durationMs": 1916,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "Paris",
+          "usage": {
+            "input": 939,
+            "output": 21
+          }
+        },
+        {
+          "turn": 4,
+          "level": "medium",
+          "durationMs": 5150,
+          "settled": true,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false
+            }
+          ],
+          "expectMet": true,
+          "text": "42",
+          "usage": {
+            "input": 88,
+            "output": 24
+          }
+        },
+        {
+          "turn": 5,
+          "level": "medium",
+          "durationMs": 2423,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "red",
+          "usage": {
+            "input": 1167,
+            "output": 29
+          }
+        },
+        {
+          "turn": 6,
+          "level": "high",
+          "durationMs": 2429,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-high"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "9<|close|>argument<|sep|><|close|>call<|sep|><|close|>tools<|sep|>",
+          "usage": {
+            "input": 1167,
+            "output": 32
+          }
+        },
+        {
+          "turn": 7,
+          "level": "high",
+          "durationMs": 2542,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-high"
+          ],
+          "tools": [],
+          "expectMet": true,
+          "text": "heron",
+          "usage": {
+            "input": 1325,
+            "output": 31
+          }
+        },
+        {
+          "turn": 8,
+          "level": "high",
+          "durationMs": 4661,
+          "settled": true,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "uids": [
+            "swe-2-high",
+            "swe-2-high"
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false
+            }
+          ],
+          "expectMet": true,
+          "text": "350",
+          "usage": {
+            "input": 154,
+            "output": 21
+          }
+        },
+        {
+          "turn": 9,
+          "level": "medium",
+          "durationMs": 2223,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "7",
+          "usage": {
+            "input": 1554,
+            "output": 26
+          }
+        },
+        {
+          "turn": 10,
+          "level": "medium",
+          "durationMs": 2322,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "tac",
+          "usage": {
+            "input": 1487,
+            "output": 24
+          }
+        },
+        {
+          "turn": 11,
+          "level": "medium",
+          "durationMs": 2118,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "81",
+          "usage": {
+            "input": 72,
+            "output": 25
+          }
+        },
+        {
+          "turn": 12,
+          "level": "medium",
+          "durationMs": 4541,
+          "settled": true,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false
+            }
+          ],
+          "expectMet": true,
+          "text": "15",
+          "usage": {
+            "input": 48,
+            "output": 20
+          }
+        },
+        {
+          "turn": 13,
+          "level": "medium",
+          "durationMs": 2221,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "71",
+          "usage": {
+            "input": 105,
+            "output": 28
+          }
+        },
+        {
+          "turn": 14,
+          "level": "high",
+          "durationMs": 2120,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-high"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "hot",
+          "usage": {
+            "input": 487,
+            "output": 26
+          }
+        },
+        {
+          "turn": 15,
+          "level": "medium",
+          "durationMs": 2019,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "Earth",
+          "usage": {
+            "input": 162,
+            "output": 21
+          }
+        },
+        {
+          "turn": 16,
+          "level": "medium",
+          "durationMs": 4950,
+          "settled": true,
+          "stopReasons": [
+            "aborted"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27",
+          "errorMessage": "This operation was aborted",
+          "usage": {
+            "input": 92,
+            "output": 303
+          },
+          "abortSent": true
+        },
+        {
+          "turn": 17,
+          "level": "medium",
+          "durationMs": 2623,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": true,
+          "text": "ready",
+          "usage": {
+            "input": 46,
+            "output": 39
+          }
+        },
+        {
+          "turn": 18,
+          "level": "medium",
+          "durationMs": 2220,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "12",
+          "usage": {
+            "input": 121,
+            "output": 27
+          }
+        },
+        {
+          "turn": 19,
+          "level": "medium",
+          "durationMs": 4558,
+          "settled": true,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false
+            }
+          ],
+          "expectMet": true,
+          "text": "100",
+          "usage": {
+            "input": 34,
+            "output": 20
+          }
+        },
+        {
+          "turn": 20,
+          "level": "medium",
+          "durationMs": 2224,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "blue",
+          "usage": {
+            "input": 88,
+            "output": 29
+          }
+        },
+        {
+          "turn": 21,
+          "level": "high",
+          "durationMs": 2523,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-high"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "11",
+          "usage": {
+            "input": 2459,
+            "output": 32
+          }
+        },
+        {
+          "turn": 22,
+          "level": "medium",
+          "durationMs": 2124,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": true,
+          "text": "heron",
+          "usage": {
+            "input": 161,
+            "output": 31
+          }
+        },
+        {
+          "turn": 23,
+          "level": "medium",
+          "durationMs": 2826,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": true,
+          "text": "heron",
+          "usage": {
+            "input": 43,
+            "output": 47
+          },
+          "afterRestart": true
+        },
+        {
+          "turn": 24,
+          "level": "medium",
+          "durationMs": 2423,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "1024",
+          "usage": {
+            "input": 576,
+            "output": 34
+          }
+        },
+        {
+          "turn": 25,
+          "level": "medium",
+          "durationMs": 4638,
+          "settled": true,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false
+            }
+          ],
+          "expectMet": true,
+          "text": "100",
+          "usage": {
+            "input": 48,
+            "output": 21
+          }
+        },
+        {
+          "turn": 26,
+          "level": "high",
+          "durationMs": 2223,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-high"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "banana",
+          "usage": {
+            "input": 998,
+            "output": 27
+          }
+        },
+        {
+          "turn": 27,
+          "level": "medium",
+          "durationMs": 2121,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "999",
+          "usage": {
+            "input": 165,
+            "output": 21
+          }
+        },
+        {
+          "turn": 28,
+          "level": "medium",
+          "durationMs": 2927,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "3",
+          "usage": {
+            "input": 93,
+            "output": 25
+          }
+        },
+        {
+          "turn": 29,
+          "level": "medium",
+          "durationMs": 2526,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "OK",
+          "usage": {
+            "input": 93,
+            "output": 60
+          }
+        },
+        {
+          "turn": 30,
+          "level": "high",
+          "durationMs": 3449,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-high"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "42",
+          "usage": {
+            "input": 316,
+            "output": 31
+          }
+        },
+        {
+          "turn": 31,
+          "level": "medium",
+          "durationMs": 8687,
+          "settled": true,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false
+            }
+          ],
+          "expectMet": true,
+          "text": "444",
+          "usage": {
+            "input": 41,
+            "output": 21
+          }
+        },
+        {
+          "turn": 32,
+          "level": "medium",
+          "durationMs": 2423,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "mice",
+          "usage": {
+            "input": 96,
+            "output": 40
+          }
+        },
+        {
+          "turn": 33,
+          "level": "medium",
+          "durationMs": 2228,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "40",
+          "usage": {
+            "input": 108,
+            "output": 33
+          }
+        },
+        {
+          "turn": 34,
+          "level": "medium",
+          "durationMs": 2525,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "Pacific Ocean",
+          "usage": {
+            "input": 112,
+            "output": 37
+          }
+        },
+        {
+          "turn": 35,
+          "level": "high",
+          "durationMs": 2322,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-high"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "121",
+          "usage": {
+            "input": 504,
+            "output": 26
+          }
+        },
+        {
+          "turn": 36,
+          "level": "high",
+          "durationMs": 4446,
+          "settled": true,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "uids": [
+            "swe-2-high",
+            "swe-2-high"
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false
+            }
+          ],
+          "expectMet": true,
+          "text": "100",
+          "usage": {
+            "input": 160,
+            "output": 21
+          }
+        },
+        {
+          "turn": 37,
+          "level": "medium",
+          "durationMs": 2523,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "April",
+          "usage": {
+            "input": 277,
+            "output": 21
+          }
+        },
+        {
+          "turn": 38,
+          "level": "medium",
+          "durationMs": 2321,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "9",
+          "usage": {
+            "input": 78,
+            "output": 26
+          }
+        },
+        {
+          "turn": 39,
+          "level": "medium",
+          "durationMs": 2625,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": true,
+          "text": "heron, falcon",
+          "usage": {
+            "input": 76,
+            "output": 59
+          }
+        },
+        {
+          "turn": 40,
+          "level": "medium",
+          "durationMs": 2827,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "120",
+          "usage": {
+            "input": 104,
+            "output": 31
+          }
+        },
+        {
+          "turn": 41,
+          "level": "medium",
+          "durationMs": 4649,
+          "settled": true,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false
+            }
+          ],
+          "expectMet": true,
+          "text": "1000",
+          "usage": {
+            "input": 151,
+            "output": 23
+          }
+        },
+        {
+          "turn": 42,
+          "level": "high",
+          "durationMs": 2220,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-high"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "100",
+          "usage": {
+            "input": 535,
+            "output": 34
+          }
+        },
+        {
+          "turn": 43,
+          "level": "medium",
+          "durationMs": 2220,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "60",
+          "usage": {
+            "input": 156,
+            "output": 22
+          }
+        },
+        {
+          "turn": 44,
+          "level": "medium",
+          "durationMs": 2424,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "4",
+          "usage": {
+            "input": 85,
+            "output": 21
+          }
+        },
+        {
+          "turn": 45,
+          "level": "medium",
+          "durationMs": 14749,
+          "settled": true,
+          "stopReasons": [
+            "stop"
+          ],
+          "uids": [
+            "swe-2-medium"
+          ],
+          "tools": [],
+          "expectMet": null,
+          "text": "We answered quick math and trivia questions, used the add tool a few times, and remembered the code words heron and falc",
+          "usage": {
+            "input": 76,
+            "output": 116
+          }
+        }
+      ],
+      "report": [
+        "Account quota · fetched 10/23 16:18 (just now) · not live",
+        "  Daily  ▕██████████▏ 100% left · resets 10/23 17:00 (in 42m)",
+        "  Weekly ▕███████░░░▏ 77% left · resets 10/25 17:00 (in 2d)",
+        "This session · lead conversation (sidekick excluded)",
+        "  53 requests · input 21k · output 2.3k · cache read 120k · cache write 0",
+        "Run budget · last run",
+        "  ▕█░░░░░░░░░▏ 1/8 model calls used",
+        "Settings: Recommended models only off · Usage in status line off"
+      ],
+      "hasQuotaLine": true,
+      "sessionRequests": 53,
+      "ledger": {
+        "modelCalls": [
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-high",
+          "swe-2-high",
+          "swe-2-high",
+          "swe-2-high",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-high",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-high",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-high",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-high",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-high",
+          "swe-2-high",
+          "swe-2-high",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-high",
+          "swe-2-medium",
+          "swe-2-medium",
+          "swe-2-medium"
+        ],
+        "modelStatuses": [
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "readCalls": {
+          "GetUserStatus": 53,
+          "GetCliModelConfigs": 1,
+          "GetCliTeamSettings": 1
+        },
+        "readStatuses": [
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetCliModelConfigs:200",
+          "GetUserStatus:200",
+          "GetCliTeamSettings:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200",
+          "GetUserStatus:200"
+        ],
+        "blocked": [],
+        "catalog": {
+          "swe-2-medium": {
+            "present": true,
+            "disabled": false,
+            "costTier": "MODEL_COST_TIER_FREE",
+            "promoActive": true,
+            "promoEnd": {
+              "seconds": "1793516399",
+              "nanos": 999999999
+            }
+          },
+          "swe-2-high": {
+            "present": true,
+            "disabled": false,
+            "costTier": "MODEL_COST_TIER_FREE",
+            "promoActive": true,
+            "promoEnd": {
+              "seconds": "1793516399",
+              "nanos": 999999999
+            }
+          }
+        },
+        "halted": []
+      },
+      "stderrLines": 0,
+      "pass": true
+    }
+  ],
+  "notRun": [],
+  "totals": {
+    "modelCalls": [
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-high",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-high",
+      "swe-2-high",
+      "swe-2-high",
+      "swe-2-high",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-high",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-high",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-high",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-high",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-high",
+      "swe-2-high",
+      "swe-2-high",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-high",
+      "swe-2-medium",
+      "swe-2-medium",
+      "swe-2-medium"
+    ],
+    "modelStatuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "readCalls": {
+      "token": 1,
+      "GetUserStatus": 63,
+      "GetCliModelConfigs": 2,
+      "GetCliTeamSettings": 2
+    },
+    "readStatuses": [
+      "token:200",
+      "GetUserStatus:200",
+      "GetCliModelConfigs:200",
+      "GetCliTeamSettings:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetCliModelConfigs:200",
+      "GetUserStatus:200",
+      "GetCliTeamSettings:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200",
+      "GetUserStatus:200"
+    ],
+    "blocked": [
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      },
+      {
+        "reason": "host",
+        "host": "github.com:443"
+      }
+    ],
+    "catalog": {
+      "swe-2-medium": {
+        "present": true,
+        "disabled": false,
+        "costTier": "MODEL_COST_TIER_FREE",
+        "promoActive": true,
+        "promoEnd": {
+          "seconds": "1793516399",
+          "nanos": 999999999
+        }
+      },
+      "swe-2-high": {
+        "present": true,
+        "disabled": false,
+        "costTier": "MODEL_COST_TIER_FREE",
+        "promoActive": true,
+        "promoEnd": {
+          "seconds": "1793516399",
+          "nanos": 999999999
+        }
+      }
+    },
+    "halted": []
+  },
+  "outcome": "pass"
+}

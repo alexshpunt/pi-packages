@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "approved": true,
+  "approvedAt": "2026-10-23T07:14:32.837932Z",
+  "approvedBy": "user messages in this chat session: '실 검증 진행해줘. SWE2 모델로 50턴 정도 진행해봐. 무료야.' and the login choice '열린 탭에서 로그인 (권장)' (the user signed in in their own browser)",
+  "planHash": "13b34fb82fa6050844c1456d80b6d3fd62a5444ecc88acf7141e3a781ef4c078",
+  "scope": {
+    "artifactSha256": "89b92e7c2ee7372305fe09949caa4d49ba23724eee7fe7159b6f91640b868f5c",
+    "runtimeDigest": "086c67ea82b31f554eaf267c3d0df39ee68c793c8e266adf6092c51862f83bcf",
+    "allowedUIDs": [
+      "swe-2-medium",
+      "swe-2-high"
+    ],
+    "maxModelCalls": 80,
+    "requireFreeTier": true,
+    "hosts": [
+      "server.codeium.com",
+      "api.devin.ai"
+    ],
+    "cases": [
+      "catalog",
+      "devin-settings",
+      "plain-medium",
+      "level-high",
+      "add-tool",
+      "fusion",
+      "session"
+    ],
+    "sessionTurns": 45,
+    "login": "assistant started /login in the temporary Pi TUI and opened the authorization page in Chrome; the user signed in",
+    "cleanup": "temporary state removed after the run; server-side session not revoked"
+  }
+}

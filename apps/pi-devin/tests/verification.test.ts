@@ -1,15 +1,18 @@
 import { expect, test } from "vitest";
-import { DevinClient } from "../src/core/client.ts";
+import { Effect } from "effect";
 import { toolRoundtrip } from "../src/cli/verification.ts";
-import { object, type JsonObject } from "../src/core/types.ts";
 import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
-import { credential, fingerprint, requestBody, STATUS_METHOD, streamResponse, unaryResponse } from "./helpers.ts";
+import type { JsonObject } from "../src/core/types.ts";
+import { object as objectEffect } from "../src/core/validation.ts";
+import { credential, devinClient, fingerprint, requestBody, run, runSync, STATUS_METHOD, streamResponse, unaryResponse } from "./helpers.ts";
+
+const object = (value: unknown, label: string) => runSync(objectEffect(value, label));
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 test("a tool round trip keeps call IDs and signatures and regenerates only wire message IDs and fingerprints", async () => {
   const requests: JsonObject[] = [];
-  const client = new DevinClient(credential, {
+  const client = devinClient(credential, {
     fingerprint: fingerprint(),
     fetch: async (_url, init) => {
       const request = requestBody(CHAT_METHOD, init!);
@@ -53,7 +56,7 @@ test("a tool round trip keeps call IDs and signatures and regenerates only wire 
     },
   });
   const reports: JsonObject[] = [];
-  const result = await toolRoundtrip(client, { model: "swe-2-medium", maxTokens: 512, onResult: (_stage, value) => reports.push(value) });
+  const result = await run(toolRoundtrip(client, { model: "swe-2-medium", maxTokens: 512, onResult: (_stage, value) => Effect.sync(() => { reports.push(value); }) }));
   expect(result.toolResult).toBe(42);
   expect(requests.length).toBe(2);
   const report = JSON.stringify(reports);
@@ -61,24 +64,24 @@ test("a tool round trip keeps call IDs and signatures and regenerates only wire 
 });
 
 test("only the account match is reported, and a different user ID is rejected", async () => {
-  const client = new DevinClient(credential, { fingerprint: fingerprint(),
+  const client = devinClient(credential, { fingerprint: fingerprint(),
     fetch: async () => unaryResponse(STATUS_METHOD, { userStatus: { userId: "expected-id", name: "private-name", email: "private@example.invalid" } }),
   });
-  const status = await client.status(undefined, "expected-id");
+  const status = await run(client.status({ expectedUserId: "expected-id" }));
   expect(status.identityVerified).toBe(true);
   expect(JSON.stringify(status).includes("private")).toBeFalsy();
-  await expect(client.status(undefined, "another-id")).rejects.toThrow(/differs from the requested account/);
+  await expect(run(client.status({ expectedUserId: "another-id" }))).rejects.toThrow(/differs from the requested account/);
 });
 
 test("a failed tool check sends no result and does not retry automatically", async () => {
   let calls = 0;
-  const client = new DevinClient(credential, { fingerprint: fingerprint(), fetch: async () => {
+  const client = devinClient(credential, { fingerprint: fingerprint(), fetch: async () => {
     calls++;
     return streamResponse([
       { deltaToolCalls: [{ id: "call-1", name: "bash", argumentsJson: '{"command":"untrusted"}' }] },
       { stopReason: "STOP_REASON_FUNCTION_CALL" }, { usage: { inputTokens: 1, outputTokens: 1 } },
     ]);
   } });
-  await expect(toolRoundtrip(client, { model: "swe-2-medium", maxTokens: 512 })).rejects.toThrow(/Arbitrary/);
+  await expect(run(toolRoundtrip(client, { model: "swe-2-medium", maxTokens: 512 }))).rejects.toThrow(/Arbitrary/);
   expect(calls).toBe(1);
 });

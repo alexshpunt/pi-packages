@@ -1,9 +1,9 @@
 import { readFile } from "node:fs/promises";
 import type { RefreshModelsContext } from "@earendil-works/pi-ai";
-import { createDevinProvider } from "../src/pi/provider.ts";
-import { createFingerprintProvider } from "../src/core/protocol/fingerprint.ts";
+import { Effect } from "effect";
 import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
 import type { Credential, JsonObject } from "../src/core/types.ts";
+import { makeTestProvider, type TestOptions } from "./extension-harness.ts";
 import { finalFrames, identity, MODELS_METHOD, requestBody, STATUS_METHOD, statusResponse, streamResponse, unaryResponse } from "./helpers.ts";
 
 export const TEAM_METHOD = "exa.seat_management_pb.SeatManagementService/GetCliTeamSettings";
@@ -41,9 +41,10 @@ export async function providerFixture(options: {
   };
   const dependencies = { fetch: fetchImpl, maxModelCalls: options.maxModelCalls,
     loginOptions: { apiServerURL: providerCredential.apiServerURL, webappURL: "https://example.invalid" },
-    fingerprint: (credential: Credential) => createFingerprintProvider(credential.sessionToken, { collectIdentity: () => { fingerprintCollections++; return identity; } }),
-  };
-  const provider = createDevinProvider(dependencies);
+    deviceIdentity: Effect.sync(() => { fingerprintCollections++; return identity; }),
+  } satisfies TestOptions;
+  const testProvider = makeTestProvider(dependencies);
+  const { provider } = testProvider;
   if (requests.length || fingerprintCollections) throw new Error("Factory must not perform I/O");
   const refresh: RefreshModelsContext = { credential: providerHostCredential, allowNetwork: true, force: true, signal: new AbortController().signal,
     publish: async (value) => { value.update?.(); return true; },
@@ -52,5 +53,5 @@ export async function providerFixture(options: {
   // Family models have several thinking levels. Fusion mirrors its lead family, so it is skipped.
   const model = provider.getModels().find((model) => model.id !== "fusion" && Object.values(model.thinkingLevelMap ?? {}).filter(Boolean).length > 1)!;
   if (!model) throw new Error("Fixture group missing");
-  return { provider, model, dependencies, requests, chatCalls: () => chatCalls, fingerprintCollections: () => fingerprintCollections };
+  return { ...testProvider, model, dependencies, requests, chatCalls: () => chatCalls, fingerprintCollections: () => fingerprintCollections };
 }

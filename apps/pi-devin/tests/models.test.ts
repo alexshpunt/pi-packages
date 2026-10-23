@@ -3,16 +3,19 @@ import { expect, test } from "vitest";
 import { clampThinkingLevel, getSupportedThinkingLevels } from "@earendil-works/pi-ai";
 import { parseModelCatalog } from "../src/core/models/catalog.ts";
 import { EFFECTIVE_THINKING_LEVELS, modelIDForUID, projectModelVariants, resolveBackendSelection } from "../src/core/models/variants.ts";
-import { FUSION_MODEL_ID, fusionChoices, isFusionModelID, modelsFromProjection, publicModelIDs } from "../src/pi/models.ts";
-import { chatRequest } from "../src/core/inference/chat.ts";
+import { FUSION_MODEL_ID, isFusionModelID } from "../src/pi/features/catalog/constants.ts";
+import { fusionChoices } from "../src/pi/features/catalog/fusion.ts";
+import { publicModelIDs } from "../src/pi/features/catalog/ids.ts";
+import { modelsFromProjection } from "../src/pi/features/catalog/projection.ts";
+import { chatRequest } from "../src/core/inference/request.ts";
 import { chatRequestCodec } from "../src/core/protocol/protobuf.ts";
 import { getModelByUID } from "../src/core/models/select.ts";
 import type { JsonObject } from "../src/core/types.ts";
-import { credential } from "./helpers.ts";
+import { credential, runSync } from "./helpers.ts";
 
 const raw = JSON.parse(await readFile(new URL("./fixtures/model-catalog.json", import.meta.url), "utf8")) as JsonObject;
-const catalog = parseModelCatalog(raw);
-const projection = projectModelVariants(catalog);
+const catalog = runSync(parseModelCatalog(raw));
+const projection = runSync(projectModelVariants(catalog));
 const piModels = modelsFromProjection(projection, credential);
 const ids = publicModelIDs(projection);
 const isExactID = (id: string) => { const target = ids.targets.get(id); return target !== undefined && "variant" in target; };
@@ -84,8 +87,8 @@ test("classifies all 265 fixture catalog entries, lists 65 groups and a single F
   expect(piModels.filter((model) => model.devin.recommended === true).length).toBe(13);
   expect(piModels.find((model) => model.id === swe2.id)!.devin.recommended).toBe(true);
   // With a catalog that has no recommended flags, the filter falls back to the default group list.
-  const unmarked = parseModelCatalog({ clientModelConfigs: (raw.clientModelConfigs as JsonObject[]).map((config) => ({ ...config, isRecommended: false })) });
-  const fallback = modelsFromProjection(projectModelVariants(unmarked), credential, { recommendedOnly: true });
+  const unmarked = runSync(parseModelCatalog({ clientModelConfigs: (raw.clientModelConfigs as JsonObject[]).map((config) => ({ ...config, isRecommended: false })) }));
+  const fallback = modelsFromProjection(runSync(projectModelVariants(unmarked)), credential, { recommendedOnly: true });
   expect([fallback.length, fallback.some((model) => model.devin.recommended)]).toStrictEqual([66, false]);
   // Candidates are published groups and exact UIDs that support tool calls. The saved pair is reflected in the name, thinking levels and lead.
   const choices = fusionChoices(projection);
@@ -108,8 +111,8 @@ test("classifies all 265 fixture catalog entries, lists 65 groups and a single F
   assertPair(fusionFor(modelsFromProjection(projection, credential, { fusion: { leadID: sol.id, sidekickID: "missing" } })), sol.id, "swe-2-medium", "SWE-2 Medium");
   // A sidekick process (false) and a catalog without the default sidekick create no Fusion entry.
   expect(fusionFor(modelsFromProjection(projection, credential, { fusion: false }))).toBe(undefined);
-  const withoutSidekick = parseModelCatalog({ clientModelConfigs: (raw.clientModelConfigs as JsonObject[]).filter((config) => config.modelUid !== "swe-2-medium") });
-  const plain = modelsFromProjection(projectModelVariants(withoutSidekick), credential);
+  const withoutSidekick = runSync(parseModelCatalog({ clientModelConfigs: (raw.clientModelConfigs as JsonObject[]).filter((config) => config.modelUid !== "swe-2-medium") }));
+  const plain = modelsFromProjection(runSync(projectModelVariants(withoutSidekick)), credential);
   expect(plain.some((model) => isFusionModelID(model.id))).toBe(false);
   for (const model of piModels) {
     const levels = getSupportedThinkingLevels(model);
@@ -124,7 +127,7 @@ test("each exact UID and group/level round-trips to the final protobuf request U
   const childModels = modelsFromProjection(projection, credential, { fusion: false, listsAllExactModels: true });
   for (const variant of projection.variants) {
     if (variant.level === undefined || variant.unsupported) continue;
-    const selected = resolveBackendSelection(projection, modelIDForUID(variant.model.id), variant.level);
+    const selected = runSync(resolveBackendSelection(projection, modelIDForUID(variant.model.id), variant.level));
     expect(selected.uid).toBe(variant.model.id);
     // A variant's public ID is its catalog UID.
     expect(ids.variants.get(variant.model.id)).toBe(variant.model.id);
@@ -133,12 +136,12 @@ test("each exact UID and group/level round-trips to the final protobuf request U
     expect(model.maxTokens).toBe(variant.model.maxOutputTokens);
     expect(model.input.includes("image")).toBe(variant.model.supportsImages);
     const group = projection.groups.find((group) => group.variants.includes(variant))!;
-    expect(resolveBackendSelection(projection, group.id, variant.level).uid).toBe(variant.model.id);
+    expect(runSync(resolveBackendSelection(projection, group.id, variant.level)).uid).toBe(variant.model.id);
     const request = chatRequest({ metadata: { apiKey: "fake-only" }, model: selected.uid,
       messages: [{ messageId: "user", source: "CHAT_MESSAGE_SOURCE_USER", prompt: "offline" }],
       systemPrompt: "offline", maxTokens: 5000, cascadeId: "cascade", trajectoryId: "trajectory", includeContext: false,
     });
-    const decoded = chatRequestCodec.decode(chatRequestCodec.encode(request));
+    const decoded = runSync(chatRequestCodec.decode(runSync(chatRequestCodec.encode(request))));
     expect(decoded.chatModelUid).toBe(variant.model.id);
     expect((decoded.configuration as JsonObject).maxTokens).toBe("5000");
     checked++;
@@ -153,11 +156,11 @@ test("SWE-2 supported levels, the Lightning dimension, and Pi clamping vs explic
   for (const group of groups) {
     const model = piModels.find((model) => model.id === ids.groups.get(group.id))!;
     expect(getSupportedThinkingLevels(model)).toStrictEqual(["medium", "high", "max"]);
-    expect(() => resolveBackendSelection(projection, group.id, "low")).toThrow(/unavailable/);
+    expect(() => runSync(resolveBackendSelection(projection, group.id, "low"))).toThrow(/unavailable/);
     expect(clampThinkingLevel(model, "off")).toBe("medium");
     expect(clampThinkingLevel(model, "xhigh")).toBe("max");
-    selectedUIDs.add(resolveBackendSelection(projection, group.id, clampThinkingLevel(model, "off")).uid);
-    expect(resolveBackendSelection(projection, group.id, "max").uid).toBe(group.mappings.max);
+    selectedUIDs.add(runSync(resolveBackendSelection(projection, group.id, clampThinkingLevel(model, "off"))).uid);
+    expect(runSync(resolveBackendSelection(projection, group.id, "max")).uid).toBe(group.mappings.max);
   }
   expect(selectedUIDs.size).toBe(2);
 });
@@ -175,7 +178,7 @@ test("GPT-5.4 and Claude toggles expose only declared levels, and unverified mod
   }
   for (const { uid } of projection.unsupported) {
     expect(piModels.some((model) => model.id === uid)).toBe(false);
-    expect(() => resolveBackendSelection(projection, modelIDForUID(uid), "high")).toThrow(/does not support/);
+    expect(() => runSync(resolveBackendSelection(projection, modelIDForUID(uid), "high"))).toThrow(/does not support/);
   }
 });
 
@@ -184,15 +187,15 @@ test("same-level collisions and per-variant limit differences hide the group but
   duplicate.modelUid = "synthetic-other-uid";
   (duplicate.modelInfo as JsonObject).modelUid = duplicate.modelUid;
   (duplicate.modelInfo as JsonObject).aliases = ["swe-2-medium"];
-  const colliding = projectModelVariants(parseModelCatalog({ clientModelConfigs: [...configsFor("swe-2-medium"), duplicate] }));
+  const colliding = runSync(projectModelVariants(runSync(parseModelCatalog({ clientModelConfigs: [...configsFor("swe-2-medium"), duplicate] }))));
   expect(colliding.groups[0].canPublish).toBe(false);
-  expect(() => resolveBackendSelection(colliding, colliding.groups[0].id, "medium")).toThrow();
-  expect(resolveBackendSelection(colliding, modelIDForUID("swe-2-medium"), "medium").uid).toBe("swe-2-medium");
-  expect(resolveBackendSelection(colliding, modelIDForUID("synthetic-other-uid"), "medium").uid).toBe("synthetic-other-uid");
-  expect(getModelByUID(colliding.variants.map((variant) => variant.model), "swe-2-medium").id).toBe("swe-2-medium");
+  expect(() => runSync(resolveBackendSelection(colliding, colliding.groups[0].id, "medium"))).toThrow();
+  expect(runSync(resolveBackendSelection(colliding, modelIDForUID("swe-2-medium"), "medium")).uid).toBe("swe-2-medium");
+  expect(runSync(resolveBackendSelection(colliding, modelIDForUID("synthetic-other-uid"), "medium")).uid).toBe("synthetic-other-uid");
+  expect(runSync(getModelByUID(colliding.variants.map((variant) => variant.model), "swe-2-medium")).id).toBe("swe-2-medium");
   const changed = configsFor("swe-2-medium", "swe-2-high");
   (changed[1].modelInfo as JsonObject).maxOutputTokens = 64;
-  const differentLimits = projectModelVariants(parseModelCatalog({ clientModelConfigs: changed }));
+  const differentLimits = runSync(projectModelVariants(runSync(parseModelCatalog({ clientModelConfigs: changed }))));
   expect(differentLimits.groups[0].canPublish).toBe(false);
   const exact = modelsFromProjection(differentLimits, credential);
   expect(exact.length).toBe(2);
@@ -202,10 +205,10 @@ test("same-level collisions and per-variant limit differences hide the group but
 test("disabled and duplicate UIDs are not bypassed and the catalog input is not mutated", () => {
   const changed = configsFor("swe-2-medium", "swe-2-high"); changed[0].disabled = true;
   const before = JSON.stringify(changed);
-  const result = projectModelVariants(parseModelCatalog({ clientModelConfigs: changed }));
+  const result = runSync(projectModelVariants(runSync(parseModelCatalog({ clientModelConfigs: changed }))));
   expect(result.groups[0].mappings.medium).toBe(undefined);
-  expect(() => resolveBackendSelection(result, result.groups[0].id, "medium")).toThrow();
-  expect(() => resolveBackendSelection(result, modelIDForUID("swe-2-medium"), "medium")).toThrow();
+  expect(() => runSync(resolveBackendSelection(result, result.groups[0].id, "medium"))).toThrow();
+  expect(() => runSync(resolveBackendSelection(result, modelIDForUID("swe-2-medium"), "medium"))).toThrow();
   expect(JSON.stringify(changed)).toBe(before);
-  expect(() => projectModelVariants(parseModelCatalog({ clientModelConfigs: [changed[1], changed[1]] }))).toThrow(/Duplicate model UID/);
+  expect(() => runSync(projectModelVariants(runSync(parseModelCatalog({ clientModelConfigs: [changed[1], changed[1]] }))))).toThrow(/Duplicate model UID/);
 });

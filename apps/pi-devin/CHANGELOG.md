@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Improved
+
+- The extension now runs on Effect 4 internally. Requests, sign-in, model list refreshes, `/devin`, `/devin-fusion` and the Fusion sidekick behave as before. Installing the package now also installs its runtime dependencies `effect` and `@effect/platform-node`.
+- The usage in the status line now appears only while a Devin model, including Devin Fusion, is selected, and disappears as soon as you switch to another provider's model. `/devin` still shows usage whichever model is selected.
+
 ## [0.1.5] - 2026-10-21
 
 ### Improved

@@ -1,0 +1,2460 @@
+{
+  "schemaVersion": 1,
+  "kind": "pi-devin-live-dry-run",
+  "startedAt": "2026-10-23T07:06:55.590Z",
+  "node": "v24.14.0",
+  "piVersion": "1.3.0",
+  "planHash": "13b34fb82fa6050844c1456d80b6d3fd62a5444ecc88acf7141e3a781ef4c078",
+  "plan": {
+    "schemaVersion": 1,
+    "task": "08",
+    "artifactSha256": "89b92e7c2ee7372305fe09949caa4d49ba23724eee7fe7159b6f91640b868f5c",
+    "runtimeDigest": "086c67ea82b31f554eaf267c3d0df39ee68c793c8e266adf6092c51862f83bcf",
+    "allowedUIDs": [
+      "swe-2-medium",
+      "swe-2-high"
+    ],
+    "maxModelCalls": 80,
+    "requireFreeTier": true,
+    "hosts": [
+      "server.codeium.com",
+      "api.devin.ai"
+    ],
+    "cases": [
+      {
+        "id": "catalog",
+        "mode": "rpc",
+        "expectModelCalls": 0,
+        "purpose": "OAuth account status and catalog lookup; check that the approved UIDs are active and free tier"
+      },
+      {
+        "id": "devin-settings",
+        "mode": "rpc-devin",
+        "model": "swe-2",
+        "level": "medium",
+        "prompt": "Please say hello briefly.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectModelCalls": 1,
+        "purpose": "Real list change when the /devin recommended filter is turned on and off; real quota and session usage in the bare /devin notification after one turn"
+      },
+      {
+        "id": "plain-medium",
+        "mode": "json",
+        "model": "swe-2",
+        "level": "medium",
+        "prompt": "Please say hello briefly.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectModelCalls": 1
+      },
+      {
+        "id": "level-high",
+        "mode": "json",
+        "model": "swe-2",
+        "level": "high",
+        "prompt": "Please say hello briefly.",
+        "expectUIDs": [
+          "swe-2-high"
+        ],
+        "expectModelCalls": 1
+      },
+      {
+        "id": "add-tool",
+        "mode": "json",
+        "model": "swe-2",
+        "level": "medium",
+        "prompt": "Add 2 and 3 with the add tool, then reply with only the resulting number.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectTool": "add",
+        "expectModelCalls": 2
+      },
+      {
+        "id": "fusion",
+        "mode": "json",
+        "model": "fusion",
+        "level": "medium",
+        "prompt": "Ask the sidekick tool to 'add 2 and 3 with the add tool and report the result', then reply with only the reported number.",
+        "expectUIDs": [
+          "swe-2-medium"
+        ],
+        "expectTool": "devin_sidekick",
+        "expectModelCalls": 4
+      },
+      {
+        "id": "session",
+        "mode": "session",
+        "model": "swe-2",
+        "levelUIDs": {
+          "medium": "swe-2-medium",
+          "high": "swe-2-high"
+        },
+        "pauseMs": 1000,
+        "expectModelCalls": 53,
+        "purpose": "45 prompts in one Pi session: add tool calls, medium/high level changes, a cancelled response, a Pi restart resuming the same session file, code word recalls across them, then the /devin report",
+        "turns": [
+          {
+            "prompt": "Remember this code word for later in our conversation: heron. Reply with only OK.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 7 times 8? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is the capital of France? Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Use the add tool to add 12 and 30, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b42\\b"
+          },
+          {
+            "prompt": "Name one primary color. Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 15 minus 6? Reply with only the number.",
+            "level": "high"
+          },
+          {
+            "prompt": "What code word did I ask you to remember? Reply with only the word.",
+            "level": "high",
+            "expect": "heron"
+          },
+          {
+            "prompt": "Use the add tool to add 100 and 250, then reply with only the result.",
+            "level": "high",
+            "tool": "add",
+            "expect": "\\b350\\b"
+          },
+          {
+            "prompt": "How many days are in a week? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Spell the word 'cat' backwards. Reply with only the result.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 9 squared? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Use the add tool to add 7 and 8, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b15\\b"
+          },
+          {
+            "prompt": "Which is larger, 17 or 71? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is the opposite of 'cold'? Reply with one word.",
+            "level": "high"
+          },
+          {
+            "prompt": "Name the planet we live on. Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Count from 1 to 300, writing every number on its own line.",
+            "level": "medium",
+            "abort": true
+          },
+          {
+            "prompt": "Reply with only the word ready.",
+            "level": "medium",
+            "expect": "ready"
+          },
+          {
+            "prompt": "What is 144 divided by 12? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Use the add tool to add 45 and 55, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b100\\b"
+          },
+          {
+            "prompt": "What color is a clear daytime sky? Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 3 plus 4 times 2? Reply with only the number.",
+            "level": "high"
+          },
+          {
+            "prompt": "Repeat the code word from the start of our conversation. Reply with only the word.",
+            "level": "medium",
+            "expect": "heron"
+          },
+          {
+            "prompt": "We just resumed this session. What code word did I ask you to remember? Reply with only the word.",
+            "level": "medium",
+            "expect": "heron",
+            "restartBefore": true
+          },
+          {
+            "prompt": "What is 2 to the power of 10? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Use the add tool to add 64 and 36, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b100\\b"
+          },
+          {
+            "prompt": "Name a fruit that is yellow. Reply with one word.",
+            "level": "high"
+          },
+          {
+            "prompt": "What is 1000 minus 1? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "How many sides does a triangle have? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Remember this code word for later in our conversation: falcon. Reply with only OK.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 6 times 7? Reply with only the number.",
+            "level": "high"
+          },
+          {
+            "prompt": "Use the add tool to add 321 and 123, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b444\\b"
+          },
+          {
+            "prompt": "What is the plural of 'mouse'? Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 50 percent of 80? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Name the largest ocean on Earth. Reply with at most two words.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 11 times 11? Reply with only the number.",
+            "level": "high"
+          },
+          {
+            "prompt": "Use the add tool to add 9 and 91, then reply with only the result.",
+            "level": "high",
+            "tool": "add",
+            "expect": "\\b100\\b"
+          },
+          {
+            "prompt": "Which month comes after March? Reply with one word.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 81 divided by 9? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "List both code words I asked you to remember, separated by a comma.",
+            "level": "medium",
+            "expect": [
+              "heron",
+              "falcon"
+            ]
+          },
+          {
+            "prompt": "What is 5 factorial? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "Use the add tool to add 250 and 750, then reply with only the result.",
+            "level": "medium",
+            "tool": "add",
+            "expect": "\\b1000\\b"
+          },
+          {
+            "prompt": "At sea level, what is the boiling point of water in Celsius? Reply with only the number.",
+            "level": "high"
+          },
+          {
+            "prompt": "How many minutes are in an hour? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "What is 2 plus 2? Reply with only the number.",
+            "level": "medium"
+          },
+          {
+            "prompt": "In one short sentence, summarize what we did in this conversation.",
+            "level": "medium"
+          }
+        ]
+      }
+    ]
+  },
+  "scenarios": {
+    "plan": {
+      "results": [
+        {
+          "id": "catalog",
+          "durationMs": 3063,
+          "exitCode": 0,
+          "devinModels": 66,
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1,
+              "GetCliModelConfigs": 1,
+              "GetCliTeamSettings": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetCliModelConfigs:200",
+              "GetCliTeamSettings:200"
+            ],
+            "blocked": [],
+            "catalog": {
+              "swe-2-medium": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              },
+              "swe-2-high": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              }
+            },
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": true
+        },
+        {
+          "id": "devin-settings",
+          "durationMs": 2388,
+          "exitCode": 0,
+          "defaultCount": 66,
+          "restoredCount": 66,
+          "filtered": {
+            "count": 14,
+            "uids": [
+              "claude-fable-5-1",
+              "claude-opus-5-5",
+              "claude-sonnet-5-5",
+              "gemini-3-8-flash",
+              "gemini-4-argon",
+              "glm-5-3",
+              "glm-5.2",
+              "gpt-6-astra",
+              "gpt-6-luna",
+              "gpt-6-sol",
+              "kimi-k3",
+              "swe-1.7-lightning",
+              "swe-2"
+            ],
+            "hasFusion": true,
+            "allRecommendedExact": true
+          },
+          "stopReasons": [
+            "stop"
+          ],
+          "responseUIDs": [
+            "swe-2-medium"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            }
+          ],
+          "report": [
+            "Account quota · fetched 10/23 16:07 (just now) · not live",
+            "  Daily  ▕██████████▏ 100% left · reset time unknown",
+            "  Weekly ▕██████████▏ 100% left · reset time unknown",
+            "This session · lead conversation (sidekick excluded)",
+            "  1 request · input 3 · output 2 · cache read 0 · cache write 0",
+            "Run budget · last run",
+            "  ▕█░░░░░░░░░▏ 1/8 model calls used",
+            "Settings: Recommended models only off · Usage in status line off"
+          ],
+          "hasQuotaLine": true,
+          "hasSessionLine": true,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-medium"
+            ],
+            "modelStatuses": [
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200"
+            ],
+            "blocked": [],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 1,
+          "pass": true
+        },
+        {
+          "id": "plain-medium",
+          "durationMs": 884,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "stop"
+          ],
+          "responseUIDs": [
+            "swe-2-medium"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            }
+          ],
+          "tools": [],
+          "finalTextLength": 6,
+          "finalHasFive": false,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-medium"
+            ],
+            "modelStatuses": [
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200"
+            ],
+            "blocked": [],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 1,
+          "pass": true
+        },
+        {
+          "id": "level-high",
+          "durationMs": 843,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "stop"
+          ],
+          "responseUIDs": [
+            "swe-2-high"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            }
+          ],
+          "tools": [],
+          "finalTextLength": 6,
+          "finalHasFive": false,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-high"
+            ],
+            "modelStatuses": [
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200"
+            ],
+            "blocked": [],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 1,
+          "pass": true
+        },
+        {
+          "id": "add-tool",
+          "durationMs": 865,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "responseUIDs": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            },
+            {
+              "input": 3,
+              "output": 2
+            }
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false,
+              "result": "5"
+            }
+          ],
+          "finalTextLength": 1,
+          "finalHasFive": true,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-medium",
+              "swe-2-medium"
+            ],
+            "modelStatuses": [
+              200,
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 2
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetUserStatus:200"
+            ],
+            "blocked": [],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 2,
+          "pass": true
+        },
+        {
+          "id": "fusion",
+          "durationMs": 1766,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "toolUse",
+            "stop"
+          ],
+          "responseUIDs": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            },
+            {
+              "input": 3,
+              "output": 2
+            }
+          ],
+          "tools": [
+            {
+              "tool": "devin_sidekick",
+              "isError": false
+            }
+          ],
+          "finalTextLength": 1,
+          "finalHasFive": true,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium"
+            ],
+            "modelStatuses": [
+              200,
+              200,
+              200,
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 4
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200"
+            ],
+            "blocked": [],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 4,
+          "pass": true
+        },
+        {
+          "id": "session",
+          "durationMs": 53869,
+          "exitCodes": [
+            0,
+            0
+          ],
+          "devinModels": 66,
+          "sessionResumed": true,
+          "turns": [
+            {
+              "turn": 1,
+              "level": "medium",
+              "durationMs": 406,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 2,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 3,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 4,
+              "level": "medium",
+              "durationMs": 102,
+              "settled": true,
+              "stopReasons": [
+                "toolUse",
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium",
+                "swe-2-medium"
+              ],
+              "tools": [
+                {
+                  "tool": "add",
+                  "isError": false
+                }
+              ],
+              "expectMet": true,
+              "text": "42",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 5,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 6,
+              "level": "high",
+              "durationMs": 102,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-high"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 7,
+              "level": "high",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-high"
+              ],
+              "tools": [],
+              "expectMet": true,
+              "text": "heron",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 8,
+              "level": "high",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "toolUse",
+                "stop"
+              ],
+              "uids": [
+                "swe-2-high",
+                "swe-2-high"
+              ],
+              "tools": [
+                {
+                  "tool": "add",
+                  "isError": false
+                }
+              ],
+              "expectMet": true,
+              "text": "350",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 9,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 10,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 11,
+              "level": "medium",
+              "durationMs": 102,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 12,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "toolUse",
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium",
+                "swe-2-medium"
+              ],
+              "tools": [
+                {
+                  "tool": "add",
+                  "isError": false
+                }
+              ],
+              "expectMet": true,
+              "text": "15",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 13,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 14,
+              "level": "high",
+              "durationMs": 102,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-high"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 15,
+              "level": "medium",
+              "durationMs": 102,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 16,
+              "level": "medium",
+              "durationMs": 202,
+              "settled": true,
+              "stopReasons": [
+                "aborted"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "1\n2\n3\n4\n",
+              "errorMessage": "This operation was aborted",
+              "usage": {
+                "input": 0,
+                "output": 0
+              },
+              "abortSent": true
+            },
+            {
+              "turn": 17,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": true,
+              "text": "ready",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 18,
+              "level": "medium",
+              "durationMs": 100,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 19,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "toolUse",
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium",
+                "swe-2-medium"
+              ],
+              "tools": [
+                {
+                  "tool": "add",
+                  "isError": false
+                }
+              ],
+              "expectMet": true,
+              "text": "100",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 20,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 21,
+              "level": "high",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-high"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 22,
+              "level": "medium",
+              "durationMs": 100,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": true,
+              "text": "heron",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 23,
+              "level": "medium",
+              "durationMs": 403,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": true,
+              "text": "heron",
+              "usage": {
+                "input": 3,
+                "output": 2
+              },
+              "afterRestart": true
+            },
+            {
+              "turn": 24,
+              "level": "medium",
+              "durationMs": 102,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 25,
+              "level": "medium",
+              "durationMs": 100,
+              "settled": true,
+              "stopReasons": [
+                "toolUse",
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium",
+                "swe-2-medium"
+              ],
+              "tools": [
+                {
+                  "tool": "add",
+                  "isError": false
+                }
+              ],
+              "expectMet": true,
+              "text": "100",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 26,
+              "level": "high",
+              "durationMs": 100,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-high"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 27,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 28,
+              "level": "medium",
+              "durationMs": 102,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 29,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 30,
+              "level": "high",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-high"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 31,
+              "level": "medium",
+              "durationMs": 102,
+              "settled": true,
+              "stopReasons": [
+                "toolUse",
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium",
+                "swe-2-medium"
+              ],
+              "tools": [
+                {
+                  "tool": "add",
+                  "isError": false
+                }
+              ],
+              "expectMet": true,
+              "text": "444",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 32,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 33,
+              "level": "medium",
+              "durationMs": 103,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 34,
+              "level": "medium",
+              "durationMs": 102,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 35,
+              "level": "high",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-high"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 36,
+              "level": "high",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "toolUse",
+                "stop"
+              ],
+              "uids": [
+                "swe-2-high",
+                "swe-2-high"
+              ],
+              "tools": [
+                {
+                  "tool": "add",
+                  "isError": false
+                }
+              ],
+              "expectMet": true,
+              "text": "100",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 37,
+              "level": "medium",
+              "durationMs": 102,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 38,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 39,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": true,
+              "text": "heron, falcon",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 40,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 41,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "toolUse",
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium",
+                "swe-2-medium"
+              ],
+              "tools": [
+                {
+                  "tool": "add",
+                  "isError": false
+                }
+              ],
+              "expectMet": true,
+              "text": "1000",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 42,
+              "level": "high",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-high"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 43,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 44,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            },
+            {
+              "turn": 45,
+              "level": "medium",
+              "durationMs": 101,
+              "settled": true,
+              "stopReasons": [
+                "stop"
+              ],
+              "uids": [
+                "swe-2-medium"
+              ],
+              "tools": [],
+              "expectMet": null,
+              "text": "OK",
+              "usage": {
+                "input": 3,
+                "output": 2
+              }
+            }
+          ],
+          "report": [
+            "Account quota · fetched 10/23 16:08 (just now) · not live",
+            "  Daily  ▕██████████▏ 100% left · reset time unknown",
+            "  Weekly ▕██████████▏ 100% left · reset time unknown",
+            "This session · lead conversation (sidekick excluded)",
+            "  53 requests · input 156 · output 104 · cache read 0 · cache write 0",
+            "Run budget · last run",
+            "  ▕█░░░░░░░░░▏ 1/8 model calls used",
+            "Settings: Recommended models only off · Usage in status line off"
+          ],
+          "hasQuotaLine": true,
+          "sessionRequests": 53,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-high",
+              "swe-2-high",
+              "swe-2-high",
+              "swe-2-high",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-high",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-high",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-high",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-high",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-high",
+              "swe-2-high",
+              "swe-2-high",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-high",
+              "swe-2-medium",
+              "swe-2-medium",
+              "swe-2-medium"
+            ],
+            "modelStatuses": [
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200,
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 53
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200"
+            ],
+            "blocked": [],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 53,
+          "pass": true
+        }
+      ],
+      "mockRequests": 127,
+      "mockChats": [
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium"
+      ],
+      "allOAuthToken": true,
+      "ledgerHasSecret": false,
+      "openConnections": 0
+    },
+    "uidBlocked": {
+      "results": [
+        {
+          "id": "catalog",
+          "durationMs": 3050,
+          "exitCode": 0,
+          "devinModels": 66,
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1,
+              "GetCliModelConfigs": 1,
+              "GetCliTeamSettings": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetCliModelConfigs:200",
+              "GetCliTeamSettings:200"
+            ],
+            "blocked": [],
+            "catalog": {
+              "swe-2-medium": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              }
+            },
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": true
+        },
+        {
+          "id": "level-high",
+          "durationMs": 800,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "error"
+          ],
+          "responseUIDs": [
+            "swe-2-high"
+          ],
+          "usage": [
+            {
+              "input": 0,
+              "output": 0
+            }
+          ],
+          "tools": [],
+          "finalTextLength": 0,
+          "finalHasFive": false,
+          "errorMessage": "live-guard blocked: uid",
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200"
+            ],
+            "blocked": [
+              {
+                "reason": "uid",
+                "uid": "swe-2-high",
+                "method": "GetChatMessage"
+              }
+            ],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": false
+        }
+      ],
+      "mockRequests": 4,
+      "mockChats": [],
+      "allOAuthToken": true,
+      "ledgerHasSecret": false,
+      "openConnections": 0
+    },
+    "sidekickBlocked": {
+      "results": [
+        {
+          "id": "catalog",
+          "durationMs": 3057,
+          "exitCode": 0,
+          "devinModels": 66,
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1,
+              "GetCliModelConfigs": 1,
+              "GetCliTeamSettings": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetCliModelConfigs:200",
+              "GetCliTeamSettings:200"
+            ],
+            "blocked": [],
+            "catalog": {
+              "swe-2-high": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              }
+            },
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": true
+        },
+        {
+          "id": "fusion",
+          "durationMs": 1617,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "toolUse",
+            "toolUse",
+            "stop"
+          ],
+          "responseUIDs": [
+            "swe-2-high",
+            "swe-2-high",
+            "swe-2-high"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            },
+            {
+              "input": 3,
+              "output": 2
+            },
+            {
+              "input": 3,
+              "output": 2
+            }
+          ],
+          "tools": [
+            {
+              "tool": "devin_sidekick",
+              "isError": true
+            },
+            {
+              "tool": "add",
+              "isError": false,
+              "result": "5"
+            }
+          ],
+          "finalTextLength": 16,
+          "finalHasFive": true,
+          "ledger": {
+            "modelCalls": [
+              "swe-2-high",
+              "swe-2-high",
+              "swe-2-high"
+            ],
+            "modelStatuses": [
+              200,
+              200,
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 4
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200",
+              "GetUserStatus:200"
+            ],
+            "blocked": [
+              {
+                "reason": "uid",
+                "uid": "swe-2-medium",
+                "method": "GetChatMessage"
+              }
+            ],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 3,
+          "pass": false
+        }
+      ],
+      "mockRequests": 10,
+      "mockChats": [
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-high"
+      ],
+      "allOAuthToken": true,
+      "ledgerHasSecret": false,
+      "openConnections": 0
+    },
+    "budget": {
+      "results": [
+        {
+          "id": "catalog",
+          "durationMs": 3061,
+          "exitCode": 0,
+          "devinModels": 66,
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1,
+              "GetCliModelConfigs": 1,
+              "GetCliTeamSettings": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetCliModelConfigs:200",
+              "GetCliTeamSettings:200"
+            ],
+            "blocked": [],
+            "catalog": {
+              "swe-2-medium": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              },
+              "swe-2-high": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              }
+            },
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": true
+        },
+        {
+          "id": "add-tool",
+          "durationMs": 831,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "toolUse",
+            "error"
+          ],
+          "responseUIDs": [
+            "swe-2-medium",
+            "swe-2-medium"
+          ],
+          "usage": [
+            {
+              "input": 3,
+              "output": 2
+            },
+            {
+              "input": 0,
+              "output": 0
+            }
+          ],
+          "tools": [
+            {
+              "tool": "add",
+              "isError": false,
+              "result": "5"
+            }
+          ],
+          "finalTextLength": 0,
+          "finalHasFive": false,
+          "errorMessage": "live-guard blocked: budget",
+          "ledger": {
+            "modelCalls": [
+              "swe-2-medium"
+            ],
+            "modelStatuses": [
+              200
+            ],
+            "readCalls": {
+              "GetUserStatus": 2
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetUserStatus:200"
+            ],
+            "blocked": [
+              {
+                "reason": "budget",
+                "uid": "swe-2-medium",
+                "method": "GetChatMessage"
+              }
+            ],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 1,
+          "pass": false
+        }
+      ],
+      "mockRequests": 6,
+      "mockChats": [
+        "swe-2-medium"
+      ],
+      "allOAuthToken": true,
+      "ledgerHasSecret": false,
+      "openConnections": 0
+    },
+    "notFree": {
+      "results": [
+        {
+          "id": "catalog",
+          "durationMs": 3060,
+          "exitCode": 0,
+          "devinModels": 66,
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1,
+              "GetCliModelConfigs": 1,
+              "GetCliTeamSettings": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200",
+              "GetCliModelConfigs:200",
+              "GetCliTeamSettings:200"
+            ],
+            "blocked": [],
+            "catalog": {
+              "swe-2-medium": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_HIGH",
+                "promoActive": null,
+                "promoEnd": null
+              },
+              "swe-2-high": {
+                "present": true,
+                "disabled": false,
+                "costTier": "MODEL_COST_TIER_FREE",
+                "promoActive": null,
+                "promoEnd": null
+              }
+            },
+            "halted": [
+              {
+                "reason": "approved UID missing, disabled or not free tier",
+                "uids": [
+                  "swe-2-medium"
+                ]
+              }
+            ]
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": false
+        },
+        {
+          "id": "plain-medium",
+          "durationMs": 798,
+          "exitCode": 0,
+          "timedOut": false,
+          "invalidJsonLines": 0,
+          "agentSettled": 1,
+          "stopReasons": [
+            "error"
+          ],
+          "responseUIDs": [
+            "swe-2-medium"
+          ],
+          "usage": [
+            {
+              "input": 0,
+              "output": 0
+            }
+          ],
+          "tools": [],
+          "finalTextLength": 0,
+          "finalHasFive": false,
+          "errorMessage": "live-guard blocked: halted",
+          "ledger": {
+            "modelCalls": [],
+            "modelStatuses": [],
+            "readCalls": {
+              "GetUserStatus": 1
+            },
+            "readStatuses": [
+              "GetUserStatus:200"
+            ],
+            "blocked": [
+              {
+                "reason": "halted",
+                "uid": "swe-2-medium",
+                "method": "GetChatMessage"
+              }
+            ],
+            "catalog": null,
+            "halted": []
+          },
+          "stderrLines": 0,
+          "mockChatRequests": 0,
+          "pass": false
+        }
+      ],
+      "mockRequests": 4,
+      "mockChats": [],
+      "allOAuthToken": true,
+      "ledgerHasSecret": false,
+      "openConnections": 0
+    }
+  },
+  "checks": [
+    {
+      "key": "plan-all-cases-pass",
+      "pass": true,
+      "observed": [
+        [
+          "catalog",
+          true
+        ],
+        [
+          "devin-settings",
+          true
+        ],
+        [
+          "plain-medium",
+          true
+        ],
+        [
+          "level-high",
+          true
+        ],
+        [
+          "add-tool",
+          true
+        ],
+        [
+          "fusion",
+          true
+        ],
+        [
+          "session",
+          true
+        ]
+      ]
+    },
+    {
+      "key": "plan-model-calls-within-cap",
+      "pass": true,
+      "observed": [
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-high",
+        "swe-2-medium",
+        "swe-2-medium",
+        "swe-2-medium"
+      ]
+    },
+    {
+      "key": "plan-oauth-only",
+      "pass": true,
+      "observed": {
+        "requests": 127
+      }
+    },
+    {
+      "key": "non-approved-uid-not-sent",
+      "pass": true,
+      "observed": [
+        {
+          "reason": "uid",
+          "uid": "swe-2-high",
+          "method": "GetChatMessage"
+        }
+      ]
+    },
+    {
+      "key": "sidekick-uid-checked-before-send",
+      "pass": true,
+      "observed": {
+        "sent": [
+          "swe-2-high",
+          "swe-2-high",
+          "swe-2-high"
+        ],
+        "blocked": [
+          {
+            "reason": "uid",
+            "uid": "swe-2-medium",
+            "method": "GetChatMessage"
+          }
+        ]
+      }
+    },
+    {
+      "key": "global-cap-enforced",
+      "pass": true,
+      "observed": {
+        "sent": 1,
+        "blocked": [
+          {
+            "reason": "budget",
+            "uid": "swe-2-medium",
+            "method": "GetChatMessage"
+          }
+        ]
+      }
+    },
+    {
+      "key": "not-free-halts-before-inference",
+      "pass": true,
+      "observed": {
+        "halted": [
+          {
+            "reason": "approved UID missing, disabled or not free tier",
+            "uids": [
+              "swe-2-medium"
+            ]
+          }
+        ],
+        "sent": 0
+      }
+    },
+    {
+      "key": "api-key-env-not-inherited",
+      "pass": true,
+      "observed": []
+    },
+    {
+      "key": "no-secrets-in-ledgers",
+      "pass": true,
+      "observed": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "key": "mock-connections-closed",
+      "pass": true,
+      "observed": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "key": "socket-level-host-blocked",
+      "pass": true,
+      "observed": {
+        "stdout": "ELIVEGUARD",
+        "status": 0
+      }
+    },
+    {
+      "key": "dry-run-state-removed",
+      "pass": true,
+      "observed": {}
+    }
+  ],
+  "outcome": "pass",
+  "completedAt": "2026-10-23T07:08:42.035Z"
+}

@@ -23,7 +23,10 @@ const maxModelCalls = Number(required("PI_DEVIN_LIVE_MAX_MODEL_CALLS"));
 const requireFreeTier = process.env.PI_DEVIN_LIVE_REQUIRE_FREE_TIER === "1";
 if (!Number.isSafeInteger(maxModelCalls) || maxModelCalls < 0) throw new Error("live-guard: invalid PI_DEVIN_LIVE_MAX_MODEL_CALLS");
 if (allowedHosts.has("*")) throw new Error("live-guard: wildcard hosts are not allowed");
-const protobuf = await import(pathToFileURL(required("PI_DEVIN_LIVE_CODEC")).href);
+const codecPath = required("PI_DEVIN_LIVE_CODEC");
+const protobuf = await import(pathToFileURL(codecPath).href);
+// The codec returns Effect values; run them with the effect copy the codec itself loads.
+const { Effect } = await import(pathToFileURL(createRequire(codecPath).resolve("effect")).href);
 const MODELS_METHOD = "exa.api_server_pb.ApiServerService/GetCliModelConfigs";
 const FREE_TIER = "MODEL_COST_TIER_FREE";
 
@@ -36,11 +39,11 @@ function ledger() {
 }
 function chatModelUID(body) {
   const bytes = Buffer.from(body);
-  return protobuf.chatRequestCodec.decode(bytes[0] & 1 ? gunzipSync(bytes.subarray(5)) : bytes.subarray(5)).chatModelUid;
+  return Effect.runSync(protobuf.chatRequestCodec.decode(bytes[0] & 1 ? gunzipSync(bytes.subarray(5)) : bytes.subarray(5))).chatModelUid;
 }
 function inspectCatalog(bytes) {
   try {
-    const catalog = protobuf.unaryCodecs(MODELS_METHOD).response.decode(bytes);
+    const catalog = Effect.runSync(Effect.flatMap(protobuf.unaryCodecs(MODELS_METHOD), (codecs) => codecs.response.decode(bytes)));
     const configs = new Map((catalog.clientModelConfigs ?? []).map((config) => [config.modelUid, config]));
     const uids = Object.fromEntries([...allowedUIDs].map((uid) => {
       const config = configs.get(uid);

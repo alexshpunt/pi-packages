@@ -2,12 +2,12 @@ import { expect, test, vi } from "vitest";
 import { normalizeContext, type AssistantMessageEvent, type Context } from "@earendil-works/pi-ai";
 import { isRetryableAssistantError } from "@earendil-works/pi-ai/utils/retry";
 import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
-import { encodeFrame } from "../src/core/protocol/transport.ts";
-import { chatResponseCodec } from "../src/core/protocol/protobuf.ts";
+import { Effect } from "effect";
 import type { JsonObject } from "../src/core/types.ts";
-import { createDevinProvider } from "../src/pi/provider.ts";
-import { memoryAccountUsageStore } from "../src/pi/usage-store.ts";
-import { errorStreamResponse, finalFrames, STATUS_METHOD, statusResponse, streamResponse, unaryResponse } from "./helpers.ts";
+import { memoryUsageStore } from "../src/pi/features/settings/service.ts";
+import type { DevinProvider } from "../src/pi/adapters/pi/types.ts";
+import { makeTestProvider, type TestProvider } from "./extension-harness.ts";
+import { encodeResponse, errorStreamResponse, finalFrames, frameBytes, runSync, STATUS_METHOD, statusResponse, streamResponse, unaryResponse } from "./helpers.ts";
 import { extendedCacheCatalog, providerCredential, providerFixture, providerHostCredential } from "./provider-fixture.ts";
 
 const context = (): Context => ({ systemPrompt: "Current Pi prompt", messages: [{ role: "user", content: "hello", timestamp: 1 }] });
@@ -68,7 +68,7 @@ test("provider UID, payload replacement, headers, signatures and usage provenanc
     expect(assistant.signature).toBe("opaque-native-signature"); expect(assistant.signatureType).toBe("fixture-signature");
     expect(assistant.thinkingId).toBe("thinking-id"); expect(assistant.thinking).toBe("thinking");
     expect(fixture.fingerprintCollections()).toBe(1);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("current system/tool changes and user and tool-result images are kept in the final protobuf", async () => {
@@ -92,44 +92,44 @@ test("current system/tool changes and user and tool-result images are kept in th
     expect((prompts[2].images as JsonObject[])[0].base64Data).toBe(image.data);
     expect((prompts[1].toolCalls as JsonObject[])[0].id).toBe("keep-tool-id"); expect(prompts[2].toolCallId).toBe("keep-tool-id");
     expect(prompts.every((prompt) => prompt.promptCacheOptions === undefined)).toBe(true);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("a failed partial tool and a truncated stream do not become success and content events are closed", async () => {
   for (const response of [
     errorStreamResponse("internal", "failed after partial", [{ deltaText: "PARTIAL", deltaToolCalls: [{ id: "call", name: "current", argumentsJson: '{"x":1}' }] }]),
-    new Response(new Uint8Array(encodeFrame(chatResponseCodec.encode({ deltaText: "truncated" }))), { headers: { "content-type": "application/connect+proto" } }),
+    new Response(new Uint8Array(frameBytes(encodeResponse({ deltaText: "truncated" }))), { headers: { "content-type": "application/connect+proto" } }),
   ]) {
     const fixture = await providerFixture({ chat: () => response });
     try {
       const { events, result } = await collect(fixture.provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
       balanced(events); expect(result.stopReason).toBe("error"); expect(fixture.chatCalls()).toBe(1);
-    } finally { fixture.provider.shutdown(); }
+    } finally { fixture.shutdown(); }
   }
 });
 
 test("the fixed 8-call budget is not reset at host retry boundaries and blocks before sending", async () => {
   const fixture = await providerFixture({ chat: () => Response.json({}, { status: 429 }) });
-  fixture.provider.lifecycle.begin("agent"); fixture.provider.lifecycle.agentStarted();
+  runSync(fixture.runs.begin("agent")); runSync(fixture.runs.agentStarted);
   try {
     for (let i = 0; i < 9; i++) {
-      if (i) fixture.provider.lifecycle.agentStarted();
+      if (i) runSync(fixture.runs.agentStarted);
       const { result } = await collect(fixture.provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
       expect(result.stopReason).toBe("error");
       if (i === 8) expect(result.errorMessage!).toMatch(/all 8 Devin model HTTP requests/);
     }
     expect(fixture.chatCalls()).toBe(8);
-    const state = fixture.provider.lifecycle.snapshot(); expect(state.execution?.used).toBe(8);
+    const state = runSync(fixture.runs.snapshot); expect(state.execution?.used).toBe(8);
     const bodies = fixture.requests.filter((request) => request.method === CHAT_METHOD).map((request) => request.body);
     expect(new Set(bodies.map((body) => body.executionId)).size).toBe(1);
     expect(new Set(bodies.map((body) => body.cascadeId)).size).toBe(1);
     expect((bodies[0].trajectoryReference as JsonObject).stepType).toBe("CORTEX_STEP_TYPE_USER_INPUT");
     expect((bodies[1].trajectoryReference as JsonObject).stepType).toBe(undefined);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 const socketError = (message: string, code: string) => () => Promise.reject(Object.assign(new Error(message), { code }));
-const withoutEndStream = () => new Response(new Uint8Array(encodeFrame(chatResponseCodec.encode({ deltaText: "partial" }))), { headers: { "content-type": "application/connect+proto" } });
+const withoutEndStream = () => new Response(new Uint8Array(frameBytes(encodeResponse({ deltaText: "partial" }))), { headers: { "content-type": "application/connect+proto" } });
 for (const [name, chat, retryable] of [
   ["a refused connection", socketError("connect ECONNREFUSED 35.223.238.178:443", "ECONNREFUSED"), true],
   ["a reset connection", socketError("read ECONNRESET", "ECONNRESET"), true],
@@ -147,7 +147,7 @@ for (const [name, chat, retryable] of [
     expect(result.stopReason).toBe("error");
     expect(result.errorMessage!.startsWith("Connection error (")).toBe(retryable);
     if (retryable) expect(isRetryableAssistantError(result)).toBe(true);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("the account check runs before every request outside Pi's credential lock, and refresh no longer repeats it", async () => {
@@ -164,7 +164,7 @@ test("the account check runs before every request outside Pi's credential lock, 
     // Pi calls refresh under the shared auth.json lock once the check interval passes; a process that already checked does not wait on the network.
     await fixture.provider.auth.oauth!.refresh(providerHostCredential, new AbortController().signal);
     expect(statusCalls()).toBe(2);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("the quota is shared between Pi processes for the same credential, newest first, and never shown for another credential or after logout", async () => {
@@ -175,34 +175,34 @@ test("the quota is shared between Pi processes for the same credential, newest f
     return unaryResponse(STATUS_METHOD, body);
   } });
   // One store stands for the shared file; each provider stands for a separate Pi process such as a subagent.
-  const store = memoryAccountUsageStore(), clock = { now: 1_000 }, providers: ReturnType<typeof createDevinProvider>[] = [];
+  const store = memoryUsageStore(), clock = { now: 1_000 }, providers: TestProvider[] = [];
   const refresh = (credential: typeof providerHostCredential | undefined) => ({ credential, allowNetwork: credential !== undefined, force: true,
     signal: new AbortController().signal, publish: async (value: { update?: () => void }) => { value.update?.(); return true; } });
   const open = async (credential = providerHostCredential) => {
     let notices = 0;
-    const provider = createDevinProvider({ ...fixture.dependencies, accountUsage: store, now: () => clock.now, onAccountUsage: () => { notices++; } });
-    providers.push(provider);
-    await provider.refreshModels(refresh(credential));
-    return { provider, notices: () => notices };
+    const opened = makeTestProvider({ ...fixture.dependencies, accountUsage: store, now: () => clock.now, onAccountUsage: () => Effect.sync(() => { notices++; }) });
+    providers.push(opened);
+    await opened.provider.refreshModels(refresh(credential));
+    return { provider: opened.provider, usage: opened.accountUsage, notices: () => notices };
   };
-  const ask = (provider: ReturnType<typeof createDevinProvider>) => collect(provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
+  const ask = (provider: DevinProvider) => collect(provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
   try {
     const lead = await open(), child = await open();
-    expect(lead.provider.getAccountUsage()).toBe(undefined);
+    expect(lead.usage()).toBe(undefined);
     // A request in another process records the quota; the lead shows it without sending a request itself.
     expect((await ask(child.provider)).result.stopReason).toBe("stop");
-    expect(lead.provider.getAccountUsage()?.dailyRemainingPercent).toBe(90);
+    expect(lead.usage()?.dailyRemainingPercent).toBe(90);
     const leadNotices = lead.notices();
     clock.now = 2_000;
     expect((await ask(lead.provider)).result.stopReason).toBe("stop");
     expect(lead.notices()).toBeGreaterThan(leadNotices);
-    expect([lead.provider.getAccountUsage()?.dailyRemainingPercent, child.provider.getAccountUsage()?.dailyRemainingPercent]).toStrictEqual([89, 89]);
+    expect([lead.usage()?.dailyRemainingPercent, child.usage()?.dailyRemainingPercent]).toStrictEqual([89, 89]);
     // Another credential never sees this quota, and logout hides it.
     const other = await open({ ...providerHostCredential, access: "another-fake-session" });
-    expect(other.provider.getAccountUsage()).toBe(undefined);
+    expect(other.usage()).toBe(undefined);
     await lead.provider.refreshModels(refresh(undefined));
-    expect(lead.provider.getAccountUsage()).toBe(undefined);
-  } finally { for (const provider of [fixture.provider, ...providers]) provider.shutdown(); }
+    expect(lead.usage()).toBe(undefined);
+  } finally { for (const opened of [fixture, ...providers]) opened.shutdown(); }
 });
 
 test("an unreachable first account check fails the request with a retryable connection error", async () => {
@@ -212,7 +212,7 @@ test("an unreachable first account check fails the request with a retryable conn
     expect(result.errorMessage).toBe("Connection error (connect ECONNREFUSED 127.0.0.1:9)");
     expect(isRetryableAssistantError(result)).toBe(true);
     expect(fixture.chatCalls()).toBe(0);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 for (const timeoutMs of [undefined, 5000]) test(`provider ${timeoutMs ?? "default 90000"}ms limit ends the final fetch signal`, async (context) => {
@@ -228,7 +228,7 @@ for (const timeoutMs of [undefined, 5000]) test(`provider ${timeoutMs ?? "defaul
   try {
     const { result } = await collect(fixture.provider.streamSimple(fixture.model, normalizeContext({ messages: [{ role: "user", content: "timeout", timestamp: 1 }] }), { apiKey: providerCredential.sessionToken, reasoning: "medium", timeoutMs }));
     expect(result.stopReason).toBe("error"); expect(result.errorMessage!).toMatch(new RegExp(String(expected)));
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("even an uncooperative provider event observer ends on caller cancel and makes no further request", async () => {
@@ -239,7 +239,7 @@ test("even an uncooperative provider event observer ends on caller cancel and ma
       onProviderStreamEvent: () => { controller.abort(); return new Promise(() => {}); },
     }));
     balanced(events); expect(result.stopReason).toBe("aborted"); expect(fixture.chatCalls()).toBe(1);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
 });
 
 test("payload identity changes and missing permission fail before the inference request", async () => {
@@ -249,12 +249,12 @@ test("payload identity changes and missing permission fail before the inference 
       apiKey: providerCredential.sessionToken, reasoning: "medium", onPayload: (value) => ({ ...(value as JsonObject), cascadeId: "replacement" }),
     }).result();
     expect(result.stopReason).toBe("error"); expect(fixture.chatCalls()).toBe(0);
-  } finally { fixture.provider.shutdown(); }
+  } finally { fixture.shutdown(); }
   const denied = await providerFixture({ status: { userStatus: { userId: "offline-user-id", planStatus: { planInfo: { devinInfo: { canUseCli: false } } } } } });
   try {
     const result = await denied.provider.streamSimple(denied.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }).result();
     expect(result.stopReason).toBe("error"); expect(result.errorMessage!).toMatch(/may use the CLI/); expect(denied.chatCalls()).toBe(0);
-  } finally { denied.provider.shutdown(); }
+  } finally { denied.shutdown(); }
 });
 
 test("prompt cache: by default only user and tool results are marked EPHEMERAL, and long is sent only for 24h catalog models", async () => {
@@ -287,7 +287,7 @@ test("prompt cache: by default only user and tool results are marked EPHEMERAL, 
     } finally {
       if (previousEnv === undefined) delete process.env.PI_CACHE_RETENTION; else process.env.PI_CACHE_RETENTION = previousEnv;
     }
-  } finally { plain.provider.shutdown(); }
+  } finally { plain.shutdown(); }
   const extended = await providerFixture({ catalog: extendedCacheCatalog });
   try {
     expect(extended.model.id).toMatch(/^gpt-5.6-sol/);
@@ -297,5 +297,5 @@ test("prompt cache: by default only user and tool results are marked EPHEMERAL, 
     expect(body.chatModelUid).toBe("gpt-5-6-sol-medium");
     expect(marks(body)).toStrictEqual(expected);
     expect("systemPromptCacheOptions" in body).toBe(false);
-  } finally { extended.provider.shutdown(); }
+  } finally { extended.shutdown(); }
 });

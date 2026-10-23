@@ -336,7 +336,7 @@ async function scenarioHelp(scenario) {
   if (isArtifactRun) {
     // Negative control: reading the source runtime must be refused under the same sandbox profile.
     const probe = spawn("/usr/bin/sandbox-exec", ["-f", env.profile, nodePath, "-e",
-      "try { require('node:fs').readFileSync(process.argv[1]); console.log('readable'); } catch (error) { console.log(error.code); }", join(sourceRoot, "src/pi/provider.ts")],
+      "try { require('node:fs').readFileSync(process.argv[1]); console.log('readable'); } catch (error) { console.log(error.code); }", join(sourceRoot, "src/pi/adapters/pi/provider.ts")],
       { cwd: env.work, env: childEnv(env), stdio: ["ignore", "pipe", "pipe"] });
     let output = "";
     probe.stdout.on("data", (chunk) => { output += chunk; });
