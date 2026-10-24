@@ -1,14 +1,20 @@
-import { readFile } from "node:fs/promises";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { excerptDiffText } from "./excerpt.js";
-import { notify } from "./notify.js";
-import { parseSettingsDocument, type SettingsDocument, type SettingsScope } from "./settings.js";
-import { onOff, type RedactStatus, statusLines } from "./status.js";
-import { AnalyticsPanel, type AnalyticsReader } from "./ui/analytics-panel.js";
-import { errorText } from "./ui/common.js";
-import { CustomPanel, type CustomTarget } from "./ui/custom-panel.js";
-import { RedactPanel } from "./ui/redact-panel.js";
-import type { MaskPreview } from "./ui/try-panel.js";
+import { Effect } from "effect";
+import type { AnalyticsReader } from "../analytics.js";
+import { excerptDiffText } from "../excerpt.js";
+import type { MaskPreview } from "../masking-session.js";
+import { errorText, notify } from "../notify.js";
+import {
+  type CustomTarget,
+  parseSettingsDocument,
+  readSettingsTextEffect,
+  type SettingsDocument,
+  type SettingsScope,
+} from "../settings.js";
+import { onOff, type RedactStatus, statusLines } from "../status.js";
+import { AnalyticsPanel } from "../ui/analytics-panel.js";
+import { CustomPanel } from "../ui/custom-panel.js";
+import { RedactPanel } from "../ui/redact-panel.js";
 
 export const REDACT_COMMAND = "redact";
 export const CUSTOM_COMMAND = "redact-custom";
@@ -73,12 +79,7 @@ async function editSettingsText(
   controller: RedactController,
   target: CustomTarget,
 ): Promise<void> {
-  let text: string;
-  try {
-    text = await readFile(target.path, "utf8");
-  } catch {
-    text = "{}\n";
-  }
+  let text = await Effect.runPromise(readSettingsTextEffect(target.path));
   for (;;) {
     const edited = await ctx.ui.editor(`pi-redact settings: ${target.path}`, text);
     if (edited === undefined) return;

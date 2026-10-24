@@ -42,7 +42,8 @@
     "prepack": "tsc"
   },
   "dependencies": {
-    "@buyong/redact": "workspace:*"
+    "@buyong/redact": "workspace:*",
+    "effect": "4.0.6"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
