@@ -12,26 +12,19 @@ import {
 } from "@buyong/redact";
 import { getSettingsListTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import { type Component, type Focusable, type SettingItem, SettingsList } from "@earendil-works/pi-tui";
+import type { MaskPreview } from "../masking-session.js";
+import { errorText } from "../notify.js";
 import {
+  type CustomTarget,
   EMPTY_SETTINGS_DOCUMENT,
   type SettingsDocument,
-  type SettingsFileState,
   type SettingsScope,
   SWITCHABLE_RULE_IDS,
 } from "../settings.js";
-import { errorText, messageLines, type PanelMessage, paragraph, title } from "./common.js";
+import { messageLines, type PanelMessage, paragraph, title } from "./common.js";
 import { ListEditor } from "./list-editor.js";
 import { SwitchList } from "./switch-list.js";
-import { type MaskPreview, TryPanel } from "./try-panel.js";
-
-/** One settings file the page can edit. */
-export interface CustomTarget {
-  readonly scope: SettingsScope;
-  readonly path: string;
-  readonly file: SettingsFileState;
-  /** Why the file cannot be edited here; absent when it can. */
-  readonly unavailableReason?: string;
-}
+import { TryPanel } from "./try-panel.js";
 
 export interface CustomPanelActions {
   /** The global target first, then the project target. */

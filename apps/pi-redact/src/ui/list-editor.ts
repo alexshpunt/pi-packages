@@ -8,7 +8,8 @@ import {
   SelectList,
   truncateToWidth,
 } from "@earendil-works/pi-tui";
-import { errorText, hint, messageLines, type PanelMessage, paragraph, title } from "./common.js";
+import { errorText } from "../notify.js";
+import { hint, messageLines, type PanelMessage, paragraph, title } from "./common.js";
 
 export interface FormField {
   readonly label: string;

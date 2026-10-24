@@ -60,6 +60,14 @@ export interface AnalyticsSummary {
   readonly rules: readonly (readonly [ruleId: string, records: number])[];
 }
 
+/** UI-facing record operations; the session adapter supplies their synchronous boundary. */
+export interface AnalyticsReader {
+  list(scope: AnalyticsScope, limit: number): readonly RecordSummary[];
+  summarize(scope: AnalyticsScope): AnalyticsSummary;
+  get(id: number): StoredRecord | undefined;
+  clear(scope: AnalyticsScope): number;
+}
+
 const SOURCES: readonly RedactionSource[] = ["tool result", "model request", "compaction", "branch summary"];
 
 /**

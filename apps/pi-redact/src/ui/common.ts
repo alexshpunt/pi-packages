@@ -6,10 +6,6 @@ export interface PanelMessage {
   readonly isError: boolean;
 }
 
-export function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 /** Text wrapped to `width` with a one-column left margin, as Pi's own panels indent their text. */
 export function paragraph(text: string, width: number): string[] {
   const inner = Math.max(1, width - 1);
