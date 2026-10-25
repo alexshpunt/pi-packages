@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-25
+
 ### 달라진 것
 
 - Pi에서 사용자 메시지 하나가 보낼 수 있는 모델 요청 수를 더 이상 제한하지 않습니다. 이전에는 도구 후속 요청, 재시도, 자동 압축을 포함해 기본 8번 요청한 뒤 `Used all 8 Devin model HTTP requests in the budget.` 오류로 멈췄습니다. `PI_DEVIN_MAX_MODEL_CALLS`를 없앴으며 설정해도 무시합니다. `/devin`도 더 이상 실행 예산을 보여 주지 않습니다. 이전 버전에서 저장한 세션도 그대로 쓸 수 있습니다. 함께 배포하는 CLI의 `--max-model-calls` 옵션은 바뀌지 않습니다.

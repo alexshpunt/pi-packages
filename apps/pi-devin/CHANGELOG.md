@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-25
+
 ### Improved
 
 - Pi no longer limits how many model requests one user message may send. Before, a message stopped with `Used all 8 Devin model HTTP requests in the budget.` after 8 requests by default, counting tool follow-ups, retries and auto-compaction. `PI_DEVIN_MAX_MODEL_CALLS` is removed and ignored, and `/devin` no longer shows the run budget. Sessions saved by earlier versions keep working. The `--max-model-calls` option of the bundled CLI is unchanged.
