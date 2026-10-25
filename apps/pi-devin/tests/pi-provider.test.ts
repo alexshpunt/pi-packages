@@ -108,18 +108,16 @@ test("a failed partial tool and a truncated stream do not become success and con
   }
 });
 
-test("the fixed 8-call budget is not reset at host retry boundaries and blocks before sending", async () => {
+test("host retries stay in one run and no request limit stops them", async () => {
   const fixture = await providerFixture({ chat: () => Response.json({}, { status: 429 }) });
   runSync(fixture.runs.begin("agent")); runSync(fixture.runs.agentStarted);
   try {
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 12; i++) {
       if (i) runSync(fixture.runs.agentStarted);
       const { result } = await collect(fixture.provider.streamSimple(fixture.model, normalizeContext(context()), { apiKey: providerCredential.sessionToken, reasoning: "medium" }));
       expect(result.stopReason).toBe("error");
-      if (i === 8) expect(result.errorMessage!).toMatch(/all 8 Devin model HTTP requests/);
     }
-    expect(fixture.chatCalls()).toBe(8);
-    const state = runSync(fixture.runs.snapshot); expect(state.execution?.used).toBe(8);
+    expect(fixture.chatCalls()).toBe(12);
     const bodies = fixture.requests.filter((request) => request.method === CHAT_METHOD).map((request) => request.body);
     expect(new Set(bodies.map((body) => body.executionId)).size).toBe(1);
     expect(new Set(bodies.map((body) => body.cascadeId)).size).toBe(1);

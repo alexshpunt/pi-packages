@@ -16,11 +16,6 @@ export class RequestTimeout extends Data.TaggedError("RequestTimeout")<{ readonl
   override get name(): string { return "TimeoutError"; }
 }
 
-export class ModelBudgetError extends Data.TaggedError("ModelBudgetError")<{ readonly limit: number }> {
-  override get message(): string { return `Used all ${this.limit} Devin model HTTP requests in the budget.`; }
-  override get name(): string { return "ModelBudgetError"; }
-}
-
 export type RPCFailureKind = "authentication" | "permission" | "rate_limit" | "timeout" | "rpc";
 
 function rpcFailureKind(code: string, httpStatus: number | undefined): RPCFailureKind {
@@ -59,9 +54,9 @@ export class RPCError extends Data.TaggedError("RPCError")<{
   get kind(): RPCFailureKind { return rpcFailureKind(this.code, this.httpStatus); }
 }
 
-export type DevinFailure = DevinError | Cancelled | RequestTimeout | ModelBudgetError | RPCError;
+export type DevinFailure = DevinError | Cancelled | RequestTimeout | RPCError;
 
-const FAILURE_TAGS = new Set(["DevinError", "Cancelled", "RequestTimeout", "ModelBudgetError", "RPCError"]);
+const FAILURE_TAGS = new Set(["DevinError", "Cancelled", "RequestTimeout", "RPCError"]);
 
 export function isDevinFailure(value: unknown): value is DevinFailure {
   return value instanceof Error && Predicate.hasProperty(value, "_tag") && FAILURE_TAGS.has(value._tag as string);
@@ -109,7 +104,6 @@ export function failureDetails(error: unknown): Record<string, unknown> {
     case "RequestTimeout": return { category: "timeout", code: "deadline_exceeded" };
     case "Cancelled": return { category: "cancelled" };
     case "DevinError": return failure.code !== undefined && NETWORK_CODES.test(failure.code) ? { category: "network", code: failure.code } : { category: "error" };
-    case "ModelBudgetError": return { category: "error" };
   }
 }
 

@@ -22,7 +22,7 @@ import { UsageStatus } from "./usage-status.ts";
 /**
  * Registers one extension instance: its runtime, the provider, and, for the lead, the sidekick tool, `/devin` and `/devin-fusion`.
  * Pi's event handlers run their effects synchronously and return after the services finished, so the next event sees the result.
- * A failed layer build (for example an invalid request budget) throws here, before anything is registered.
+ * A failed layer build throws here, before anything is registered.
  */
 export function registerDevinExtension(pi: ExtensionAPI, environment: Layer.Layer<ExtensionEnvironment>): DevinExtension {
   const runtime = makeExtensionRuntime(environment, PiSidekickHost(pi));

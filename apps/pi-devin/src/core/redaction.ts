@@ -29,6 +29,5 @@ export function redactFailure(failure: DevinFailure, secrets: readonly string[])
     });
     case "Cancelled": return new Cancelled({ message: safeError(failure, secrets) });
     case "RequestTimeout": return new RequestTimeout({ message: safeError(failure, secrets) });
-    case "ModelBudgetError": return failure;
   }
 }

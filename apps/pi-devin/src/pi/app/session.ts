@@ -14,7 +14,7 @@ export const attachSession = (binding: SessionBinding) => Effect.gen(function* (
 
 /**
  * Stops the provider's work. The lifetime ends first, so running requests stop with its reason rather than an interruption;
- * an unfinished run budget stays in the session's checkpoint. The extension instance and its runtime stay usable.
+ * an unfinished run stays in the session's checkpoint. The extension instance and its runtime stay usable.
  */
 export const shutdownProvider = Effect.gen(function* () {
   const clients = yield* DevinClients;

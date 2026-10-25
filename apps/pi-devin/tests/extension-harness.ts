@@ -44,7 +44,6 @@ import { identity, transportOf, type TransportChoice } from "./helpers.ts";
 export interface TestOptions extends TransportChoice {
   /** Replaces the provider's transport outright, for example to count connection pools. */
   transport?: HttpTransportShape;
-  maxModelCalls?: number;
   /** `/login` endpoints, and a fetch for its code exchanges; without one, sign-in uses the provider's transport choice. */
   loginOptions?: LoginSettings & { fetch?: typeof fetch };
   /** Device values for request fingerprints. Defaults to fixed offline values. */
@@ -64,7 +63,7 @@ export function testEnvironment(options: TestOptions = {}): Layer.Layer<Extensio
   const { fetch: loginFetch, ...login } = options.loginOptions ?? {};
   return Layer.mergeAll(
     Layer.succeed(ExtensionConfig, {
-      maxModelCalls: options.maxModelCalls, now: options.now ?? Date.now, isFusionChild: options.isFusionChild === true, login,
+      now: options.now ?? Date.now, isFusionChild: options.isFusionChild === true, login,
       agentDir: options.sidekick?.agentDir ?? (() => "/unused-agent-dir"),
     }),
     Layer.succeed(HttpTransport, options.transport ?? transportOf(options)),

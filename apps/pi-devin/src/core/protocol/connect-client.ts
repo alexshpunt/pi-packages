@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { Effect, Exit, Fiber, Predicate, Scope, Stream } from "effect";
 import { HttpBody, HttpClientRequest, type HttpClient, type HttpClientResponse } from "effect/http";
-import { guardAll, makeCancellation, startDeadline, type Cancellation } from "../cancellation.ts";
+import { guardAll, makeCancellation, startDeadline, startIdleDeadline, type Cancellation } from "../cancellation.ts";
 import { Cancelled, isAuthenticationError, RPCError, toDevinError, type DevinError, type DevinFailure } from "../errors.ts";
 import { redactFailure, requestSecrets, safeError } from "../redaction.ts";
 import type { JsonObject } from "../types.ts";
@@ -47,6 +47,7 @@ export interface StreamRequestContext {
 export interface ConnectClientOptions {
   baseURL: string;
   token?: string;
+  /** A unary call must finish within it; a stream fails after this long without data. Defaults to 90000ms. */
   timeoutMs?: number;
   compressionThresholdBytes?: number;
   trace?: () => string;
@@ -225,7 +226,8 @@ export function makeConnectClient(options: ConnectClientOptions): Effect.Effect<
       for (const value of Object.values(context.headers ?? {})) if (value) secrets.push(value);
       const frames = Stream.unwrap(Effect.gen(function* () {
         yield* assertAuthenticated;
-        const deadline = yield* startDeadline(timeoutMs);
+        // A stream may answer for a long time; it ends only after `timeoutMs` without data, like Pi's idle HTTP timeout.
+        const deadline = yield* startIdleDeadline(timeoutMs);
         const guard = guardAll([deadline, lifetime]);
         const opened = guard(Effect.gen(function* () {
           let payload = body;
@@ -240,7 +242,7 @@ export function makeConnectClient(options: ConnectClientOptions): Effect.Effect<
             yield* discardResponse(response);
             return yield* failWith("Unsupported Connect response compression.");
           }
-          return decodeFrames(responseChunks(response), { compression }).pipe(Stream.mapEffect((frame) => Effect.gen(function* () {
+          return decodeFrames(responseChunks(response).pipe(Stream.tap(() => deadline.touch)), { compression }).pipe(Stream.mapEffect((frame) => Effect.gen(function* () {
             if (context.onFrame) yield* context.onFrame(frame);
             if (frame.isEnd && frame.data.error) {
               const error = yield* object(frame.data.error, "EndStream error");

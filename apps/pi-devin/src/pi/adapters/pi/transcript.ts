@@ -50,6 +50,8 @@ export function attachReplayMetadata(output: AssistantMessage, message: ChatMess
   }
 }
 
+const NON_VISION_USER_IMAGE_PLACEHOLDER = "(image omitted: model does not support images)";
+const NON_VISION_TOOL_IMAGE_PLACEHOLDER = "(tool image omitted: model does not support images)";
 const SCHEMA_MAPS = new Set(["properties", "patternProperties", "$defs", "definitions", "dependentSchemas"]);
 const SCHEMA_DATA = new Set(["enum", "const", "default", "examples", "example"]);
 
@@ -129,12 +131,16 @@ function inputMessage(message: Exclude<ContextMessage, { role: "assistant" | "sy
       messageId: randomUUID(), source: message.role === "toolResult" ? "CHAT_MESSAGE_SOURCE_TOOL" : "CHAT_MESSAGE_SOURCE_USER", prompt: "",
       ...(message.role === "toolResult" ? { toolCallId: message.toolCallId, toolResultIsError: message.isError } : {}),
     };
-    let imageBytes = 0;
+    let imageBytes = 0, isAfterPlaceholder = false;
     const content = typeof message.content === "string" ? [{ type: "text" as const, text: message.content }] : message.content;
     for (const block of content) {
-      if (block.type === "text") result.prompt += block.text;
-      else {
-        if (!model.supportsImages) return yield* failWith("This model does not support images in history or tool results.");
+      if (block.type === "text") {
+        result.prompt += block.text; isAfterPlaceholder = false;
+      } else if (!model.supportsImages) {
+        // Like Pi's own providers: a text-only model gets a note instead, so earlier images do not stop the conversation.
+        if (!isAfterPlaceholder) result.prompt += message.role === "toolResult" ? NON_VISION_TOOL_IMAGE_PLACEHOLDER : NON_VISION_USER_IMAGE_PLACEHOLDER;
+        isAfterPlaceholder = true;
+      } else {
         const converted = yield* imageFromBase64(block.data, block.mimeType);
         imageBytes += converted.sizeBytes;
         if (imageBytes > MAX_IMAGES_BYTES) return yield* failWith(`Images in one message must total at most ${MAX_IMAGES_BYTES} bytes.`);
@@ -149,13 +155,16 @@ function inputMessage(message: Exclude<ContextMessage, { role: "assistant" | "sy
 export function toDevinTranscript(context: TranscriptContext, model: ModelInfo): Effect.Effect<DevinTranscript, DevinError> {
   return Effect.gen(function* () {
     const tools = yield* toolDeclarations(context, model);
-    const failedCalls = new Set(context.messages.flatMap((message) => message.role === "assistant" && ["error", "aborted"].includes(message.stopReason)
-      ? message.content.filter((block) => block.type === "toolCall").map((block) => block.id) : []));
+    // Results follow their assistant, so only the calls of the latest failed assistant are skipped. A later failure that
+    // reuses an earlier call ID leaves the earlier result in place.
+    let failedCalls = new Set<string>();
     const messages: ChatMessage[] = [];
     for (const message of context.messages) {
       if (message.role === "system") continue;
       if (message.role === "assistant") {
-        if (message.stopReason === "error" || message.stopReason === "aborted") continue;
+        const isFailed = message.stopReason === "error" || message.stopReason === "aborted";
+        failedCalls = new Set(isFailed ? message.content.filter((block) => block.type === "toolCall").map((block) => block.id) : []);
+        if (isFailed) continue;
         if (message.stopReason === "pending") return yield* failWith("An unfinished assistant response cannot be sent as Devin history.");
         messages.push(yield* assistantMessage(message));
         continue;
