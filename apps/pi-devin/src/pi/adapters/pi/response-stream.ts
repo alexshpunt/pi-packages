@@ -132,10 +132,18 @@ export class DevinResponseStream {
       if (this.hasTerminated) return;
       if (!this.message.content.length && (result.message.signature || result.message.geminiThoughtSignature || result.message.outputId)) this.text("text", "");
       this.provenance(result.message, result.usageReported);
+      // Pi runs no call whose arguments are invalid, reports the error to the model and lets it call again.
+      for (const [id, error] of Object.entries(result.toolArgumentErrors)) {
+        const state = this.tools.get(id);
+        if (!state) continue;
+        const block = this.message.content[state.index] as ToolCall;
+        block.arguments = {}; block.argumentsError = error;
+      }
       this.closeContent();
       this.hasTerminated = true;
       this.message.rawStopReason = result.stopReason;
-      this.message.stopReason = result.message.toolCalls?.length ? "toolUse" : result.stopReason === "STOP_REASON_MAX_TOKENS" ? "length" : "stop";
+      // At the output limit Pi runs none of the calls, since their arguments may be cut off, and asks the model to repeat them.
+      this.message.stopReason = result.stopReason === "STOP_REASON_MAX_TOKENS" ? "length" : result.message.toolCalls?.length ? "toolUse" : "stop";
       this.stream.push({ type: "done", reason: this.message.stopReason, message: this.message });
       this.stream.end(this.message);
     });

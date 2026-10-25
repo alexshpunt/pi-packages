@@ -13,11 +13,40 @@ const COPIED_STRINGS = [
 ] as const;
 const USAGE_FIELDS = [["inputTokens", "input"], ["outputTokens", "output"], ["cacheReadTokens", "cacheRead"], ["cacheWriteTokens", "cacheWrite"]] as const;
 
+const SERVER_JSON_ERROR = "The server reported a tool argument JSON error.";
+
+/**
+ * Fails when a finished result has a call that must not run: arguments that are not a JSON object, or calls cut off at the output limit.
+ * The CLI runs tools itself and uses this; Pi reports such calls back to the model instead.
+ */
+export function assertRunnableToolCalls(result: ChatResult): Effect.Effect<void, DevinError> {
+  return Effect.gen(function* () {
+    for (const call of result.message.toolCalls ?? []) {
+      const error = result.toolArgumentErrors[call.id];
+      if (error) return yield* failWith(error.startsWith(SERVER_JSON_ERROR) ? SERVER_JSON_ERROR : `Arguments of tool ${call.name} are not valid JSON.`);
+    }
+    if (result.message.toolCalls?.length && !COMPLETE_STOP_REASONS.has(result.stopReason)) return yield* failWith("Tool calls and the stop reason do not match.");
+  });
+}
+
+/** Pi's wording for arguments that are not a JSON object: the problem, then the text the model sent. */
+function argumentsError(call: ToolCall): string | undefined {
+  try {
+    const value = JSON.parse(call.argumentsJson) as unknown;
+    if (Predicate.isObject(value) && !Array.isArray(value)) return undefined;
+    return `Tool arguments must be a JSON object\n\nReceived arguments:\n${call.argumentsJson}`;
+  } catch (error) {
+    return `${error instanceof Error ? error.message : String(error)}\n\nReceived arguments:\n${call.argumentsJson}`;
+  }
+}
+
 /** Attaches argument deltas without an ID to the call that started with the first ID. Ambiguous parallel deltas are rejected. */
 export class ChatAccumulator {
   readonly message: ChatMessage = { messageId: "", source: "CHAT_MESSAGE_SOURCE_SYSTEM", prompt: "" };
   readonly usage: Usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 };
   readonly calls = new Map<string, ToolCall>();
+  /** Calls the server marked as invalid JSON. Their arguments are reported, never parsed into a runnable call. */
+  private readonly serverArgumentErrors = new Set<string>();
   private currentCall?: ToolCall;
   private hasEnded = false;
   private readonly startedAt = performance.now();
@@ -98,7 +127,7 @@ export class ChatAccumulator {
         }
         const call = self.currentCall!;
         if (delta.isCustomToolCall) return yield* failWith("Grammar-based custom tools are not supported.");
-        if (delta.invalidJsonErr || delta.invalidJsonStr) return yield* failWith("The server reported a tool argument JSON error.");
+        if (delta.invalidJsonErr || delta.invalidJsonStr) self.serverArgumentErrors.add(call.id);
         if (Predicate.isString(delta.name)) call.name += delta.name;
         if (Predicate.isString(delta.argumentsJson)) call.argumentsJson += delta.argumentsJson;
       }
@@ -112,23 +141,17 @@ export class ChatAccumulator {
       if (!COMPLETE_STOP_REASONS.has(self.stopReason) && self.stopReason !== "STOP_REASON_MAX_TOKENS") {
         return yield* failWith(`stopReason cannot be treated as success: ${self.stopReason || "(none)"}`);
       }
+      const toolArgumentErrors: Record<string, string> = {};
       if (self.calls.size > 0) {
         self.message.toolCalls = [...self.calls.values()];
         for (const call of self.message.toolCalls) {
           yield* requiredString(call.name, "tool name");
-          const args = yield* Effect.try({
-            try: () => JSON.parse(call.argumentsJson) as unknown,
-            catch: () => new DevinError({ message: `Arguments of tool ${call.name} are not valid JSON.` }),
-          });
-          yield* object(args, "tool arguments");
+          const error = self.serverArgumentErrors.has(call.id) ? `${SERVER_JSON_ERROR}\n\nReceived arguments:\n${call.argumentsJson}` : argumentsError(call);
+          if (error) toolArgumentErrors[call.id] = error;
         }
       }
       if (self.stopReason === "STOP_REASON_FUNCTION_CALL" && !self.calls.size) {
         return yield* failWith("The response ended with FUNCTION_CALL but has no tool call.");
-      }
-      // Tool use is read from the calls themselves; only calls cut off at the output limit are rejected.
-      if (self.calls.size && !COMPLETE_STOP_REASONS.has(self.stopReason)) {
-        return yield* failWith("Tool calls and the stop reason do not match.");
       }
       self.message.messageId ||= randomUUID();
       return {
@@ -140,6 +163,7 @@ export class ChatAccumulator {
         stopFrameIndex: self.stopFrameIndex,
         lastUsageFrameIndex: self.lastUsageFrameIndex,
         idlessToolDeltaCount: self.idlessToolDeltaCount,
+        toolArgumentErrors,
         durationMs: Math.round(performance.now() - self.startedAt),
         firstDeltaMs: self.firstDeltaMs === undefined ? undefined : Math.round(self.firstDeltaMs),
         actualModelUid: self.actualModelUid,

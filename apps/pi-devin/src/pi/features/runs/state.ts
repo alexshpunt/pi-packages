@@ -15,14 +15,15 @@ const isStoredState = Schema.is(Schema.Struct({
   cascadeId: UUID,
   trajectoryId: UUID,
   nextStepIndex: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: MAX_STEP_INDEX })),
-  execution: Schema.optionalKey(Schema.Struct({ id: UUID, used: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 100 })), settled: Schema.Boolean })),
+  // `used` is the request budget count saved by 0.1.5 and earlier; it is accepted and dropped.
+  execution: Schema.optionalKey(Schema.Struct({ id: UUID, used: Schema.optionalKey(Schema.Int), settled: Schema.Boolean })),
 }));
 
 export function freshState(sessionId: string): DevinSessionState {
   return { version: 1, sessionId, cascadeId: randomUUID(), trajectoryId: randomUUID(), nextStepIndex: 0 };
 }
 
-/** The newest state of this session's branch. Another session's state starts fresh; a corrupt one stops instead of resetting the budget. */
+/** The newest state of this session's branch. Another session's state starts fresh; a corrupt one stops instead of resetting the IDs. */
 export function restoreState(binding: SessionBinding): Effect.Effect<DevinSessionState, DevinError> {
   return Effect.suspend(() => {
     const sessionId = binding.getSessionId();
@@ -30,6 +31,7 @@ export function restoreState(binding: SessionBinding): Effect.Effect<DevinSessio
     if (!entry) return Effect.succeed(freshState(sessionId));
     if (!isStoredState(entry.data)) return failWith("The Devin session state is corrupt or an unsupported version. Start a new session.");
     if (entry.data.sessionId !== sessionId) return Effect.succeed(freshState(sessionId));
-    return Effect.succeed(structuredClone(entry.data) as DevinSessionState);
+    const { execution, ...state } = structuredClone(entry.data);
+    return Effect.succeed({ ...state, ...(execution ? { execution: { id: execution.id, settled: execution.settled } } : {}) } as DevinSessionState);
   });
 }

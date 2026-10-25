@@ -4,6 +4,16 @@
 
 ### Improved
 
+- Pi no longer limits how many model requests one user message may send. Before, a message stopped with `Used all 8 Devin model HTTP requests in the budget.` after 8 requests by default, counting tool follow-ups, retries and auto-compaction. `PI_DEVIN_MAX_MODEL_CALLS` is removed and ignored, and `/devin` no longer shows the run budget. Sessions saved by earlier versions keep working. The `--max-model-calls` option of the bundled CLI is unchanged.
+
+### Fixed
+
+- Devin requests no longer fail when Pi's `retry.provider.maxRetries` is not 0 or when `transport` is set to a WebSocket option for other providers. Devin ignores both preferences, as Pi expects from providers that do not support them.
+- A long response that keeps streaming is no longer cut off when Pi's request timeout (300 seconds by default) passes. The request now fails only after that long without any data.
+- Rate limits and server errors that come with an error body (for example `resource_exhausted` with HTTP 429, or `internal`) are now retried by Pi's automatic retry. Quota and billing errors are still not retried.
+- When a response hits the output limit while calling tools, or calls a tool with arguments that are not valid JSON, Pi now tells the model and lets it call again instead of ending the turn with an error. Such calls are still never run.
+- Switching to a model without image support no longer fails because of images earlier in the conversation; they are replaced with a note.
+- A failed response that reused the ID of an earlier tool call no longer drops that earlier, successful tool result from the history sent to Devin.
 - The extension now runs on Effect 4 internally. Requests, sign-in, model list refreshes, `/devin`, `/devin-fusion` and the Fusion sidekick behave as before. Installing the package now also installs its runtime dependencies `effect` and `@effect/platform-node`.
 - The usage in the status line now appears only while a Devin model, including Devin Fusion, is selected, and disappears as soon as you switch to another provider's model. `/devin` still shows usage whichever model is selected.
 

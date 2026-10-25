@@ -3,7 +3,7 @@ import type { DevinFailure } from "../errors.ts";
 import type { ConnectClient } from "../protocol/connect-client.ts";
 import { CHAT_METHOD } from "../protocol/protobuf.ts";
 import type { ChatResult, JsonObject } from "../types.ts";
-import { ChatAccumulator } from "./accumulator.ts";
+import { assertRunnableToolCalls, ChatAccumulator } from "./accumulator.ts";
 
 export interface StreamChatOptions {
   onText?: (delta: string) => Effect.Effect<void>;
@@ -20,6 +20,7 @@ export function streamChat(client: ConnectClient, request: JsonObject, options: 
       if (!frame.isEnd && Predicate.isString(frame.data.deltaText) && options.onText) yield* options.onText(frame.data.deltaText);
     })));
     const result = yield* accumulator.finish;
+    yield* assertRunnableToolCalls(result);
     // Field 22 records the model of the generation request, not actualModelUid/usage.modelUid.
     if (Predicate.isString(request.chatModelUid)) result.message.modelUid = request.chatModelUid;
     return result;

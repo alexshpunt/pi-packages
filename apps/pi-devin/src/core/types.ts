@@ -64,6 +64,8 @@ export interface ChatResult {
   stopFrameIndex?: number;
   lastUsageFrameIndex?: number;
   idlessToolDeltaCount: number;
+  /** Tool call ID → why its arguments cannot run, in Pi's `argumentsError` wording. */
+  toolArgumentErrors: Readonly<Record<string, string>>;
   durationMs: number;
   firstDeltaMs?: number;
   actualModelUid?: string;

@@ -21,7 +21,6 @@ export async function providerFixture(options: {
   status?: JsonObject;
   /** Replaces the nth account status response (1-based); undefined keeps the normal response. */
   statusFailure?: (index: number) => Response | Promise<Response> | undefined;
-  maxModelCalls?: number;
   catalog?: JsonObject;
 } = {}) {
   const requests: CapturedProviderRequest[] = [];
@@ -39,7 +38,7 @@ export async function providerFixture(options: {
     chatCalls++;
     return options.chat?.(captured, chatCalls) ?? streamResponse(finalFrames());
   };
-  const dependencies = { fetch: fetchImpl, maxModelCalls: options.maxModelCalls,
+  const dependencies = { fetch: fetchImpl,
     loginOptions: { apiServerURL: providerCredential.apiServerURL, webappURL: "https://example.invalid" },
     deviceIdentity: Effect.sync(() => { fingerprintCollections++; return identity; }),
   } satisfies TestOptions;

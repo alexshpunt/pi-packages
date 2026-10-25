@@ -14,13 +14,13 @@ import type { ExtensionEnvironment } from "./layer.ts";
  * The environment Pi loads the extension with: Node's network, process and file services, and the global stores in Pi's agent directory.
  * The sidekick child keeps no Fusion or display settings, but records its quota so the lead shows what the sidekick used.
  */
-export function productionEnvironment(options: { maxModelCalls?: number; isFusionChild: boolean }): Layer.Layer<ExtensionEnvironment> {
+export function productionEnvironment(options: { isFusionChild: boolean }): Layer.Layer<ExtensionEnvironment> {
   const agentDir = getAgentDir();
   const settings = options.isFusionChild
     ? Layer.mergeAll(Layer.sync(FusionSettings, () => memoryFusionSettings()), Layer.sync(DisplaySettings, () => memoryDisplaySettings()))
     : Layer.mergeAll(FusionSettingsFile(fusionSettingsPath(agentDir)), DisplaySettingsFile(devinSettingsPath(agentDir)));
   return Layer.mergeAll(
-    Layer.succeed(ExtensionConfig, { maxModelCalls: options.maxModelCalls, isFusionChild: options.isFusionChild, now: Date.now, login: {}, agentDir: getAgentDir }),
+    Layer.succeed(ExtensionConfig, { isFusionChild: options.isFusionChild, now: Date.now, login: {}, agentDir: getAgentDir }),
     NodeHttpTransport(),
     Layer.succeed(LoginTransport, nodeTransport()),
     settings,

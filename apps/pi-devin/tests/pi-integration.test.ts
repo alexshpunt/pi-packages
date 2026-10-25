@@ -89,10 +89,10 @@ const waitUntil = async (predicate: () => boolean, label: string) => {
 };
 
 /** Loads the Devin extension through the public loader, AgentSession and OAuth, and finds the Pi-style Fusion model. */
-async function fusionSession(chat: (request: CapturedProviderRequest, index: number) => Response | Promise<Response>, maxModelCalls?: number,
+async function fusionSession(chat: (request: CapturedProviderRequest, index: number) => Response | Promise<Response>,
   sidekick?: TestOptions["sidekick"], catalog?: JsonObject) {
   const directory = await mkdtemp(join(tmpdir(), "pi-devin-fusion-"));
-  const fixture = await providerFixture({ chat, maxModelCalls, catalog });
+  const fixture = await providerFixture({ chat, catalog });
   fixture.shutdown();
   const runtime = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: join(directory, "models.json"),
     modelsStore: new InMemoryModelsStore(), refreshOnCreate: false, allowModelNetwork: false });
@@ -205,7 +205,7 @@ test("public loader → OAuth → model/thinking → tool results, host retry an
     expect(JSON.stringify(finalPrompts).includes("failed-tool")).toBe(false);
     const assistant = finalPrompts.find((entry) => Array.isArray(entry.toolCalls))!;
     expect(assistant.modelUid).toBe("swe-2-high"); expect(assistant.signature).toBe("native-signature");
-    const state = runSync(extension.runs.snapshot); expect(state.execution!.used).toBe(3); expect(state.execution!.settled).toBe(true);
+    const state = runSync(extension.runs.snapshot); expect(state.execution!.settled).toBe(true);
     const stored = manager.getBranch().filter((entry) => entry.type === "custom" && entry.customType === DEVIN_STATE_ENTRY);
     expect(stored.length > 0).toBeTruthy();
     expect(JSON.stringify(stored).includes(providerCredential.sessionToken)).toBe(false);
@@ -241,7 +241,7 @@ test("Pi-style Fusion: the child Pi sidekick runs with the lead's tools and sess
       case 3: return streamResponse(callFrames("lead-3", "devin_sidekick", { message: "Report the earlier sum again." }));
       default: return streamResponse(finalFrames(`lead done ${index}`));
     }
-  }, undefined, { launcher: fake.launcher });
+  }, { launcher: fake.launcher });
   try {
     const { session } = f;
     expect(session.getActiveToolNames().includes("devin_sidekick")).toBe(false);
@@ -290,7 +290,7 @@ test("Pi-style Fusion: block:false, steer and user input while waiting move work
       case 9: return streamResponse(callFrames("lead-9", "devin_sidekick", { message: "Cancel me." }));
       default: return streamResponse(finalFrames(`lead done ${index}`));
     }
-  }, undefined, { launcher: fake.launcher });
+  }, { launcher: fake.launcher });
   try {
     const { session } = f;
     await session.setModel(f.fusion);
@@ -367,7 +367,7 @@ test("Pi-style Fusion: an oversized sidekick report reaches the lead bounded as 
       case 5: return streamResponse(callFrames("lead-5", "devin_sidekick", { message: "Long background report.", block: false }));
       default: return streamResponse(finalFrames(`lead done ${index}`));
     }
-  }, undefined, { launcher: fake.launcher });
+  }, { launcher: fake.launcher });
   const savedReports: string[] = [];
   const resultText = (message: { content: unknown }) => (message.content as { text?: string }[]).map((block) => block.text ?? "").join("");
   try {
@@ -494,7 +494,7 @@ test("/devin: a recommended filter changed by argument is saved globally and app
   // The full fixture catalog has groups with and without a variant marked isRecommended.
   const catalog = JSON.parse(await readFile(new URL("./fixtures/model-catalog.json", import.meta.url), "utf8")) as JsonObject;
   const recommendedUIDs = new Set((catalog.clientModelConfigs as JsonObject[]).filter((config) => config.isRecommended === true).map((config) => config.modelUid as string));
-  const f = await fusionSession(() => streamResponse(finalFrames("unused")), undefined, undefined, catalog);
+  const f = await fusionSession(() => streamResponse(finalFrames("unused")), undefined, catalog);
   try {
     const { session } = f;
     const catalogRequests = () => f.fixture.requests.filter((entry) => entry.method === MODELS_METHOD).length;
@@ -546,12 +546,12 @@ test("usage: the status line and details come only from the last account status 
     expect(usageStatusText(undefined, usage)).toBe("devin · ↑3 ↓2");
     expect([progressBar(98), progressBar(0), progressBar(150), progressBar(12.5)]).toStrictEqual(["▕█████████░▏", "▕░░░░░░░░░░▏", "▕██████████▏", "▕█░░░░░░░░░▏"]);
     expect([remainingTone(20), remainingTone(40), remainingTone(41)]).toStrictEqual(["error", "warning", "success"]);
-    const report = usageReport(account, usage, runSync(extension.runs.budget), account.fetchedAtMs + 5 * 60_000).map((line) => line.text);
+    const report = usageReport(account, usage, account.fetchedAtMs + 5 * 60_000).map((line) => line.text);
     expect(report[0]).toMatch(/^Account quota · fetched \d\d\/\d\d \d\d:\d\d \(5m ago\) · not live$/);
     expect(report.slice(1)).toStrictEqual(["  Daily  ▕██████████▏ 100% left · reset time unknown", "  Weekly ▕██████████▏ 100% left · reset time unknown",
-      "This session · lead conversation (sidekick excluded)", "  1 request · input 3 · output 2 · cache read 0 · cache write 0", "Run budget · last run", "  ▕█░░░░░░░░░▏ 1/8 model calls used"]);
-    const tones = usageReport(account, usage, { used: 8, limit: 8, isActive: true }, account.fetchedAtMs).map((line) => line.tone ?? null);
-    expect(tones).toStrictEqual([null, "success", "success", null, null, null, "error"]);
+      "This session · lead conversation (sidekick excluded)", "  1 request · input 3 · output 2 · cache read 0 · cache write 0"]);
+    const tones = usageReport(account, usage, account.fetchedAtMs).map((line) => line.tone ?? null);
+    expect(tones).toStrictEqual([null, "success", "success", null, null]);
     // The status line is written only in the TUI and only with the toggle on. Off clears only this package's key.
     const statuses: [string, string | undefined][] = [];
     const context = (mode: string, provider = "devin") => ({ mode, model: { provider }, ui: { theme: { fg: (tone: string, text: string) => `[${tone}]${text}` },
@@ -576,10 +576,10 @@ test("usage: the status line and details come only from the last account status 
     // Display strings contain no tokens or account identifiers.
     expect([...report, ...statuses.map(([, text]) => text ?? "")].some((text) => text.includes(providerCredential.sessionToken) || text.includes("offline-user-id"))).toBe(false);
     // Accounts not billed by quota show no credits. Abbreviations and relative times follow the Pi display rules.
-    expect(usageReport({ billingStrategy: "BILLING_STRATEGY_CREDITS", fetchedAtMs: 0 }, usage, { used: 0, limit: 8, isActive: true }, 0)[1].text).toMatch(/Not a quota-billed account \(BILLING_STRATEGY_CREDITS\)/);
+    expect(usageReport({ billingStrategy: "BILLING_STRATEGY_CREDITS", fetchedAtMs: 0 }, usage, 0)[1].text).toMatch(/Not a quota-billed account \(BILLING_STRATEGY_CREDITS\)/);
     expect([formatTokens(999), formatTokens(1234), formatTokens(12_345), formatTokens(1_234_567)]).toStrictEqual(["999", "1.2k", "12k", "1.2M"]);
     expect([relativeTime(0, 20_000), relativeTime(20_000, 0), relativeTime(90 * 60_000, 0), relativeTime(3 * 86_400_000, 0), relativeTime(0, 2 * 60_000)]).toStrictEqual(["just now", "soon", "in 1h 30m", "in 3d", "2m ago"]);
-    expect(usageReport(account, usage, runSync(extension.runs.budget), account.fetchedAtMs + 10_000)[0].text).toMatch(/fetched .+ \(just now\)/);
+    expect(usageReport(account, usage, account.fetchedAtMs + 10_000)[0].text).toMatch(/fetched .+ \(just now\)/);
     expect(f.errors).toStrictEqual([]);
   } finally { await f.dispose(); }
 });
