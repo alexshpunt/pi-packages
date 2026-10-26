@@ -1,118 +1,128 @@
-# Verification and performance results
+# Verification
 
 **English** | [한국어](verification.ko.md) | [README](../README.md)
 
-This report covers recorded checks of the Codex memory v2 adaptation for Pi: recall with and without memory, retention after compaction, and token use. The results are limited to the tested cases, not a general model ranking.
+This report describes how pi-codex-memory is verified and what the checks found. Model-free checks run on every code change. Whether memory actually helps was checked by running a fixed scenario with real models.
 
-## Test scope
+## Summary
 
-The live comparison used saved 16-turn synthetic conversations with two models:
+- With memory on, both models answered all six past decisions in a new session. With memory off, neither answered any.
+- After the conversation was compacted, all 16 original user messages still reached extraction.
+- Values corrected in the conversation appeared in new-session answers, and facts forgotten from the menu were not regenerated.
+- One generation run (extraction and consolidation) used 38,632 tokens with Haiku and 21,822 with Luna.
 
-- **Haiku:** `claude-bridge/claude-haiku-5-5`
-- **Luna:** `openai-codex/gpt-6-luna`
+## Checks on every code change
 
-Requested reasoning: Haiku `medium` for dialogue/recall and `low`/`medium` for extraction/consolidation; Luna `high` throughout.
+Run these from the repository root. None of them call a model.
 
-Environment: macOS, Pi 1.4.0, Node.js 24.14.0.
+```sh
+pnpm --filter "@buyong/pi-codex-memory..." build
+pnpm --filter @buyong/pi-codex-memory typecheck
+pnpm --filter @buyong/pi-codex-memory lint
+pnpm --filter @buyong/pi-codex-memory test
+python3 apps/pi-codex-memory/verification/tui-smoke.py
+node scripts/codex/check-package.mjs apps/pi-codex-memory
+```
 
-A turn is one user input and its completed response. We checked one question and answer per comparison condition; these results are not averages of repeated runs.
-
-**Previous** means extraction from the compacted conversation. **Repaired** means extraction that retains original active-branch evidence. Both versions received the same per-model input, including a sanitized Haiku copy and an added post-compaction turn, and actually regenerated memory. Recall used fresh sessions whose questions did not contain the answers.
-
-These live results predate repository sharing. Checks for the later repository-sharing implementation are listed separately below. Codex CLI itself was not benchmarked against this extension.
-
-## Recall before and after enabling memory
-
-Six historical fields were checked: service, region, verification command, release gate, decision scope and historical execution status.
-
-| Model | No memory | Previous implementation | Repaired implementation |
-| --- | --- | --- | --- |
-| Haiku | 0/6 recovered; all unknown | 6/6 | 6/6 |
-| Luna | 0/6 recovered; all unknown | Semantically 6/6 | 6/6 |
-
-The no-memory answers were the expected abstention, not a model failure. Both repaired cases used an actual memory read and a valid source citation. This is **six more recovered facts than the no-memory control**, but not an accuracy win over the previous implementation in this comparison.
-
-Luna's previous answer used an equivalent Korean phrase for “this project only.” The original English-string checker reported **5/6**; a separate semantic assessment accepted that scope. The original verdict was not replaced.
-
-### Original evidence reaching extraction
-
-| Model | Previous | Repaired | Change |
-| --- | ---: | ---: | ---: |
-| Haiku | 0/16 original user turns | 16/16 | +16 turns |
-| Luna | 1/16 original user turns | 16/16 | +15 turns |
-
-The repair improved **source evidence retention**. This count does not mean every detail was stored or that the full conversation is retained forever. Memory summaries and correct answers are separate outcomes.
-
-## Retention after compaction
-
-In the earlier experiment, both models recalled **6/6 before and immediately after compaction** in all six cases. Existing stored memory survived; regenerating it from the compacted conversation was less reliable.
-
-| Model | Regeneration after 6 turns | After 16 turns | After 32 turns |
-| --- | --- | --- | --- |
-| Haiku | 6/6 after recall recheck | **2/6** | 6/6 with a 512 KiB input limit |
-| Luna | Facts and citations matched after recheck; scope equivalent | **0/6** | Content and citations matched; answer-wrapper format failed, with a 512 KiB limit |
-
-In the 16-turn failures, the regenerated text still contained the values but described confirmed decisions as unverified. The next model read them and answered that it did not know. **A value being stored is not enough to establish successful recall.**
-
-The later repaired comparison used changed inputs and a new follow-up turn. Its success does not erase these failures or prove that the repair alone caused an accuracy improvement.
-
-The 6- and 16-turn cases used real manual compaction; the 32-turn cases used the real automatic path with a lowered threshold. Long inputs exceeded the default **256 KiB** generation budget, so the experiment used **512 KiB**. The rejected attempt sent no generation request. Product defaults were unchanged; this was not a default-context-window saturation test.
-
-## Token use
-
-These totals belong to the 16-turn previous/repaired comparison. They include input, output, cache-read and cache-write tokens, matching Pi's recorded `totalTokens`. **Token counts are not prices.**
-
-| Model and operation | Previous tokens | Repaired tokens | Change |
-| --- | ---: | ---: | ---: |
-| Haiku: generation | 13,184 | 38,632 | +25,448 (+193.0%) |
-| Luna: generation | 5,603 | 21,822 | +16,219 (+289.5%) |
-| Haiku: one recall | 31,191 | 14,040 | −17,151 (−55.0%) |
-| Luna: one recall | 8,088 | 10,940 | +2,852 (+35.3%) |
-| Haiku: generation + one recall | 44,375 | 52,672 | +8,297 (+18.7%) |
-| Luna: generation + one recall | 13,691 | 32,762 | +19,071 (+139.3%) |
-
-Generation includes extraction and consolidation. Recall counts every model request made to answer one question. Original dialogue creation, compaction, setup failures, earlier failed recalls, correction and forgetting are excluded.
-
-The no-memory questions used **3,453 tokens for Haiku** and **1,156 for Luna**, but returned unknown values. They are not lower-cost examples of equivalent successful recall.
-
-Generation used two host requests per model and version. Recall requests changed from **3 to 2 for Haiku**, and **3 to 4 for Luna**. More original evidence increased generation input; recall did not consistently use fewer tokens.
-
-## Observed call time
-
-| Model and operation | Previous | Repaired | Change |
-| --- | ---: | ---: | ---: |
-| Haiku: generation | 27.795 s | 20.829 s | −6.966 s |
-| Luna: generation | 16.703 s | 18.922 s | +2.219 s |
-| Haiku: recall | 14.710 s | 10.261 s | −4.449 s |
-| Luna: recall | 7.488 s | 11.044 s | +3.556 s |
-
-Times sum the host-recorded durations of the same model calls used in the token table. They exclude time between calls, other tool processing and setup. They are **not end-to-end UI latency or an average**. Cache state, output length and provider load were not controlled, so these observations do not establish a causal speed improvement.
-
-## Correction and forgetting
-
-- Both repaired cases regenerated a correction and recalled all six fields, including the corrected value, in a fresh session.
-- After forgetting and real compaction, both had zero active records, zero matches for forgotten facts and zero injected bytes. After the required idle time, another scan produced no new memory records. We invoked `/codex-memory run`; we did not test the automatic timer in this check.
-- **The final model-answer check failed.** Its question wrongly expected an empty store to have no files, although an empty `memory_summary.md` template can remain. The corrected question was not rerun. Offline absence checks do not replace that missing live-answer check.
-
-Earlier terminal tests also checked fresh-session recall, UI correction and forgetting, cancellation, restart and reload. Forgotten values stayed absent during a **90-second** automatic-rescan observation. Those tests predate repository sharing, and cancellation does not prove that provider-side computation or billing stopped.
-
-## Repository-sharing checks
-
-This later implementation was checked with isolated stores, synthetic repositories and fake streams through the real Pi SDK—not new live-provider or terminal experiments.
-
-| Check | Result |
+| Command | What it checks |
 | --- | --- |
-| Source tests | 81/81 passed |
-| Independent installation | Resource loading passed; 41/41 repository cases and 6/6 tool cases |
-| Bundled installation | Resource loading passed; 41/41 repository cases and 6/6 tool cases |
+| `typecheck`, `lint` | Type errors and Biome rules |
+| `test` | 83 tests. Isolated stores and fake model responses cover extraction, consolidation, recall, citation validation, correction and forgetting, cancellation, call limits, repository sharing and read consent. Some tests load the extension into the real Pi SDK and run its commands and tools. |
+| `tui-smoke.py` | In the real Pi TUI, opens and cancels `/codex-memory`, opens `/codex-memory-manage` and `/codex-memory-settings`, and reopens `/codex-memory` after `/reload`. Fails if any model request is sent. Requires `pi` on `PATH`. |
+| `check-package.mjs` | Confirms that the release archive contains the required files and entry points. |
 
-The 41-case suites are subsets of the 81-case suite. They cover sharing and isolation, read consent, legacy import, scoped citations, forgetting and concurrency boundaries. They do not establish live-model answer quality.
+The installed package was also checked once. Installed alone and through the `@buyong/pi-codex` bundle, the extension loaded and passed 41 repository-sharing cases and 6 tool cases.
 
-## Limits and local checks
+## Checks with real models
 
-- These are small synthetic cases, not long-term production measurements or guarantees for other models and platforms.
-- An earlier compaction response contained an unexplained identifier absent from the host-visible input. It was absent from final memory; its origin remains unknown. Masking and host-side checks are not proof of complete provider isolation.
-- Forgetting does not erase original conversations, backups or provider copies. Independent sources can contain the same fact.
-- Raw historical request/response data is not included in the public package. This report presents aggregate results; it is not a self-contained live benchmark dataset.
+The real-model checks used a version from before repository sharing and the current three-command layout were added. Both are covered only by the automated checks above.
 
-See the [README's local checks](../README.md#verify-locally) to run the model-free tests. The `benchmark` command reports synthetic scheduling data, not the live token and call-time measurements above.
+### Scenario
+
+1. Create a synthetic 16-turn conversation. The first turn sets `service`, a middle turn sets `region` and `verify_command`, and the last turn changes `release_gate` to a new value. The conversation also states "applies to this project only" and "no commands were run." Values are randomized on each run so the model cannot know them in advance.
+2. Compact the conversation manually and continue for one more turn.
+3. Generate memory from this conversation.
+4. In a new session, ask for six fields with a question that does not contain the answers: `service`, `region`, `verify_command`, `release_gate`, `decision_scope` and `actions_executed`. Also check that the answer cites lines the memory tools actually read.
+
+| Name | Model | Reasoning level |
+| --- | --- | --- |
+| Haiku | `claude-bridge/claude-haiku-5-5` | `medium` for dialogue and recall, `low` for extraction, `medium` for consolidation |
+| Luna | `openai-codex/gpt-6-luna` | `high` throughout |
+
+Each condition ran once on macOS with Pi 1.4.0 and Node.js 24.14.0.
+
+### Recall
+
+| Model | Memory off | Memory on |
+| --- | --- | --- |
+| Haiku | 0/6; answered "unknown" for all | 6/6 |
+| Luna | 0/6; answered "unknown" for all | 6/6 |
+
+With memory on, both models read the memory files and correctly cited the lines they read. With memory off, answering "unknown" followed the instruction not to guess.
+
+After compaction, all 16 original user messages still reached extraction, because extraction uses the original messages of the current branch instead of the compaction summary.
+
+### Tokens and time
+
+| Model | Generation tokens | Generation time | Recall tokens | Recall time |
+| --- | ---: | ---: | ---: | ---: |
+| Haiku | 38,632 | 20.8 s | 14,040 | 10.3 s |
+| Luna | 21,822 | 18.9 s | 10,940 | 11.0 s |
+
+- Generation is one extraction and one consolidation: two model calls. Recall counts every model call needed to answer one question: two for Haiku and four for Luna.
+- Tokens are the sum of input, output, cache-read and cache-write tokens, matching Pi's recorded `totalTokens`. Prices depend on the provider and plan.
+- Time is the sum of model call durations only. It excludes waits between calls and tool processing, so it differs from the time you see on screen.
+
+Asking the same question without memory used 3,453 tokens with Haiku and 1,156 with Luna, but returned no answer.
+
+### Correction and forgetting
+
+- **Correction in the conversation**: a follow-up turn changed `release_gate` again and memory was regenerated. In a new session, both models answered all six fields, including the new value.
+- **Forgetting from the menu**: memory was forgotten from the memory menu, the conversation was actually compacted, and a manual rescan of idle conversations processed it again. Active memories, search matches for the forgotten facts and injected summary bytes all stayed at zero, and no memory was regenerated. A follow-up question to the model failed because the question was wrong: it expected no files at all, but an empty `memory_summary.md` template remains. The corrected question was not rerun.
+- **Terminal check**: an earlier version was checked in a real terminal for new-session recall, correcting and forgetting from the menu, cancellation, restart and `/reload`. Forgotten values did not reappear during 90 seconds of watching automatic rescans.
+
+### Limits of these checks
+
+- The results come from one kind of synthetic conversation and two models, with one run per condition. They are not measurements from long-term real use.
+- Raw request and response records are not published. The real-model scripts in `verification/live`, `verification/compaction` and `verification/regeneration` take these records as input, so they cannot be rerun from the repository alone.
+
+## How the default wait times were chosen
+
+The 30-minute idle time before extraction and the 60-minute consolidation interval are starting values chosen by comparing synthetic work patterns. They are not optimal values measured from real usage or model quality. Codex uses 6 hours for both.
+
+```sh
+pnpm --filter @buyong/pi-codex-memory benchmark
+```
+
+`benchmark` simulates five work patterns minute by minute, using the same eligibility function the extension uses: continuous work, short breaks, review waits, resuming after lunch, and separate tasks two hours apart. Build first.
+
+| Idle time before extraction | Total extractions | Extractions during work | Delay until the last memory |
+| --- | ---: | ---: | ---: |
+| 5 min | 22 | 17 | 5 min |
+| 15 min | 13 | 8 | 15 min |
+| **30 min** | **9** | **4** | **30 min** |
+| 60 min | 8 | 3 | 60 min |
+| 6 h | 5 | 0 | 6 h |
+
+Compared with 15 minutes, 30 minutes runs four fewer extractions. Compared with 60 minutes, it produces the last memory 30 minutes sooner.
+
+Consolidation was compared with a pattern that adds new material every 10 minutes for two hours.
+
+| Consolidation interval | Consolidations | Delay until the last material is included |
+| --- | ---: | ---: |
+| 15 min | 9 | 0 min |
+| 30 min | 5 | 0 min |
+| **60 min** | **3** | **0 min** |
+| 180 min | 2 | 60 min |
+| 6 h | 2 | 240 min |
+
+The 0-minute delays occur because, in this pattern, the last material arrived at the same time as a consolidation. In practice, new material can wait up to the configured interval for the next consolidation.
+
+### When to change them
+
+Change settings in `/codex-memory-settings`.
+
+- If extraction runs too often during long reviews, raise the idle time to 60 minutes.
+- If memories show up too late for your next task, try 15 minutes. This increases calls.
+- To reduce calls, raise the consolidation interval to 180 minutes or 6 hours.
+- If you need memory right away, use **Generate from this conversation** in `/codex-memory-manage`.

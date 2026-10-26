@@ -1,11 +1,42 @@
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, lstatSync, openSync, unlinkSync } from "node:fs";
+import {
+    closeSync,
+    existsSync,
+    lstatSync,
+    openSync,
+    unlinkSync,
+} from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { DEFAULT_SETTINGS, parseSettings, type MemorySettings } from "./config.js";
-import { atomicWrite, canonicalCwd, createMemoryMasker, digest, privateDirectory, SUMMARY_MAX_BYTES, truncateMiddleBytes, workspaceScope } from "./safety.js";
-import { MemoryFailure, MemoryUserError, type MemoryFailureCode, type MemoryUsage } from "./failure.js";
-import { defaultMemoryScope, findRepository, repositoryScope, type RegisteredRepository, type RepositoryLocation, type RepositoryObservation } from "./repositories.js";
+import {
+    DEFAULT_SETTINGS,
+    type MemorySettings,
+    parseSettings,
+} from "./config.js";
+import {
+    MemoryFailure,
+    type MemoryFailureCode,
+    type MemoryUsage,
+    MemoryUserError,
+} from "./failure.js";
+import {
+    defaultMemoryScope,
+    findRepository,
+    type RegisteredRepository,
+    type RepositoryLocation,
+    type RepositoryObservation,
+    repositoryScope,
+} from "./repositories.js";
+import {
+    atomicWrite,
+    canonicalCwd,
+    createMemoryMasker,
+    digest,
+    privateDirectory,
+    SUMMARY_MAX_BYTES,
+    truncateMiddleBytes,
+    workspaceScope,
+} from "./safety.js";
 
 export interface RolloutSource {
     id: string;
@@ -30,7 +61,12 @@ export interface MemoryRecord {
     wasNormalized?: boolean;
     isPinned: boolean;
     expiresAtMs: number | null;
-    importedFrom?: { scope: string; cwd: string; path: string; importedAtMs: number };
+    importedFrom?: {
+        scope: string;
+        cwd: string;
+        path: string;
+        importedAtMs: number;
+    };
 }
 export interface ScopeState {
     revision: number;
@@ -64,8 +100,12 @@ export class MemoryStore {
         privateDirectory(root);
         const path = join(root, "state.sqlite");
         if (!existsSync(path)) {
-            try { closeSync(openSync(path, "wx", 0o600)); }
-            catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
+            try {
+                closeSync(openSync(path, "wx", 0o600));
+            } catch (error) {
+                if ((error as NodeJS.ErrnoException).code !== "EEXIST")
+                    throw error;
+            }
         }
         if (lstatSync(path).isSymbolicLink() || !lstatSync(path).isFile())
             throw new Error("Memory database must be a regular file.");
@@ -100,8 +140,13 @@ export class MemoryStore {
                 owner TEXT NOT NULL, busy INTEGER NOT NULL, expires_at INTEGER NOT NULL,
                 PRIMARY KEY(scope, session_id, owner));
         `);
-        const version = this.database.prepare("SELECT version FROM schema_version").get() as { version: number };
-        if (version.version !== 1) { this.close(); throw new Error("Unsupported memory database version."); }
+        const version = this.database
+            .prepare("SELECT version FROM schema_version")
+            .get() as { version: number };
+        if (version.version !== 1) {
+            this.close();
+            throw new Error("Unsupported memory database version.");
+        }
         this.database.exec(`
             CREATE TABLE IF NOT EXISTS repositories (scope TEXT PRIMARY KEY, value TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS repository_reads (source_scope TEXT NOT NULL, target_scope TEXT NOT NULL,
@@ -109,15 +154,29 @@ export class MemoryStore {
                 PRIMARY KEY(source_scope, target_scope));
         `);
     }
-    close(): void { if (!this.isClosed) { this.isClosed = true; this.database.close(); } }
+    close(): void {
+        if (!this.isClosed) {
+            this.isClosed = true;
+            this.database.close();
+        }
+    }
     private transaction<T>(run: () => T): T {
         this.database.exec("BEGIN IMMEDIATE");
-        try { const result = run(); this.database.exec("COMMIT"); return result; }
-        catch (error) { this.database.exec("ROLLBACK"); throw error; }
+        try {
+            const result = run();
+            this.database.exec("COMMIT");
+            return result;
+        } catch (error) {
+            this.database.exec("ROLLBACK");
+            throw error;
+        }
     }
     private ensureScope(scope: string): void {
-        if (!/^(global|(?:workspace|repository)-[a-f0-9]{24})$/.test(scope)) throw new Error("Invalid memory scope.");
-        this.database.prepare("INSERT OR IGNORE INTO scopes(scope) VALUES (?)").run(scope);
+        if (!/^(global|(?:workspace|repository)-[a-f0-9]{24})$/.test(scope))
+            throw new Error("Invalid memory scope.");
+        this.database
+            .prepare("INSERT OR IGNORE INTO scopes(scope) VALUES (?)")
+            .run(scope);
     }
     scopeFor(cwd: string): string {
         // Old cwd records/settings are preserved; only an explicit global choice
@@ -126,357 +185,983 @@ export class MemoryStore {
     }
     /** Other scopes stop collecting new conversations from a cwd that explicitly selects personal global. */
     selectsGlobal(cwd: string): boolean {
-        const selected = this.database.prepare("SELECT scope FROM selections WHERE cwd = ?").get(canonicalCwd(cwd)) as { scope: string } | undefined;
+        const selected = this.database
+            .prepare("SELECT scope FROM selections WHERE cwd = ?")
+            .get(canonicalCwd(cwd)) as { scope: string } | undefined;
         return selected?.scope === "global";
     }
     selectScope(cwd: string, mode: "workspace" | "global"): string {
         const scope = mode === "global" ? "global" : defaultMemoryScope(cwd);
         this.transaction(() => {
             const old = this.scopeFor(cwd);
-            this.ensureScope(old); this.ensureScope(scope);
-            this.database.prepare("UPDATE scopes SET generation = generation + 1 WHERE scope = ?").run(old);
-            if (mode === "global") this.database.prepare("INSERT OR REPLACE INTO selections(cwd,scope) VALUES (?,?)").run(canonicalCwd(cwd), scope);
-            else this.database.prepare("DELETE FROM selections WHERE cwd = ?").run(canonicalCwd(cwd));
+            this.ensureScope(old);
+            this.ensureScope(scope);
+            this.database
+                .prepare(
+                    "UPDATE scopes SET generation = generation + 1 WHERE scope = ?",
+                )
+                .run(old);
+            if (mode === "global")
+                this.database
+                    .prepare(
+                        "INSERT OR REPLACE INTO selections(cwd,scope) VALUES (?,?)",
+                    )
+                    .run(canonicalCwd(cwd), scope);
+            else
+                this.database
+                    .prepare("DELETE FROM selections WHERE cwd = ?")
+                    .run(canonicalCwd(cwd));
         });
         return scope;
     }
     registerRepository(repository: RepositoryLocation): void {
-        if (repository.scope !== repositoryScope(repository.commonDirectory)) throw new Error("Invalid repository identity.");
+        if (repository.scope !== repositoryScope(repository.commonDirectory))
+            throw new Error("Invalid repository identity.");
         this.transaction(() => {
             this.ensureScope(repository.scope);
             const prior = this.repository(repository.scope);
-            const worktreeRoots = [...new Set([...(prior?.worktreeRoots ?? []), repository.worktreeRoot])];
-            this.database.prepare("INSERT OR REPLACE INTO repositories(scope,value) VALUES (?,?)").run(repository.scope,
-                JSON.stringify({ scope: repository.scope, name: repository.name, commonDirectory: repository.commonDirectory, worktreeRoots,
-                    sessionDirectories: prior?.sessionDirectories ?? [] }));
+            const worktreeRoots = [
+                ...new Set([
+                    ...(prior?.worktreeRoots ?? []),
+                    repository.worktreeRoot,
+                ]),
+            ];
+            this.database
+                .prepare(
+                    "INSERT OR REPLACE INTO repositories(scope,value) VALUES (?,?)",
+                )
+                .run(
+                    repository.scope,
+                    JSON.stringify({
+                        scope: repository.scope,
+                        name: repository.name,
+                        commonDirectory: repository.commonDirectory,
+                        worktreeRoots,
+                        sessionDirectories: prior?.sessionDirectories ?? [],
+                    }),
+                );
         });
     }
     registerSessionDirectory(scope: string, directory: string): void {
         this.transaction(() => {
             const repository = this.repository(scope);
             if (!repository) throw new Error("Unknown repository.");
-            const sessionDirectories = [...new Set([...(repository.sessionDirectories ?? []), canonicalCwd(directory)])];
-            this.database.prepare("UPDATE repositories SET value = ? WHERE scope = ?").run(JSON.stringify({ ...repository, sessionDirectories }), scope);
+            const sessionDirectories = [
+                ...new Set([
+                    ...(repository.sessionDirectories ?? []),
+                    canonicalCwd(directory),
+                ]),
+            ];
+            this.database
+                .prepare("UPDATE repositories SET value = ? WHERE scope = ?")
+                .run(
+                    JSON.stringify({ ...repository, sessionDirectories }),
+                    scope,
+                );
         });
     }
     repositories(): RegisteredRepository[] {
-        return (this.database.prepare("SELECT value FROM repositories ORDER BY scope").all() as { value: string }[])
-            .map(row => JSON.parse(row.value) as RegisteredRepository);
+        return (
+            this.database
+                .prepare("SELECT value FROM repositories ORDER BY scope")
+                .all() as { value: string }[]
+        ).map((row) => JSON.parse(row.value) as RegisteredRepository);
     }
     /** Exact lookup for internal scope IDs; a repository name never stands in for an unregistered or non-repository scope. */
     repository(scope: string): RegisteredRepository | undefined {
-        const row = this.database.prepare("SELECT value FROM repositories WHERE scope = ?").get(scope) as { value: string } | undefined;
-        return row ? JSON.parse(row.value) as RegisteredRepository : undefined;
+        const row = this.database
+            .prepare("SELECT value FROM repositories WHERE scope = ?")
+            .get(scope) as { value: string } | undefined;
+        return row
+            ? (JSON.parse(row.value) as RegisteredRepository)
+            : undefined;
     }
     /** Resolves a user-supplied repository selector: scope ID, unique name, or registered root path. */
     resolveRepository(selector: string): RegisteredRepository | undefined {
         const repositories = this.repositories();
-        const exact = repositories.find(repository => repository.scope === selector);
+        const exact = repositories.find(
+            (repository) => repository.scope === selector,
+        );
         if (exact) return exact;
         if (isAbsolute(selector)) {
             const canonical = canonicalCwd(selector);
-            const common = repositories.find(repository => repository.commonDirectory === canonical && repositoryScope(canonical) === repository.scope);
+            const common = repositories.find(
+                (repository) =>
+                    repository.commonDirectory === canonical &&
+                    repositoryScope(canonical) === repository.scope,
+            );
             if (common) return common;
             const location = findRepository(selector);
-            const live = repositories.find(repository => repository.scope === location?.scope);
+            const live = repositories.find(
+                (repository) => repository.scope === location?.scope,
+            );
             if (live) return live;
         }
-        const matches = repositories.filter(repository => repository.name === selector ||
-            (repository.commonDirectory === selector && repositoryScope(selector) === repository.scope) ||
-            (repository.worktreeRoots.includes(selector) && findRepository(selector)?.scope === repository.scope));
-        if (matches.length > 1) throw new Error("Ambiguous repository name. Use its exact scope ID or registered root path.");
+        const matches = repositories.filter(
+            (repository) =>
+                repository.name === selector ||
+                (repository.commonDirectory === selector &&
+                    repositoryScope(selector) === repository.scope) ||
+                (repository.worktreeRoots.includes(selector) &&
+                    findRepository(selector)?.scope === repository.scope),
+        );
+        if (matches.length > 1)
+            throw new Error(
+                "Ambiguous repository name. Use its exact scope ID or registered root path.",
+            );
         return matches[0];
     }
-    readLink(sourceScope: string, targetScope: string): { isEnabled: boolean; revision: number } {
-        const row = this.database.prepare("SELECT enabled,revision FROM repository_reads WHERE source_scope = ? AND target_scope = ?")
-            .get(sourceScope, targetScope) as { enabled: number; revision: number } | undefined;
+    readLink(
+        sourceScope: string,
+        targetScope: string,
+    ): { isEnabled: boolean; revision: number } {
+        const row = this.database
+            .prepare(
+                "SELECT enabled,revision FROM repository_reads WHERE source_scope = ? AND target_scope = ?",
+            )
+            .get(sourceScope, targetScope) as
+            | { enabled: number; revision: number }
+            | undefined;
         return { isEnabled: row?.enabled === 1, revision: row?.revision ?? 0 };
     }
-    setReadLink(sourceScope: string, targetScope: string, isEnabled: boolean): void {
-        if (sourceScope === targetScope || !this.repository(targetScope)) throw new MemoryUserError("Select a different registered repository.");
+    setReadLink(
+        sourceScope: string,
+        targetScope: string,
+        isEnabled: boolean,
+    ): void {
+        if (sourceScope === targetScope || !this.repository(targetScope))
+            throw new MemoryUserError(
+                "Select a different registered repository.",
+            );
         this.transaction(() => {
             this.ensureScope(sourceScope);
-            this.database.prepare(`INSERT INTO repository_reads(source_scope,target_scope,enabled,revision) VALUES(?,?,?,1)
+            this.database
+                .prepare(`INSERT INTO repository_reads(source_scope,target_scope,enabled,revision) VALUES(?,?,?,1)
                 ON CONFLICT(source_scope,target_scope) DO UPDATE SET enabled=excluded.enabled,revision=revision+1`)
                 .run(sourceScope, targetScope, isEnabled ? 1 : 0);
         });
     }
     legacyMemories(cwd: string, targetScope?: string) {
-        const scope = workspaceScope(cwd), nowMs = Date.now(), settings = this.getSettings(scope);
-        const records = this.records(scope, nowMs).filter(record => record.isPinned || nowMs - (record.lastUsedAtMs || record.generatedAtMs) <= settings.maxUnusedDays * 86_400_000);
-        const excluded = new Set((this.database.prepare("SELECT source_id FROM tombstones WHERE scope IN (?,?)").all(scope, targetScope ?? scope) as { source_id: string }[]).map(row => row.source_id));
-        const affectedPaths = targetScope ? this.records(targetScope, 0).filter(record => excluded.has(record.source?.id ?? record.id)).map(record => record.path) : [];
-        return { scope, revision: this.state(scope).revision, records: records.filter(record => !excluded.has(record.source?.id ?? record.id)), excludedSources: excluded.size, affectedPaths };
+        const scope = workspaceScope(cwd),
+            nowMs = Date.now(),
+            settings = this.getSettings(scope);
+        const records = this.records(scope, nowMs).filter(
+            (record) =>
+                record.isPinned ||
+                nowMs - (record.lastUsedAtMs || record.generatedAtMs) <=
+                    settings.maxUnusedDays * 86_400_000,
+        );
+        const excluded = new Set(
+            (
+                this.database
+                    .prepare(
+                        "SELECT source_id FROM tombstones WHERE scope IN (?,?)",
+                    )
+                    .all(scope, targetScope ?? scope) as { source_id: string }[]
+            ).map((row) => row.source_id),
+        );
+        const affectedPaths = targetScope
+            ? this.records(targetScope, 0)
+                  .filter((record) =>
+                      excluded.has(record.source?.id ?? record.id),
+                  )
+                  .map((record) => record.path)
+            : [];
+        return {
+            scope,
+            revision: this.state(scope).revision,
+            records: records.filter(
+                (record) => !excluded.has(record.source?.id ?? record.id),
+            ),
+            excludedSources: excluded.size,
+            affectedPaths,
+        };
     }
-    importLegacy(cwd: string, targetScope: string, recordIds: readonly string[], sourceRevision: number, targetRevision: number, nowMs = Date.now()) {
+    importLegacy(
+        cwd: string,
+        targetScope: string,
+        recordIds: readonly string[],
+        sourceRevision: number,
+        targetRevision: number,
+        nowMs = Date.now(),
+    ) {
         const sourceScope = workspaceScope(cwd);
-        if (sourceScope === targetScope || findRepository(cwd)?.scope !== targetScope) throw new MemoryUserError("Legacy cwd must belong to the active Git repository.");
-        if (new Set(recordIds).size !== recordIds.length) throw new MemoryUserError("Select distinct records.");
+        if (
+            sourceScope === targetScope ||
+            findRepository(cwd)?.scope !== targetScope
+        )
+            throw new MemoryUserError(
+                "Legacy cwd must belong to the active Git repository.",
+            );
+        if (new Set(recordIds).size !== recordIds.length)
+            throw new MemoryUserError("Select distinct records.");
         return this.transaction(() => {
             this.ensureScope(targetScope);
-            if (this.state(sourceScope).revision !== sourceRevision || this.state(targetScope).revision !== targetRevision)
-                throw new MemoryUserError("Memory changed during confirmation. Select the records again.");
-            if (this.database.prepare("SELECT 1 FROM jobs WHERE scope IN (?,?) AND owner IS NOT NULL AND lease_until > ?")
-                .get(sourceScope, targetScope, nowMs)) throw new MemoryUserError("A memory job is active. Retry importing after it finishes.");
-            const oldSettings = this.getSettings(sourceScope), allSource = this.records(sourceScope, 0);
-            const excluded = new Set((this.database.prepare("SELECT source_id FROM tombstones WHERE scope IN (?,?)").all(sourceScope, targetScope) as { source_id: string }[]).map(row => row.source_id));
-            const sourceRecordsById = new Map(allSource.map(record => [record.id, record]));
-            const selected = recordIds.map(id => {
+            if (
+                this.state(sourceScope).revision !== sourceRevision ||
+                this.state(targetScope).revision !== targetRevision
+            )
+                throw new MemoryUserError(
+                    "Memory changed during confirmation. Select the records again.",
+                );
+            if (
+                this.database
+                    .prepare(
+                        "SELECT 1 FROM jobs WHERE scope IN (?,?) AND owner IS NOT NULL AND lease_until > ?",
+                    )
+                    .get(sourceScope, targetScope, nowMs)
+            )
+                throw new MemoryUserError(
+                    "A memory job is active. Retry importing after it finishes.",
+                );
+            const oldSettings = this.getSettings(sourceScope),
+                allSource = this.records(sourceScope, 0);
+            const excluded = new Set(
+                (
+                    this.database
+                        .prepare(
+                            "SELECT source_id FROM tombstones WHERE scope IN (?,?)",
+                        )
+                        .all(sourceScope, targetScope) as {
+                        source_id: string;
+                    }[]
+                ).map((row) => row.source_id),
+            );
+            const sourceRecordsById = new Map(
+                allSource.map((record) => [record.id, record]),
+            );
+            const selected = recordIds.map((id) => {
                 const record = sourceRecordsById.get(id);
-                if (!record) throw new MemoryUserError("A selected legacy record no longer exists.");
+                if (!record)
+                    throw new MemoryUserError(
+                        "A selected legacy record no longer exists.",
+                    );
                 return record;
             });
-            let imported = 0, skipped = 0, removed = 0, exclusionsAdded = 0;
-            for (const id of excluded) exclusionsAdded += Number(this.database.prepare("INSERT OR IGNORE INTO tombstones(scope,source_id) VALUES (?,?)").run(targetScope, id).changes);
-            for (const record of this.records(targetScope, 0)) if (excluded.has(record.source?.id ?? record.id)) {
-                this.database.prepare("DELETE FROM records WHERE scope = ? AND id = ?").run(targetScope, record.id); removed++;
-            }
-            const recordsById = new Map(this.records(targetScope, 0).map(record => [record.id, record]));
-            const recordPaths = new Set([...recordsById.values()].map(record => record.path));
+            let imported = 0,
+                skipped = 0,
+                removed = 0,
+                exclusionsAdded = 0;
+            for (const id of excluded)
+                exclusionsAdded += Number(
+                    this.database
+                        .prepare(
+                            "INSERT OR IGNORE INTO tombstones(scope,source_id) VALUES (?,?)",
+                        )
+                        .run(targetScope, id).changes,
+                );
+            for (const record of this.records(targetScope, 0))
+                if (excluded.has(record.source?.id ?? record.id)) {
+                    this.database
+                        .prepare(
+                            "DELETE FROM records WHERE scope = ? AND id = ?",
+                        )
+                        .run(targetScope, record.id);
+                    removed++;
+                }
+            const recordsById = new Map(
+                this.records(targetScope, 0).map((record) => [
+                    record.id,
+                    record,
+                ]),
+            );
+            const recordPaths = new Set(
+                [...recordsById.values()].map((record) => record.path),
+            );
             for (const record of selected) {
-                if (excluded.has(record.source?.id ?? record.id) || (record.expiresAtMs !== null && record.expiresAtMs <= nowMs) ||
-                    (!record.isPinned && nowMs - (record.lastUsedAtMs || record.generatedAtMs) > oldSettings.maxUnusedDays * 86_400_000)) { skipped++; continue; }
+                if (
+                    excluded.has(record.source?.id ?? record.id) ||
+                    (record.expiresAtMs !== null &&
+                        record.expiresAtMs <= nowMs) ||
+                    (!record.isPinned &&
+                        nowMs - (record.lastUsedAtMs || record.generatedAtMs) >
+                            oldSettings.maxUnusedDays * 86_400_000)
+                ) {
+                    skipped++;
+                    continue;
+                }
                 const duplicate = recordsById.get(record.id);
                 if (duplicate) {
-                    if (duplicate.body !== record.body || duplicate.kind !== record.kind)
-                        throw new MemoryUserError(`A different version of ${this.mask(record.path)} already exists in this repository; no records were imported. Deselect it or resolve the existing record first.`);
-                    skipped++; continue;
+                    if (
+                        duplicate.body !== record.body ||
+                        duplicate.kind !== record.kind
+                    )
+                        throw new MemoryUserError(
+                            `A different version of ${this.mask(record.path)} already exists in this repository; no records were imported. Deselect it or resolve the existing record first.`,
+                        );
+                    skipped++;
+                    continue;
                 }
                 let path = record.path;
                 if (recordPaths.has(path)) {
-                    if (record.kind !== "note") throw new MemoryUserError(`Conflicting rollout path ${this.mask(path)}; no records were imported.`);
+                    if (record.kind !== "note")
+                        throw new MemoryUserError(
+                            `Conflicting rollout path ${this.mask(path)}; no records were imported.`,
+                        );
                     path = `extensions/ad_hoc/notes/imported-${digest(sourceScope + record.id).slice(0, 24)}.md`;
-                    if (recordPaths.has(path)) throw new MemoryUserError(`Conflicting imported note path ${path}; no records were imported.`);
+                    if (recordPaths.has(path))
+                        throw new MemoryUserError(
+                            `Conflicting imported note path ${path}; no records were imported.`,
+                        );
                 }
-                const copy = { ...record, path, body: this.mask(record.body), lastUsedAtMs: nowMs, usageCount: 0,
-                    importedFrom: { scope: sourceScope, cwd: this.mask(canonicalCwd(cwd)), path: record.path, importedAtMs: nowMs } };
-                this.put(targetScope, copy); recordsById.set(copy.id, copy); recordPaths.add(path); imported++;
+                const copy = {
+                    ...record,
+                    path,
+                    body: this.mask(record.body),
+                    lastUsedAtMs: nowMs,
+                    usageCount: 0,
+                    importedFrom: {
+                        scope: sourceScope,
+                        cwd: this.mask(canonicalCwd(cwd)),
+                        path: record.path,
+                        importedAtMs: nowMs,
+                    },
+                };
+                this.put(targetScope, copy);
+                recordsById.set(copy.id, copy);
+                recordPaths.add(path);
+                imported++;
             }
-            if (imported || removed || exclusionsAdded) { this.changed(targetScope, true); this.publish(targetScope, nowMs); }
-            return { imported, skipped, removed, excludedSources: excluded.size };
+            if (imported || removed || exclusionsAdded) {
+                this.changed(targetScope, true);
+                this.publish(targetScope, nowMs);
+            }
+            return {
+                imported,
+                skipped,
+                removed,
+                excludedSources: excluded.size,
+            };
         });
     }
     getSettings(scope: string): MemorySettings {
-        const row = this.database.prepare("SELECT value FROM settings WHERE scope = ?").get(scope) as { value: string } | undefined;
+        const row = this.database
+            .prepare("SELECT value FROM settings WHERE scope = ?")
+            .get(scope) as { value: string } | undefined;
         return parseSettings(row ? JSON.parse(row.value) : DEFAULT_SETTINGS);
     }
     saveSettings(scope: string, value: unknown): MemorySettings {
         const settings = parseSettings(value);
         this.transaction(() => {
             this.ensureScope(scope);
-            this.database.prepare("INSERT OR REPLACE INTO settings(scope,value) VALUES (?,?)").run(scope, JSON.stringify(settings));
-            this.database.prepare("UPDATE scopes SET generation = generation + 1 WHERE scope = ?").run(scope);
+            this.database
+                .prepare(
+                    "INSERT OR REPLACE INTO settings(scope,value) VALUES (?,?)",
+                )
+                .run(scope, JSON.stringify(settings));
+            this.database
+                .prepare(
+                    "UPDATE scopes SET generation = generation + 1 WHERE scope = ?",
+                )
+                .run(scope);
         });
         return settings;
     }
     state(scope: string): ScopeState {
-        const row = this.database.prepare("SELECT * FROM scopes WHERE scope = ?").get(scope) as { revision: number; generation: number; summary: string; consolidated_at: number; inputs: string } | undefined;
-        return row ? { revision: row.revision, generation: row.generation, summary: row.summary, consolidatedAtMs: row.consolidated_at, inputs: JSON.parse(row.inputs) } : { revision: 0, generation: 0, summary: "", consolidatedAtMs: 0, inputs: {} };
+        const row = this.database
+            .prepare("SELECT * FROM scopes WHERE scope = ?")
+            .get(scope) as
+            | {
+                  revision: number;
+                  generation: number;
+                  summary: string;
+                  consolidated_at: number;
+                  inputs: string;
+              }
+            | undefined;
+        return row
+            ? {
+                  revision: row.revision,
+                  generation: row.generation,
+                  summary: row.summary,
+                  consolidatedAtMs: row.consolidated_at,
+                  inputs: JSON.parse(row.inputs),
+              }
+            : {
+                  revision: 0,
+                  generation: 0,
+                  summary: "",
+                  consolidatedAtMs: 0,
+                  inputs: {},
+              };
     }
     records(scope: string, nowMs = Date.now()): MemoryRecord[] {
-        const rows = this.database.prepare("SELECT value FROM records WHERE scope = ? ORDER BY path").all(scope) as { value: string }[];
-        return rows.map(row => JSON.parse(row.value) as MemoryRecord).filter(record => record.expiresAtMs === null || record.expiresAtMs > nowMs);
+        const rows = this.database
+            .prepare("SELECT value FROM records WHERE scope = ? ORDER BY path")
+            .all(scope) as { value: string }[];
+        return rows
+            .map((row) => JSON.parse(row.value) as MemoryRecord)
+            .filter(
+                (record) =>
+                    record.expiresAtMs === null || record.expiresAtMs > nowMs,
+            );
     }
     isForgotten(scope: string, sourceId: string): boolean {
-        return !!this.database.prepare("SELECT 1 FROM tombstones WHERE scope = ? AND source_id = ?").get(scope, sourceId);
+        return !!this.database
+            .prepare(
+                "SELECT 1 FROM tombstones WHERE scope = ? AND source_id = ?",
+            )
+            .get(scope, sourceId);
     }
     isSourceExcluded(scope: string, source: RolloutSource): boolean {
-        return this.isForgotten(scope, source.id) || (scope !== "global" && this.selectsGlobal(source.cwd)) || (scope.startsWith("repository-") &&
-            ((source.repository?.scope ?? workspaceScope(source.cwd)) !== scope || this.isForgotten(workspaceScope(source.cwd), source.id)));
+        return (
+            this.isForgotten(scope, source.id) ||
+            (scope !== "global" && this.selectsGlobal(source.cwd)) ||
+            (scope.startsWith("repository-") &&
+                ((source.repository?.scope ?? workspaceScope(source.cwd)) !==
+                    scope ||
+                    this.isForgotten(workspaceScope(source.cwd), source.id)))
+        );
     }
     private put(scope: string, record: MemoryRecord): void {
-        this.database.prepare("INSERT OR REPLACE INTO records(scope,id,path,value) VALUES (?,?,?,?)").run(scope, record.id, record.path, JSON.stringify(record));
+        this.database
+            .prepare(
+                "INSERT OR REPLACE INTO records(scope,id,path,value) VALUES (?,?,?,?)",
+            )
+            .run(scope, record.id, record.path, JSON.stringify(record));
     }
     private changed(scope: string, invalidate: boolean): void {
-        this.database.prepare(`UPDATE scopes SET revision = revision + 1${invalidate ? ", summary = '', generation = generation + 1" : ""} WHERE scope = ?`).run(scope);
+        this.database
+            .prepare(
+                `UPDATE scopes SET revision = revision + 1${invalidate ? ", summary = '', generation = generation + 1" : ""} WHERE scope = ?`,
+            )
+            .run(scope);
     }
-    claim(scope: string, key: string, fingerprint: string, nowMs: number, settings: MemorySettings, force = false): JobLease | null {
+    claim(
+        scope: string,
+        key: string,
+        fingerprint: string,
+        nowMs: number,
+        settings: MemorySettings,
+        force = false,
+    ): JobLease | null {
         return this.transaction(() => {
             this.ensureScope(scope);
-            const row = this.database.prepare("SELECT * FROM jobs WHERE scope = ? AND key = ?").get(scope, key) as unknown as JobRow | undefined;
+            const row = this.database
+                .prepare("SELECT * FROM jobs WHERE scope = ? AND key = ?")
+                .get(scope, key) as unknown as JobRow | undefined;
             if (row?.owner && row.lease_until > nowMs) return null;
             const isSame = row?.fingerprint === fingerprint;
             if (isSame && row?.status === "succeeded") return null;
-            if (!force && isSame && row && (row.retry_at > nowMs || row.attempts >= settings.maxAttempts)) return null;
+            if (
+                !force &&
+                isSame &&
+                row &&
+                (row.retry_at > nowMs || row.attempts >= settings.maxAttempts)
+            )
+                return null;
             const owner = randomUUID();
-            this.database.prepare(`INSERT OR REPLACE INTO jobs(scope,key,fingerprint,owner,lease_until,retry_at,attempts,status)
-                VALUES (?,?,?,?,?,0,?,'running')`).run(scope, key, fingerprint, owner, nowMs + settings.timeoutMs + 10_000, isSame && !force ? (row?.attempts ?? 0) + 1 : 1);
-            return { scope, key, owner, fingerprint, generation: this.state(scope).generation };
+            this.database
+                .prepare(`INSERT OR REPLACE INTO jobs(scope,key,fingerprint,owner,lease_until,retry_at,attempts,status)
+                VALUES (?,?,?,?,?,0,?,'running')`)
+                .run(
+                    scope,
+                    key,
+                    fingerprint,
+                    owner,
+                    nowMs + settings.timeoutMs + 10_000,
+                    isSame && !force ? (row?.attempts ?? 0) + 1 : 1,
+                );
+            return {
+                scope,
+                key,
+                owner,
+                fingerprint,
+                generation: this.state(scope).generation,
+            };
         });
     }
     hasCompleted(scope: string, key: string, fingerprint: string): boolean {
-        return !!this.database.prepare("SELECT 1 FROM jobs WHERE scope = ? AND key = ? AND fingerprint = ? AND status = 'succeeded'").get(scope, key, fingerprint);
+        return !!this.database
+            .prepare(
+                "SELECT 1 FROM jobs WHERE scope = ? AND key = ? AND fingerprint = ? AND status = 'succeeded'",
+            )
+            .get(scope, key, fingerprint);
     }
-    block(scope: string, key: string, fingerprint: string, nowMs: number, code: MemoryFailureCode): void {
+    block(
+        scope: string,
+        key: string,
+        fingerprint: string,
+        nowMs: number,
+        code: MemoryFailureCode,
+    ): void {
         this.transaction(() => {
             this.ensureScope(scope);
-            const row = this.database.prepare("SELECT * FROM jobs WHERE scope = ? AND key = ?").get(scope, key) as unknown as JobRow | undefined;
+            const row = this.database
+                .prepare("SELECT * FROM jobs WHERE scope = ? AND key = ?")
+                .get(scope, key) as unknown as JobRow | undefined;
             if (row?.owner && row.lease_until > nowMs) return;
-            this.database.prepare(`INSERT OR REPLACE INTO jobs(scope,key,fingerprint,attempts,status,error)
-                VALUES (?,?,?,?,'blocked',?)`).run(scope, key, fingerprint, row?.fingerprint === fingerprint ? row.attempts : 0, code);
+            this.database
+                .prepare(`INSERT OR REPLACE INTO jobs(scope,key,fingerprint,attempts,status,error)
+                VALUES (?,?,?,?,'blocked',?)`)
+                .run(
+                    scope,
+                    key,
+                    fingerprint,
+                    row?.fingerprint === fingerprint ? row.attempts : 0,
+                    code,
+                );
         });
     }
     private owns(lease: JobLease, nowMs: number): boolean {
-        const row = this.database.prepare("SELECT owner,lease_until FROM jobs WHERE scope = ? AND key = ?").get(lease.scope, lease.key) as { owner: string; lease_until: number } | undefined;
-        return row?.owner === lease.owner && row.lease_until > nowMs && this.state(lease.scope).generation === lease.generation;
+        const row = this.database
+            .prepare(
+                "SELECT owner,lease_until FROM jobs WHERE scope = ? AND key = ?",
+            )
+            .get(lease.scope, lease.key) as
+            | { owner: string; lease_until: number }
+            | undefined;
+        return (
+            row?.owner === lease.owner &&
+            row.lease_until > nowMs &&
+            this.state(lease.scope).generation === lease.generation
+        );
     }
-    reserveCall(lease: JobLease, settings: MemorySettings, nowMs: number, source?: RolloutSource): void {
+    reserveCall(
+        lease: JobLease,
+        settings: MemorySettings,
+        nowMs: number,
+        source?: RolloutSource,
+    ): void {
         this.transaction(() => {
             // A scope selection can change after the lease was claimed without changing settings.
-            if (!this.owns(lease, nowMs) || !this.getSettings(lease.scope).generateMemories ||
-                (source && this.isSourceExcluded(lease.scope, source))) throw new MemoryFailure("superseded");
+            if (
+                !this.owns(lease, nowMs) ||
+                !this.getSettings(lease.scope).generateMemories ||
+                (source && this.isSourceExcluded(lease.scope, source))
+            )
+                throw new MemoryFailure("superseded");
             const day = new Date(nowMs).toISOString().slice(0, 10);
-            this.database.prepare("INSERT OR IGNORE INTO usage(scope,day) VALUES (?,?)").run(lease.scope, day);
-            const row = this.database.prepare("SELECT calls FROM usage WHERE scope = ? AND day = ?").get(lease.scope, day) as { calls: number };
-            if (row.calls >= settings.maxCallsPerDay) throw new MemoryFailure("daily_budget");
-            this.database.prepare("UPDATE usage SET calls = calls + 1 WHERE scope = ? AND day = ?").run(lease.scope, day);
+            this.database
+                .prepare("INSERT OR IGNORE INTO usage(scope,day) VALUES (?,?)")
+                .run(lease.scope, day);
+            const row = this.database
+                .prepare("SELECT calls FROM usage WHERE scope = ? AND day = ?")
+                .get(lease.scope, day) as { calls: number };
+            if (row.calls >= settings.maxCallsPerDay)
+                throw new MemoryFailure("daily_budget");
+            this.database
+                .prepare(
+                    "UPDATE usage SET calls = calls + 1 WHERE scope = ? AND day = ?",
+                )
+                .run(lease.scope, day);
         });
     }
-    recordUsage(scope: string, usage: MemoryUsage | undefined, nowMs: number): void {
+    recordUsage(
+        scope: string,
+        usage: MemoryUsage | undefined,
+        nowMs: number,
+    ): void {
         if (!usage) return;
-        const finite = (value: number | undefined) => Number.isFinite(value) && Number(value) >= 0 ? Number(value) : 0;
-        this.database.prepare("UPDATE usage SET input_tokens = input_tokens + ?, output_tokens = output_tokens + ?, cost = cost + ? WHERE scope = ? AND day = ?")
-            .run(finite(usage.input) + finite(usage.cacheRead) + finite(usage.cacheWrite), finite(usage.output), finite(usage.cost?.total), scope, new Date(nowMs).toISOString().slice(0, 10));
+        const finite = (value: number | undefined) =>
+            Number.isFinite(value) && Number(value) >= 0 ? Number(value) : 0;
+        this.database
+            .prepare(
+                "UPDATE usage SET input_tokens = input_tokens + ?, output_tokens = output_tokens + ?, cost = cost + ? WHERE scope = ? AND day = ?",
+            )
+            .run(
+                finite(usage.input) +
+                    finite(usage.cacheRead) +
+                    finite(usage.cacheWrite),
+                finite(usage.output),
+                finite(usage.cost?.total),
+                scope,
+                new Date(nowMs).toISOString().slice(0, 10),
+            );
     }
     private succeeded(lease: JobLease, nowMs: number): void {
-        this.database.prepare("UPDATE jobs SET owner = NULL, status = 'succeeded', finished_at = ?, error = '' WHERE scope = ? AND key = ? AND owner = ?")
+        this.database
+            .prepare(
+                "UPDATE jobs SET owner = NULL, status = 'succeeded', finished_at = ?, error = '' WHERE scope = ? AND key = ? AND owner = ?",
+            )
             .run(nowMs, lease.scope, lease.key, lease.owner);
     }
-    fail(lease: JobLease, nowMs: number, delayMs: number, isCancelled: boolean, code: MemoryFailureCode = "storage"): void {
-        this.database.prepare("UPDATE jobs SET owner = NULL, status = ?, retry_at = ?, attempts = CASE WHEN ? THEN MAX(0, attempts - 1) ELSE attempts END, error = ? WHERE scope = ? AND key = ? AND owner = ?")
-            .run(isCancelled ? "cancelled" : "failed", nowMs + (isCancelled ? 0 : delayMs), isCancelled ? 1 : 0, isCancelled ? "aborted" : code, lease.scope, lease.key, lease.owner);
+    fail(
+        lease: JobLease,
+        nowMs: number,
+        delayMs: number,
+        isCancelled: boolean,
+        code: MemoryFailureCode = "storage",
+    ): void {
+        this.database
+            .prepare(
+                "UPDATE jobs SET owner = NULL, status = ?, retry_at = ?, attempts = CASE WHEN ? THEN MAX(0, attempts - 1) ELSE attempts END, error = ? WHERE scope = ? AND key = ? AND owner = ?",
+            )
+            .run(
+                isCancelled ? "cancelled" : "failed",
+                nowMs + (isCancelled ? 0 : delayMs),
+                isCancelled ? 1 : 0,
+                isCancelled ? "aborted" : code,
+                lease.scope,
+                lease.key,
+                lease.owner,
+            );
     }
-    completeExtraction(lease: JobLease, source: RolloutSource, summary: string, slug: string, nowMs: number, wasNormalized = false): boolean {
+    completeExtraction(
+        lease: JobLease,
+        source: RolloutSource,
+        summary: string,
+        slug: string,
+        nowMs: number,
+        wasNormalized = false,
+    ): boolean {
         return this.transaction(() => {
-            if (!this.owns(lease, nowMs) || this.isSourceExcluded(lease.scope, source)) return false;
-            const prior = this.records(lease.scope, nowMs).find(record => record.id === source.id);
+            if (
+                !this.owns(lease, nowMs) ||
+                this.isSourceExcluded(lease.scope, source)
+            )
+                return false;
+            const prior = this.records(lease.scope, nowMs).find(
+                (record) => record.id === source.id,
+            );
             const masked = this.mask(summary).trim();
-            const marker = "\n[Middle omitted at memory storage limit; missing evidence is unknown.]\n";
+            const marker =
+                "\n[Middle omitted at memory storage limit; missing evidence is unknown.]\n";
             const body = truncateMiddleBytes(masked, SUMMARY_MAX_BYTES, marker);
-            const truncatedBytes = body === masked ? 0 : Buffer.byteLength(masked) - Buffer.byteLength(body) + Buffer.byteLength(marker);
+            const truncatedBytes =
+                body === masked
+                    ? 0
+                    : Buffer.byteLength(masked) -
+                      Buffer.byteLength(body) +
+                      Buffer.byteLength(marker);
             if (body) {
                 const { text: _text, ...provenance } = source;
-                const safeSlug = this.mask(slug).toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "session";
+                const safeSlug =
+                    this.mask(slug)
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-]+/g, "-")
+                        .replace(/^-|-$/g, "")
+                        .slice(0, 60) || "session";
                 this.put(lease.scope, {
-                    id: source.id, path: `rollout_summaries/${digest(source.id).slice(0, 16)}-${safeSlug}.md`, kind: "rollout", body, truncatedBytes, wasNormalized,
-                    source: { ...provenance, cwd: this.mask(provenance.cwd), file: this.mask(provenance.file),
-                        ...(provenance.repository ? { repository: { ...provenance.repository,
-                            commonDirectory: this.mask(provenance.repository.commonDirectory), worktreeRoot: this.mask(provenance.repository.worktreeRoot),
-                            branchAtCapture: provenance.repository.branchAtCapture === null ? null : this.mask(provenance.repository.branchAtCapture) } } : {}) }, generatedAtMs: nowMs,
-                    lastUsedAtMs: prior?.lastUsedAtMs ?? 0, usageCount: prior?.usageCount ?? 0, isPinned: prior?.isPinned ?? false, expiresAtMs: prior?.expiresAtMs ?? null,
+                    id: source.id,
+                    path: `rollout_summaries/${digest(source.id).slice(0, 16)}-${safeSlug}.md`,
+                    kind: "rollout",
+                    body,
+                    truncatedBytes,
+                    wasNormalized,
+                    source: {
+                        ...provenance,
+                        cwd: this.mask(provenance.cwd),
+                        file: this.mask(provenance.file),
+                        ...(provenance.repository
+                            ? {
+                                  repository: {
+                                      ...provenance.repository,
+                                      commonDirectory: this.mask(
+                                          provenance.repository.commonDirectory,
+                                      ),
+                                      worktreeRoot: this.mask(
+                                          provenance.repository.worktreeRoot,
+                                      ),
+                                      branchAtCapture:
+                                          provenance.repository
+                                              .branchAtCapture === null
+                                              ? null
+                                              : this.mask(
+                                                    provenance.repository
+                                                        .branchAtCapture,
+                                                ),
+                                  },
+                              }
+                            : {}),
+                    },
+                    generatedAtMs: nowMs,
+                    lastUsedAtMs: prior?.lastUsedAtMs ?? 0,
+                    usageCount: prior?.usageCount ?? 0,
+                    isPinned: prior?.isPinned ?? false,
+                    expiresAtMs: prior?.expiresAtMs ?? null,
                 });
-            } else this.database.prepare("DELETE FROM records WHERE scope = ? AND id = ?").run(lease.scope, source.id);
+            } else
+                this.database
+                    .prepare("DELETE FROM records WHERE scope = ? AND id = ?")
+                    .run(lease.scope, source.id);
             if (body || prior) this.changed(lease.scope, !!prior);
             this.succeeded(lease, nowMs);
             this.publish(lease.scope, nowMs);
             return true;
         });
     }
-    completeConsolidation(lease: JobLease, revision: number, inputs: Record<string, string>, summary: string, nowMs: number): boolean {
+    completeConsolidation(
+        lease: JobLease,
+        revision: number,
+        inputs: Record<string, string>,
+        summary: string,
+        nowMs: number,
+    ): boolean {
         return this.transaction(() => {
-            if (!this.owns(lease, nowMs) || this.state(lease.scope).revision !== revision) return false;
-            this.database.prepare("UPDATE scopes SET summary = ?, inputs = ?, consolidated_at = ? WHERE scope = ?")
-                .run(this.mask(summary), JSON.stringify(inputs), nowMs, lease.scope);
+            if (
+                !this.owns(lease, nowMs) ||
+                this.state(lease.scope).revision !== revision
+            )
+                return false;
+            this.database
+                .prepare(
+                    "UPDATE scopes SET summary = ?, inputs = ?, consolidated_at = ? WHERE scope = ?",
+                )
+                .run(
+                    this.mask(summary),
+                    JSON.stringify(inputs),
+                    nowMs,
+                    lease.scope,
+                );
             this.succeeded(lease, nowMs);
             this.publish(lease.scope, nowMs);
             return true;
         });
     }
-    addNote(scope: string, note: string, nowMs = Date.now(), filename?: string): MemoryRecord {
+    addNote(
+        scope: string,
+        note: string,
+        nowMs = Date.now(),
+        filename?: string,
+    ): MemoryRecord {
         const body = this.mask(note).trim();
-        if (!body || Buffer.byteLength(body) > SUMMARY_MAX_BYTES) throw new Error("Note must contain 1–9000 UTF-8 bytes.");
-        if (filename && !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,100}\.md$/.test(filename)) throw new Error("Invalid note filename.");
+        if (!body || Buffer.byteLength(body) > SUMMARY_MAX_BYTES)
+            throw new Error("Note must contain 1–9000 UTF-8 bytes.");
+        if (filename && !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,100}\.md$/.test(filename))
+            throw new Error("Invalid note filename.");
         return this.transaction(() => {
             this.ensureScope(scope);
             const id = randomUUID();
-            const record: MemoryRecord = { id, path: `extensions/ad_hoc/notes/${filename ?? `${id}.md`}`, kind: "note", body,
-                source: null, generatedAtMs: nowMs, lastUsedAtMs: 0, usageCount: 0, isPinned: true, expiresAtMs: null };
-            if (this.records(scope, nowMs).some(item => item.path === record.path)) throw new Error("Note already exists.");
-            this.put(scope, record); this.changed(scope, true); this.publish(scope, nowMs);
+            const record: MemoryRecord = {
+                id,
+                path: `extensions/ad_hoc/notes/${filename ?? `${id}.md`}`,
+                kind: "note",
+                body,
+                source: null,
+                generatedAtMs: nowMs,
+                lastUsedAtMs: 0,
+                usageCount: 0,
+                isPinned: true,
+                expiresAtMs: null,
+            };
+            if (
+                this.records(scope, nowMs).some(
+                    (item) => item.path === record.path,
+                )
+            )
+                throw new Error("Note already exists.");
+            this.put(scope, record);
+            this.changed(scope, true);
+            this.publish(scope, nowMs);
             return record;
         });
     }
-    revise(scope: string, path: string, body: string | null, nowMs = Date.now()): void {
+    revise(
+        scope: string,
+        path: string,
+        body: string | null,
+        nowMs = Date.now(),
+    ): void {
         this.transaction(() => {
             this.ensureScope(scope);
-            const record = this.records(scope, nowMs).find(item => item.path === path);
-            if (!record) throw new Error("Memory record not found.");
-            this.database.prepare("INSERT OR IGNORE INTO tombstones(scope,source_id) VALUES (?,?)").run(scope, record.source?.id ?? record.id);
-            this.database.prepare("DELETE FROM records WHERE scope = ? AND id = ?").run(scope, record.id);
+            const record = this.records(scope, nowMs).find(
+                (item) => item.path === path,
+            );
+            if (!record) throw new MemoryUserError("Memory record not found.");
+            this.database
+                .prepare(
+                    "INSERT OR IGNORE INTO tombstones(scope,source_id) VALUES (?,?)",
+                )
+                .run(scope, record.source?.id ?? record.id);
+            this.database
+                .prepare("DELETE FROM records WHERE scope = ? AND id = ?")
+                .run(scope, record.id);
             if (body !== null) {
                 const masked = this.mask(body).trim();
-                if (!masked || Buffer.byteLength(masked) > SUMMARY_MAX_BYTES) throw new Error("Correction must contain 1–9000 UTF-8 bytes.");
+                if (!masked || Buffer.byteLength(masked) > SUMMARY_MAX_BYTES)
+                    throw new MemoryUserError(
+                        "Correction must contain 1–9000 UTF-8 bytes.",
+                    );
                 const id = randomUUID();
-                this.put(scope, { ...record, id, source: null, importedFrom: undefined, kind: "note", path: `extensions/ad_hoc/notes/${id}.md`, body: masked, isPinned: true, generatedAtMs: nowMs });
+                this.put(scope, {
+                    ...record,
+                    id,
+                    source: null,
+                    importedFrom: undefined,
+                    kind: "note",
+                    path: `extensions/ad_hoc/notes/${id}.md`,
+                    body: masked,
+                    isPinned: true,
+                    generatedAtMs: nowMs,
+                });
             }
-            this.database.prepare("UPDATE scopes SET generation = generation + 1 WHERE scope = ?").run(scope);
-            this.changed(scope, true); this.publish(scope, nowMs);
+            this.database
+                .prepare(
+                    "UPDATE scopes SET generation = generation + 1 WHERE scope = ?",
+                )
+                .run(scope);
+            this.changed(scope, true);
+            this.publish(scope, nowMs);
         });
     }
-    setRetention(scope: string, path: string, isPinned: boolean, expiresAtMs: number | null): void {
-        if (expiresAtMs !== null && (!Number.isSafeInteger(expiresAtMs) || expiresAtMs <= Date.now())) throw new Error("Expiry must be a future timestamp.");
+    setRetention(
+        scope: string,
+        path: string,
+        isPinned: boolean,
+        expiresAtMs: number | null,
+    ): void {
+        if (
+            expiresAtMs !== null &&
+            (!Number.isSafeInteger(expiresAtMs) || expiresAtMs <= Date.now())
+        )
+            throw new Error("Expiry must be a future timestamp.");
         this.transaction(() => {
-            const record = this.records(scope).find(item => item.path === path);
-            if (!record) throw new Error("Memory record not found.");
-            this.put(scope, { ...record, isPinned, expiresAtMs }); this.changed(scope, false);
+            const record = this.records(scope).find(
+                (item) => item.path === path,
+            );
+            if (!record) throw new MemoryUserError("Memory record not found.");
+            this.put(scope, { ...record, isPinned, expiresAtMs });
+            this.changed(scope, false);
         });
     }
     prune(scope: string, settings: MemorySettings, nowMs: number): void {
         this.transaction(() => {
             this.ensureScope(scope);
-            const rows = this.database.prepare("SELECT value FROM records WHERE scope = ?").all(scope) as { value: string }[];
+            const rows = this.database
+                .prepare("SELECT value FROM records WHERE scope = ?")
+                .all(scope) as { value: string }[];
             let changed = false;
             for (const row of rows) {
                 const record = JSON.parse(row.value) as MemoryRecord;
-                const expired = record.expiresAtMs !== null && record.expiresAtMs <= nowMs;
-                const unused = !record.isPinned && nowMs - (record.lastUsedAtMs || record.generatedAtMs) > settings.maxUnusedDays * 86_400_000;
+                const expired =
+                    record.expiresAtMs !== null && record.expiresAtMs <= nowMs;
+                const unused =
+                    !record.isPinned &&
+                    nowMs - (record.lastUsedAtMs || record.generatedAtMs) >
+                        settings.maxUnusedDays * 86_400_000;
                 if (!expired && !unused) continue;
-                this.database.prepare("DELETE FROM records WHERE scope = ? AND id = ?").run(scope, record.id); changed = true;
-                this.database.prepare("INSERT OR IGNORE INTO tombstones(scope,source_id) VALUES (?,?)").run(scope, record.source?.id ?? record.id);
+                this.database
+                    .prepare("DELETE FROM records WHERE scope = ? AND id = ?")
+                    .run(scope, record.id);
+                changed = true;
+                this.database
+                    .prepare(
+                        "INSERT OR IGNORE INTO tombstones(scope,source_id) VALUES (?,?)",
+                    )
+                    .run(scope, record.source?.id ?? record.id);
             }
-            if (changed) { this.changed(scope, true); this.database.prepare("UPDATE scopes SET generation = generation + 1 WHERE scope = ?").run(scope); this.publish(scope, nowMs); }
+            if (changed) {
+                this.changed(scope, true);
+                this.database
+                    .prepare(
+                        "UPDATE scopes SET generation = generation + 1 WHERE scope = ?",
+                    )
+                    .run(scope);
+                this.publish(scope, nowMs);
+            }
         });
     }
     reset(scope: string, nowMs = Date.now()): void {
         this.transaction(() => {
             this.ensureScope(scope);
             for (const record of this.records(scope, 0))
-                this.database.prepare("INSERT OR IGNORE INTO tombstones(scope,source_id) VALUES (?,?)").run(scope, record.source?.id ?? record.id);
-            this.database.prepare("DELETE FROM records WHERE scope = ?").run(scope);
-            this.database.prepare("UPDATE scopes SET generation = generation + 1, revision = revision + 1, summary = '' WHERE scope = ?").run(scope);
+                this.database
+                    .prepare(
+                        "INSERT OR IGNORE INTO tombstones(scope,source_id) VALUES (?,?)",
+                    )
+                    .run(scope, record.source?.id ?? record.id);
+            this.database
+                .prepare("DELETE FROM records WHERE scope = ?")
+                .run(scope);
+            this.database
+                .prepare(
+                    "UPDATE scopes SET generation = generation + 1, revision = revision + 1, summary = '' WHERE scope = ?",
+                )
+                .run(scope);
             this.publish(scope, nowMs);
         });
     }
-    markUsed(scope: string, paths: readonly string[], nowMs = Date.now()): void {
+    markUsed(
+        scope: string,
+        paths: readonly string[],
+        nowMs = Date.now(),
+    ): void {
         this.transaction(() => {
-            for (const record of this.records(scope, nowMs)) if (paths.includes(record.path))
-                this.put(scope, { ...record, usageCount: record.usageCount + 1, lastUsedAtMs: nowMs });
+            for (const record of this.records(scope, nowMs))
+                if (paths.includes(record.path))
+                    this.put(scope, {
+                        ...record,
+                        usageCount: record.usageCount + 1,
+                        lastUsedAtMs: nowMs,
+                    });
         });
     }
-    activity(scope: string, sessionId: string, owner: string, isBusy: boolean, nowMs: number): void {
-        this.database.prepare("INSERT OR REPLACE INTO activity(scope,session_id,owner,busy,expires_at) VALUES (?,?,?,?,?)")
+    activity(
+        scope: string,
+        sessionId: string,
+        owner: string,
+        isBusy: boolean,
+        nowMs: number,
+    ): void {
+        this.database
+            .prepare(
+                "INSERT OR REPLACE INTO activity(scope,session_id,owner,busy,expires_at) VALUES (?,?,?,?,?)",
+            )
             .run(scope, sessionId, owner, isBusy ? 1 : 0, nowMs + 90_000);
     }
-    releaseActivity(owner: string): void { this.database.prepare("DELETE FROM activity WHERE owner = ?").run(owner); }
+    releaseActivity(owner: string): void {
+        this.database
+            .prepare("DELETE FROM activity WHERE owner = ?")
+            .run(owner);
+    }
     isBusy(scope: string, sessionId: string, nowMs: number): boolean {
-        return !!this.database.prepare("SELECT 1 FROM activity WHERE scope = ? AND session_id = ? AND busy = 1 AND expires_at > ?").get(scope, sessionId, nowMs);
+        return !!this.database
+            .prepare(
+                "SELECT 1 FROM activity WHERE scope = ? AND session_id = ? AND busy = 1 AND expires_at > ?",
+            )
+            .get(scope, sessionId, nowMs);
     }
     status(scope: string): object {
-        return { scope, root: this.artifactRoot(scope), settings: this.getSettings(scope), state: { ...this.state(scope), summary: undefined, inputs: undefined },
-            records: this.records(scope).length, truncatedRecords: this.records(scope).filter(record => (record.truncatedBytes ?? 0) > 0).length,
-            normalizedRecords: this.records(scope).filter(record => record.wasNormalized).length, excludedSources: (this.database.prepare("SELECT COUNT(*) AS count FROM tombstones WHERE scope = ?").get(scope) as { count: number }).count,
-            jobs: this.database.prepare("SELECT key,status,attempts,retry_at,error FROM jobs WHERE scope = ? ORDER BY rowid DESC LIMIT 20").all(scope),
-            usage: this.database.prepare("SELECT * FROM usage WHERE scope = ? ORDER BY day DESC LIMIT 7").all(scope) };
+        return {
+            scope,
+            root: this.artifactRoot(scope),
+            settings: this.getSettings(scope),
+            state: {
+                ...this.state(scope),
+                summary: undefined,
+                inputs: undefined,
+            },
+            records: this.records(scope).length,
+            truncatedRecords: this.records(scope).filter(
+                (record) => (record.truncatedBytes ?? 0) > 0,
+            ).length,
+            normalizedRecords: this.records(scope).filter(
+                (record) => record.wasNormalized,
+            ).length,
+            excludedSources: (
+                this.database
+                    .prepare(
+                        "SELECT COUNT(*) AS count FROM tombstones WHERE scope = ?",
+                    )
+                    .get(scope) as { count: number }
+            ).count,
+            jobs: this.database
+                .prepare(
+                    "SELECT key,status,attempts,retry_at,error FROM jobs WHERE scope = ? ORDER BY rowid DESC LIMIT 20",
+                )
+                .all(scope),
+            usage: this.database
+                .prepare(
+                    "SELECT * FROM usage WHERE scope = ? ORDER BY day DESC LIMIT 7",
+                )
+                .all(scope),
+        };
     }
     artifactRoot(scope: string): string {
-        if (!/^(global|(?:workspace|repository)-[a-f0-9]{24})$/.test(scope)) throw new Error("Invalid memory scope.");
+        if (!/^(global|(?:workspace|repository)-[a-f0-9]{24})$/.test(scope))
+            throw new Error("Invalid memory scope.");
         return join(this.root, "scopes", scope);
     }
     document(record: MemoryRecord): string {
-        const imported = record.importedFrom ? `imported_from_cwd: ${JSON.stringify(record.importedFrom.cwd)}\nimported_from_scope: ${record.importedFrom.scope}\n\n` : "";
+        const imported = record.importedFrom
+            ? `imported_from_cwd: ${JSON.stringify(record.importedFrom.cwd)}\nimported_from_scope: ${record.importedFrom.scope}\n\n`
+            : "";
         if (record.kind === "note") return imported + record.body;
         const repository = record.source?.repository;
-        const context = repository ? `repository_scope: ${repository.scope}\nworktree_root: ${JSON.stringify(repository.worktreeRoot)}\ngit_branch_at_capture: ${JSON.stringify(repository.branchAtCapture)}\ngit_observed_at: ${new Date(repository.capturedAtMs).toISOString()}\nrepository_binding: ${repository.binding}\n` : "";
+        const context = repository
+            ? `repository_scope: ${repository.scope}\nworktree_root: ${JSON.stringify(repository.worktreeRoot)}\ngit_branch_at_capture: ${JSON.stringify(repository.branchAtCapture)}\ngit_observed_at: ${new Date(repository.capturedAtMs).toISOString()}\nrepository_binding: ${repository.binding}\n`
+            : "";
         return `thread_id: ${record.source?.id}\ncwd: ${record.source?.cwd}\nsource_entry: ${record.source?.leafId}\nupdated_at: ${new Date(record.source?.updatedAtMs ?? 0).toISOString()}\n${context}\n${imported}${record.body}`;
     }
     /** Called under the SQLite writer lock; retrieval never trusts Markdown over the DB. */
@@ -484,24 +1169,46 @@ export class MemoryStore {
         privateDirectory(join(this.root, "scopes"));
         const root = this.artifactRoot(scope);
         privateDirectory(root);
-        privateDirectory(join(root, "extensions")); privateDirectory(join(root, "extensions", "ad_hoc"));
+        privateDirectory(join(root, "extensions"));
+        privateDirectory(join(root, "extensions", "ad_hoc"));
         const directories = ["rollout_summaries", "extensions/ad_hoc/notes"];
         const records = this.records(scope, nowMs);
-        for (const directory of directories) privateDirectory(join(root, directory));
-        const expected = new Set(records.map(record => record.path));
-        const previous = this.database.prepare("SELECT path FROM artifact_paths WHERE scope = ?").all(scope) as { path: string }[];
+        for (const directory of directories)
+            privateDirectory(join(root, directory));
+        const expected = new Set(records.map((record) => record.path));
+        const previous = this.database
+            .prepare("SELECT path FROM artifact_paths WHERE scope = ?")
+            .all(scope) as { path: string }[];
         for (const { path } of previous) {
             if (expected.has(path)) continue;
-            if (!/^(rollout_summaries|extensions\/ad_hoc\/notes)\/[A-Za-z0-9_-]+\.md$/.test(path)) throw new Error("Unsafe memory artifact path.");
+            if (
+                !/^(rollout_summaries|extensions\/ad_hoc\/notes)\/[A-Za-z0-9_-]+\.md$/.test(
+                    path,
+                )
+            )
+                throw new Error("Unsafe memory artifact path.");
             const target = join(root, path);
             try {
-                if (lstatSync(target).isSymbolicLink() || !lstatSync(target).isFile()) throw new Error("Unsafe memory artifact.");
+                if (
+                    lstatSync(target).isSymbolicLink() ||
+                    !lstatSync(target).isFile()
+                )
+                    throw new Error("Unsafe memory artifact.");
                 unlinkSync(target);
-            } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+            } catch (error) {
+                if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+                    throw error;
+            }
         }
-        for (const record of records) atomicWrite(join(root, record.path), this.document(record));
-        this.database.prepare("DELETE FROM artifact_paths WHERE scope = ?").run(scope);
-        for (const record of records) this.database.prepare("INSERT INTO artifact_paths(scope,path) VALUES (?,?)").run(scope, record.path);
+        for (const record of records)
+            atomicWrite(join(root, record.path), this.document(record));
+        this.database
+            .prepare("DELETE FROM artifact_paths WHERE scope = ?")
+            .run(scope);
+        for (const record of records)
+            this.database
+                .prepare("INSERT INTO artifact_paths(scope,path) VALUES (?,?)")
+                .run(scope, record.path);
         atomicWrite(join(root, "memory_summary.md"), this.state(scope).summary);
     }
 }

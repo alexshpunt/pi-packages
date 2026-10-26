@@ -1,6 +1,13 @@
 import type { ThinkingLevel } from "@earendil-works/pi-ai";
 
-export const MEMORY_REASONING_LEVELS: readonly ThinkingLevel[] = ["minimal", "low", "medium", "high", "xhigh", "max"];
+export const MEMORY_REASONING_LEVELS: readonly ThinkingLevel[] = [
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+];
 export interface ModelChoice {
     provider: string;
     id: string;
@@ -64,30 +71,73 @@ const ranges: Record<string, readonly [number, number]> = {
     maxCallsPerDay: [1, 1000],
     maxInjectionBytes: [1024, 16 * 1024],
 };
+export function settingRange(
+    key: keyof MemorySettings,
+): readonly [number, number] | undefined {
+    return ranges[key];
+}
+/** "custom" is a stored combination the mode menu does not offer: creating without using. */
+export type MemoryMode = "off" | "use" | "create" | "custom";
+export function memoryMode(settings: MemorySettings): MemoryMode {
+    if (!settings.useMemories)
+        return settings.generateMemories ? "custom" : "off";
+    return settings.generateMemories ? "create" : "use";
+}
 export function parseSettings(value: unknown): MemorySettings {
     if (!value || typeof value !== "object" || Array.isArray(value))
         throw new Error("Memory settings must be an object.");
     const settings = { ...DEFAULT_SETTINGS, ...value } as MemorySettings;
     for (const [key, item] of Object.entries(settings)) {
-        if (!Object.hasOwn(DEFAULT_SETTINGS, key)) throw new Error(`Unknown memory setting: ${key}`);
+        if (!Object.hasOwn(DEFAULT_SETTINGS, key))
+            throw new Error(`Unknown memory setting: ${key}`);
         if (key.endsWith("Model")) {
-            if (item !== null && (!item || typeof item !== "object" ||
-                Array.isArray(item) || Object.keys(item).some(k => k !== "provider" && k !== "id" && k !== "reasoning") ||
-                (item.reasoning !== undefined && !MEMORY_REASONING_LEVELS.includes(item.reasoning)) ||
-                typeof item.provider !== "string" || !item.provider.trim() ||
-                typeof item.id !== "string" || !item.id.trim()))
+            if (
+                item !== null &&
+                (!item ||
+                    typeof item !== "object" ||
+                    Array.isArray(item) ||
+                    Object.keys(item).some(
+                        (k) =>
+                            k !== "provider" && k !== "id" && k !== "reasoning",
+                    ) ||
+                    (item.reasoning !== undefined &&
+                        !MEMORY_REASONING_LEVELS.includes(item.reasoning)) ||
+                    typeof item.provider !== "string" ||
+                    !item.provider.trim() ||
+                    typeof item.id !== "string" ||
+                    !item.id.trim())
+            )
                 throw new Error(`Invalid model setting: ${key}`);
         } else if (ranges[key]) {
             const [min, max] = ranges[key];
-            if (!Number.isSafeInteger(item) || Number(item) < min || Number(item) > max)
-                throw new Error(`${key} must be an integer between ${min} and ${max}.`);
-        } else if (typeof item !== "boolean") throw new Error(`${key} must be a boolean.`);
+            if (
+                !Number.isSafeInteger(item) ||
+                Number(item) < min ||
+                Number(item) > max
+            )
+                throw new Error(
+                    `${key} must be an integer between ${min} and ${max}.`,
+                );
+        } else if (typeof item !== "boolean")
+            throw new Error(`${key} must be a boolean.`);
     }
-    if (settings.generateMemories && (!settings.extractModel || !settings.consolidateModel))
-        throw new Error("Select extraction and consolidation models before enabling generation.");
+    if (
+        settings.generateMemories &&
+        (!settings.extractModel || !settings.consolidateModel)
+    )
+        throw new Error(
+            "Select extraction and consolidation models before enabling generation.",
+        );
     return settings;
 }
-export function isSourceEligible(updatedAtMs: number, nowMs: number, settings: MemorySettings): boolean {
+export function isSourceEligible(
+    updatedAtMs: number,
+    nowMs: number,
+    settings: MemorySettings,
+): boolean {
     const ageMs = nowMs - updatedAtMs;
-    return ageMs >= settings.minIdleMs && ageMs <= settings.maxRolloutAgeDays * 86_400_000;
+    return (
+        ageMs >= settings.minIdleMs &&
+        ageMs <= settings.maxRolloutAgeDays * 86_400_000
+    );
 }

@@ -2,135 +2,146 @@
 
 **English** | [한국어](README.ko.md)
 
-Codex memory v2 adapted to Pi. Keep project decisions across sessions by extracting conversation summaries, consolidating them, and retrieving relevant history when needed. Manage everything through **`/codex-memory`**.
+A Pi extension that saves project decisions and context from your conversations and brings them back in later sessions. It is for Pi users who work on one project across many sessions. If you decide today to "switch the release gate to `amber`," then days later, when you ask "what did we pick for the release gate?" in a new session, the agent reads the memory and answers with a citation.
 
-[Verification and performance results](docs/verification.md)
+It adapts the extraction and consolidation design of [Codex memory v2](https://github.com/openai/codex/tree/4610b573e59b211bf9430cf6ffb97cfb84623090/codex-rs/memories) to Pi's model providers and SQLite storage. You don't need the Codex CLI, and it doesn't use Codex's database.
 
-## Required
+## Requirements
 
 | Component | Requirement |
 | --- | --- |
-| Pi | 1.4.0+ |
-| Node.js | 22.19+ |
-| Memory models | Configure the selected providers in Pi before enabling generation |
+| Pi | 1.4.0 or later |
+| Node.js | 22.19 or later |
+| pnpm | 10, for building from source |
+| Memory model | A model available in Pi. Needed only for creating memories. |
 
-Codex CLI is not required.
+## Install
 
-## Build and try
-
-From the repository root:
+The package is not published to npm yet, so build it from the repository source and register it with Pi:
 
 ```sh
+git clone https://github.com/buYoung/pi-packages.git
+cd pi-packages
 pnpm install
 pnpm --filter "@buyong/pi-codex-memory..." build
-pi -ne -e ./apps/pi-codex-memory
+pi install ./apps/pi-codex-memory
 ```
 
-For persistent local registration, use `pi install ./apps/pi-codex-memory`. Remove it with `pi remove ./apps/pi-codex-memory`; this does not erase stored memories.
+After installation, start Pi and the `/codex-memory` commands are available. Removing the extension with `pi remove ./apps/pi-codex-memory` keeps your stored memories.
 
-The `@buyong/pi-codex` bundle also includes this extension. Enable either the bundle or the individual package, not both. Rebuild the bundle after component changes.
+The `@buyong/pi-codex` bundle built from the repository source also includes this extension; the bundle published to npm does not include it yet. Do not enable both the bundle and this package.
 
-## First use
+## Quick start
 
-### Save a note
+This walkthrough uses the verification settings to create a memory and bring it back in a new session: `claude-bridge/claude-haiku-5-5` as the memory model, with the default timing. The `claude-bridge` provider comes from the [@buyong/pi-claude-bridge](https://github.com/buYoung/pi-packages/blob/main/apps/pi-claude-bridge/README.md) extension, so install it first by following its instructions. You can also pick any other model already configured in Pi.
 
-1. Open `/codex-memory` → **기억 추가** (add memory).
-2. Enter a project fact or decision and confirm.
-3. Use **기억 조회·정정·잊기** to read, correct or forget it.
+Creating memories sends masked copies of your conversations to the model you pick, which uses your provider quota or costs money. Masking does not catch every private value.
 
-These management actions do not call a model. `/codex-memory status` shows the active scope, storage location and usage.
+### 1. Turn on memory creation
 
-### Enable generation
+1. Start Pi in the project folder where you want memory, and run `/codex-memory`.
+2. Choose **Use and create memories**.
+3. Pick `claude-bridge/claude-haiku-5-5`. It is used for both extraction and consolidation, with `low` reasoning for extraction and `medium` for consolidation.
+4. Approve **Send conversations to create memories?**, which shows the model and the daily call limit.
 
-**Generation is off by default.** Existing memory can still be read and included in context.
+The notification "Memory creation is on. A conversation becomes memory after 30 idle minutes." confirms it worked.
 
-1. Open `/codex-memory settings`.
-2. Select extraction and consolidation models, review the limits, and enable generation.
-3. Save and confirm the transmission scope.
-4. Use `/codex-memory extract` for the current branch, or wait until the configured idle time has passed.
+### 2. Turn a decision into memory
 
-Generation sends masked conversation copies to the selected providers and may consume quota or incur charges. Masking does not detect every private value. Load any provider extension needed by the selected models; changing the foreground model does not change your saved memory-model choices.
+1. Record a decision in the conversation, for example: `We decided to switch the release gate to amber. This applies to this project only.`
+2. Run `/codex-memory-manage`, choose **Generate from this conversation**, and approve. This item appears only while memory creation is on, and creates memory now instead of after 30 idle minutes.
+3. When it finishes, a notification says "Created memories from 1 conversation(s)."
+4. Run `/codex-memory-manage` and choose **Review saved memories** to see what was saved.
 
-Generation runs while Pi is open and is cancelled when foreground work starts. It does not continue as a service after Pi exits.
+### 3. Bring it back in a new session
 
-## Commands and tools
+1. In the same project, open a new session with `/new`.
+2. Ask `What did we pick for the release gate?`
 
-| Command | Action |
-| --- | --- |
-| `/codex-memory` | Notes, settings, scope and reset |
-| `/codex-memory status` | Inspect status without a model call |
-| `/codex-memory settings` | Edit and confirm settings |
-| `/codex-memory extract` | Confirm and extract the current branch |
-| `/codex-memory run` | Confirm and extract memories from sessions that meet the idle settings |
-| `/codex-memory import` | Include older conversations in the idle scan, after confirmation |
-| `/codex-memory cancel` | Cancel this session's memory job |
-| `/codex-memory repositories` | Register repositories and manage read connections |
-| `/codex-memory legacy` | Select and confirm existing cwd memories to copy |
-
-The agent uses `pi_codex_memory_list`, `pi_codex_memory_search`, `pi_codex_memory_read` and `pi_codex_memory_note`. Notes require confirmation. Interactive management is available in TUI and UI-capable RPC; noninteractive execution cannot silently approve changes or transmission.
-
-## Sharing and scope
-
-The main checkout, subdirectories and linked worktrees of one Git repository share memories, settings and call budgets. Separate clones, nested repositories and submodules remain separate. Outside Git, the scope is the current working directory.
-
-Scope identity uses the local Git common-directory path, not the remote URL. Moving that path can change the scope; replacing a repository at the same path can reuse its old scope.
-
-To read another repository's history:
-
-1. Register its working-directory path with `/codex-memory repositories`.
-2. Explicitly request that repository's memory. Read tools accept its registered name, scope ID or path through `repository`.
-3. Confirm access for that user request, or save a directional read connection for repeated use.
-
-A connection from `shop-web` to `shop-api` does not grant access in reverse. Reading does not automatically inject, copy or edit the other repository's memory. Notes, corrections and forgetting affect only the active scope.
-
-Existing cwd memories are not migrated automatically. Use `/codex-memory legacy` to select records from the same repository and confirm the copy. Forgotten records are not revived, and settings or generation consent are not transferred. The copies remain independent afterward. Personal-global scope is a separate, explicit choice; switching scope does not merge existing records.
-
-## Storage and retention
-
-Memories stay in the central Pi agent directory, not inside the project or `.git`:
+The agent sees a memory summary with each request and searches and reads memory when it needs more. If it used memory, it answers `amber` and cites the source at the end of the answer, and the status bar shows the citation:
 
 ```text
-~/.pi/agent/pi-codex-memory/
-├─ state.sqlite
-└─ scopes/
-   ├─ <shop-api scope ID>/
-   │  ├─ memory_summary.md
-   │  ├─ rollout_summaries/
-   │  └─ extensions/ad_hoc/notes/
-   └─ <shop-web scope ID>/
+Memory: Use and create · 1 cited
 ```
 
-`PI_CODING_AGENT_DIR` changes the agent directory. Use `/codex-memory status` for actual scope IDs. SQLite is authoritative; manage memories through `/codex-memory` rather than editing generated Markdown files.
+The status bar starts with the current mode. `1 cited` appears only when the last answer cited memory that the agent actually read; a citation that does not match what was read shows a warning instead. `updating…` means a memory job is running, and `update failed` means the last one failed.
+
+Memory is a record of past conversations. It does not prove the code is still in that state, so check important points against the code.
+
+## Everyday use
+
+In **Use and create memories** mode, memories are built in the background while Pi is open. Nothing is processed while Pi is closed; conversations that were waiting are processed the next time Pi is open and idle.
+
+- After a conversation has been idle for 30 minutes, its memories are extracted.
+- Extracted content is consolidated into existing memory at most once every 60 minutes.
+- When you type new input, any memory job in progress is cancelled.
+
+To save something right away, ask the agent to "remember" it. A confirmation shows the exact text before it is saved, and it works in **Use saved memories** mode as well. To save the whole conversation instead, use **Generate from this conversation** in `/codex-memory-manage`.
+
+### Fix a wrong memory
+
+Run `/codex-memory-manage` and choose **Review saved memories**. Use **Search…** to narrow the list, pick a memory, and choose **View memory and source**, **Edit memory** or **Forget memory**. These actions do not call a model.
+
+- Edited or forgotten memories leave the summary and search results immediately.
+- A forgotten memory is not created again from the same conversation. Original sessions, provider-side copies and other conversations with the same fact are not erased.
+
+## Commands
+
+All three commands take no arguments.
+
+| Command | What it opens |
+| --- | --- |
+| `/codex-memory` | The mode: **Off**, **Use saved memories** or **Use and create memories**. |
+| `/codex-memory-manage` | Saved memories: **Review saved memories**, **Generate from this conversation**, **Stop current job** while a job runs, **Show what failed** after a failure, and **Forget all memories in this scope**. |
+| `/codex-memory-settings` | The model, timing, retention, daily call limit, memory scope and repository access. |
+
+Opening a page does not stop a running job. Without a UI, `/codex-memory` and `/codex-memory-manage` print the status as JSON and `/codex-memory-settings` prints the settings; they change nothing.
+
+The agent reads memory with `pi_codex_memory_list`, `pi_codex_memory_search` and `pi_codex_memory_read`, and saves what you ask it to remember with `pi_codex_memory_note`.
+
+## Who shares memory
+
+Subfolders and worktrees of one Git repository share memory, settings and the daily call limit. Separate clones, nested repositories and submodules each keep their own. Outside Git, each folder keeps its own. Because settings are also per scope, you must turn on memory creation again in another repository.
+
+Scopes are identified by the repository's local path. Moving the repository folder disconnects it from its existing memory, and placing a different repository at the same path inherits the old memory.
+
+To share one memory across folders, run `/codex-memory-settings`, choose **Memory scope** and pick **Personal**. Every folder set to Personal shares that memory and its settings. Changing scope does not copy or merge existing memories.
+
+If a folder in this repository has memories saved before repository sharing existed, `/codex-memory-manage` shows **Import N old memories for this folder**. It copies them into the repository's memory after showing the list.
+
+### Read another repository's memory
+
+For example, to check what was decided in `shop-api` while working in `shop-web`:
+
+1. In `shop-web`, run `/codex-memory-settings` and choose **Repository access**.
+2. Pick `shop-api`. If you have not opened Pi in `shop-api` since installing this extension, it is not listed; choose **Add repository…** and enter its folder path.
+3. Choose **Always allow reads** to let the agent read it without asking, or **Ask each time** to confirm each read, then approve.
+4. Ask the agent with the repository named, for example "find the auth method in shop-api's memory." With **Ask each time**, a confirmation appears now.
+
+Access goes one way. Letting `shop-web` read `shop-api` does not let `shop-api` read `shop-web`. Another repository's memory is only read; it is never added to the summary, copied or edited.
+
+## Storage and defaults
+
+Memories are stored in `~/.pi/agent/pi-codex-memory/`, not in your project. If you set `PI_CODING_AGENT_DIR`, they are stored under that directory instead. `state.sqlite` is the source of truth; the Markdown files under `scopes/` are copies generated from it. Manage memories with `/codex-memory-manage` instead of editing the Markdown.
+
+Change settings in `/codex-memory-settings`. Each change is saved right away for the current scope, stops a running memory job, and applies from the next job. **Edit all settings as JSON** holds the remaining settings, such as separate extraction and consolidation models and their reasoning levels.
 
 | Setting | Default |
 | --- | --- |
-| Minimum idle time before extraction | 30 minutes |
-| Consolidation cooldown | 60 minutes |
-| Sources per run / model calls per UTC day | 2 / 24 |
-| Maximum source age | 10 days |
-| Unused, unpinned memory retention | 30 days |
-| Model input / context injection limit | 256 KiB / 12 KiB |
+| Idle time before creating memories | 30 minutes |
+| Consolidation interval | 60 minutes |
+| Model calls per UTC day | 24 |
+| Keep unused memories | 30 days. Memories you asked the agent to save and memories you edited are kept. |
+| Conversations per extraction run | 2 |
+| Maximum age of a conversation to extract | 10 days |
+| Input per call / summary injection limit | 256 KiB / 12 KiB |
 
-Explicit expiry also applies to pinned records. Cleanup runs while Pi is open. These are configurable limits, not measured universal optima. See [timing details](docs/timing.ko.md) for the scheduling rationale.
+For how the 30- and 60-minute defaults were chosen and when to change them, see the [verification report](docs/verification.md#how-the-default-wait-times-were-chosen).
 
-## What memory does not guarantee
+## Verification
 
-- Memory is historical evidence, not proof of the current code or permission to execute an action.
-- Forgetting removes active memory and excludes its source from regeneration. It does not erase original sessions, earlier answers, backups or provider-side copies. Independent sources can contain the same fact.
-- Reading a memory or validating its citation does not guarantee a correct answer. Accuracy, token use and the limits of the tested cases are covered in the [verification report](docs/verification.md).
+Every code change runs 83 tests, a TUI smoke check and a package check, all without a model. With real models, a scenario set six facts in a 16-turn conversation and asked for them again in a new session. With memory on, both tested models (Haiku and Luna) answered all six; with memory off, neither answered any. The commands, token use and limits are in the [verification report](docs/verification.md).
 
-## Verify locally
+## License
 
-From the repository root:
-
-```sh
-pnpm --filter "@buyong/pi-codex-memory..." build
-pnpm --filter @buyong/pi-codex-memory typecheck
-pnpm --filter @buyong/pi-codex-memory test
-pnpm --filter @buyong/pi-codex-memory benchmark
-node scripts/codex/check-package.mjs apps/pi-codex-memory
-```
-
-Tests use isolated stores and fake model streams. `benchmark` reports synthetic scheduling data, not live-model performance. These commands do not request live memory-model responses.
-
-Based on [Codex memory v2](https://github.com/openai/codex/tree/4610b573e59b211bf9430cf6ffb97cfb84623090/codex-rs/memories), adapted to Pi's providers and SQLite storage. It does not share Codex's database. [Apache-2.0](LICENSE); see [NOTICE](NOTICE) for attribution.
+[Apache-2.0](LICENSE). Attribution is in [NOTICE](NOTICE).

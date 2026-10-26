@@ -1,56 +1,53 @@
 {
-  "resources": {
-    "extensions": [
-      "dist/index.js"
+    "resources": {
+        "extensions": ["dist/index.js"],
+        "skills": [],
+        "prompts": [],
+        "themes": []
+    },
+    "names": {
+        "tools": [
+            "pi_codex_memory_list",
+            "pi_codex_memory_read",
+            "pi_codex_memory_search",
+            "pi_codex_memory_note"
+        ],
+        "commands": [
+            "codex-memory",
+            "codex-memory-manage",
+            "codex-memory-settings"
+        ],
+        "flags": [],
+        "skills": [],
+        "prompts": [],
+        "themes": []
+    },
+    "requiredFiles": [
+        "dist/index.js",
+        "dist/config.js",
+        "dist/failure.js",
+        "dist/safety.js",
+        "dist/store.js",
+        "dist/sources.js",
+        "dist/pipeline.js",
+        "dist/retrieval.js",
+        "dist/runtime.js",
+        "dist/commands.js",
+        "dist/repositories.js",
+        "dist/repository-access.js",
+        "dist/repository-commands.js",
+        "dist/settings-commands.js",
+        "assets/prompts/extract.md",
+        "assets/prompts/consolidate.md",
+        "assets/prompts/read.md",
+        "README.md",
+        "README.ko.md",
+        "LICENSE",
+        "NOTICE",
+        "docs/verification.md",
+        "docs/verification.ko.md",
+        "CHANGELOG.md",
+        "CHANGELOG.ko.md"
     ],
-    "skills": [],
-    "prompts": [],
-    "themes": []
-  },
-  "names": {
-    "tools": [
-      "pi_codex_memory_list",
-      "pi_codex_memory_read",
-      "pi_codex_memory_search",
-      "pi_codex_memory_note"
-    ],
-    "commands": [
-      "codex-memory"
-    ],
-    "flags": [],
-    "skills": [],
-    "prompts": [],
-    "themes": []
-  },
-  "requiredFiles": [
-    "dist/index.js",
-    "dist/config.js",
-    "dist/failure.js",
-    "dist/safety.js",
-    "dist/store.js",
-    "dist/sources.js",
-    "dist/pipeline.js",
-    "dist/retrieval.js",
-    "dist/runtime.js",
-    "dist/commands.js",
-    "dist/repositories.js",
-    "dist/repository-access.js",
-    "dist/repository-commands.js",
-    "assets/prompts/extract.md",
-    "assets/prompts/consolidate.md",
-    "assets/prompts/read.md",
-    "README.md",
-    "README.ko.md",
-    "LICENSE",
-    "NOTICE",
-    "docs/timing.ko.md",
-    "docs/verification.md",
-    "docs/verification.ko.md",
-    "CHANGELOG.md",
-    "CHANGELOG.ko.md"
-  ],
-  "forbiddenFiles": [
-    "state.sqlite",
-    "auth.json"
-  ]
+    "forbiddenFiles": ["state.sqlite", "auth.json"]
 }

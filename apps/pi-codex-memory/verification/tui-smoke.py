@@ -62,22 +62,30 @@ try:
     # Startup currently prints the version/banner; screen rendering then accepts commands.
     read_until("ctrl+c/ctrl+d")
     os.write(master, b"/codex-memory\r")
-    read_until("Codex Memory v2")
+    # The title's second line points to the other two commands.
+    read_until("Settings: /codex-memory-settings")
     settle_input()
     os.write(master, b"\x03")
     settle_input()
-    # A second command must work after cancelling the menu.
-    os.write(master, b"/codex-memory status\r")
-    read_until("generateMemories")
+    # The other pages must open after cancelling the first menu.
+    os.write(master, b"/codex-memory-manage\r")
+    read_until("Review saved memories (0)")
+    settle_input()
+    os.write(master, b"\x1b")
+    settle_input()
+    os.write(master, b"/codex-memory-settings\r")
+    read_until("Idle time before creating memories: 30 minutes")
+    settle_input()
+    os.write(master, b"\x1b")
     settle_input()
     os.write(master, b"/reload\r")
     read_until("Reloaded")
     settle_input()
     os.write(master, b"/codex-memory\r")
-    read_until("Codex Memory v2")
+    read_until("Codex Memory")
     os.write(master, b"\x1b")
     assert b"MODEL_REQUEST_FORBIDDEN_IN_UI_CHECK" not in output
-    print(json.dumps({"status": "pass", "checks": ["TUI menu", "cancel", "status", "reload", "menu after reload"], "modelCalls": 0}))
+    print(json.dumps({"status": "pass", "checks": ["mode menu", "cancel", "manage page", "settings page", "reload", "menu after reload"], "modelCalls": 0}))
 finally:
     process.terminate()
     try:

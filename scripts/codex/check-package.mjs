@@ -92,9 +92,10 @@ const requiredFiles = {
         "dist/index.js", "dist/index.d.ts", "dist/config.js", "dist/store.js",
         "dist/safety.js", "dist/sources.js", "dist/pipeline.js", "dist/retrieval.js",
         "dist/runtime.js", "dist/commands.js", "dist/failure.js", "dist/repositories.js",
-        "dist/repository-access.js", "dist/repository-commands.js", "assets/prompts/extract.md",
+        "dist/repository-access.js", "dist/repository-commands.js", "dist/settings-commands.js",
+        "assets/prompts/extract.md",
         "assets/prompts/consolidate.md", "assets/prompts/read.md", "README.md", "README.ko.md",
-        "LICENSE", "NOTICE", "docs/timing.ko.md", "docs/verification.md", "docs/verification.ko.md",
+        "LICENSE", "NOTICE", "docs/verification.md", "docs/verification.ko.md",
         "CHANGELOG.md", "CHANGELOG.ko.md",
     ],
     "@buyong/redact": [

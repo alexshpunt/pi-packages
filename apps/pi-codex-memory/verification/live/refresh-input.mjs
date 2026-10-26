@@ -1,17 +1,54 @@
-import { mkdir, copyFile, readFile } from "node:fs/promises";
-import { resolve, join } from "node:path";
-import { readSource } from "../../dist/sources.js";
+import { copyFile, mkdir, readFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { DEFAULT_SETTINGS } from "../../dist/config.js";
 import { digest } from "../../dist/safety.js";
+import { readSource } from "../../dist/sources.js";
 import { privateJSON } from "./runtime.mjs";
-const from = resolve(process.argv[2]), to = resolve(process.argv[3]);
+
+const from = resolve(process.argv[2]),
+    to = resolve(process.argv[3]);
 await mkdir(to, { recursive: true, mode: 0o700 });
-for (const name of ["provider-paths.json", "catalog.json", "input-session.jsonl"]) await copyFile(join(from, name), join(to, name));
-const source = await readSource(join(to, "input-session.jsonl"), DEFAULT_SETTINGS.maxInputBytes - 8192, new AbortController().signal, false);
+for (const name of [
+    "provider-paths.json",
+    "catalog.json",
+    "input-session.jsonl",
+])
+    await copyFile(join(from, name), join(to, name));
+const source = await readSource(
+    join(to, "input-session.jsonl"),
+    DEFAULT_SETTINGS.maxInputBytes - 8192,
+    new AbortController().signal,
+    false,
+);
 if (!source) throw new Error("Approved snapshot unavailable.");
-const ids = ["f3a9ce5d", "fac33e99", "a5270b51", "2c84e63c", "1d418acf", "2fdc986c", "25b941e2", "e4d88ded"];
-if (ids.some(id => !source.text.includes("[entry=" + id + ";"))) throw new Error("Required evidence was lost.");
+const ids = [
+    "f3a9ce5d",
+    "fac33e99",
+    "a5270b51",
+    "2c84e63c",
+    "1d418acf",
+    "2fdc986c",
+    "25b941e2",
+    "e4d88ded",
+];
+if (ids.some((id) => !source.text.includes(`[entry=${id};`)))
+    throw new Error("Required evidence was lost.");
 await privateJSON(join(to, "source.json"), source);
-const previous = JSON.parse(await readFile(join(from, "input-manifest.json"), "utf8"));
-await privateJSON(join(to, "input-manifest.json"), { ...previous, previousPreparation: from, sourceBytes: Buffer.byteLength(source.text), sourceHash: digest(source.text), retainedEntries: ids, projectionVersion: 3 });
-console.log(JSON.stringify({ sourceBytes: Buffer.byteLength(source.text), retainedEntries: ids.length, output: to }));
+const previous = JSON.parse(
+    await readFile(join(from, "input-manifest.json"), "utf8"),
+);
+await privateJSON(join(to, "input-manifest.json"), {
+    ...previous,
+    previousPreparation: from,
+    sourceBytes: Buffer.byteLength(source.text),
+    sourceHash: digest(source.text),
+    retainedEntries: ids,
+    projectionVersion: 3,
+});
+console.log(
+    JSON.stringify({
+        sourceBytes: Buffer.byteLength(source.text),
+        retainedEntries: ids.length,
+        output: to,
+    }),
+);

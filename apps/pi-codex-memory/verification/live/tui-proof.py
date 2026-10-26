@@ -107,7 +107,8 @@ class Terminal:
         if was_terminated or self.process.returncode != 0: raise RuntimeError('TUI did not exit cleanly: ' + str(self.process.returncode))
 
 def cancel_running_request(t, report):
-    t.step('/codex-memory extract\r', '메모리 추출·통합 실행')
+    t.step('/codex-memory-manage\r', 'Saved memories')
+    t.step('\x1b[B\r', 'Create memories from this conversation now?')
     before = len(events(t.phase)); before_state = state()
     t.send('\r')
     t.wait(lambda: any(e.get('event') == 'model_request' and e.get('kind') == 'extraction' for e in events(t.phase)[before:]), 30)
@@ -117,7 +118,9 @@ def cancel_running_request(t, report):
     report['cancelled_request'] = {'requestId': request['requestId'], 'jobKey': key}
     report['checks']['exact_request_was_running'] = any(j['key'] == key and j['status'] == 'running' for j in state()['jobs'])
     if not report['checks']['exact_request_was_running']: raise RuntimeError('Cancellation probe did not intercept a running request.')
-    t.command('/codex-memory cancel')
+    t.step('/codex-memory-manage\r', 'Stop current job')
+    t.send('\x1b[B\r'); t.drain()
+    t.send('\x1b'); t.drain()
     t.wait(lambda: any(j['key'] == key and j['status'] == 'cancelled' and j['error'] == 'aborted' for j in state()['jobs']), 20)
     until = time.monotonic() + 3
     while time.monotonic() < until: t.pump(0.2)
@@ -130,17 +133,15 @@ t = None
 try:
     if mode == 'lifecycle':
         t = Terminal('lifecycle')
-        before = len(events('lifecycle'))
-        t.command('/codex-memory status')
-        t.wait(lambda: any(e.get('event') == 'memory_status' for e in events('lifecycle')[before:]), 20)
+        t.step('/codex-memory\r', 'Codex Memory')
+        t.send('\x1b'); t.drain()
         report['checks']['stored_records_survive_restart'] = any(case['marker'] in r['body'] for r in state()['records'])
         starts = sum(e.get('event') == 'session_start' and e.get('mode') == 'tui' for e in events('lifecycle'))
         t.command('/reload')
         t.wait(lambda: sum(e.get('event') == 'session_start' and e.get('mode') == 'tui' for e in events('lifecycle')) > starts, 45)
         t.fresh()
-        before = len(events('lifecycle'))
-        t.command('/codex-memory status')
-        t.wait(lambda: any(e.get('event') == 'memory_status' for e in events('lifecycle')[before:]), 20)
+        t.step('/codex-memory\r', 'Codex Memory')
+        t.send('\x1b'); t.drain()
         report['checks']['reload_and_new_session_work'] = any(case['marker'] in r['body'] for r in state()['records'])
         report['checks']['no_model_request'] = not any(e.get('event') == 'model_request' for e in events('lifecycle')[t.eventStart:])
         t.close(); t = None
@@ -155,16 +156,20 @@ try:
         t = Terminal('manage')
         original = next(r for r in state()['records'] if case['marker'] in r['body'])
         def target_menu(path):
-            t.step('/codex-memory\r', 'Codex Memory v2')
-            t.step('\r', '기억 검색')
-            t.step(path + '\r', '기억 1개')
-            t.step('\r', '본문·출처 보기')
+            t.step('/codex-memory-manage\r', 'Saved memories')
+            t.step('\r', 'Search…')
+            t.step('\r', 'Search memories')
+            t.step(path + '\r', 'Memories matching')
+            t.step('\x1b[B\r', 'View memory and source')
+        def close_menus():
+            t.send('\x1b'); t.drain()
+            t.send('\x1b'); t.drain()
         target_menu(original['path'])
-        t.step('\x1b[B\r', '수정할 내용')
+        t.step('\x1b[B\r', 'Edit ' + original['path'])
         t.step('\x07', case['corrected'])
-        t.step('\r', '기억 저장')
-        t.step('\r', 'Codex Memory v2')
-        t.send('\x1b'); t.drain()
+        t.step('\r', 'Save this change?')
+        t.step('\r', 'Memories matching')
+        close_menus()
         corrected = next(r for r in state()['records'] if case['corrected'] in r['body'])
         report['checks']['ui_correction_saved'] = case['marker'] not in corrected['body'] and corrected['kind'] == 'note'
         report['after_correction'] = state()
@@ -172,9 +177,9 @@ try:
         report['corrected_recall'] = t.prompt(question)
         report['checks']['corrected_fresh_answer'] = case['corrected'] in report['corrected_recall']['answer'] and case['region'] in report['corrected_recall']['answer'] and case['marker'] not in report['corrected_recall']['answer']
         target_menu(corrected['path'])
-        t.step('\x1b[B\x1b[B\r', '기억 잊기')
-        t.step('\r', 'Codex Memory v2')
-        t.send('\x1b'); t.drain()
+        t.step('\x1b[B\x1b[B\r', 'Forget this memory?')
+        t.step('\r', 'Memories matching')
+        close_menus()
         report['checks']['ui_forget_removed_record'] = all(r['path'] != corrected['path'] for r in state()['records'])
         # Allow real automatic rescanning; previously recalled prose must not resurrect the fact.
         until = time.monotonic() + 90
@@ -203,7 +208,6 @@ try:
             report['checks']['fresh_session_exact_facts'] = case['marker'] in answer and case['region'] in answer
             report['checks']['actual_memory_read'] = any(e.get('event') == 'tool_end' and e.get('name') == 'pi_codex_memory_read' and not e.get('isError') for e in report['positive']['events'])
             report['checks']['validated_citation_usage'] = any(r['usageCount'] > 0 for r in state()['records'])
-            t.command('/codex-memory status')
             t.close(); t = None
             if mode == 'installed':
                 report['control'] = {'status': 'not_repeated', 'reason': 'The independent empty-memory control is recorded in the source TUI proof.'}

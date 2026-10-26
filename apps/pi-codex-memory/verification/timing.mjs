@@ -13,39 +13,79 @@ const workloads = [
 const rows = [];
 for (const idleMinutes of [5, 15, 30, 60, 360]) {
     const settings = { ...DEFAULT_SETTINGS, minIdleMs: idleMinutes * 60_000 };
-    let extractions = 0, interimExtractions = 0;
+    let extractions = 0,
+        interimExtractions = 0;
     for (const workload of workloads) {
-        let latest = -1, processed = -1;
+        let latest = -1,
+            processed = -1;
         const end = workload.updates.at(-1) + 361;
         for (let minute = 0; minute <= end; minute++) {
             const index = workload.updates.indexOf(minute);
             if (index >= 0) latest = index;
-            if (latest !== processed && latest >= 0 && isSourceEligible(workload.updates[latest] * 60_000, minute * 60_000, settings)) {
-                extractions++; processed = latest;
+            if (
+                latest !== processed &&
+                latest >= 0 &&
+                isSourceEligible(
+                    workload.updates[latest] * 60_000,
+                    minute * 60_000,
+                    settings,
+                )
+            ) {
+                extractions++;
+                processed = latest;
                 if (latest < workload.updates.length - 1) interimExtractions++;
             }
         }
     }
-    rows.push({ idleMinutes, extractions, interimExtractions, finalSnapshotDelayMinutes: idleMinutes });
+    rows.push({
+        idleMinutes,
+        extractions,
+        interimExtractions,
+        finalSnapshotDelayMinutes: idleMinutes,
+    });
 }
 const consolidationRows = [];
 for (const intervalMinutes of [15, 30, 60, 180, 360]) {
     // One new source every ten minutes for two hours, then silence.
-    let last = -Infinity, latest = -1, processed = -1, calls = 0, finalReadyAt = null;
+    let last = -Infinity,
+        latest = -1,
+        processed = -1,
+        calls = 0,
+        finalReadyAt = null;
     for (let minute = 0; minute <= 480; minute++) {
         if (minute <= 120 && minute % 10 === 0) latest = minute;
         if (latest !== processed && minute - last >= intervalMinutes) {
-            calls++; processed = latest; last = minute;
+            calls++;
+            processed = latest;
+            last = minute;
             if (latest === 120) finalReadyAt = minute;
         }
     }
-    consolidationRows.push({ intervalMinutes, calls, finalInputLagMinutes: finalReadyAt - 120 });
+    consolidationRows.push({
+        intervalMinutes,
+        calls,
+        finalInputLagMinutes: finalReadyAt - 120,
+    });
 }
 assert.equal(DEFAULT_SETTINGS.minIdleMs, 1_800_000);
 assert.equal(DEFAULT_SETTINGS.consolidationCooldownMs, 3_600_000);
-console.log(JSON.stringify({
-    kind: "deterministic-synthetic-timing-comparison", cadenceMinutes: 1,
-    limitations: "No live model, personal-session telemetry, semantic-quality score, prompt-cache hit-rate, or billing measurement. These results do not prove a universal optimum.",
-    workloads, extraction: rows, consolidation: consolidationRows,
-    selectedDefaults: { minIdleMs: DEFAULT_SETTINGS.minIdleMs, consolidationCooldownMs: DEFAULT_SETTINGS.consolidationCooldownMs },
-}, null, 2));
+console.log(
+    JSON.stringify(
+        {
+            kind: "deterministic-synthetic-timing-comparison",
+            cadenceMinutes: 1,
+            limitations:
+                "No live model, personal-session telemetry, semantic-quality score, prompt-cache hit-rate, or billing measurement. These results do not prove a universal optimum.",
+            workloads,
+            extraction: rows,
+            consolidation: consolidationRows,
+            selectedDefaults: {
+                minIdleMs: DEFAULT_SETTINGS.minIdleMs,
+                consolidationCooldownMs:
+                    DEFAULT_SETTINGS.consolidationCooldownMs,
+            },
+        },
+        null,
+        2,
+    ),
+);

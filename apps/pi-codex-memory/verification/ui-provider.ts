@@ -5,8 +5,19 @@ export default function (pi: ExtensionAPI) {
         baseUrl: "http://unused.invalid",
         api: "openai-completions",
         apiKey: "synthetic-ui-fixture",
-        models: [{ id: "local", name: "Model-free UI fixture", reasoning: false, input: ["text"],
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 32000, maxTokens: 1000 }],
-        streamSimple() { throw new Error("MODEL_REQUEST_FORBIDDEN_IN_UI_CHECK"); },
+        models: [
+            {
+                id: "local",
+                name: "Model-free UI fixture",
+                reasoning: false,
+                input: ["text"],
+                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+                contextWindow: 32000,
+                maxTokens: 1000,
+            },
+        ],
+        streamSimple() {
+            throw new Error("MODEL_REQUEST_FORBIDDEN_IN_UI_CHECK");
+        },
     });
 }
