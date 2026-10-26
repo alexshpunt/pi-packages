@@ -1,0 +1,29 @@
+{
+  "resources": {
+    "extensions": [
+      "node_modules/@buyong/pi-codex-auto-review/dist/index.js",
+      "node_modules/@buyong/pi-codex-computer-use/dist/index.js",
+      "node_modules/@buyong/pi-codex-fast-mode/dist/index.js",
+      "node_modules/@buyong/pi-codex-image-gen/dist/index.js",
+      "node_modules/@buyong/pi-codex-memory/dist/index.js"
+    ],
+    "skills": [
+      "node_modules/@buyong/pi-codex-image-gen/skills/imagegen/SKILL.md"
+    ],
+    "prompts": [],
+    "themes": []
+  },
+  "requiredFiles": [
+    "node_modules/@buyong/pi-codex-memory/docs/verification.md",
+    "node_modules/@buyong/pi-codex-memory/docs/verification.ko.md",
+    "node_modules/@buyong/pi-codex-memory/dist/failure.js",
+    "node_modules/@buyong/pi-codex-memory/dist/repositories.js",
+    "node_modules/@buyong/pi-codex-memory/dist/repository-access.js",
+    "node_modules/@buyong/pi-codex-memory/dist/repository-commands.js",
+    "node_modules/@buyong/pi-codex-memory/dist/index.js",
+    "node_modules/@buyong/pi-codex-memory/assets/prompts/extract.md",
+    "node_modules/@buyong/pi-codex-memory/assets/prompts/consolidate.md",
+    "node_modules/@buyong/pi-codex-memory/assets/prompts/read.md",
+    "node_modules/@buyong/redact/dist/index.js"
+  ]
+}

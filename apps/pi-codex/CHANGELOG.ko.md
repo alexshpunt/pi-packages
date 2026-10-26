@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### 새로워진 것
+
+- `/codex-memory` 관리, 범위별 조회와 선택적으로 켜는 자동 생성을 갖춘 Codex memory v2를 포함합니다(`@buyong/pi-codex-memory` 0.1.0). Pi 1.4.0 이상과 Node.js 22.19 이상이 필요합니다.
+
 ## [0.4.1] - 2026-10-21
 
 ### 달라진 것
