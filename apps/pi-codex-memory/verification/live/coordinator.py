@@ -286,6 +286,9 @@ try:
     time.sleep(1)
     # Create memories now is the sixth row, after Saved memories.
     os.write(p3.master, b"\x1b[B\x1b[B\x1b[B\x1b[B\x1b[B\r")
+    wait(lambda: b"All closed conversations" in p3.snapshot(), 15, "the creation range selector")
+    time.sleep(1)
+    os.write(p3.master, b"\r")  # Keep the preselected configured recent period.
     wait(lambda: (job(p5.session_id) or {}).get("status") == "succeeded", 120, "p5 extraction")
     manual_seconds = round(time.monotonic() - closed_at, 1)
     wait(lambda: query("SELECT 1 FROM scopes WHERE summary LIKE ?", f"%{p5.session_id}%"), 120, "summary with p5")

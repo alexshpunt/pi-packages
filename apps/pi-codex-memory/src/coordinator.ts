@@ -48,6 +48,8 @@ export interface RunTally {
     extracted: number;
     failed: number;
 }
+/** The session-age range of one manual run; never saved as a setting. */
+export type MemoryCreationRange = "recent" | "all";
 /** A manual run claims waiting conversations even in retry backoff, but each only once. */
 interface ManualRun {
     readonly scanSettings: MemorySettings;
@@ -169,13 +171,16 @@ export class MemoryCoordinator {
         }
     }
     /**
-     * Turns every closed conversation that is not memory yet into memory now, without the idle
-     * wait and including conversations waiting to retry, then updates the summary. Runs in this
-     * session whether or not it coordinates; job leases keep other sessions from repeating its
-     * work. After a settings change or a sleep it first waits one heartbeat period so open
+     * Turns closed conversations in the selected age range that are not memory yet into memory
+     * now, without the idle wait and including conversations waiting to retry, then updates the
+     * summary. Runs in this session whether or not it coordinates; job leases keep other sessions
+     * from repeating its work. After a settings change or a sleep it waits one heartbeat period so open
      * sessions are not taken for closed. Stop, a settings change and shutdown end it.
      */
-    async runNow(onWait?: (ms: number) => void): Promise<RunTally> {
+    async runNow(
+        onWait?: (ms: number) => void,
+        range: MemoryCreationRange = "recent",
+    ): Promise<RunTally> {
         const { store, scope } = this.#host;
         if (this.#isManual)
             throw new MemoryUserError("Memories are already being created.");
@@ -198,7 +203,7 @@ export class MemoryCoordinator {
             }
             while (this.#round) await this.#round;
             signal.throwIfAborted();
-            const run = this.#manual(settings, snapshot, signal, tally);
+            const run = this.#manual(settings, snapshot, signal, tally, range);
             await this.#track(run.catch(() => {}));
             await run;
             return tally;
@@ -332,9 +337,18 @@ export class MemoryCoordinator {
         settingsSnapshot: string,
         signal: AbortSignal,
         tally: RunTally,
+        range: MemoryCreationRange,
     ): Promise<void> {
         const manual: ManualRun = {
-            scanSettings: { ...settings, minIdleMs: 0 },
+            // Scan-only overrides: jobs and settings-change checks keep the saved settings.
+            scanSettings: {
+                ...settings,
+                minIdleMs: 0,
+                maxRolloutAgeDays:
+                    range === "all"
+                        ? Number.POSITIVE_INFINITY
+                        : settings.maxRolloutAgeDays,
+            },
             claimed: new Set(),
         };
         while (true) {

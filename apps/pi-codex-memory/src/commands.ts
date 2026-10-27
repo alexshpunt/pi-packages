@@ -8,6 +8,7 @@ import {
     type ModelChoice,
     parseSettings,
 } from "./config.js";
+import type { MemoryCreationRange } from "./coordinator.js";
 import { MemoryUserError, memoryFailureCode } from "./failure.js";
 import {
     type Option,
@@ -312,7 +313,24 @@ function memoryRows(
                         id: "create",
                         label: "Create memories now",
                         value: "",
-                        description: `Turns closed conversations that are not memory yet into memory now, without waiting ${duration(settings.minIdleMs)}, then updates the summary.`,
+                        description: `Choose all closed conversations or the configured recent period, without waiting ${duration(settings.minIdleMs)}, then update the summary.`,
+                        options: () => {
+                            const days = runtime.settings().maxRolloutAgeDays;
+                            return {
+                                title: "Create memories now",
+                                preselect: "recent",
+                                options: [
+                                    {
+                                        value: "recent",
+                                        label: `Last ${days} day${days === 1 ? "" : "s"}`,
+                                    },
+                                    {
+                                        value: "all",
+                                        label: "All closed conversations",
+                                    },
+                                ],
+                            };
+                        },
                     },
                 ]),
     ];
@@ -331,11 +349,12 @@ export function resultText(result: {
 async function createNow(
     runtime: MemoryRuntime,
     ctx: ExtensionCommandContext,
+    range: MemoryCreationRange,
 ): Promise<void> {
     let waitMs = 0;
     const work = runtime.createNow((ms) => {
         waitMs = ms;
-    });
+    }, range);
     if (ctx.mode !== "tui") {
         const result = await work;
         ctx.ui.notify(resultText(result), result.failed ? "error" : "info");
@@ -395,8 +414,11 @@ export async function memoryCommand(
                 continue;
             }
             if (choice.id === "create") {
-                await createNow(runtime, ctx);
-                return;
+                if (choice.value === "all" || choice.value === "recent") {
+                    await createNow(runtime, ctx, choice.value);
+                    return;
+                }
+                continue;
             }
             if (choice.id === "stop") {
                 await runtime.cancel();

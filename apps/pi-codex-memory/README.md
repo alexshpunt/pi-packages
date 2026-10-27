@@ -79,7 +79,12 @@ While memory is on, conversations become memory in the background after you clos
 
 While memory is on in its scope or in Personal, each Pi session records every 30 seconds that it is open. A conversation counts as closed once that record has not been renewed for 90 seconds, for example after you quit Pi or it crashes. A conversation open in a Pi without this extension counts as closed.
 
-To save something right away, ask the agent to "remember" it; a confirmation shows the exact text before it is saved. To save the whole conversation, use **Remember this conversation now** in `/codex-memory-settings`. To turn closed conversations into memory without waiting 2 hours, choose **Create memories now** in `/codex-memory`; it also updates the summary right away.
+To save something right away, ask the agent to "remember" it; a confirmation shows the exact text before it is saved. To save the whole conversation, use **Remember this conversation now** in `/codex-memory-settings`. To turn closed conversations into memory without waiting 2 hours, choose **Create memories now** in `/codex-memory`, then pick a range:
+
+- **All closed conversations** ignores the age limit for this run.
+- **Last 7 days** uses **Use conversations from the last**; the label shows your configured number of days and is selected by default.
+
+Both choices process only closed conversations in the current memory scope and update the summary right away. Unchanged conversations and forgotten memories are not regenerated. The choice does not change saved settings or automatic generation. Esc returns to the memory page without starting a job.
 
 Turning memory off keeps saved memories but neither uses nor creates them.
 
@@ -132,7 +137,7 @@ Settings are saved per scope. In `/codex-memory-settings`, Enter or Space cycles
 | --- | --- | --- | --- |
 | Create memories after | 2 hours idle | 15 minutes, 30 minutes, 60 minutes, 2 hours, 6 hours | How long after its last message a closed conversation becomes memory. A shorter wait makes memories appear sooner, but a conversation you reopen and continue is extracted again. |
 | Update the summary every | 2 hours | 15 minutes, 30 minutes, 60 minutes, 2 hours, 3 hours, 6 hours | New memories can be searched right away; this is how often they are merged into the summary sent with each request. |
-| Use conversations from the last | 7 days | 1, 3, 7, 14, 30 days | Conversations whose last message is older are skipped. |
+| Use conversations from the last | 7 days | 1, 3, 7, 14, 30 days | Conversations whose last message is older are skipped, except when you choose **All closed conversations** for a manual run. |
 | Delete unused memories after | 30 days | 7, 30, 90, 365 days | Memories you asked the agent to save and memories you edited are kept. |
 
 These are fixed: up to 8 conversations at once, 256 KiB of input per model call and a 12 KiB summary per request.
@@ -141,7 +146,18 @@ For how the defaults were chosen and when to change them, see the [verification 
 
 ## Verification
 
-Every code change runs 116 tests, a TUI smoke check and a package check, all without a model. With real models, a scenario set six facts in a 16-turn conversation and asked for them again in a new session. With memory on, both tested models (Haiku and Luna) answered all six; with memory off, neither answered any. Another check ran several real Pi processes: only closed conversations became memory, each once, and another session took over when the coordinating process was killed. The commands, token use and limits are in the [verification report](docs/verification.md).
+Every code change runs 124 tests, a TUI smoke check and a package check, all without a model. With real models, a scenario set six facts in a 16-turn conversation and asked for them again in a new session. With memory on, both tested models (Haiku and Luna) answered all six; with memory off, neither answered any. Another check ran several real Pi processes: only closed conversations became memory, each once, and another session took over when the coordinating process was killed. The commands, token use and limits are in the [verification report](docs/verification.md).
+
+From the repository root, after installing dependencies:
+
+```sh
+pnpm --filter "@buyong/pi-codex-memory..." build
+pnpm --filter @buyong/pi-codex-memory typecheck
+pnpm --filter @buyong/pi-codex-memory test
+python3 apps/pi-codex-memory/verification/tui-smoke.py
+```
+
+These checks require no model account. The TUI check requires `pi` on `PATH` and verifies range selection, cancellation and an empty run.
 
 ## License
 
