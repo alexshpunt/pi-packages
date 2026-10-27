@@ -1,0 +1,73 @@
+{
+  "name": "@buyong/pi-mcp-adapter",
+  "version": "0.1.0",
+  "description": "MCP adapter for Pi: connects the servers in mcp.json, with configurable output limits and tool metadata for other extensions.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "mcp",
+    "model-context-protocol"
+  ],
+  "files": [
+    "src/",
+    "CHANGELOG.md",
+    "CHANGELOG.ko.md",
+    "README.md",
+    "README.ko.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buYoung/pi-packages.git",
+    "directory": "apps/pi-mcp-adapter"
+  },
+  "homepage": "https://github.com/buYoung/pi-packages/tree/main/apps/pi-mcp-adapter#readme",
+  "bugs": {
+    "url": "https://github.com/buYoung/pi-packages/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsgo --noEmit",
+    "test": "pnpm run test:unit",
+    "test:unit": "vitest run"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
+  "dependencies": {
+    "@earendil-works/pi-mcp": "1.4.0",
+    "proper-lockfile": "^4.1.2"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@earendil-works/pi-ai": "catalog:mcp-adapter",
+    "@earendil-works/pi-coding-agent": "catalog:mcp-adapter",
+    "@earendil-works/pi-tui": "catalog:mcp-adapter",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/proper-lockfile": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typebox": "catalog:",
+    "vitest": "catalog:"
+  }
+}

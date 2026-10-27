@@ -1,0 +1,9 @@
+# 변경 이력
+
+## [Unreleased]
+
+### 새로워진 것
+
+- Pi 내장 MCP 지원 대신 이 패키지가 MCP 서버를 Pi에 연결합니다. `mcp.json`, `/mcp` 관리 화면, 도구 노출 방식은 내장 지원과 같습니다.
+- MCP 결과의 텍스트 한도를 바이트로 정할 수 있습니다. 도구의 `_meta["pi/maxOutputBytes"]`, 없으면 서버의 `maxOutputBytes`, 없으면 `mcp.json` 최상위의 `maxOutputBytes`, 그것도 없으면 20KB를 씁니다.
+- 다른 확장이 `pi.events`의 `tool-meta` 채널로 MCP 도구마다 `_meta`를 읽을 수 있습니다.
