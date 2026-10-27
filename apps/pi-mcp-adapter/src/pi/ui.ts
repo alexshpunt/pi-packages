@@ -111,7 +111,7 @@ class AuthUrlComponent extends Container {
   }
 }
 
-export class McpManagerView implements McpUi, Component, Focusable {
+class McpManagerView implements McpUi, Component, Focusable {
   private readonly tui: TUI;
   private readonly theme: Theme;
   private readonly keybindings: KeybindingsManager;
@@ -148,10 +148,10 @@ export class McpManagerView implements McpUi, Component, Focusable {
   menu(build: () => McpMenu, subscribe?: (listener: () => void) => () => void): Promise<string | undefined> {
     return new Promise((resolve) => {
       let unsubscribe: (() => void) | undefined;
-      let settled = false;
+      let isSettled = false;
       const finish = (value: string | undefined) => {
-        if (settled) return;
-        settled = true;
+        if (isSettled) return;
+        isSettled = true;
         unsubscribe?.();
         resolve(value);
       };
@@ -188,7 +188,7 @@ export class McpManagerView implements McpUi, Component, Focusable {
       };
       render();
       unsubscribe = subscribe?.(() => {
-        if (!settled) render();
+        if (!isSettled) render();
       });
     });
   }
@@ -206,10 +206,10 @@ export class McpManagerView implements McpUi, Component, Focusable {
 
   redirectUrl(title: string, authorizationUrl: string, signal: AbortSignal): Promise<string | undefined> {
     return new Promise((resolve) => {
-      let settled = false;
+      let isSettled = false;
       const finish = (value: string | undefined) => {
-        if (settled) return;
-        settled = true;
+        if (isSettled) return;
+        isSettled = true;
         signal.removeEventListener("abort", onAbort);
         resolve(value);
       };

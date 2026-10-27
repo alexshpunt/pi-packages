@@ -143,7 +143,7 @@ pnpm run lint
 pnpm run test:unit
 ```
 
-`test:unit`은 메모리 안의 MCP 서버로 한도 적용 순서, 설정 검증, `tool-meta` 채널을 확인합니다.
+`test:unit`은 메모리 안의 MCP 서버로 확장을 실행합니다. 한도 적용 순서, 설정 검증, `tool-meta` 채널, 그리고 시작부터 `/mcp` 동작을 거쳐 종료까지의 서버 연결을 확인합니다.
 
 Pi에서 직접 확인하려면 `~/.pi/agent/mcp.json`에 서버를 추가하고 `pi -e /path/to/pi-packages/apps/pi-mcp-adapter`로 시작한 뒤 `/mcp`를 실행하세요. 관리 화면에 그 서버가 도구 개수와 함께 `connected`로 나옵니다.
 

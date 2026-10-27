@@ -15,7 +15,7 @@ import {
   Text,
   truncateToWidth,
 } from "@earendil-works/pi-tui";
-import type { McpToolDetails } from "./tools.ts";
+import type { McpToolDetails } from "./output.ts";
 
 /** Visual (wrapped) result lines shown before the output is expanded. */
 const OUTPUT_PREVIEW_LINES = 5;

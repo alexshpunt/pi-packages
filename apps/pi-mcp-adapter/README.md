@@ -143,7 +143,7 @@ pnpm run lint
 pnpm run test:unit
 ```
 
-`test:unit` checks the limit order, the config validation, and the `tool-meta` channel against an in-memory MCP server.
+`test:unit` runs the extension against in-memory MCP servers. It checks the limit order, the config validation, the `tool-meta` channel, and the server connections from startup through `/mcp` actions to shutdown.
 
 To check it in Pi by hand, add a server to `~/.pi/agent/mcp.json`, start `pi -e /path/to/pi-packages/apps/pi-mcp-adapter`, and run `/mcp`. The manager lists the server as `connected` with its tool count.
 
