@@ -106,12 +106,23 @@ export function createToolBridge({ diagnostics, sessions, configuration }: ToolB
 	// it, and a handler that runs first parks its resolver in `pendingToolCalls`.
 	// Handlers close over the captured `queryCtx`, ensuring they operate on the
 	// correct query's state while multiple queries run concurrently.
+	//
+	// Each tool also carries the `_meta` pi's extensions report for it (an MCP
+	// server's own `_meta`, see adapters/pi/tool-meta.ts), unchanged. Tools nobody
+	// reports one for get none.
 	function buildMcpServers(tools: Tool[], queryCtx: QueryContext): Record<string, ReturnType<typeof createToolServer>> | undefined {
 		if (!tools.length) return undefined;
+		let metas: ReadonlyMap<string, Record<string, unknown>> = new Map();
+		try {
+			metas = configuration.listPiToolMeta?.() ?? metas;
+		} catch (error) {
+			diagnostics.debug("WARNING: could not list pi's tools for their _meta:", error);
+		}
 		const mcpTools = tools.map((tool) => ({
 			name: tool.name,
 			description: tool.description,
 			inputSchema: tool.parameters,
+			meta: metas.get(tool.name),
 			handler: (toolCallId: string) => {
 				if (queryCtx.pendingResults.has(toolCallId)) {
 					const result = queryCtx.pendingResults.get(toolCallId)!;

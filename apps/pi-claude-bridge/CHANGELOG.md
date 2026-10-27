@@ -5,6 +5,7 @@
 ### Improved
 
 - The bridge now uses Claude Code 2.1.311 (Agent SDK `^0.3.311`).
+- Pi MCP tools reach Claude Code with the `_meta` their server declared, unchanged. If the server declares `anthropic/maxResultSizeChars`, its value replaces the bridge's default of 500,000. The bridge reads this `_meta` from `meta` in `pi.getAllTools()` and from extensions that answer `tool-meta` requests on `pi.events`, such as `@buyong/pi-mcp-adapter`; Pi 1.4.0 needs such an extension.
 
 ### Fixed
 

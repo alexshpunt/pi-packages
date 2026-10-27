@@ -17,6 +17,7 @@ import { forgetSessionCwd } from "./session-cwd.js";
 import { rememberSessionCwd } from "./session-cwd.js";
 import { rememberSummarySession } from "./session-cwd.js";
 import { bindSessionLinks } from "../../features/session/continuity.js";
+import { listPiToolMeta } from "./tool-meta.js";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 // --- Constants ---
@@ -34,6 +35,7 @@ export function registerBridge(pi: ExtensionAPI, { streamSimple, diagnostics, co
 	const config = loadConfig(process.cwd());
 	diagnostics.debug("loadConfig:", JSON.stringify(config));
 	configuration.providerSettings = config.provider ?? {};
+	configuration.listPiToolMeta = () => listPiToolMeta(pi);
 	// We need these settings to know if we're eligible for 1M context on certain models
 	// Validate at the boundary: a non-array here would throw inside every
 	// claudeCodeModelId call and brick the extension at activation.

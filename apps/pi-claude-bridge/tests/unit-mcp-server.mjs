@@ -8,7 +8,11 @@
  * actually receives rather than an intermediate representation.
  */
 import { beforeAll, describe, expect, it } from "vitest";
+import { createEventBus } from "@earendil-works/pi-coding-agent";
 import { createToolServer } from "../src/adapters/claude/mcp-server.js";
+import { listPiToolMeta } from "../src/adapters/pi/tool-meta.js";
+import { QueryContext } from "../src/features/query/state.js";
+import { createToolBridge } from "../src/features/tool-bridge/service.js";
 
 const NESTED_TOOL_SCHEMA = {
 	type: "object",
@@ -137,6 +141,79 @@ describe("MCP tool schema advertisement", () => {
 			{ "anthropic/maxResultSizeChars": 500_000 },
 			{ "anthropic/maxResultSizeChars": 500_000 },
 		]);
+	});
+});
+
+describe("tool _meta from pi", () => {
+	const TOOLS = ["read", "mcp__codemap__grep", "mcp__docs__search"].map((name) => ({
+		name,
+		description: name,
+		parameters: { type: "object", properties: {} },
+	}));
+	const LIMIT = { "anthropic/maxResultSizeChars": 500_000 };
+
+	/** A pi whose getAllTools() is `allTools` and whose extensions answer `tool-meta` requests with `replies`. */
+	function fakePi(allTools, replies = []) {
+		const events = createEventBus();
+		for (const reply of replies) events.on("tool-meta", (request) => request.reply(reply));
+		return { events, getAllTools: allTools };
+	}
+
+	/** `_meta` by tool name as Claude Code lists it, when `source` is the bridge's `listPiToolMeta`. */
+	async function listedMeta(source) {
+		const bridge = createToolBridge({ diagnostics: { DEBUG: false, debug: () => {} }, configuration: { listPiToolMeta: source }, sessions: {} });
+		const { request } = await connectClient(Object.values(bridge.buildMcpServers(TOOLS, new QueryContext()))[0]);
+		const tools = (await request("tools/list", {})).result.tools;
+		return Object.fromEntries(tools.map((tool) => [tool.name, tool._meta]));
+	}
+
+	it("passes each tool's _meta on as pi.getAllTools() reports it, over the default limit", async () => {
+		const pi = fakePi(() => [
+			{ name: "read" },
+			{ name: "mcp__codemap__grep", meta: { "anthropic/maxResultSizeChars": 100_000 } },
+			{ name: "mcp__docs__search", meta: { "x/key": { nested: [1] }, "pi/maxOutputBytes": 50_000 } },
+		]);
+		expect(await listedMeta(() => listPiToolMeta(pi))).toStrictEqual({
+			read: LIMIT,
+			mcp__codemap__grep: { "anthropic/maxResultSizeChars": 100_000 },
+			mcp__docs__search: { ...LIMIT, "x/key": { nested: [1] }, "pi/maxOutputBytes": 50_000 },
+		});
+	});
+
+	// Pi versions without `meta` in getAllTools(): extensions reply on pi.events instead.
+	it("passes each tool's _meta on as extensions reply to tool-meta requests", async () => {
+		const pi = fakePi(
+			() => TOOLS,
+			[
+				{ mcp__codemap__grep: { "anthropic/maxResultSizeChars": 100_000 } },
+				{ mcp__docs__search: { "pi/maxOutputBytes": 50_000 }, ignored: "not an object" },
+			],
+		);
+		expect(await listedMeta(() => listPiToolMeta(pi))).toStrictEqual({
+			read: LIMIT,
+			mcp__codemap__grep: { "anthropic/maxResultSizeChars": 100_000 },
+			mcp__docs__search: { ...LIMIT, "pi/maxOutputBytes": 50_000 },
+		});
+	});
+
+	it("keeps pi.getAllTools() meta for a tool an extension also replies for", () => {
+		const pi = fakePi(
+			() => [{ name: "mcp__docs__search", meta: { from: "pi" } }],
+			[{ mcp__docs__search: { from: "reply" }, mcp__codemap__grep: { from: "reply" } }],
+		);
+		expect(Object.fromEntries(listPiToolMeta(pi))).toStrictEqual({
+			mcp__docs__search: { from: "pi" },
+			mcp__codemap__grep: { from: "reply" },
+		});
+	});
+
+	// No meta from pi or any extension, no pi, and a pi whose tools cannot be listed.
+	it.each([
+		["without meta", () => listPiToolMeta(fakePi(() => TOOLS))],
+		["absent", undefined],
+		["failing", () => listPiToolMeta(fakePi(() => { throw new Error("stale"); }))],
+	])("keeps the default limit when pi's tool list is %s", async (_case, source) => {
+		expect(await listedMeta(source)).toStrictEqual({ read: LIMIT, mcp__codemap__grep: LIMIT, mcp__docs__search: LIMIT });
 	});
 });
 

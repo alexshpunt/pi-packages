@@ -7,6 +7,7 @@
 ### 달라진 것
 
 - 브리지가 Claude Code 2.1.311(Agent SDK `^0.3.311`)을 사용합니다.
+- 브리지가 Pi MCP 도구마다 서버가 선언한 `_meta`를 바꾸지 않고 Claude Code에 전달합니다. 서버가 `anthropic/maxResultSizeChars`를 선언하면 브리지의 기본값 500,000 대신 서버의 값을 씁니다. 브리지는 이 `_meta`를 `pi.getAllTools()`의 `meta`와, `pi.events`의 `tool-meta` 요청에 답하는 확장(예: `@buyong/pi-mcp-adapter`)에서 읽습니다. Pi 1.4.0에서는 그런 확장이 있어야 합니다.
 
 ### 해결된 것
 

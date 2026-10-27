@@ -13,6 +13,8 @@ export interface McpToolDef {
 	name: string;
 	description: string;
 	inputSchema: unknown;
+	/** The `_meta` pi reports for the tool, put on its `tools/list` entry. */
+	meta?: Record<string, unknown>;
 	handler: (toolCallId: string) => Effect.Effect<McpResult, unknown> | Promise<McpResult>;
 }
 

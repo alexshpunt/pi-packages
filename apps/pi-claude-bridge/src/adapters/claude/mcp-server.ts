@@ -45,7 +45,8 @@ const TOOL_USE_ID_META = "claudecode/toolUseId";
 // MAX_MCP_OUTPUT_TOKENS (25,000 by default) is replaced by an error naming the
 // saved file. Pi bounds its own tool output and keeps the full result in its
 // history, so every tool declares the largest limit CC accepts; CC clamps a
-// larger value to 500,000.
+// larger value to 500,000. The `_meta` pi reports for a tool (an MCP server's
+// own `_meta`) goes on as is, and a key it sets replaces this default.
 const MAX_RESULT_SIZE_META = "anthropic/maxResultSizeChars";
 const MAX_RESULT_SIZE_CHARS = 500_000;
 
@@ -151,7 +152,7 @@ export function createToolServer(name: string, tools: McpToolDef[]) {
 				name: tool.name,
 				description: [note, tool.description].filter(Boolean).join("\n\n"),
 				inputSchema: schema,
-				_meta: { [MAX_RESULT_SIZE_META]: MAX_RESULT_SIZE_CHARS },
+				_meta: { [MAX_RESULT_SIZE_META]: MAX_RESULT_SIZE_CHARS, ...tool.meta },
 			};
 		}),
 	}));

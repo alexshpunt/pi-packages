@@ -34,6 +34,9 @@ export interface ProviderConfigurationServices {
 	pendingNotices: string[];
 	piMode: ExtensionContext["mode"] | null;
 	piUI: ExtensionUIContext | null;
+	/** The `_meta` pi's extensions report for each tool, by tool name, in the session this
+	 *  instance registered in (adapters/pi/tool-meta.ts). */
+	listPiToolMeta: (() => ReadonlyMap<string, Record<string, unknown>>) | null;
 	providerSettings: NonNullable<Config["provider"]>;
 	readonly showStartupNoticeOnce: () => Effect.Effect<void, unknown>;
 }

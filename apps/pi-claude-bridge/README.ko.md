@@ -100,6 +100,7 @@ Pi의 도구는 Claude Code에 연결되며, Pi에서는 평소처럼 사용합�
 다음 동작은 고정되어 있으며 설정 키로 바꿀 수 없습니다.
 
 - **MCP 서버:** 브리지는 Claude Code가 사용자·프로젝트·플러그인 설정이나 claude.ai에서 MCP 서버를 직접 불러오는 것을 항상 막습니다. Pi의 도구와 Pi MCP 도구는 브리지의 `custom-tools` 서버를 통해 계속 쓸 수 있습니다.
+- **도구 `_meta`:** `custom-tools` 서버의 모든 도구는 `anthropic/maxResultSizeChars: 500000`을 선언합니다. 그래서 Claude Code는 결과를 500,000자까지 Claude에 그대로 전달합니다. Pi MCP 도구는 서버가 선언한 `_meta`도 바꾸지 않고 그대로 갖습니다. 서버가 `anthropic/maxResultSizeChars`를 선언하면 500000 대신 서버의 값을 씁니다. 브리지는 이 `_meta`를 `pi.getAllTools()`의 `meta`와, `pi.events`의 `tool-meta` 요청에 답하는 확장(예: `@buyong/pi-mcp-adapter`)에서 읽습니다. 1.4.0처럼 `pi.getAllTools()`에 `meta`가 없는 Pi 버전에서는 그런 확장이 있어야 합니다.
 - **권한:** 공급자는 Claude Code를 `dontAsk` 권한 모드로 실행하고 브리지의 MCP 서버만 미리 허용합니다. 브리지는 전체 권한 우회 모드를 요청하지 않으며, 그 모드에 필요한 `IS_SANDBOX` 값도 넣지 않습니다. 도구 호출과 작업 디렉터리 밖 `@file` 확장은 macOS에서 확인했고, 컨테이너에서 uid 0으로 실행하는 경우는 검증하지 않았습니다.
 - **환경 변수:** 브리지는 부모 Claude Code의 세션 표식을 자식 환경에서 지우고 SDK 진입점을 씁니다. 비필수 트래픽을 막는 변수는 Claude Code 자식 프로세스에만 설정하므로 Pi의 `bash` 도구와 다른 확장의 환경은 바뀌지 않습니다. 인증·서버 연결 변수는 그대로 전달하며, 그래서 export한 Anthropic 변수가 자식 프로세스의 동작을 바꿉니다([알려진 문제](#알려진-문제) 참고).
 - **Claude Code 설정:** 요약 쿼리도 공급자 쿼리처럼 Claude Code의 기본 설정 소스를 읽으므로, Claude Code 사용자 설정의 `env`와 설정한 `apiKeyHelper`가 적용됩니다. Claude Code의 지침 파일은 제외하고, Claude는 Pi가 보낸 문맥을 받습니다.
