@@ -1,0 +1,63 @@
+{
+  "name": "@buyong/pi-refuseless",
+  "version": "0.1.0",
+  "description": "Refuseless provider for Pi: API-key login and the abliterated chat models.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "type": "module",
+  "keywords": [
+    "pi-package"
+  ],
+  "files": [
+    "src/",
+    "CHANGELOG.md",
+    "CHANGELOG.ko.md",
+    "README.md",
+    "README.ko.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buYoung/pi-packages.git",
+    "directory": "apps/pi-refuseless"
+  },
+  "homepage": "https://github.com/buYoung/pi-packages/tree/main/apps/pi-refuseless#readme",
+  "bugs": {
+    "url": "https://github.com/buYoung/pi-packages/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsgo --noEmit",
+    "test": "pnpm run test:unit",
+    "test:unit": "vitest run",
+    "cli": "node scripts/cli.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@earendil-works/pi-ai": "catalog:",
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -13,6 +13,7 @@
 | [`apps/pi-claude-bridge`](apps/pi-claude-bridge) | `@buyong/pi-claude-bridge` | Claude Code와 Agent SDK를 통해 Pi에서 Claude 모델 사용 |
 | [`apps/pi-devin`](apps/pi-devin) | `@buyong/pi-devin` | Devin 계정으로 Devin 모델을 쓰는 비공식 공급자 |
 | [`apps/pi-ollama-cloud`](apps/pi-ollama-cloud) | `@buyong/pi-ollama-cloud` | Ollama Cloud 공급자, 웹 도구, 사용량 조회 |
+| [`apps/pi-refuseless`](apps/pi-refuseless) | `@buyong/pi-refuseless` | Refuseless 공급자: API 키 로그인과 그 키로 쓸 수 있는 모델 |
 | [`apps/pi-codex`](apps/pi-codex) | `@buyong/pi-codex` | 아래 Codex 확장 4개와 `imagegen` 스킬을 묶은 통합 패키지 |
 | [`apps/pi-codex-auto-review`](apps/pi-codex-auto-review) | `@buyong/pi-codex-auto-review` | Codex의 "Approve for me"를 참고한 실행 승인 검토 |
 | [`apps/pi-codex-computer-use`](apps/pi-codex-computer-use) | `@buyong/pi-codex-computer-use` | Codex Desktop 런타임을 통한 Codex Computer Use·Browser Use |
@@ -111,5 +112,5 @@ pi -e ./apps/pi-ollama-cloud        # load an app in Pi for one session
 
 저장소 루트는 MIT License([`LICENSE`](LICENSE))를 따릅니다. 패키지마다 자체 `LICENSE`가 있고, 일부에는 `NOTICE`도 있습니다.
 
-- MIT: `pi-claude-bridge`, `pi-devin`, `pi-ollama-cloud`, `typescript-config`
+- MIT: `pi-claude-bridge`, `pi-devin`, `pi-ollama-cloud`, `pi-refuseless`, `typescript-config`
 - Apache-2.0: `pi-codex`, `pi-codex-auto-review`, `pi-codex-computer-use`, `pi-codex-fast-mode`, `pi-codex-image-gen`, `pi-redact`, `redact`
