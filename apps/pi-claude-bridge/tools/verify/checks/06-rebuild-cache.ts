@@ -1,11 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { measureRebuildScenario, REBUILD_SCENARIOS } from "../rebuild-cases.js";
+import { INLINE_RESULT_BYTES, LARGE_RESULT_BYTES, measureRebuildScenario, REBUILD_SCENARIOS } from "../rebuild-cases.js";
 import { expect, VerificationError, type Facts, type VerificationCheck } from "../types.js";
 
 export default {
 	name: "06-rebuild-cache", mode: "live", group: "cache",
-	inputs: { model: "claude-haiku-5-5[1m]", scenarios: [...REBUILD_SCENARIOS], repetitions: 2, largeResultBytes: 90 * 1024,
+	inputs: { model: "claude-haiku-5-5[1m]", scenarios: [...REBUILD_SCENARIOS], repetitions: 2, inlineResultBytes: INLINE_RESULT_BYTES, largeResultBytes: LARGE_RESULT_BYTES,
 		faults: "controlled SDK error-result/exception after real responses; exception only after native process exit", restart: "two real Pi processes, same persisted Pi session" },
 	expected: { shortfallTokens: 0, faithfulRequestPrefix: true, baselineAndCurrentPaired: true },
 	async run(context) {

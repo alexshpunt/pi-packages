@@ -2,6 +2,17 @@
 
 0.12.0까지의 변경 이력은 영문 [CHANGELOG.md](CHANGELOG.md)에만 있습니다.
 
+## UNRELEASED
+
+### 달라진 것
+
+- 브리지가 Claude Code 2.1.311(Agent SDK `^0.3.311`)을 사용합니다.
+- 브리지가 Pi MCP 도구마다 서버가 선언한 `_meta`를 바꾸지 않고 Claude Code에 전달합니다. 서버가 `anthropic/maxResultSizeChars`를 선언하면 브리지의 기본값 52,224 대신 서버의 값을 씁니다. 브리지는 이 `_meta`를 `pi.getAllTools()`의 `meta`와, `pi.events`의 `tool-meta` 요청에 답하는 확장(예: `@buyong/pi-mcp-adapter`)에서 읽습니다. 1.4.0처럼 `pi.getAllTools()`에 `meta`가 없는 Pi 버전에서는 그런 확장이 있어야 합니다.
+
+### 해결된 것
+
+- Pi 도구 결과를 52,224자까지 Claude에 그대로 전달합니다. Pi 도구의 출력 한도(50KB)에 Pi가 출력을 자를 때 붙이는 안내 줄의 여유분을 더한 값입니다. 이전에는 브리지가 도구에 `anthropic/maxResultSizeChars`를 선언하지 않아서, Claude Code가 50,000자를 넘는 결과는 파일로 저장하고 Claude에 2KB 미리보기만 보여 주었고, 25,000토큰을 넘는 결과는 그 파일 경로를 담은 오류로 바꾸었습니다. 이 업데이트 전에 Claude Code가 이미 미리보기나 오류로 바꾼 결과는 그대로 남습니다.
+
 ## 0.13.1 — 2026-10-21
 
 ### 달라진 것

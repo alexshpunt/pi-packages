@@ -25,6 +25,7 @@
 // tools/list_changed notifications we never send.
 
 import { Effect } from "effect";
+import { DEFAULT_MAX_BYTES } from "@earendil-works/pi-coding-agent";
 import type { McpToolDef } from "./types.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -38,6 +39,21 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 // stops sending it, every tool call fails with the error below rather than
 // silently pairing results to the wrong call, which is the intended tradeoff.
 const TOOL_USE_ID_META = "claudecode/toolUseId";
+
+// Claude Code applies its own size limits to an MCP tool result unless the tool
+// lists `_meta["anthropic/maxResultSizeChars"]`: a result over 50,000 characters
+// is saved under the CC session and Claude sees only a 2KB preview, and one over
+// MAX_MCP_OUTPUT_TOKENS (25,000 by default) is replaced by an error naming the
+// saved file. Pi's own tools cut their output at DEFAULT_MAX_BYTES (50KB, so at
+// most as many characters) and then add a line about the cut, which together can
+// pass 50,000 characters. Every tool therefore declares that limit plus room for
+// the line, so what Pi's tools return reaches Claude whole, while larger results
+// still go to a file. The `_meta` pi reports for a tool (an MCP server's own
+// `_meta`) goes on as is, and a key it sets replaces this default.
+const MAX_RESULT_SIZE_META = "anthropic/maxResultSizeChars";
+/** Room for the line Pi's tools add after cutting their output, such as `[Showing lines 1-2000 of 9000 (50.0KB limit). ...]`. */
+const TRUNCATION_NOTICE_CHARS = 1024;
+const MAX_RESULT_SIZE_CHARS = DEFAULT_MAX_BYTES + TRUNCATION_NOTICE_CHARS;
 
 // MCP requires an object schema. Pi types tool parameters as any TypeBox schema,
 // so a scalar or array one typechecks but cannot go on the wire — that is a bug
@@ -141,6 +157,7 @@ export function createToolServer(name: string, tools: McpToolDef[]) {
 				name: tool.name,
 				description: [note, tool.description].filter(Boolean).join("\n\n"),
 				inputSchema: schema,
+				_meta: { [MAX_RESULT_SIZE_META]: MAX_RESULT_SIZE_CHARS, ...tool.meta },
 			};
 		}),
 	}));

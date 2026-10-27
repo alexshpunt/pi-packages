@@ -1,5 +1,16 @@
 # Changelog
 
+## UNRELEASED
+
+### Improved
+
+- The bridge now uses Claude Code 2.1.311 (Agent SDK `^0.3.311`).
+- Pi MCP tools reach Claude Code with the `_meta` their server declared, unchanged. If the server declares `anthropic/maxResultSizeChars`, its value replaces the bridge's default of 52,224. The bridge reads this `_meta` from `meta` in `pi.getAllTools()` and from extensions that answer `tool-meta` requests on `pi.events`, such as `@buyong/pi-mcp-adapter`. Pi versions whose `pi.getAllTools()` has no `meta`, such as 1.4.0, need such an extension.
+
+### Fixed
+
+- Pass Pi tool results to Claude in full up to 52,224 characters, Pi's tool output limit (50KB) plus room for the line Pi adds when it cuts output. Previously, because the bridge did not declare `anthropic/maxResultSizeChars` on its tools, Claude Code saved a result over 50,000 characters to a file and showed Claude only a 2KB preview, and replaced one over 25,000 tokens with an error naming that file. Results Claude Code already turned into a preview or an error before this update stay that way.
+
 ## 0.13.1 — 2026-10-21
 
 ### Improved
