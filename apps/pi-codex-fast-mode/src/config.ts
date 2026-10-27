@@ -11,26 +11,9 @@ export interface FastConfig {
     hasExplicitStandard: boolean;
     persistState: boolean;
     notifyOnModelSwitch: boolean;
-    supportedModels: readonly string[];
+    /** Exact Fast allowlist; when absent, the service-tier catalog decides. */
+    supportedModels?: readonly string[];
 }
-
-export const DEFAULT_SUPPORTED_MODELS: readonly string[] = Object.freeze([
-    "openai/gpt-5.4",
-    "openai/gpt-5.5",
-    "openai/gpt-6-astra",
-    "openai/gpt-6.1-sol",
-    "openai/gpt-6-sol",
-    "openai/gpt-6-luna",
-    "openai-codex/gpt-6-astra",
-    "openai-codex/gpt-6.1-sol",
-    "openai-codex/gpt-6-sol",
-    "openai-codex/gpt-6-luna",
-    "openai-codex/gpt-5.6-sol",
-    "openai-codex/gpt-5.6-terra",
-    "openai-codex/gpt-5.6-luna",
-    "openai-codex/gpt-5.4",
-    "openai-codex/gpt-5.5",
-]);
 
 export const DEFAULT_CONFIG: Readonly<FastConfig> = Object.freeze({
     serviceTier: "standard",
@@ -38,7 +21,6 @@ export const DEFAULT_CONFIG: Readonly<FastConfig> = Object.freeze({
     hasExplicitStandard: false,
     persistState: true,
     notifyOnModelSwitch: true,
-    supportedModels: DEFAULT_SUPPORTED_MODELS,
 });
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -159,6 +141,23 @@ async function readSettings(
     }
 }
 
+/** Replace `path` through a unique `wx`, `0600` temporary file, removing it afterward. */
+export async function writeJsonAtomically(
+    path: string,
+    value: unknown,
+): Promise<void> {
+    const temporary = `${path}.${randomUUID()}.tmp`;
+    try {
+        await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, {
+            flag: "wx",
+            mode: 0o600,
+        });
+        await rename(temporary, path);
+    } finally {
+        await rm(temporary, { force: true });
+    }
+}
+
 /** Preserve unknown settings and write to the existing project layer, otherwise global. */
 export class FastSettingsStore {
     private path: string;
@@ -188,7 +187,7 @@ export class FastSettingsStore {
     }): Promise<void> {
         await withSettingsLock(this.path, async (path) => {
             const current = (await readSettings(path)) ?? {};
-            await this.write(path, { ...current, ...state });
+            await writeJsonAtomically(path, { ...current, ...state });
         });
     }
 
@@ -208,23 +207,7 @@ export class FastSettingsStore {
             else modelServiceTiers[model] = tier;
             const next = { ...current, modelServiceTiers };
             validateLayer(next);
-            await this.write(path, next);
+            await writeJsonAtomically(path, next);
         });
-    }
-
-    private async write(
-        path: string,
-        next: Record<string, unknown>,
-    ): Promise<void> {
-        const temporary = `${path}.${randomUUID()}.tmp`;
-        try {
-            await writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, {
-                flag: "wx",
-                mode: 0o600,
-            });
-            await rename(temporary, path);
-        } finally {
-            await rm(temporary, { force: true });
-        }
     }
 }

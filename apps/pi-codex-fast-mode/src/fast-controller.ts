@@ -8,6 +8,7 @@ import {
     type ModelServiceTiers,
     type ServiceTier,
 } from "./config.js";
+import type { ServiceTierCatalog } from "./service-tier-catalog.js";
 
 type FastContext = Pick<ExtensionContext, "model" | "modelRegistry">;
 
@@ -37,7 +38,10 @@ export class FastController {
     // Saved-setting rollback must not revert a later memory-only session choice.
     private sessionTierOverride: ServiceTier | undefined;
 
-    constructor(private readonly serviceTier = "priority" as const) {}
+    constructor(
+        private readonly catalog: Pick<ServiceTierCatalog, "getTiers">,
+        private readonly serviceTier = "priority" as const,
+    ) {}
 
     get desiredTier(): ServiceTier {
         return this.state.desiredTier;
@@ -97,19 +101,18 @@ export class FastController {
     }
 
     supportsFast(ctx: FastContext, cfg: FastConfig): boolean {
-        return (
-            !!ctx.model &&
-            cfg.supportedModels.includes(
-                `${ctx.model.provider}/${ctx.model.id}`,
-            )
-        );
+        const model = ctx.model;
+        if (!model) return false;
+        return cfg.supportedModels
+            ? cfg.supportedModels.includes(`${model.provider}/${model.id}`)
+            : this.catalog.getTiers(model).has("fast");
     }
 
     supportsUltrafast(ctx: FastContext): boolean {
         const model = ctx.model;
         if (
             !model ||
-            (model.id !== "gpt-6-astra" && model.id !== "gpt-6.1-sol") ||
+            !this.catalog.getTiers(model).has("ultrafast") ||
             !ctx.modelRegistry.hasConfiguredAuth(model)
         )
             return false;
