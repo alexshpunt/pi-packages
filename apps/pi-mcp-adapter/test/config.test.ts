@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadMcpConfig, validateMcpServerConfig } from "../src/config.ts";
+import { loadMcpConfig } from "../src/config/files.ts";
+import { validateMcpServerConfig } from "../src/config/schema.ts";
 
 describe("maxOutputBytes in mcp.json", () => {
   const dirs: string[] = [];
@@ -35,7 +36,7 @@ describe("maxOutputBytes in mcp.json", () => {
       { maxOutputBytes: 60_000, mcpServers: {} },
     );
 
-    const untrusted = loadMcpConfig({ ...paths, projectTrusted: false });
+    const untrusted = loadMcpConfig({ ...paths, isProjectTrusted: false });
     expect(untrusted.maxOutputBytes).toBe(40_000);
     expect(untrusted.servers.map((server) => [server.name, server.config.maxOutputBytes])).toEqual([
       ["large", 100_000],
@@ -44,11 +45,11 @@ describe("maxOutputBytes in mcp.json", () => {
       expect.stringContaining('server "zero": maxOutputBytes must be a positive integer'),
       expect.stringContaining('server "fraction": maxOutputBytes must be a positive integer'),
     ]);
-    expect(loadMcpConfig({ ...paths, projectTrusted: true }).maxOutputBytes).toBe(60_000);
+    expect(loadMcpConfig({ ...paths, isProjectTrusted: true }).maxOutputBytes).toBe(60_000);
 
     // An invalid project value is reported and leaves the global value in place.
     writeFileSync(join(paths.cwd, ".pi", "mcp.json"), JSON.stringify({ maxOutputBytes: "60000", mcpServers: {} }));
-    const invalid = loadMcpConfig({ ...paths, projectTrusted: true });
+    const invalid = loadMcpConfig({ ...paths, isProjectTrusted: true });
     expect(invalid.maxOutputBytes).toBe(40_000);
     expect(invalid.errors).toContainEqual(expect.stringContaining("maxOutputBytes must be a positive integer"));
   });

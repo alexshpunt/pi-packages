@@ -1,30 +1,15 @@
 /**
- * The extension against an in-memory MCP server and a stand-in for the pi API: tool results are cut at
- * the tool's `pi/maxOutputBytes`, else the configured limit, and other extensions get each tool's
- * `_meta` over `pi.events`.
+ * Tool results are cut at the tool's `pi/maxOutputBytes`, else the configured limit, and other extensions
+ * get each tool's `_meta` over `pi.events`.
  */
 
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import type { TextContent } from "@earendil-works/pi-ai";
-import {
-  createEventBus,
-  type ExtensionAPI,
-  type ExtensionContext,
-  type ExtensionToolContext,
-} from "@earendil-works/pi-coding-agent";
-import { type JsonRpcRequest, LATEST_PROTOCOL_VERSION } from "@earendil-works/pi-mcp";
-import { createInMemoryTransportPair } from "@earendil-works/pi-mcp/testing";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { LoadedMcpConfig, McpServerConfig } from "../src/config.ts";
-import { createMcpExtension } from "../src/index.ts";
-import { TOOL_META_CHANNEL, type ToolMeta } from "../src/tool-meta.ts";
-import type { McpToolDefinition } from "../src/tools.ts";
+import type { LoadedMcpConfig } from "../src/config/files.ts";
+import { TOOL_META_CHANNEL } from "../src/tools/meta.ts";
+import { type FakeServer, SCHEMA, startSession, type TestSession } from "./harness.ts";
 
 /** Bytes of text the `dump` tools return, more than any output limit in the tests. */
 const DUMP_BYTES = 100_000;
-const SCHEMA = { type: "object", properties: {} };
 
 const TOOLS = [
   { name: "dump", inputSchema: SCHEMA },
@@ -34,118 +19,21 @@ const TOOLS = [
   { name: "text_meta", inputSchema: SCHEMA, _meta: "ab" },
 ];
 
+/** Every server offers {@link TOOLS}, whose results are {@link DUMP_BYTES} of text. */
+const DUMP_SERVER: FakeServer = { tools: TOOLS, callText: "x".repeat(DUMP_BYTES) };
+
 /** Bytes of a truncated result's text that reached the model, without header, marker, and file path. */
 function keptBytes(text: string): number {
   const [, body = ""] = text.split("\n\n");
   return Buffer.byteLength(body.replace(/…\d+ chars truncated…/, ""));
 }
 
-/** An MCP server offering {@link TOOLS}, whose tools return {@link DUMP_BYTES} of text. */
-function createServer() {
-  const pair = createInMemoryTransportPair();
-  const respond = (request: JsonRpcRequest): unknown => {
-    switch (request.method) {
-      case "initialize":
-        return {
-          protocolVersion: LATEST_PROTOCOL_VERSION,
-          capabilities: { tools: {} },
-          serverInfo: { name: "docs", version: "1.0.0" },
-        };
-      case "tools/list":
-        return { tools: TOOLS };
-      case "tools/call":
-        return { content: [{ type: "text", text: "x".repeat(DUMP_BYTES) }] };
-      default:
-        return {};
-    }
-  };
-  pair.server.onMessage((message) => {
-    if (!("id" in message) || !("method" in message)) return;
-    const request = message as JsonRpcRequest;
-    queueMicrotask(() => void pair.server.send({ jsonrpc: "2.0", id: request.id, result: respond(request) }));
-  });
-  return pair;
-}
-
-type Handler = (event: unknown, ctx: ExtensionContext) => unknown;
-
-/** Load the extension into a stand-in for the pi API and start a session. */
-async function start(options: { config?: Partial<LoadedMcpConfig>; registered?: Record<string, unknown> } = {}) {
-  const logDir = mkdtempSync(join(tmpdir(), "pi-mcp-adapter-test-"));
-  const tools = new Map<string, McpToolDefinition>();
-  const handlers = new Map<string, Handler[]>();
-  const notices: string[] = [];
-  const events = createEventBus();
-  let active: string[] = [];
-  const pi = {
-    events,
-    registerToolRenderer: () => {},
-    registerCommand: () => {},
-    registerTool: (definition: McpToolDefinition) => {
-      tools.set(definition.name, definition);
-    },
-    on: (event: string, handler: Handler) => {
-      handlers.set(event, [...(handlers.get(event) ?? []), handler]);
-    },
-    getMcpServers: () =>
-      Object.entries(options.registered ?? {}).map(([name, config]) => ({
-        name,
-        config: config as McpServerConfig,
-        extensionPath: "/ext/registering.ts",
-      })),
-    getAllTools: () => [...tools.values()].map((tool) => ({ name: tool.name, exposure: tool.exposure ?? "direct" })),
-    getActiveTools: () => active,
-    setActiveTools: (names: string[]) => {
-      active = names;
-    },
-  } as unknown as ExtensionAPI;
-  const ctx = {
-    cwd: logDir,
-    hasUI: false,
-    mode: "print",
-    isProjectTrusted: () => false,
-    ui: { notify: (message: string) => notices.push(message) },
-  } as unknown as ExtensionToolContext;
-  const config: LoadedMcpConfig = {
-    servers: [{ name: "docs", config: { command: "docs", exposure: "direct" }, source: "test", scope: "global" }],
-    errors: [],
-    ...options.config,
-  };
-  createMcpExtension({
-    loadConfig: () => config,
-    createTransport: () => {
-      const pair = createServer();
-      void pair.server.start();
-      return pair.client;
-    },
-    logPath: join(logDir, "mcp.log"),
-    startupWaitMs: 5_000,
-  })(pi);
-  for (const handler of handlers.get("session_start") ?? []) await handler({}, ctx);
-  // The first prompt waits for servers with direct tools.
-  for (const handler of handlers.get("before_agent_start") ?? []) {
-    await handler({ systemPromptOptions: { sections: {} } }, ctx);
-  }
-  const call = async (name: string) => {
-    const tool = tools.get(name);
-    if (!tool) throw new Error(`${name} is not registered`);
-    const result = await tool.execute("call", {}, undefined, undefined, ctx);
-    return (result.content[0] as TextContent).text;
-  };
-  const askToolMeta = () => {
-    const replies: Record<string, ToolMeta>[] = [];
-    events.emit(TOOL_META_CHANNEL, { reply: (meta: Record<string, ToolMeta>) => replies.push(meta) });
-    return replies;
-  };
-  const shutdown = async () => {
-    for (const handler of handlers.get("session_shutdown") ?? []) await handler({}, ctx);
-    rmSync(logDir, { recursive: true, force: true });
-  };
-  return { tools, notices, events, call, askToolMeta, shutdown };
+function start(options: { config?: Partial<LoadedMcpConfig>; registered?: Record<string, unknown> } = {}) {
+  return startSession({ ...options, servers: { docs: DUMP_SERVER, large: DUMP_SERVER, broken: DUMP_SERVER } });
 }
 
 describe("MCP tool output limit", () => {
-  const sessions: { shutdown: () => Promise<void> }[] = [];
+  const sessions: TestSession[] = [];
   afterEach(async () => {
     for (const session of sessions.splice(0)) await session.shutdown();
   });
@@ -200,7 +88,7 @@ describe("MCP tool output limit", () => {
 });
 
 describe("MCP tool _meta for other extensions", () => {
-  const sessions: { shutdown: () => Promise<void> }[] = [];
+  const sessions: TestSession[] = [];
   afterEach(async () => {
     for (const session of sessions.splice(0)) await session.shutdown();
   });
