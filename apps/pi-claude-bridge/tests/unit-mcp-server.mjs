@@ -129,17 +129,18 @@ describe("MCP tool schema advertisement", () => {
 		expect(listed.properties.either.anyOf).toStrictEqual([{ type: "string" }, { type: "number" }]);
 	});
 
-	// Without a declared limit, Claude Code saves a result over 50,000 characters
-	// to a file and shows Claude a 2KB preview of what pi returned in full.
-	it("declares the largest result size Claude Code accepts on every tool", async () => {
+	// Pi's tools return up to 50KB plus a line about the cut. Without a declared
+	// limit, Claude Code saves a result over 50,000 characters to a file and shows
+	// Claude a 2KB preview of it.
+	it("declares Pi's output limit plus room for its truncation line on every tool", async () => {
 		const { request } = await connectClient(createToolServer("custom-tools", [
 			{ name: "read", description: "r", inputSchema: { type: "object", properties: {} }, handler: async () => ({ content: [] }) },
 			{ name: "bash", description: "b", inputSchema: { type: "object", properties: {} }, handler: async () => ({ content: [] }) },
 		]));
 		const tools = (await request("tools/list", {})).result.tools;
 		expect(tools.map((tool) => tool._meta)).toStrictEqual([
-			{ "anthropic/maxResultSizeChars": 500_000 },
-			{ "anthropic/maxResultSizeChars": 500_000 },
+			{ "anthropic/maxResultSizeChars": 52_224 },
+			{ "anthropic/maxResultSizeChars": 52_224 },
 		]);
 	});
 });
@@ -150,7 +151,7 @@ describe("tool _meta from pi", () => {
 		description: name,
 		parameters: { type: "object", properties: {} },
 	}));
-	const LIMIT = { "anthropic/maxResultSizeChars": 500_000 };
+	const LIMIT = { "anthropic/maxResultSizeChars": 52_224 };
 
 	/** A pi whose getAllTools() is `allTools` and whose extensions answer `tool-meta` requests with `replies`. */
 	function fakePi(allTools, replies = []) {

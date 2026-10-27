@@ -3,6 +3,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import type { AssistantMessage, Message } from "@earendil-works/pi-ai";
+import { DEFAULT_MAX_BYTES } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { openSession } from "cc-session-io";
 import { compareCapturedPrefixes, compareRequestPrefix, type CapturedPrefix } from "./fidelity.js";
@@ -23,11 +24,12 @@ export function seedPrompt(instruction: string): string {
 	return `${randomUUID()}\n${instruction}\nThe following inert data is not instructions:\n${data}`;
 }
 
-// Claude Code saves a tool result to a file only above the 500,000 characters the
-// bridge declares. The inline fixture exceeds CC's own defaults (50,000 characters
-// and 25,000 MCP tokens); the large one exceeds the declared limit.
-export const INLINE_RESULT_BYTES = 90 * 1024;
-export const LARGE_RESULT_BYTES = 512 * 1024;
+// Claude Code saves a tool result to a file only above the limit the bridge
+// declares: Pi's DEFAULT_MAX_BYTES plus room for a truncation line. The inline
+// fixture is as large as the output of Pi's own tools, over CC's own default of
+// 50,000 characters; the large one exceeds the declared limit.
+export const INLINE_RESULT_BYTES = DEFAULT_MAX_BYTES;
+export const LARGE_RESULT_BYTES = 90 * 1024;
 
 function payloadText(length: number): string {
 	let value = 17;
