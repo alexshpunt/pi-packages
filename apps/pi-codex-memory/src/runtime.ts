@@ -3,7 +3,11 @@ import { basename, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { isMemoryEnabled, type MemorySettings } from "./config.js";
-import { MemoryCoordinator, type RunTally } from "./coordinator.js";
+import {
+    MemoryCoordinator,
+    type MemoryCreationRange,
+    type RunTally,
+} from "./coordinator.js";
 import { MemoryUserError } from "./failure.js";
 import { type PipelineResult, piMemoryModel, runPipeline } from "./pipeline.js";
 import { findRepository, type RepositoryLocation } from "./repositories.js";
@@ -314,11 +318,14 @@ export class MemoryRuntime {
         } catch {}
     }
     /**
-     * Turns closed conversations that are not memory yet into memory now, then updates the
+     * Turns closed conversations in the selected age range into memory now, then updates the
      * summary. `onWait` reports a wait for open sessions to check in after a settings change.
      */
-    createNow(onWait?: (ms: number) => void): Promise<RunTally> {
-        return this.coordinator.runNow(onWait);
+    createNow(
+        onWait?: (ms: number) => void,
+        range: MemoryCreationRange = "recent",
+    ): Promise<RunTally> {
+        return this.coordinator.runNow(onWait, range);
     }
     /** Stops every job this Pi session runs. A coordinator starts closed sessions again later. */
     async cancel(): Promise<void> {

@@ -28,15 +28,15 @@ node scripts/codex/check-package.mjs apps/pi-codex-memory
 | Command | What it checks |
 | --- | --- |
 | `typecheck`, `lint` | Type errors and Biome rules |
-| `test` | 116 tests. Isolated stores and fake model responses cover extraction, consolidation, recall, citation validation, correction and forgetting, cancellation, repository sharing and read consent. Several sessions sharing one store, on a fake clock, cover background coordination: one coordinator per scope, closed conversations only, at most 8 jobs, takeover after a lost lease or a long sleep, shutdown while a provider ignores cancellation, the status shown in every session, and **Create memories now**. Some tests load the extension into the real Pi SDK and run its commands and tools. |
-| `tui-smoke.py` | In the real Pi TUI, opens `/codex-memory` and checks its rows, row description and key hint, opens its memory model list, opens `/codex-memory-settings`, and reopens `/codex-memory` after `/reload`. Fails if any model request is sent. Requires `pi` on `PATH`. |
+| `test` | 124 tests. Isolated stores and fake model responses cover extraction, consolidation, recall, citation validation, correction and forgetting, cancellation, repository sharing and read consent. Several sessions sharing one store, on a fake clock, cover background coordination: one coordinator per scope, closed conversations only, at most 8 jobs, takeover after a lost lease or a long sleep, shutdown while a provider ignores cancellation, the status shown in every session, and both age ranges in **Create memories now**, including the age boundary, session exclusions, unchanged and forgotten memories, and TUI/RPC cancellation. Some tests load the extension into the real Pi SDK and run its commands and tools. |
+| `tui-smoke.py` | In the real Pi TUI, opens `/codex-memory` and checks its rows, row description and key hint, opens its memory model list, opens `/codex-memory-settings`, and reopens `/codex-memory` after `/reload`. It also opens and cancels the creation range selector, then runs **All closed conversations** with no eligible conversations. Fails if any model request is sent. Requires `pi` on `PATH`. |
 | `check-package.mjs` | Confirms that the release archive contains the required files and entry points. |
 
 The installed package was also checked once. Installed alone and through the `@buyong/pi-codex` bundle, the extension loaded and passed 41 repository-sharing cases and 6 tool cases.
 
 ## Checks with real models
 
-The coordination check below uses the current version. The recall checks after it used a version from before repository sharing, the current command layout and background coordination were added; those are covered by the coordination check and the automated checks above.
+The coordination check below ran before the creation range selector was added. The selector is covered by the model-free tests and TUI check above; the live-model check has not been rerun with it. The recall checks after it used a version from before repository sharing, the current command layout and background coordination were added; those are covered by the coordination check and the automated checks above.
 
 ### Background coordination
 
@@ -50,7 +50,7 @@ python3 apps/pi-codex-memory/verification/live/coordinator.py
 2. A second session records a decision and quits. A third records another decision and stays open. A fourth stays open without a conversation.
 3. The closed conversation must become memory, and the open one must not, even after it has been idle longer than the wait.
 4. The coordinating process is killed. Another session must take over, and the remaining conversation must become memory once it is closed.
-5. A fifth session records a third decision and quits. An open session chooses **Create memories now** in `/codex-memory`. The conversation must become memory without the 1-minute wait, and another session's status line must show the job.
+5. A fifth session records a third decision and quits. An open session chooses **Create memories now** in `/codex-memory`, then the configured recent period. The conversation must become memory without the 1-minute wait, and another session's status line must show the job.
 6. A session asks for all three decisions. Then memory is turned off.
 
 All 12 checks passed in 358 seconds on macOS with Pi 1.4.0:

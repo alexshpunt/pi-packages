@@ -19,7 +19,7 @@ import { WORKER_LIMIT } from "../dist/coordinator.js";
 import { EMPTY_SUMMARY } from "../dist/pipeline.js";
 import { MemoryRuntime } from "../dist/runtime.js";
 import { ACTIVITY_TTL_MS } from "../dist/store.js";
-import { terminalPicker } from "./ui.mjs";
+import { pickRow, terminalPicker } from "./ui.mjs";
 
 const HOUR = 3_600_000;
 const START = Date.parse("2026-10-27T09:00:00Z");
@@ -161,10 +161,10 @@ async function fixture(t) {
         runtimes.push(runtime);
         return { runtime, model: model.state, ctx };
     };
-    const writeSession = async (id, atMs) => {
+    const writeSession = async (id, atMs, folder = cwd) => {
         const iso = new Date(atMs).toISOString();
         const entries = [
-            { type: "session", version: 3, id, cwd, timestamp: iso },
+            { type: "session", version: 3, id, cwd: folder, timestamp: iso },
             {
                 type: "custom",
                 id: "origin",
@@ -897,7 +897,10 @@ test("/codex-memory offers Create memories now while memory is on, and Stop curr
     a.model.hold = new Promise((resolve) => {
         release = resolve;
     });
-    a.ctx.ui.custom = terminalPicker(["Create memories now"], screens);
+    a.ctx.ui.custom = terminalPicker(
+        ["Create memories now", "Last 7 days"],
+        screens,
+    );
     await memoryCommand(options());
     assert.match(screens.at(-1), /Create memories now/);
     assert.equal(
@@ -914,6 +917,149 @@ test("/codex-memory offers Create memories now while memory is on, and Stop curr
         "the result is reported",
     );
 });
+
+for (const range of ["recent", "all"]) {
+    test(`Create memories now ${range} applies only the selected age range and keeps session exclusions`, async (t) => {
+        const f = await fixture(t);
+        const a = f.open();
+        const settings = { ...ENABLED, maxRolloutAgeDays: 3 };
+        a.runtime.store.saveSettings(
+            a.runtime.scope,
+            settings,
+            f.clock.now - ACTIVITY_TTL_MS,
+        );
+        const day = 24 * HOUR;
+        await f.writeSession("recent", START - 10 * 60_000);
+        await f.writeSession("boundary", START - 3 * day);
+        await f.writeSession("outside", START - 3 * day - 1000);
+        const oldIds = Array.from(
+            { length: WORKER_LIMIT + 1 },
+            (_, index) => `old-${index}`,
+        );
+        for (const id of oldIds) await f.writeSession(id, START - 365 * day);
+        await f.writeSession("open", START - 365 * day);
+        await f.writeSession(a.runtime.sessionId, START - 365 * day);
+        const other = join(f.root, "other");
+        await mkdir(other);
+        await f.writeSession("foreign", START - day, other);
+        await f.step(0, a.runtime);
+        a.runtime.store.activity(
+            a.runtime.scope,
+            "open",
+            "another-process",
+            false,
+            f.clock.now,
+        );
+        const expected = ["recent", "boundary"];
+        if (range === "all") expected.push("outside", ...oldIds);
+        assert.deepEqual(await a.runtime.createNow(undefined, range), {
+            extracted: expected.length,
+            failed: 0,
+        });
+        assert.deepEqual([...a.model.extractions].sort(), expected.sort());
+        assert.ok(a.model.maxInFlight <= WORKER_LIMIT);
+        assert.equal(a.model.consolidations, 1);
+        assert.deepEqual(a.runtime.settings(), settings);
+        assert.deepEqual(await a.runtime.createNow(undefined, range), {
+            extracted: 0,
+            failed: 0,
+        });
+        const record = a.runtime.store.records(a.runtime.scope)[0];
+        a.runtime.store.revise(a.runtime.scope, record.path, null, f.clock.now);
+        assert.deepEqual(await a.runtime.createNow(undefined, range), {
+            extracted: 0,
+            failed: 0,
+        });
+        assert.equal(a.model.extractions.length, expected.length);
+        await f.writeSession("later-old", START - 365 * day);
+        assert.deepEqual(
+            await a.runtime.createNow(),
+            {
+                extracted: 0,
+                failed: 0,
+            },
+            "a later default run still uses the configured period",
+        );
+        assert.deepEqual(a.runtime.settings(), settings);
+    });
+}
+
+for (const mode of ["tui", "rpc"]) {
+    for (const label of ["All closed conversations", "Last 14 days"]) {
+        test(`/codex-memory ${mode} creates memories for ${label}`, async (t) => {
+            const f = await fixture(t);
+            const screens = [];
+            const a = f.open(fakeModel(), f.cwd, {});
+            a.ctx.mode = mode;
+            a.runtime.store.saveSettings(
+                a.runtime.scope,
+                { ...ENABLED, maxRolloutAgeDays: 14 },
+                f.clock.now - ACTIVITY_TTL_MS,
+            );
+            await f.writeSession("recent", START - 10 * 60_000);
+            await f.writeSession("old", START - 365 * 24 * HOUR);
+            const choices = ["Create memories now", label];
+            a.ctx.ui.custom = terminalPicker(choices, screens);
+            a.ctx.ui.select = async (title, rows) => {
+                screens.push([title, ...rows].join("\n"));
+                if (title === "Create memories now")
+                    assert.deepEqual(rows, [
+                        "Last 14 days",
+                        "All closed conversations",
+                    ]);
+                return pickRow(rows, choices.shift());
+            };
+            await memoryCommand({
+                ctx: a.ctx,
+                runtime: a.runtime,
+                repositories: {},
+                show() {},
+                changeScope: async () => {},
+            });
+            await settled(a.runtime);
+            assert.match(screens.at(-1), /All closed conversations/);
+            assert.match(screens.at(-1), /Last 14 days/);
+            if (mode === "tui") assert.match(screens.at(-1), /→ Last 14 days/);
+            assert.deepEqual(
+                [...a.model.extractions].sort(),
+                label === "All closed conversations"
+                    ? ["old", "recent"]
+                    : ["recent"],
+            );
+        });
+    }
+    test(`/codex-memory ${mode} range selection can be cancelled without creating memories`, async (t) => {
+        const f = await fixture(t);
+        const screens = [],
+            notices = [];
+        const a = f.open(fakeModel(), f.cwd, {
+            notify: (message) => notices.push(message),
+        });
+        a.ctx.mode = mode;
+        a.runtime.store.saveSettings(a.runtime.scope, ENABLED, START);
+        await f.writeSession("closed", START - 3 * HOUR);
+        const choices = ["Create memories now", undefined, undefined];
+        a.ctx.ui.custom = terminalPicker(choices, screens);
+        a.ctx.ui.select = async (title, rows) => {
+            screens.push([title, ...rows].join("\n"));
+            return pickRow(rows, choices.shift());
+        };
+        await within(
+            memoryCommand({
+                ctx: a.ctx,
+                runtime: a.runtime,
+                repositories: {},
+                show() {},
+                changeScope: async () => {},
+            }),
+        );
+        assert.match(screens.at(-1), /Memory scope/);
+        assert.equal(a.runtime.isRunning, false);
+        assert.deepEqual(a.model.extractions, []);
+        assert.equal(a.model.consolidations, 0);
+        assert.deepEqual(notices, []);
+    });
+}
 
 /** A wait the test ends by hand, so heartbeats can run during it. */
 function manualSleep(clock) {

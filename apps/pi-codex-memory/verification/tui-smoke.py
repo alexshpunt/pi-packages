@@ -91,14 +91,39 @@ try:
     settle_input()
     os.write(master, b"\x1b")
     settle_input()
+    # Enable only the isolated fixture scope. Empty conversations need no model calls.
+    subprocess.run(
+        ["node", "--input-type=module", "-e", """
+import { join } from 'node:path';
+import { ACTIVITY_TTL_MS, MemoryStore } from './dist/store.js';
+const [agent, work] = process.argv.slice(1);
+const store = new MemoryStore(join(agent, 'pi-codex-memory'));
+const scope = store.scopeFor(work);
+store.saveSettings(scope, { ...store.getSettings(scope), useMemories: true, generateMemories: true }, Date.now() - ACTIVITY_TTL_MS);
+store.close();
+""", str(agent), str(work)],
+        cwd=package, env=env, check=True, capture_output=True,
+    )
     os.write(master, b"/reload\r")
     read_until("Reloaded")
     settle_input()
     os.write(master, b"/codex-memory\r")
-    read_until("Memory scope")
+    read_until("Memory scope", "Create memories now")
+    settle_input()
+    os.write(master, b"\x1b[B" * 5 + b"\r")
+    read_until("All closed conversations", "Last 7 days")
+    settle_input()
     os.write(master, b"\x1b")
+    read_until("Memory scope")
+    settle_input()
+    # Reopen the range selector, choose all instead of the preselected recent period.
+    os.write(master, b"\r")
+    read_until("All closed conversations", "Last 7 days")
+    settle_input()
+    os.write(master, b"\x1b[B\r")
+    read_until("No new memories were created.")
     assert b"MODEL_REQUEST_FORBIDDEN_IN_UI_CHECK" not in output
-    print(json.dumps({"status": "pass", "checks": ["memory page", "model list", "settings page", "reload", "page after reload"], "modelCalls": 0}))
+    print(json.dumps({"status": "pass", "checks": ["memory page", "model list", "settings page", "reload", "page after reload", "creation range selector", "cancel range selection", "create from all closed conversations"], "modelCalls": 0}))
 finally:
     process.terminate()
     try:

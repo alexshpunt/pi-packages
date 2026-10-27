@@ -81,7 +81,7 @@ export function terminalPicker(steps, screens = []) {
                     // Saves and dialogs settle before the panel closes.
                     for (let wait = 0; wait < 50 && !isDone; wait++)
                         await tick();
-                    if (step === undefined) return;
+                    if (step === undefined && !steps.length) return;
                 }
             })().catch(reject);
         });
