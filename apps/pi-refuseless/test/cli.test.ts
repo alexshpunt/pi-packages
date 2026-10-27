@@ -26,11 +26,15 @@ test("models --mock shows the catalog as Pi registers it, then each entry as rep
   expect(reported).toStrictEqual(MOCK_CATALOG);
 });
 
-test("models without a key and unknown input exit with usage errors", () => {
-  const missingKey = cli("models");
-  expect(missingKey.code).toBe(2);
-  expect(missingKey.stderr).toContain("No key. Set REFUSELESS_API_KEY");
-  for (const args of [
+test("models without a key exits with a usage error", () => {
+  const { code, stderr } = cli("models");
+  expect(code).toBe(2);
+  expect(stderr).toContain("No key. Set REFUSELESS_API_KEY");
+});
+
+// One test per run: each starts its own Node process.
+test.each(
+  [
     ["nope"],
     ["catalog"],
     ["models", "--bogus"],
@@ -40,10 +44,13 @@ test("models without a key and unknown input exit with usage errors", () => {
     ["live", "--model", "glm-5.3-abliterated", "--turns", "0"],
     // No key in the environment, so live stops before starting Pi or sending a request.
     ["live", "--model", "glm-5.3-abliterated"],
-  ]) {
-    const result = cli(...args);
-    expect(result.code, args.join(" ")).toBe(2);
-    expect(result.stderr).toContain("--help");
-  }
+  ].map((args) => ({ args, name: args.join(" ") })),
+)("$name exits with a usage error", ({ args }) => {
+  const { code, stderr } = cli(...args);
+  expect(code).toBe(2);
+  expect(stderr).toContain("--help");
+});
+
+test("--help exits normally", () => {
   expect(cli("--help").code).toBe(0);
 });

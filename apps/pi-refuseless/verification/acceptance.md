@@ -77,7 +77,7 @@ REFUSELESS_API_KEY=<key> pnpm --filter @buyong/pi-refuseless cli live --model gl
 | --- | --- | --- | --- |
 | `typecheck` (`tsgo --noEmit`) | source | pass | exit 0 |
 | `lint` (`biome check .`) | source | pass | exit 0 |
-| All tests, 49 cases | source, Pi 1.3.0 | pass | `test/provider.test.ts` 39, `test/integration.test.ts` 8, `test/cli.test.ts` 2; the full suite passed 3 consecutive runs |
+| All tests, 58 cases | source, Pi 1.3.0 | pass | `test/provider.test.ts` 39, `test/integration.test.ts` 8, `test/cli.test.ts` 11; the full suite passed 3 consecutive runs |
 | TUI flow tests, 8 cases | source, Pi 1.4.0 | pass | `REFUSELESS_PI_SDK` set to the installed Pi |
 | Validator with inventory, runtime and pack | source, Pi 1.4.0 | pass | 63 pass, 2 skipped, 4 not_applicable |
 | Archive file list matches the inventory (`verification/inventory.json`) | archive | pass | the 9 files under Checked package |

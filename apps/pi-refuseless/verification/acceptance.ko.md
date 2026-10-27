@@ -77,7 +77,7 @@ REFUSELESS_API_KEY=<키> pnpm --filter @buyong/pi-refuseless cli live --model gl
 | --- | --- | --- | --- |
 | `typecheck`(`tsgo --noEmit`) | 소스 | pass | 종료 코드 0 |
 | `lint`(`biome check .`) | 소스 | pass | 종료 코드 0 |
-| 전체 테스트 49개 | 소스, Pi 1.3.0 | pass | `test/provider.test.ts` 39개, `test/integration.test.ts` 8개, `test/cli.test.ts` 2개. 전체를 3회 연속 통과 |
+| 전체 테스트 58개 | 소스, Pi 1.3.0 | pass | `test/provider.test.ts` 39개, `test/integration.test.ts` 8개, `test/cli.test.ts` 11개. 전체를 3회 연속 통과 |
 | TUI 흐름 테스트 8개 | 소스, Pi 1.4.0 | pass | `REFUSELESS_PI_SDK`를 설치된 Pi로 지정 |
 | 검사기(파일 목록, 런타임, 압축) | 소스, Pi 1.4.0 | pass | pass 63, skipped 2, not_applicable 4 |
 | 압축 파일의 파일이 파일 목록(`verification/inventory.json`)과 같음 | 압축 파일 | pass | 확인한 패키지 표의 파일 9개 |
