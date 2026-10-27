@@ -16,6 +16,7 @@ import {
   type Redactor,
   SENSITIVE_FIELD_RULE_ID,
 } from "@buyong/redact";
+import { Data, Effect } from "effect";
 
 export const SETTINGS_DIRECTORY = "pi-redact";
 const SETTINGS_FILE = "settings.json";
@@ -61,6 +62,25 @@ export type SettingsFileState =
   /** Problems name keys and indexes, never configured patterns or values. */
   | { readonly state: "invalid"; readonly problems: readonly string[] };
 
+export interface SettingsLocation {
+  readonly agentDir: string;
+  readonly cwd: string;
+  readonly isProjectTrusted: boolean;
+}
+
+/** One settings file's validated contents and whether the current project may edit it. */
+export interface CustomTarget {
+  readonly scope: SettingsScope;
+  readonly path: string;
+  readonly file: SettingsFileState;
+  readonly unavailableReason?: string;
+}
+
+export class SettingsError extends Data.TaggedError("SettingsError")<{
+  readonly message: string;
+  readonly cause?: unknown;
+}> {}
+
 export interface LoadedSettings {
   /** Built-in rules plus every valid settings layer. */
   readonly redactor: Redactor;
@@ -74,12 +94,18 @@ export interface LoadedSettings {
   readonly problems: readonly string[];
 }
 
-async function isFile(path: string): Promise<boolean> {
-  try {
-    return (await stat(path)).isFile();
-  } catch {
-    return false;
-  }
+function settingsIO<A>(operation: () => Promise<A>): Effect.Effect<A, SettingsError> {
+  return Effect.tryPromise({
+    try: operation,
+    catch: (cause) => new SettingsError({ message: cause instanceof Error ? cause.message : String(cause), cause }),
+  });
+}
+
+function isFile(path: string): Effect.Effect<boolean> {
+  return settingsIO(() => stat(path)).pipe(
+    Effect.map((info) => info.isFile()),
+    Effect.catch(() => Effect.succeed(false)),
+  );
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -118,24 +144,37 @@ export function parseSettingsDocument(
   };
 }
 
-/** Read one settings file. A missing file is not a problem. */
-export async function readSettingsFile(path: string, scope: SettingsScope): Promise<SettingsFileState> {
-  let raw: string;
-  try {
-    raw = await readFile(path, "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { state: "missing" };
-    return { state: "invalid", problems: ["could not be read"] };
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    // JSON.parse messages quote the file, which can contain exception values.
-    return { state: "invalid", problems: ["is not valid JSON"] };
-  }
-  const { document, problems } = parseSettingsDocument(parsed, scope);
-  return document ? { state: "valid", document } : { state: "invalid", problems };
+/** Read one settings file. Diagnostics never expose JSON parser messages or configured values. */
+export function readSettingsFileEffect(path: string, scope: SettingsScope): Effect.Effect<SettingsFileState> {
+  return settingsIO(() => readFile(path, "utf8")).pipe(
+    Effect.map((raw): SettingsFileState => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        return { state: "invalid", problems: ["is not valid JSON"] };
+      }
+      const { document, problems } = parseSettingsDocument(parsed, scope);
+      return document ? { state: "valid", document } : { state: "invalid", problems };
+    }),
+    Effect.catch((error) =>
+      Effect.succeed<SettingsFileState>(
+        (error.cause as NodeJS.ErrnoException)?.code === "ENOENT"
+          ? { state: "missing" }
+          : { state: "invalid", problems: ["could not be read"] },
+      ),
+    ),
+  );
+}
+
+/** Promise compatibility for existing consumers; extension workflows use the Effect operation. */
+export function readSettingsFile(path: string, scope: SettingsScope): Promise<SettingsFileState> {
+  return Effect.runPromise(readSettingsFileEffect(path, scope));
+}
+
+/** The non-terminal editor preserves raw JSON, including a malformed document the user can repair. */
+export function readSettingsTextEffect(path: string): Effect.Effect<string> {
+  return settingsIO(() => readFile(path, "utf8")).pipe(Effect.catch(() => Effect.succeed("{}\n")));
 }
 
 /** The JSON written for a document: defaults and empty lists are left out. */
@@ -152,21 +191,39 @@ export function serializeSettingsDocument(document: SettingsDocument): string {
 }
 
 /**
- * Validate and write a settings file. The file is replaced atomically and readable only by
- * the user, because exceptions can hold real values. Throws with value-free problems.
+ * Own the entire atomic replacement and temporary-file cleanup. Native rename cannot be
+ * cancelled, so interruption waits for this transaction instead of racing its finalizer.
  */
-export async function writeSettingsFile(path: string, scope: SettingsScope, document: SettingsDocument): Promise<void> {
-  const text = serializeSettingsDocument(document);
-  const { problems } = parseSettingsDocument(JSON.parse(text), scope);
-  if (problems.length) throw new Error(problems.join("; "));
-  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  const temporary = `${path}.${randomUUID()}.tmp`;
-  try {
-    await writeFile(temporary, text, { mode: 0o600 });
-    await rename(temporary, path);
-  } finally {
-    await rm(temporary, { force: true });
-  }
+export function writeSettingsFileEffect(
+  path: string,
+  scope: SettingsScope,
+  document: SettingsDocument,
+): Effect.Effect<void, SettingsError> {
+  return Effect.gen(function* () {
+    const text = yield* Effect.try({
+      try: () => {
+        const serialized = serializeSettingsDocument(document);
+        const { problems } = parseSettingsDocument(JSON.parse(serialized), scope);
+        if (problems.length) throw new Error(problems.join("; "));
+        return serialized;
+      },
+      catch: (cause) => new SettingsError({ message: cause instanceof Error ? cause.message : String(cause), cause }),
+    });
+    yield* settingsIO(() => mkdir(dirname(path), { recursive: true, mode: 0o700 }));
+    yield* Effect.acquireUseRelease(
+      Effect.sync(() => `${path}.${randomUUID()}.tmp`),
+      (temporary) =>
+        Effect.gen(function* () {
+          yield* settingsIO(() => writeFile(temporary, text, { mode: 0o600 }));
+          yield* settingsIO(() => rename(temporary, path));
+        }),
+      (temporary) => settingsIO(() => rm(temporary, { force: true })),
+    );
+  }).pipe(Effect.uninterruptible);
+}
+
+export function writeSettingsFile(path: string, scope: SettingsScope, document: SettingsDocument): Promise<void> {
+  return Effect.runPromise(writeSettingsFileEffect(path, scope, document));
 }
 
 function unique<T>(values: readonly T[], keyOf: (value: T) => string): T[] {
@@ -199,44 +256,102 @@ export function mergeRedactionConfigs(layers: readonly RedactionConfig[]): Redac
   };
 }
 
-/** Load global settings and, in a trusted project, project settings; invalid input falls back to built-in rules. */
-export async function loadSettings(options: {
-  readonly agentDir: string;
-  readonly cwd: string;
-  readonly isProjectTrusted: boolean;
-}): Promise<LoadedSettings> {
-  const problems: string[] = [];
-  const sources: string[] = [];
-  const layers: RedactionConfig[] = [];
-  const paths: [string, SettingsScope][] = [[globalSettingsPath(options.agentDir), "global"]];
-  const projectPath = projectSettingsPath(options.cwd);
-  if (options.isProjectTrusted) paths.push([projectPath, "project"]);
-  else if (await isFile(projectPath)) problems.push(`${projectPath}: ignored because the project is not trusted`);
+/** Load valid layers in order; invalid input falls back to the existing built-in policy. */
+export function loadSettingsEffect(options: SettingsLocation): Effect.Effect<LoadedSettings> {
+  return Effect.gen(function* () {
+    const problems: string[] = [];
+    const sources: string[] = [];
+    const layers: RedactionConfig[] = [];
+    const paths: [string, SettingsScope][] = [[globalSettingsPath(options.agentDir), "global"]];
+    const projectPath = projectSettingsPath(options.cwd);
+    if (options.isProjectTrusted) paths.push([projectPath, "project"]);
+    else if (yield* isFile(projectPath)) problems.push(`${projectPath}: ignored because the project is not trusted`);
 
-  let isEnabledByDefault = true;
-  let disabledRules: readonly string[] = [];
-  for (const [path, scope] of paths) {
-    const file = await readSettingsFile(path, scope);
-    if (file.state === "invalid") problems.push(...file.problems.map((problem) => `${path}: ${problem}`));
-    if (file.state !== "valid") continue;
-    layers.push(file.document.config);
-    sources.push(path);
-    if (scope === "global") {
-      isEnabledByDefault = file.document.enabled;
-      disabledRules = file.document.disabledRules;
+    let isEnabledByDefault = true;
+    let disabledRules: readonly string[] = [];
+    for (const [path, scope] of paths) {
+      const file = yield* readSettingsFileEffect(path, scope);
+      if (file.state === "invalid") problems.push(...file.problems.map((problem) => `${path}: ${problem}`));
+      if (file.state !== "valid") continue;
+      layers.push(file.document.config);
+      sources.push(path);
+      if (scope === "global") {
+        isEnabledByDefault = file.document.enabled;
+        disabledRules = file.document.disabledRules;
+      }
     }
-  }
-  try {
-    return {
-      redactor: createRedactor(mergeRedactionConfigs(layers)),
-      disabledRules,
-      isEnabledByDefault,
-      sources,
-      problems,
-    };
-  } catch (error) {
-    const issues = error instanceof RedactionConfigError ? error.issues.map(formatIssue) : ["could not be applied"];
-    problems.push(...issues.map((issue) => `merged settings: ${issue}; using built-in rules`));
-    return { redactor: createRedactor(), disabledRules: [], isEnabledByDefault, sources: [], problems };
-  }
+    return yield* Effect.try({
+      try: (): LoadedSettings => ({
+        redactor: createRedactor(mergeRedactionConfigs(layers)),
+        disabledRules,
+        isEnabledByDefault,
+        sources,
+        problems,
+      }),
+      catch: (cause) => cause,
+    }).pipe(
+      Effect.catch((error) =>
+        Effect.sync(() => {
+          const issues =
+            error instanceof RedactionConfigError ? error.issues.map(formatIssue) : ["could not be applied"];
+          problems.push(...issues.map((issue) => `merged settings: ${issue}; using built-in rules`));
+          return { redactor: createRedactor(), disabledRules: [], isEnabledByDefault, sources: [], problems };
+        }),
+      ),
+    );
+  });
+}
+
+export function loadSettings(options: SettingsLocation): Promise<LoadedSettings> {
+  return Effect.runPromise(loadSettingsEffect(options));
+}
+
+export function customTargetsEffect(options: SettingsLocation): Effect.Effect<readonly CustomTarget[]> {
+  return Effect.gen(function* () {
+    const globalPath = globalSettingsPath(options.agentDir);
+    const projectPath = projectSettingsPath(options.cwd);
+    const globalFile = yield* readSettingsFileEffect(globalPath, "global");
+    const projectFile = options.isProjectTrusted
+      ? yield* readSettingsFileEffect(projectPath, "project")
+      : { state: "missing" as const };
+    return [
+      { scope: "global", path: globalPath, file: globalFile },
+      {
+        scope: "project",
+        path: projectPath,
+        file: projectFile,
+        ...(options.isProjectTrusted
+          ? {}
+          : { unavailableReason: "Trust this project in Pi (/trust) to edit its settings here." }),
+      },
+    ];
+  });
+}
+
+export function setGlobalEnabledEffect(agentDir: string, isOn: boolean): Effect.Effect<void, SettingsError> {
+  return Effect.gen(function* () {
+    const path = globalSettingsPath(agentDir);
+    const file = yield* readSettingsFileEffect(path, "global");
+    if (file.state === "invalid")
+      return yield* Effect.fail(
+        new SettingsError({
+          message: `${path} cannot be changed: ${file.problems.join("; ")}. Fix or delete it first.`,
+        }),
+      );
+    const document = file.state === "valid" ? file.document : EMPTY_SETTINGS_DOCUMENT;
+    yield* writeSettingsFileEffect(path, "global", { ...document, enabled: isOn });
+  });
+}
+
+export function saveSettingsEffect(
+  options: SettingsLocation,
+  scope: SettingsScope,
+  document: SettingsDocument,
+): Effect.Effect<void, SettingsError> {
+  return Effect.suspend(() => {
+    if (scope === "project" && !options.isProjectTrusted)
+      return Effect.fail(new SettingsError({ message: "Project settings apply only in a trusted project." }));
+    const path = scope === "global" ? globalSettingsPath(options.agentDir) : projectSettingsPath(options.cwd);
+    return writeSettingsFileEffect(path, scope, document);
+  });
 }

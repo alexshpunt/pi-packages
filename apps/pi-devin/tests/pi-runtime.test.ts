@@ -3,15 +3,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test, vi } from "vitest";
 import { InMemoryCredentialStore, InMemoryModelsStore, type AssistantMessage } from "@earendil-works/pi-ai";
-import { createAgentSessionRuntime, createAgentSessionServices, createAgentSessionFromServices, ModelRuntime, SessionManager, SettingsManager, type CreateAgentSessionRuntimeFactory, type AgentSession, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { createAgentSessionRuntime, createAgentSessionServices, createAgentSessionFromServices, ModelRuntime, SessionManager, SettingsManager, type CreateAgentSessionRuntimeFactory, type AgentSession, type ExtensionAPI, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { registerTestExtension, type TestProvider } from "./extension-harness.ts";
 import { CHAT_METHOD } from "../src/core/protocol/protobuf.ts";
 import type { JsonObject } from "../src/core/types.ts";
-import { finalFrames, runSync, statusResponse, streamResponse } from "./helpers.ts";
+import { encodeResponse, errorStreamResponse, finalFrames, frameBytes, runSync, statusResponse, streamResponse } from "./helpers.ts";
 import { providerFixture, providerHostCredential } from "./provider-fixture.ts";
 
 async function runtimeFixture(options: Parameters<typeof providerFixture>[0] & {
   settings?: Parameters<typeof SettingsManager.inMemory>[0]; seed?: (manager: SessionManager, modelID: string) => void; mode?: Parameters<AgentSession["bindExtensions"]>[0]["mode"];
+  /** Tools the session may call; without them the session has none. */
+  tools?: ToolDefinition[];
 } = {}) {
   const directory = await mkdtemp(join(tmpdir(), "pi-devin-runtime-"));
   const fixture = await providerFixture(options); fixture.shutdown();
@@ -34,7 +36,8 @@ async function runtimeFixture(options: Parameters<typeof providerFixture>[0] & {
         pi.on("session_shutdown", (event) => { events.push(`shutdown:${event.reason}`); });
       }] },
     });
-    const result = await createAgentSessionFromServices({ services, sessionManager, sessionStartEvent, model: fixture.model, thinkingLevel: "high", noTools: "all" });
+    const result = await createAgentSessionFromServices({ services, sessionManager, sessionStartEvent, model: fixture.model, thinkingLevel: "high",
+      ...(options.tools ? { customTools: options.tools, tools: options.tools.map((tool) => tool.name) } : { noTools: "all" as const }) });
     return { ...result, services, diagnostics: services.diagnostics };
   };
   const manager = SessionManager.create(directory, join(directory, "sessions")); options.seed?.(manager, fixture.model.id);
@@ -117,7 +120,7 @@ for (const timeoutMs of [undefined, 5000]) test(`public Pi timeout ${timeoutMs ?
   } finally { vi.useRealTimers(); await f.close(); }
 });
 
-test("threshold compaction, the compression send fallback and the follow-up inference share one budget", async () => {
+test("threshold compaction, the compression send fallback and the follow-up inference share one run", async () => {
   const f = await runtimeFixture({ seed: (manager, modelID) => seed(manager, modelID, 9500, "long seed ".repeat(2000)),
     settings: { compaction: { enabled: true, reserveTokens: 1000, keepRecentTokens: 0 } },
     chat: (_request, index) => index === 1 ? Response.json({ message: "fallback" }, { status: 503 }) : streamResponse(finalFrames("summary or answer")),
@@ -131,14 +134,13 @@ test("threshold compaction, the compression send fallback and the follow-up infe
     expect(requests[0].body).toStrictEqual(requests[1].body);
     expect(requests[0].body.executionId).toBe(undefined); expect(requests[2].body.executionId).toBeTruthy();
     expect(new Set(requests.map((request) => request.body.cascadeId)).size).toBe(1);
-    expect(runSync(f.runs().snapshot).execution!.used).toBe(3);
     expect(f.events.indexOf("compact:threshold") < f.events.indexOf("before")).toBeTruthy();
     expect(f.runtime.session.getLastAssistantText()).toBe("summary or answer");
     expect(f.errors).toStrictEqual([]);
   } finally { await f.close(); }
 });
 
-test("overflow auto-compaction uses the same run budget; manual compaction gets its own", async () => {
+test("overflow auto-compaction stays in the same run; manual compaction gets its own", async () => {
   const f = await runtimeFixture({ seed: (manager, modelID) => seed(manager, modelID, 10, "old conversation ".repeat(400)), settings: { compaction: { enabled: true, reserveTokens: 1000, keepRecentTokens: 0 } },
     chat: (_request, index) => index === 1 ? Response.json({ message: "maximum context length is 10000 tokens" }, { status: 400 }) : streamResponse(finalFrames("summary or answer")),
   });
@@ -149,28 +151,12 @@ test("overflow auto-compaction uses the same run budget; manual compaction gets 
     const requests = f.requests.filter((request) => request.method === CHAT_METHOD);
     expect(requests.map((request) => request.body.executionId === undefined)).toStrictEqual([false, true, true, false]);
     expect(requests[0].body.executionId).toBe(requests[3].body.executionId);
-    const original = runSync(f.runs().snapshot).execution!; expect(original.used).toBe(4); expect(original.settled).toBe(true);
+    const original = runSync(f.runs().snapshot).execution!; expect(original.settled).toBe(true);
     await f.runtime.session.prompt("more history");
     await f.runtime.session.compact("manual summary");
     const manual = runSync(f.runs().snapshot).execution!;
-    expect(manual.used).toBe(2); expect(manual.settled).toBe(true); expect(manual.id).not.toBe(original.id);
+    expect(manual.settled).toBe(true); expect(manual.id).not.toBe(original.id);
     expect(f.events.includes("compact:manual")).toBeTruthy(); expect(f.errors).toStrictEqual([]);
-  } finally { await f.close(); }
-});
-
-test("when a pre-start compaction fallback uses up the budget, the main inference is not sent", async () => {
-  const f = await runtimeFixture({ maxModelCalls: 2,
-    seed: (manager, modelID) => seed(manager, modelID, 9500, "long seed ".repeat(2000)),
-    settings: { compaction: { enabled: true, reserveTokens: 1000, keepRecentTokens: 0 } },
-    chat: (_request, index) => index === 1 ? Response.json({}, { status: 503 }) : streamResponse(finalFrames("summary")),
-  });
-  try {
-    await f.runtime.session.setModel({ ...f.runtime.session.model!, contextWindow: 10000 });
-    await f.runtime.session.prompt("cannot bypass budget");
-    expect(f.chatCalls()).toBe(2);
-    const result = f.runtime.session.messages.at(-1) as AssistantMessage;
-    expect(result.stopReason).toBe("error"); expect(result.errorMessage!).toMatch(/all 2 Devin model HTTP requests/);
-    expect(runSync(f.runs().snapshot).execution!.used).toBe(2);
   } finally { await f.close(); }
 });
 
@@ -213,4 +199,87 @@ test("the cache_warming_decision handler stops warming only for Devin models", (
     expect(decide(event, { model: { provider: "devin" } })).toStrictEqual({ action: "stop" });
     expect(decide(event, { model: { provider: "anthropic" } })).toBe(undefined);
   } finally { extension.shutdown(); }
+});
+
+/** A tool that counts its runs, so a test can tell whether Pi executed a call. */
+function countingTool() {
+  const tool: ToolDefinition & { runs: number } = { name: "fixture_add", label: "Fixture", description: "Add two numbers", runs: 0,
+    parameters: { type: "object", properties: { a: { type: "number" }, b: { type: "number" } }, required: ["a", "b"] },
+    execute: async (_id, args) => { tool.runs++; const value = args as { a: number; b: number }; return { content: [{ type: "text", text: String(value.a + value.b) }], details: {} }; },
+  };
+  return tool;
+}
+
+/** Frames sent one by one with a pause between them, as a server that keeps answering does. */
+function pacedResponse(frames: JsonObject[], pauseMs: number, isEnded = true): Response {
+  const chunks = [...frames.map((frame) => frameBytes(encodeResponse(frame))), ...(isEnded ? [frameBytes(Buffer.from("{}"), 2)] : [])];
+  return new Response(new ReadableStream({ async start(controller) {
+    for (const chunk of chunks) { controller.enqueue(new Uint8Array(chunk)); await new Promise((resolve) => setTimeout(resolve, pauseMs)); }
+    if (isEnded) controller.close();
+  } }), { headers: { "content-type": "application/connect+proto" } });
+}
+
+const toolResultsOf = (request: { body: JsonObject }) => (request.body.chatMessagePrompts as JsonObject[]).filter((message) => message.source === "CHAT_MESSAGE_SOURCE_TOOL");
+
+test("Pi's provider retry count and transport preference do not stop Devin requests", async () => {
+  const f = await runtimeFixture({ settings: { retry: { enabled: false, provider: { maxRetries: 2 } }, transport: "websocket" } });
+  try {
+    await f.runtime.session.prompt("preferences");
+    expect(f.runtime.session.getLastAssistantText()).toBe("OK"); expect(f.chatCalls()).toBe(1); expect(f.errors).toStrictEqual([]);
+  } finally { await f.close(); }
+});
+
+test("a stream that keeps sending data outlives the timeout, and one that goes quiet for the timeout fails", async () => {
+  const frames = ["one ", "two ", "three ", "four", ""].map((deltaText, index) => index < 4 ? { deltaText } : { stopReason: "STOP_REASON_STOP_PATTERN" });
+  const f = await runtimeFixture({ settings: { retry: { enabled: false, provider: { timeoutMs: 300 } } },
+    chat: (_request, index) => index === 1 ? pacedResponse(frames, 150) : pacedResponse([{ deltaText: "partial" }], 0, false) });
+  try {
+    await f.runtime.session.prompt("long answer");
+    expect(f.runtime.session.getLastAssistantText()).toBe("one two three four");
+    await f.runtime.session.prompt("stalled answer");
+    const stalled = f.runtime.session.messages.at(-1) as AssistantMessage;
+    expect(stalled.stopReason).toBe("error"); expect(stalled.errorMessage!).toMatch(/no data for 300ms/);
+  } finally { await f.close(); }
+}, 10_000);
+
+test("rate limits and server errors with an error body reach Pi's host retry, while quota errors are not retried", async () => {
+  const failures = [
+    () => Response.json({ code: "resource_exhausted", message: "slow down" }, { status: 429 }),
+    () => Response.json({ code: "internal", message: "model failed" }, { status: 500 }),
+    () => errorStreamResponse("internal", "model failed"),
+    () => errorStreamResponse("resource_exhausted", "slow down"),
+  ];
+  for (const failure of failures) {
+    const f = await runtimeFixture({ settings: { retry: { enabled: true, maxRetries: 1, baseDelayMs: 1, maxAgentDelayMs: 1 } },
+      chat: (_request, index) => index === 1 ? failure() : streamResponse(finalFrames("recovered")) });
+    try {
+      await f.runtime.session.prompt("retry");
+      expect(f.runtime.session.getLastAssistantText()).toBe("recovered"); expect(f.chatCalls()).toBe(2);
+    } finally { await f.close(); }
+  }
+  const quota = await runtimeFixture({ settings: { retry: { enabled: true, maxRetries: 1, baseDelayMs: 1, maxAgentDelayMs: 1 } },
+    chat: () => Response.json({ code: "resource_exhausted", message: "quota exceeded" }, { status: 429 }) });
+  try {
+    await quota.runtime.session.prompt("quota");
+    const result = quota.runtime.session.messages.at(-1) as AssistantMessage;
+    expect(result.stopReason).toBe("error"); expect(result.errorMessage!).toMatch(/quota exceeded/); expect(quota.chatCalls()).toBe(1);
+  } finally { await quota.close(); }
+});
+
+test("calls cut off at the output limit and calls with invalid arguments are not run, and the model is asked to call again", async () => {
+  const cases = [
+    { frames: [{ deltaToolCalls: [{ id: "cut", name: "fixture_add", argumentsJson: '{"a":1,"b":2}' }] }, { stopReason: "STOP_REASON_MAX_TOKENS" }], expected: /output token limit/ },
+    { frames: [{ deltaToolCalls: [{ id: "bad", name: "fixture_add", argumentsJson: '{"a":' }] }, { stopReason: "STOP_REASON_FUNCTION_CALL" }], expected: /Invalid arguments for tool "fixture_add"[\s\S]*Received arguments:\n\{"a":/ },
+  ];
+  for (const { frames, expected } of cases) {
+    const tool = countingTool();
+    const f = await runtimeFixture({ tools: [tool], chat: (_request, index) => index === 1 ? streamResponse(frames) : streamResponse(finalFrames("called again")) });
+    try {
+      await f.runtime.session.prompt("use the tool");
+      expect(tool.runs).toBe(0); expect(f.chatCalls()).toBe(2); expect(f.errors).toStrictEqual([]);
+      const [result] = toolResultsOf(f.requests.filter((request) => request.method === CHAT_METHOD)[1]);
+      expect(result.toolResultIsError).toBe(true); expect(result.prompt as string).toMatch(expected);
+      expect(f.runtime.session.getLastAssistantText()).toBe("called again");
+    } finally { await f.close(); }
+  }
 });

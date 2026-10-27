@@ -1,3 +1,6 @@
+import { Effect } from "effect";
+import { fromPromise, fromSync } from "../shared/effects.ts";
+
 /** Guard usage-status refreshes against stale generations and duplicate triggers. */
 export function createUsageStatusRefreshGuard() {
   let generation = 0;
@@ -23,16 +26,27 @@ export function createUsageStatusRefreshGuard() {
       inFlightGeneration = requestGeneration;
       const signal = externalSignal ? AbortSignal.any([externalSignal, controller.signal]) : controller.signal;
       const stillCurrent = () => !signal.aborted && generation === requestGeneration && isCurrent();
-      try {
-        const text = await refresh(stillCurrent, signal);
-        if (stillCurrent()) setStatus(text);
-      } catch {
-        if (stillCurrent()) setStatus(undefined);
-      } finally {
-        controller.abort();
-        if (activeController === controller) activeController = undefined;
-        if (inFlightGeneration === requestGeneration) inFlightGeneration = undefined;
-      }
+      await Effect.runPromise(
+        fromPromise(() => refresh(stillCurrent, signal)).pipe(
+          Effect.flatMap((text) =>
+            fromSync(() => {
+              if (stillCurrent()) setStatus(text);
+            }),
+          ),
+          Effect.catch(() =>
+            fromSync(() => {
+              if (stillCurrent()) setStatus(undefined);
+            }),
+          ),
+          Effect.ensuring(
+            Effect.sync(() => {
+              controller.abort();
+              if (activeController === controller) activeController = undefined;
+              if (inFlightGeneration === requestGeneration) inFlightGeneration = undefined;
+            }),
+          ),
+        ),
+      );
     },
   };
 }

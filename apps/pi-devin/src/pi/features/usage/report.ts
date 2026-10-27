@@ -1,5 +1,4 @@
 import type { JsonObject } from "../../../core/types.ts";
-import type { BudgetUsage } from "../runs/types.ts";
 import type { AccountUsage, SessionUsage, UsageLine, UsagePainter, UsageTone } from "./types.ts";
 
 const plain: UsagePainter = (_tone, text) => text;
@@ -63,10 +62,6 @@ export function remainingTone(percent: number): UsageTone {
   return percent <= 20 ? "error" : percent <= 40 ? "warning" : "success";
 }
 
-function budgetTone(used: number, limit: number): UsageTone {
-  return used >= limit ? "error" : used / limit >= 0.75 ? "warning" : "success";
-}
-
 function hasQuota(account: AccountUsage | undefined): account is AccountUsage & { dailyRemainingPercent: number; weeklyRemainingPercent: number } {
   return account?.billingStrategy === QUOTA_STRATEGY && account.dailyRemainingPercent !== undefined && account.weeklyRemainingPercent !== undefined;
 }
@@ -103,7 +98,7 @@ export function relativeTime(targetMs: number, nowMs: number): string {
 }
 
 /** Details shown by `/devin`. Built only from the last account status and session records; sends no requests. */
-export function usageReport(account: AccountUsage | undefined, session: SessionUsage, budget: BudgetUsage, nowMs: number): UsageLine[] {
+export function usageReport(account: AccountUsage | undefined, session: SessionUsage, nowMs: number): UsageLine[] {
   const lines: UsageLine[] = [];
   if (!account) {
     lines.push({ text: "Account quota · not received yet", isHeading: true });
@@ -123,7 +118,5 @@ export function usageReport(account: AccountUsage | undefined, session: SessionU
   lines.push({ text: "This session · lead conversation (sidekick excluded)", isHeading: true });
   lines.push({ text: `  ${session.requests} ${session.requests === 1 ? "request" : "requests"} · input ${formatTokens(session.input)} · output ${formatTokens(session.output)}`
     + ` · cache read ${formatTokens(session.cacheRead)} · cache write ${formatTokens(session.cacheWrite)}` });
-  lines.push({ text: `Run budget · ${budget.isActive ? "in progress" : "last run"}`, isHeading: true });
-  lines.push({ text: `  ${progressBar((budget.used / budget.limit) * 100)} ${budget.used}/${budget.limit} model calls used`, tone: budgetTone(budget.used, budget.limit) });
   return lines;
 }

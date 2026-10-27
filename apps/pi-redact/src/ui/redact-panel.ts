@@ -1,7 +1,8 @@
 import { getSettingsListTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import { type Component, getKeybindings, type SettingItem, SettingsList } from "@earendil-works/pi-tui";
+import { errorText } from "../notify.js";
 import { onOff, type RedactStatus, statusLines } from "../status.js";
-import { errorText, hint, messageLines, type PanelMessage, paragraph, title } from "./common.js";
+import { hint, messageLines, type PanelMessage, paragraph, title } from "./common.js";
 
 export interface RedactPanelOptions {
   readonly theme: Theme;

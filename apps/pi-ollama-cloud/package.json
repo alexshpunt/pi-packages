@@ -69,6 +69,7 @@
     "vitest": "catalog:"
   },
   "dependencies": {
+    "effect": "4.0.6",
     "proper-lockfile": "^4.1.2"
   }
 }

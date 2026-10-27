@@ -1,11 +1,7 @@
 import { renderDiff, type Theme } from "@earendil-works/pi-coding-agent";
 import { type Component, type Focusable, Input, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import type { MaskPreview } from "../masking-session.js";
 import { hint, paragraph, title } from "./common.js";
-
-export interface MaskPreview {
-  readonly masked: string;
-  readonly ruleIds: readonly string[];
-}
 
 export interface TryPanelOptions {
   readonly theme: Theme;

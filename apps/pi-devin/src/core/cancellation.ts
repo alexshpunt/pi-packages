@@ -53,6 +53,30 @@ export function startDeadline(timeoutMs: number, reason: () => DevinFailure = ()
   });
 }
 
+/** A deadline that restarts whenever data arrives. */
+export interface IdleDeadline extends Cancellation {
+  /** Restarts the wait. Has no effect once the deadline has passed. */
+  readonly touch: Effect.Effect<void>;
+}
+
+/**
+ * Starts an idle deadline at once: it passes only when nothing arrives for `timeoutMs`, so a long response that keeps
+ * streaming is not cut off. Like `startDeadline`, the timer exists before the guarded work runs. It stops with the scope.
+ */
+export function startIdleDeadline(timeoutMs: number, reason: () => DevinFailure = () => new RequestTimeout({ message: `The request received no data for ${timeoutMs}ms.` })): Effect.Effect<IdleDeadline, never, Scope.Scope> {
+  return Effect.gen(function* () {
+    const deadline = makeCancellation();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const arm = () => {
+      clearTimeout(timer);
+      if (!deadline.isCancelled()) timer = setTimeout(() => deadline.cancelUnsafe(reason()), timeoutMs);
+    };
+    arm();
+    yield* Effect.addFinalizer(() => Effect.sync(() => clearTimeout(timer)));
+    return { ...deadline, touch: Effect.sync(arm) };
+  });
+}
+
 /** Fails with the signal's reason once it aborts; never succeeds. */
 export function whenAborted(signal: AbortSignal): Effect.Effect<never, DevinFailure> {
   return Effect.callback<never, DevinFailure>((resume) => {

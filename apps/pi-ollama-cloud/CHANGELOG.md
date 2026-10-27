@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Improved
+
+- Refactor asynchronous requests, account selection, cache coordination, catalog refresh, usage reporting, and CLI resource cleanup with Effect 4.0.6 while preserving public Promise APIs, request policies, and storage formats.
+- Add offline baseline/candidate contract comparison and a budgeted 50-request live verification runner, with mock budget and cancellation tests. Neither runner changes the existing CI release gates.
+
 ## [0.15.1] - 2026-10-21
 
 ### Improved

@@ -41,9 +41,22 @@ export interface InferenceRequest {
   run: Effect.Effect<void>;
 }
 
-/** Node and Connect report these failures as codes ("read ECONNRESET", "unavailable: …") that Pi's host retry does not match. */
+/** Connect codes of passing server trouble, in the words Pi's host retry matches. */
+const CONNECT_RETRY_LABELS: Readonly<Record<string, string>> = {
+  resource_exhausted: "Rate limit", internal: "Internal error", deadline_exceeded: "Request timed out",
+};
+
+/**
+ * Pi decides host retries from the message text alone. Node and Connect report failures as codes ("read ECONNRESET",
+ * "resource_exhausted: …") and an error body replaces the HTTP status, so the status or code is kept in words Pi matches.
+ * The original detail stays, so Pi's rules against retrying quota and billing errors still apply.
+ */
 function hostRetryableMessage(error: unknown, message: string): string {
-  return isTransientConnectionFailure(error) ? `Connection error (${message})` : message;
+  if (isTransientConnectionFailure(error)) return `Connection error (${message})`;
+  if (!(error instanceof RPCError)) return message;
+  if (error.httpStatus !== undefined && error.httpStatus >= 400) return message.includes(String(error.httpStatus)) ? message : `HTTP ${error.httpStatus} (${message})`;
+  const label = CONNECT_RETRY_LABELS[error.code];
+  return label ? `${label} (${message})` : message;
 }
 
 /** Like Pi's built-in providers: the caller option wins; otherwise only PI_CACHE_RETENTION=long (provider env first) means long retention. */
@@ -79,8 +92,7 @@ export const prepareRequest = (deps: InferenceDependencies, model: Model<DevinAP
     let selected = yield* deps.catalog.resolve(model.id, effectiveLevel, current);
     actualUID = selected.uid;
     response.message.providerThinkingLevel = actualUID;
-    if (requestOptions.maxRetries !== undefined && requestOptions.maxRetries !== 0) return yield* failWith("Devin uses Pi host retries. Only provider maxRetries 0 is supported.");
-    if (requestOptions.transport && !["auto", "sse"].includes(requestOptions.transport)) return yield* failWith("Devin supports HTTP Connect streams only.");
+    // Retries belong to Pi and the only transport is a Connect stream, so `maxRetries` and `transport` preferences are ignored.
     const cacheRetention = resolveCacheRetention(requestOptions);
     const assertCacheRetention = (selection: BackendModelSelection) => cacheRetention === "long" && !hasExtendedPromptCacheRetention(selection.variant)
       ? failWith("Long cache lifetime is not confirmed for this Devin model. Long retention is supported only for models whose catalog Prompt Cache Retention is 24h.")
@@ -108,7 +120,7 @@ export const prepareRequest = (deps: InferenceDependencies, model: Model<DevinAP
     const maximum = requestOptions.maxTokens === undefined ? selected.model.maxOutputTokens : yield* tokenCount(requestOptions.maxTokens, "maxTokens");
     if (maximum < 1 || maximum > selected.model.maxOutputTokens) return yield* failWith("The output limit is outside the selected Devin model range.");
     const client = yield* deps.clients.open(current, { fetch: requestOptions.fetch, timeoutMs: requestOptions.timeoutMs,
-      onRequest: (attempt) => attempt.isMetered ? lease.consume : Effect.void,
+      onRequest: (attempt) => attempt.isMetered ? lease.assertAttempt : Effect.void,
     });
     yield* lease.addCleanup(client.close);
     const request = chatRequest({ metadata: yield* client.metadata(), model: selected.uid, ...transcript, maxTokens: maximum,

@@ -9,8 +9,6 @@ export interface LoginSettings {
 
 /** Values the entry point chooses for one extension instance. Read by the services that need them. */
 export interface ExtensionConfigShape {
-  /** Model HTTP requests one run may send. Defaults to 8; the run service rejects values outside 1 to 100. */
-  readonly maxModelCalls?: number;
   /** Clock of quota timestamps and session check times. */
   readonly now: () => number;
   /**

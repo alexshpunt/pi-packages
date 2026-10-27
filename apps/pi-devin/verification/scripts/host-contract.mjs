@@ -25,7 +25,7 @@ const REPORT_PREFIX = "Sidekick report for background handoff";
 const SOL = "gpt-5.6-sol";
 const UNEXPOSED_UIDS = ["kimi-k2-6", "kimi-k2-7", "swe-1-6", "swe-1-6-fast"];
 const OAUTH_ONLY_TEXT = "API key authentication is not supported";
-const BUDGET_TEXT = "Used all 8 Devin model HTTP requests";
+const TOOL_ROUNDS = 12;
 const LONG_CACHE_TEXT = "Long cache lifetime is not confirmed";
 const COMMON_ARGS = ["--no-skills", "--no-prompt-templates", "--no-themes", "--no-context-files", "--no-extensions", "--no-mcp", "--no-builtin-tools"];
 
@@ -535,14 +535,15 @@ async function scenarioRpc(scenario) {
     chats = chatsSince(base);
     scenario.check("fusion-sidekick-deactivated", chats.length === 1 && !chats[0].tools.includes("devin_sidekick") && !chats[0].hasFusionGuidance, chats.map((entry) => entry.tools));
 
-    // Default budget of 8 calls
+    // No model request limit: a long tool loop runs until the model stops
     from = rpc.mark(); base = mock.requests.length;
-    mock.setChat((_entry, index) => toolPlan("add", { a: index, b: 1 }, "budget"));
+    mock.setChat((_entry, index) => index <= TOOL_ROUNDS ? toolPlan("add", { a: index, b: 1 }, "rounds") : textPlan("rounds done", "rounds"));
     await rpc.request({ type: "prompt", message: "keep adding" });
-    await rpc.waitRecord((record) => record.type === "agent_settled", from, 60_000, "budget settled");
+    await rpc.waitRecord((record) => record.type === "agent_settled", from, 60_000, "rounds settled");
     run = runSummary(rpc.records.slice(from)); chats = chatsSince(base);
-    scenario.step("budget", { chats: chats.length, toolRuns: run.toolStarts.length, stopReason: run.stopReasons.at(-1), errorMessage: run.errorMessage });
-    scenario.check("budget-default-8", chats.length === 8 && run.stopReasons.at(-1) === "error" && run.errorMessage?.includes(BUDGET_TEXT), { chats: chats.length, error: run.errorMessage });
+    scenario.step("rounds", { chats: chats.length, toolRuns: run.toolStarts.length, stopReason: run.stopReasons.at(-1), errorMessage: run.errorMessage });
+    scenario.check("no-request-limit", chats.length === TOOL_ROUNDS + 1 && run.toolStarts.length === TOOL_ROUNDS && run.stopReasons.at(-1) === "stop",
+      { chats: chats.length, toolRuns: run.toolStarts.length, error: run.errorMessage });
 
     // stdin closed during a stream (shutdown)
     from = rpc.mark(); base = mock.requests.length;

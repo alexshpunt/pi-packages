@@ -1,21 +1,28 @@
-export async function concurrentMap<T, R>(
+import { Effect } from "effect";
+import { fromPromise } from "./effects.ts";
+
+export function concurrentMapEffect<T, R>(
+  items: T[],
+  workers: number,
+  fn: (item: T) => Promise<R>,
+): Effect.Effect<PromiseSettledResult<R>[]> {
+  return Effect.forEach(
+    items,
+    (item) =>
+      fromPromise(() => fn(item)).pipe(
+        Effect.match({
+          onSuccess: (value): PromiseSettledResult<R> => ({ status: "fulfilled", value }),
+          onFailure: (reason): PromiseSettledResult<R> => ({ status: "rejected", reason }),
+        }),
+      ),
+    { concurrency: Math.max(1, Math.trunc(workers)) },
+  );
+}
+
+export function concurrentMap<T, R>(
   items: T[],
   workers: number,
   fn: (item: T) => Promise<R>,
 ): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = new Array(items.length);
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.max(1, workers) }, async () => {
-      while (next < items.length) {
-        const index = next++;
-        try {
-          results[index] = { status: "fulfilled", value: await fn(items[index]) };
-        } catch (reason) {
-          results[index] = { status: "rejected", reason };
-        }
-      }
-    }),
-  );
-  return results;
+  return Effect.runPromise(concurrentMapEffect(items, workers, fn));
 }

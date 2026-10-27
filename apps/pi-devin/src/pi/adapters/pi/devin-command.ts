@@ -4,7 +4,6 @@ import { toDevinFailure, type DevinError, type DevinFailure } from "../../../cor
 import { ExtensionConfig } from "../../app/config.ts";
 import type { ExtensionRuntime } from "../../app/runtime.ts";
 import { ModelCatalog } from "../../features/catalog/service.ts";
-import { Runs } from "../../features/runs/service.ts";
 import { DisplaySettings } from "../../features/settings/service.ts";
 import type { DevinPreferences } from "../../features/settings/types.ts";
 import { sessionUsage, usageReport } from "../../features/usage/report.ts";
@@ -38,13 +37,12 @@ const applyPreferences = (ctx: ExtensionCommandContext, next: DevinPreferences):
   yield* (yield* UsageStatus).update(ctx);
 });
 
-const devinCommand = (args: string, ctx: ExtensionCommandContext, runtime: ExtensionRuntime): Effect.Effect<void, DevinFailure, DisplaySettings | ModelCatalog | UsageStatus | Runs | ExtensionConfig> => Effect.gen(function* () {
+const devinCommand = (args: string, ctx: ExtensionCommandContext, runtime: ExtensionRuntime): Effect.Effect<void, DevinFailure, DisplaySettings | ModelCatalog | UsageStatus | ExtensionConfig> => Effect.gen(function* () {
   const settings = yield* DisplaySettings;
   const status = yield* UsageStatus;
-  const runs = yield* Runs;
   const { now } = yield* ExtensionConfig;
   const report = () => runtime.runSync(Effect.gen(function* () {
-    return usageReport(yield* status.accountUsage, sessionUsage(ctx.sessionManager.getBranch()), yield* runs.budget, now());
+    return usageReport(yield* status.accountUsage, sessionUsage(ctx.sessionManager.getBranch()), now());
   }));
   const tokens = args.trim().split(/\s+/).filter(Boolean);
   if (tokens.length) {

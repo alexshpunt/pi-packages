@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { generatedFeature } from "../scripts/cli/generated.ts";
+import { materializeProductionDependencies } from "../scripts/lib/verification/artifact.ts";
 
 const packageRoot = fileURLToPath(new URL("../", import.meta.url));
 const files = ["catalog.generated.ts", "limits.generated.ts"];
@@ -21,6 +22,7 @@ const hashes = (root: string) =>
 function prepare(root: string) {
   cpSync(join(packageRoot, "src"), join(root, "src"), { recursive: true });
   copyFileSync(join(packageRoot, "package.json"), join(root, "package.json"));
+  materializeProductionDependencies(root);
   mkdirSync(join(root, "test", "fixtures"), { recursive: true });
   copyFileSync(
     join(packageRoot, "test", "fixtures", "inspect-generated.ts"),

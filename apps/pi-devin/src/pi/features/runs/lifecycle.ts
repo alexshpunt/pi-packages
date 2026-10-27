@@ -1,15 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { Effect, Exit } from "effect";
 import { makeCancellation, type Cancellation } from "../../../core/cancellation.ts";
-import { Cancelled, ModelBudgetError, type DevinError, type DevinFailure } from "../../../core/errors.ts";
+import { Cancelled, type DevinError, type DevinFailure } from "../../../core/errors.ts";
 import { failWith } from "../../../core/validation.ts";
 import { AdmissionLine, type AdmissionTicket } from "./admission.ts";
 import { freshState, MAX_STEP_INDEX, restoreState } from "./state.ts";
-import type { BudgetUsage, DevinSessionState, ExecutionKind, ExecutionState, RequestLease, SessionBinding } from "./types.ts";
+import type { DevinSessionState, ExecutionKind, ExecutionState, RequestLease, SessionBinding } from "./types.ts";
 
 interface Execution {
   data: ExecutionState;
-  /** Ends the run's work with a reason: a finished run, an exhausted budget or an invalidated login. */
+  /** Ends the run's work with a reason: a finished run or an invalidated login. */
   cancellation: Cancellation;
   /** Requests of one run are admitted one at a time, in order. */
   admission: AdmissionLine;
@@ -23,13 +23,6 @@ interface Execution {
 const cancelled = () => new Cancelled({ message: "The previous Devin run ended." });
 const runQuietly = (cleanup: Effect.Effect<void>) => Effect.catchCause(cleanup, () => Effect.void);
 
-/** Value of `PI_DEVIN_MAX_MODEL_CALLS`. Defaults to 8; anything other than an integer from 1 to 100 stops the extension from loading. */
-export function modelCallLimit(value: string | undefined): Effect.Effect<number | undefined, DevinError> {
-  if (value === undefined || value === "") return Effect.succeed(undefined);
-  if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > 100) return failWith("PI_DEVIN_MAX_MODEL_CALLS must be an integer from 1 to 100.");
-  return Effect.succeed(Number(value));
-}
-
 /** Runs of one extension instance and its attached session. It never builds its own tool or retry loop. */
 export class DevinLifecycle {
   private binding?: SessionBinding;
@@ -37,27 +30,13 @@ export class DevinLifecycle {
   private execution?: Execution;
   private isClosed = false;
   private isAuxiliary = false;
-  readonly maxModelCalls: number;
 
-  private constructor(maxModelCalls: number) {
-    this.maxModelCalls = maxModelCalls;
-  }
+  private constructor() {}
 
-  static make(maxModelCalls = 8): Effect.Effect<DevinLifecycle, DevinError> {
-    if (!Number.isSafeInteger(maxModelCalls) || maxModelCalls < 1 || maxModelCalls > 100) return failWith("The Devin request budget must be between 1 and 100.");
-    return Effect.sync(() => new DevinLifecycle(maxModelCalls));
-  }
+  static readonly make: Effect.Effect<DevinLifecycle> = Effect.sync(() => new DevinLifecycle());
 
   get snapshot(): Effect.Effect<DevinSessionState> {
     return Effect.sync(() => structuredClone(this.state));
-  }
-
-  /** Model requests of the running or last finished run. used is 0 when this session has no run yet. */
-  get budget(): Effect.Effect<BudgetUsage> {
-    return Effect.sync(() => {
-      const execution = this.state.execution;
-      return { used: execution?.used ?? 0, limit: this.maxModelCalls, isActive: execution !== undefined && !execution.settled };
-    });
   }
 
   private checkpoint(): Effect.Effect<void, Cancelled> {
@@ -93,10 +72,10 @@ export class DevinLifecycle {
       if (current && !current.data.settled) {
         if (kind === "agent" && ["pending", "recovered"].includes(current.data.kind)) current.data.kind = "agent";
         else if (kind === "agent" && ["manual", "tree", "direct"].includes(current.data.kind) && current.activeRequests === 0) yield* this.finish;
-        else return; // Retries and tool follow-up calls do not get a new budget.
+        else return; // Retries and tool follow-up calls stay in the same run.
         if (this.execution) return;
       }
-      this.activate({ id: randomUUID(), used: 0, settled: false, kind });
+      this.activate({ id: randomUUID(), settled: false, kind });
     });
   }
 
@@ -148,7 +127,7 @@ export class DevinLifecycle {
   get shutdown(): Effect.Effect<void> {
     return Effect.suspend(() => {
       if (this.isClosed) return Effect.void;
-      // An unfinished budget stays in the checkpoint so a reload cannot reset the limit.
+      // An unfinished run stays in the checkpoint so a reload resumes it with the same execution ID.
       return Effect.andThen(this.abort(cancelled()), Effect.sync(() => { this.isClosed = true; }));
     });
   }
@@ -195,7 +174,6 @@ export class DevinLifecycle {
         ticket = active.admission.enter();
         yield* active.cancellation.guard(ticket.turn);
         yield* assertCurrent;
-        if (active.data.used >= this.maxModelCalls) return yield* Effect.fail(new ModelBudgetError({ limit: this.maxModelCalls }));
         if (state.nextStepIndex >= MAX_STEP_INDEX) return yield* failWith("The Devin step number limit was reached. Start a new session.");
         active.activeRequests++; isCounted = true;
         const stepIndex = state.nextStepIndex++;
@@ -208,16 +186,7 @@ export class DevinLifecycle {
           executionId: active.data.id, cascadeId: state.cascadeId, trajectoryId: state.trajectoryId,
           sessionId: state.sessionId, stepIndex, isAuxiliary, isRecovery,
           cancellation: active.cancellation,
-          consume: Effect.gen({ self: this }, function* () {
-            yield* assertCurrent;
-            if (active.data.used >= this.maxModelCalls) {
-              const error = new ModelBudgetError({ limit: this.maxModelCalls });
-              yield* this.abort(error);
-              return yield* Effect.fail(error);
-            }
-            active.data.used++;
-            yield* this.checkpoint();
-          }),
+          assertAttempt: assertCurrent,
           addCleanup: (cleanup) => Effect.suspend(() => {
             let hasCleaned = false;
             const once = Effect.suspend(() => {

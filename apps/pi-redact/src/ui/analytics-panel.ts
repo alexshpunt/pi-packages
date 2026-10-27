@@ -11,21 +11,15 @@ import {
 } from "@earendil-works/pi-tui";
 import {
   ANALYTICS_RETENTION_DAYS,
+  type AnalyticsReader,
   type AnalyticsScope,
   type AnalyticsSummary,
   type RecordSummary,
   type StoredRecord,
 } from "../analytics.js";
 import { type Excerpt, excerptDiffText } from "../excerpt.js";
-import { errorText, hint, messageLines, type PanelMessage, paragraph, title } from "./common.js";
-
-/** The store operations the page uses; each may throw when the file cannot be used. */
-export interface AnalyticsReader {
-  list(scope: AnalyticsScope, limit: number): readonly RecordSummary[];
-  summarize(scope: AnalyticsScope): AnalyticsSummary;
-  get(id: number): StoredRecord | undefined;
-  clear(scope: AnalyticsScope): number;
-}
+import { errorText } from "../notify.js";
+import { hint, messageLines, type PanelMessage, paragraph, title } from "./common.js";
 
 export interface AnalyticsPanelOptions {
   readonly theme: Theme;

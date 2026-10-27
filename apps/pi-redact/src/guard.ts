@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isToolCallEventType, type ToolCallEvent } from "@earendil-works/pi-coding-agent";
+import { Data, Effect } from "effect";
 import { countMarkers, REDACTION_MARKER } from "./render.js";
 
 /** Model-facing reason for a blocked call. */
@@ -24,38 +25,58 @@ function resolveToolPath(path: string, cwd: string): string {
 }
 
 /** Markers already in the file; an unreadable or oversized file counts none, which blocks conservatively. */
-async function countFileMarkers(path: string): Promise<number> {
-  try {
-    if ((await stat(path)).size > MAX_COMPARED_FILE_BYTES) return 0;
-    return countMarkers(await readFile(path, "utf8"));
-  } catch {
-    return 0;
-  }
+function countFileMarkers(path: string): Effect.Effect<number> {
+  return Effect.gen(function* () {
+    const info = yield* Effect.tryPromise(() => stat(path));
+    if (info.size > MAX_COMPARED_FILE_BYTES) return 0;
+    const content = yield* Effect.tryPromise((signal) => readFile(path, { encoding: "utf8", signal }));
+    return countMarkers(content);
+  }).pipe(Effect.catch(() => Effect.succeed(0)));
 }
+
+export class WriteGuardError extends Data.TaggedError("WriteGuardError")<{
+  readonly cause: unknown;
+}> {}
 
 /**
  * What the call would write a masked value into, or `undefined` when it adds no marker.
  * Shell commands are blocked on any marker; file writes and edits only when they add
  * markers, so files that already contain the literal text stay editable.
  */
-export async function findMaskedWrite(event: ToolCallEvent, cwd: string): Promise<string | undefined> {
-  if (isToolCallEventType("bash", event) || isToolCallEventType("powershell", event)) {
-    const { command } = event.input;
-    return typeof command === "string" && command.includes(REDACTION_MARKER) ? `${event.toolName} command` : undefined;
-  }
-  if (isToolCallEventType("write", event)) {
-    const { content, path } = event.input;
-    if (typeof content !== "string" || typeof path !== "string") return undefined;
-    const added = countMarkers(content);
-    if (added === 0) return undefined;
-    return added > (await countFileMarkers(resolveToolPath(path, cwd))) ? path : undefined;
-  }
-  if (isToolCallEventType("edit", event)) {
-    const { edits, path } = event.input;
-    if (!Array.isArray(edits)) return undefined;
-    for (const edit of edits)
-      if (typeof edit?.newText === "string" && countMarkers(edit.newText) > countMarkers(String(edit.oldText ?? "")))
-        return typeof path === "string" ? path : "edit";
-  }
-  return undefined;
+export function findMaskedWriteEffect(
+  event: ToolCallEvent,
+  cwd: string,
+): Effect.Effect<string | undefined, WriteGuardError> {
+  return Effect.gen(function* () {
+    if (isToolCallEventType("bash", event) || isToolCallEventType("powershell", event)) {
+      const { command } = event.input;
+      return typeof command === "string" && command.includes(REDACTION_MARKER)
+        ? `${event.toolName} command`
+        : undefined;
+    }
+    if (isToolCallEventType("write", event)) {
+      const { content, path } = event.input;
+      if (typeof content !== "string" || typeof path !== "string") return undefined;
+      const added = countMarkers(content);
+      if (added === 0) return undefined;
+      const resolved = yield* Effect.try({
+        try: () => resolveToolPath(path, cwd),
+        catch: (cause) => new WriteGuardError({ cause }),
+      });
+      return added > (yield* countFileMarkers(resolved)) ? path : undefined;
+    }
+    if (isToolCallEventType("edit", event)) {
+      const { edits, path } = event.input;
+      if (!Array.isArray(edits)) return undefined;
+      for (const edit of edits)
+        if (typeof edit?.newText === "string" && countMarkers(edit.newText) > countMarkers(String(edit.oldText ?? "")))
+          return typeof path === "string" ? path : "edit";
+    }
+    return undefined;
+  });
+}
+
+/** Promise boundary retained for existing callers. */
+export function findMaskedWrite(event: ToolCallEvent, cwd: string): Promise<string | undefined> {
+  return Effect.runPromise(findMaskedWriteEffect(event, cwd));
 }

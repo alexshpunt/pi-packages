@@ -71,7 +71,6 @@ Running `/devin` in the TUI shows the following on one screen. Use ↑↓ to mov
 
 - Account quota: daily and weekly remaining-percentage bars, reset times and when the data was fetched
 - Usage in this session: request count and input, output and cache tokens. Sidekick conversations are not included.
-- Run budget: a bar of the model requests used so far by the current (or last) user message, out of the per-message limit (see [Limits and behavior](#limits-and-behavior))
 
 There are two toggles, both off by default. Changes apply to all sessions at once.
 
@@ -103,10 +102,9 @@ Picking **Devin Fusion** (`fusion`) in `/model` turns on the `devin_sidekick` to
 
 | Item | Behavior |
 | --- | --- |
-| Model request budget | Processing one user message calls models up to 8 times by default, including tool follow-ups, retries and auto-compaction. Each sidekick task gets the same limit separately. Change it with `PI_DEVIN_MAX_MODEL_CALLS` (1–100). |
-| Request timeout | Follows the value set by Pi (300 seconds by default). |
+| Request timeout | Follows the value set by Pi (300 seconds by default). A response that keeps arriving is not cut off; the request fails only when no data arrives for that long. |
 | Prompt cache | Short cache by default. `PI_CACHE_RETENTION=long` is allowed only for models Devin marks with a 24-hour cache; for other models the request is refused before sending. |
-| Images | On supported models, up to 4 MiB per image and 5 MiB in total per message. |
+| Images | On supported models, up to 4 MiB per image and 5 MiB in total per message. After switching to a model without image support, earlier images are replaced with a note saying they were left out. |
 | Sidekick report | The lead receives at most about 131,072 tokens of each report (524,288 characters, counted like Pi's context estimate of 4 characters per token), including status, errors and notices. A longer report is cut and ends with the path of a temporary file that holds the complete report (see [Storage locations](#storage-locations)). If saving fails, the cut report includes a notice instead. |
 | print and JSON modes | These modes do not fetch the model list; they use the list stored by an earlier TUI or RPC session. Run the TUI or RPC mode at least once while logged in so the list is stored; otherwise `--model devin/<model ID>` is not found. |
 

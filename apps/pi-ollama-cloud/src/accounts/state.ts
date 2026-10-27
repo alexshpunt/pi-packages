@@ -2,9 +2,11 @@ import { randomBytes } from "node:crypto";
 import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, type Stats, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { Effect } from "effect";
 import { isSafeKey } from "../cache/data.ts";
-import { withCacheLock } from "../cache/lock.ts";
+import { withCacheLockEffect } from "../cache/lock.ts";
 import { isRecord } from "../models/types.ts";
+import { runAbortable } from "../shared/effects.ts";
 import { isUsageResponse } from "../usage/api.ts";
 import type { AccountHealth, AccountState, UsageLimitWindow } from "./types.ts";
 
@@ -178,34 +180,39 @@ export function createAccountStateStore(options: AccountStateStoreOptions = {}):
       return filePath();
     },
     read,
-    async update<T>(mutate: (state: AccountState) => T, signal?: AbortSignal): Promise<T> {
-      const path = filePath();
-      let next: AccountState | undefined;
-      let result: T | undefined;
-      const lock = await withCacheLock(
-        path,
-        () => {
-          // Preserve memory-only changes while the file revision is unchanged.
-          // No await is allowed between this read and the write.
-          const current = read();
-          result = mutate(current);
-          pruneAccountState(current, now());
-          next = current;
-          if (!writeStateFile(path, current)) return false;
-          cache = { path, revision: currentRevision(path), state: current };
-          return true;
-        },
+    update<T>(mutate: (state: AccountState) => T, signal?: AbortSignal): Promise<T> {
+      return runAbortable(
+        Effect.gen(function* () {
+          const path = filePath();
+          let next: AccountState | undefined;
+          let result: T | undefined;
+          const lock = yield* withCacheLockEffect(
+            path,
+            () => {
+              // Preserve memory-only changes while the file revision is unchanged.
+              // No await is allowed between this read and the write.
+              const current = read();
+              result = mutate(current);
+              pruneAccountState(current, now());
+              next = current;
+              if (!writeStateFile(path, current)) return false;
+              cache = { path, revision: currentRevision(path), state: current };
+              return true;
+            },
+            signal,
+          );
+          if (!lock.ok) {
+            if (!next) {
+              next = read();
+              result = mutate(next);
+              pruneAccountState(next, now());
+            }
+            cache = { path, revision: currentRevision(path), state: next };
+          }
+          return result as T;
+        }),
         signal,
       );
-      if (!lock.ok) {
-        if (!next) {
-          next = read();
-          result = mutate(next);
-          pruneAccountState(next, now());
-        }
-        cache = { path, revision: currentRevision(path), state: next };
-      }
-      return result as T;
     },
   };
 }

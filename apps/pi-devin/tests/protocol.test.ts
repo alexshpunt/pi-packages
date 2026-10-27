@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { createServer, type IncomingHttpHeaders } from "node:http";
 import { Stream } from "effect";
 import { expect, test } from "vitest";
-import { ChatAccumulator } from "../src/core/inference/accumulator.ts";
+import { assertRunnableToolCalls, ChatAccumulator } from "../src/core/inference/accumulator.ts";
 import { chatRequest } from "../src/core/inference/request.ts";
 import { decodeFrames } from "../src/core/protocol/frames.ts";
 import { CHAT_METHOD, chatRequestCodec, chatResponseCodec } from "../src/core/protocol/protobuf.ts";
@@ -74,12 +74,27 @@ test("ambiguous tool deltas and invalid arguments never become executable calls"
   const parallel = new ChatAccumulator();
   runSync(parallel.accept({ deltaToolCalls: [{ id: "a", name: "add" }, { id: "b", name: "add" }] }));
   expect(() => runSync(parallel.accept({ deltaToolCalls: [{ argumentsJson: "{}" }] }))).toThrow(/Cannot attach/);
+  // The result keeps the reason in Pi's argumentsError wording; the CLI, which runs tools itself, still refuses to run them.
   for (const argumentsJson of ["[1,2]", '{"unfinished":']) {
     const invalid = new ChatAccumulator();
     runSync(invalid.accept({ deltaToolCalls: [{ id: "a", name: "add", argumentsJson }], stopReason: "STOP_REASON_FUNCTION_CALL" }));
     runSync(invalid.accept({}, true));
-    expect(() => runSync(invalid.finish)).toThrow(/JSON/);
+    const result = runSync(invalid.finish);
+    expect(result.toolArgumentErrors.a!.endsWith(`\n\nReceived arguments:\n${argumentsJson}`)).toBe(true);
+    expect(() => runSync(assertRunnableToolCalls(result))).toThrow(/Arguments of tool add are not valid JSON/);
   }
+  const reported = new ChatAccumulator();
+  runSync(reported.accept({ deltaToolCalls: [{ id: "a", name: "add", argumentsJson: "{}", invalidJsonErr: "bad" }] }));
+  runSync(reported.accept({}, true));
+  const reportedResult = runSync(reported.finish);
+  expect(reportedResult.toolArgumentErrors.a).toMatch(/^The server reported a tool argument JSON error\./);
+  expect(() => runSync(assertRunnableToolCalls(reportedResult))).toThrow(/^The server reported a tool argument JSON error\.$/);
+  const truncated = new ChatAccumulator();
+  runSync(truncated.accept({ deltaToolCalls: [{ id: "a", name: "add", argumentsJson: '{"a":1}' }], stopReason: "STOP_REASON_MAX_TOKENS" }));
+  runSync(truncated.accept({}, true));
+  const truncatedResult = runSync(truncated.finish);
+  expect(truncatedResult.toolArgumentErrors).toStrictEqual({});
+  expect(() => runSync(assertRunnableToolCalls(truncatedResult))).toThrow(/Tool calls and the stop reason do not match/);
 });
 
 test("replay of 7 preserved captures: protobuf request/response serialization and field preservation", async () => {

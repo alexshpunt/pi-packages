@@ -1,6 +1,7 @@
 import { getSettingsListTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import { type Component, type SettingItem, SettingsList } from "@earendil-works/pi-tui";
-import { errorText, messageLines, type PanelMessage, paragraph, title } from "./common.js";
+import { errorText } from "../notify.js";
+import { messageLines, type PanelMessage, paragraph, title } from "./common.js";
 
 export interface SwitchItem {
   readonly id: string;
