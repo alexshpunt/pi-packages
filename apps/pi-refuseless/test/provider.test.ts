@@ -42,11 +42,12 @@ const EDGE_CATALOG = [
   { id: "unlisted", context_length: 1_048_576 },
 ];
 
-/** Runs the extension factory against a Pi API stub that records every call and event handler. */
+/** Runs the extension factory against a Pi API stub that records every call, event handler and command. */
 function loadExtension() {
   const calls: string[] = [];
   const providers: Provider[] = [];
-  const handlers = new Map<string, (event: any) => unknown>();
+  const handlers = new Map<string, ((event: any, ctx: any) => unknown)[]>();
+  const commands: string[] = [];
   let thinkingLevel = "off";
   const pi = new Proxy(
     {},
@@ -57,7 +58,8 @@ function loadExtension() {
           if (name === "getThinkingLevel") return thinkingLevel;
           calls.push(name === "on" ? `on ${args[0]}` : String(name));
           if (name === "registerProvider") providers.push(args[0] as Provider);
-          if (name === "on") handlers.set(args[0], args[1]);
+          if (name === "on") handlers.set(args[0], [...(handlers.get(args[0]) ?? []), args[1]]);
+          if (name === "registerCommand") commands.push(args[0]);
           if (name === "setThinkingLevel") thinkingLevel = args[0];
         },
     },
@@ -66,7 +68,11 @@ function loadExtension() {
   return {
     calls,
     providers,
-    handlers,
+    commands,
+    /** Calls every handler of `event.type`, as Pi does, in a session without interactive UI. */
+    emit: (event: { type: string; [field: string]: unknown }) => {
+      for (const handler of handlers.get(event.type) ?? []) handler(event, { mode: "print" });
+    },
     thinkingLevel: () => thinkingLevel,
     setThinkingLevel: (level: string) => {
       thinkingLevel = level;
@@ -144,9 +150,18 @@ async function run(
 const ask = (text: string): Context => ({ messages: [{ role: "user", content: text, timestamp: 1 }] });
 
 describe("registration", () => {
-  test("registers one Refuseless provider with no fixed models and a model_select handler, without a network call", () => {
-    const { calls, providers } = loadExtension();
-    expect(calls).toStrictEqual(["registerProvider", "on model_select"]);
+  test("registers one Refuseless provider with no fixed models, its event handlers and /pi-refuseless, without a network call", () => {
+    const { calls, providers, commands } = loadExtension();
+    expect(calls).toStrictEqual([
+      "registerProvider",
+      "on model_select",
+      "on session_start",
+      "on model_select",
+      "on agent_end",
+      "on session_shutdown",
+      "registerCommand",
+    ]);
+    expect(commands).toStrictEqual(["pi-refuseless"]);
     expect(providers).toHaveLength(1);
     const [registered] = providers;
     expect(registered!.id).toBe("refuseless");
@@ -247,14 +262,15 @@ describe("model list from GET /v1/models", () => {
       model.maxTokens,
       getSupportedThinkingLevels(model).join(","),
       model.reasoningDefault,
+      model.abliterated,
     ]);
     expect(summary).toStrictEqual([
-      ["glm-5.3-abliterated", 1_048_576, 131_072, "low,high,max", "low"],
-      ["glm-5.3-flash-abliterated", 1_048_576, 131_072, "low,high,max", "low"],
-      ["deepseek-v4.1-flash-abliterated", 1_048_576, 131_072, "off,low,high,max", "low"],
-      ["deepseek-v4.1-flash-fast", 1_048_576, 131_072, "off,low,high,max", "low"],
-      ["minimax-m3.1-flash", 1_048_576, 131_072, "low,high,max", "low"],
-      ["deepseek-v4.1-flash-free", 524_288, 131_072, "low,high,max", "low"],
+      ["glm-5.3-abliterated", 1_048_576, 131_072, "low,high,max", "low", true],
+      ["glm-5.3-flash-abliterated", 1_048_576, 131_072, "low,high,max", "low", true],
+      ["deepseek-v4.1-flash-abliterated", 1_048_576, 131_072, "off,low,high,max", "low", true],
+      ["deepseek-v4.1-flash-fast", 1_048_576, 131_072, "off,low,high,max", "low", false],
+      ["minimax-m3.1-flash", 1_048_576, 131_072, "low,high,max", "low", false],
+      ["deepseek-v4.1-flash-free", 524_288, 131_072, "low,high,max", "low", false],
     ]);
     for (const model of models) {
       expect(model).toMatchObject({
@@ -313,6 +329,21 @@ describe("model list from GET /v1/models", () => {
     ]);
     // Each level sends the value the model lists.
     expect(models.find((model) => model.id === "small")!.thinkingLevelMap).toMatchObject({ off: "none", high: "high" });
+  });
+
+  test("takes abliterated from the catalog's flag, not from the ID", () => {
+    const models = catalogModels([
+      { id: "plain-name", abliterated: true },
+      { id: "stock-abliterated", abliterated: false },
+      { id: "no-flag-abliterated" },
+      { id: "not-boolean", abliterated: "true" },
+    ]);
+    expect(models.map((model) => [model.id, model.abliterated])).toStrictEqual([
+      ["plain-name", true],
+      ["stock-abliterated", false],
+      ["no-flag-abliterated", undefined],
+      ["not-boolean", undefined],
+    ]);
   });
 
   test("Pi fetches with REFUSELESS_API_KEY when no key is saved", async () => {
@@ -401,6 +432,7 @@ describe("model list from GET /v1/models", () => {
       expect(mock.requests).toHaveLength(fetches);
       const restored = restarted.getModels("refuseless") as RefuselessModel[];
       expect(restored.map((model) => model.reasoningDefault)).toStrictEqual(CATALOG_IDS.map(() => "low"));
+      expect(restored.map((model) => model.abliterated)).toStrictEqual(MOCK_CATALOG.map((entry) => entry.abliterated));
       expect(getSupportedThinkingLevels(restored[0]!)).toStrictEqual(["low", "high", "max"]);
 
       catalog.splice(4, 1);
@@ -466,12 +498,11 @@ describe("thinking level after picking a model", () => {
 
   test("the model_select handler sets the default, except for a restored session", () => {
     const extension = loadExtension();
-    const select = extension.handlers.get("model_select")!;
-    select({ type: "model_select", model: withOff, previousModel: undefined, source: "restore" });
+    extension.emit({ type: "model_select", model: withOff, previousModel: undefined, source: "restore" });
     expect(extension.thinkingLevel()).toBe("off");
     for (const source of ["set", "cycle"]) {
       extension.setThinkingLevel("off");
-      select({ type: "model_select", model: withOff, previousModel: undefined, source });
+      extension.emit({ type: "model_select", model: withOff, previousModel: undefined, source });
       expect(extension.thinkingLevel(), source).toBe("low");
     }
   });

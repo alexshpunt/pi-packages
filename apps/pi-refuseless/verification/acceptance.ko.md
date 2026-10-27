@@ -4,28 +4,32 @@
 
 소스 패키지와 npm 압축 파일 모두 로컬 검증을 통과했습니다. 자동 확인에는 Refuseless API를 흉내 내는 로컬 모의 서버를 썼고, 이 서버는 2026-10-27에 받은 실제 `GET /v1/models` 응답을 돌려줍니다. 이어서 실제 서비스에서도 모델 3개가 각각 10턴을 모두 통과했습니다.
 
+2026-10-28에 크레딧 표시, `/pi-refuseless`, 모델 목록의 `abliterated` 필드를 추가하면서 이 기록을 고쳤습니다. 이 기능들은 모의 서버로만 확인했습니다. 실제 서비스 확인은 다시 하지 않았으므로, 아래의 실제 서비스 결과는 2026-10-27 것입니다.
+
 ## 확인한 패키지
 
 | 항목 | 값 |
 | --- | --- |
 | 패키지 | `@buyong/pi-refuseless` 0.1.0 |
-| 소스 | `feat/pi-refuseless` 브랜치의 `apps/pi-refuseless`. `c9f293a` 기준, 2026-10-27의 커밋하지 않은 작업 트리 |
-| 압축 파일 | `npm pack --ignore-scripts`로 만든 `buyong-pi-refuseless-0.1.0.tgz`, SHA-256 `5a5cdc0ca57b2efaeab0771ff80422592e9fac8ec36c5098b6944deb6e8cc290` |
-| 압축 파일에 든 파일 | `package.json`, `src/index.ts`, `src/models.ts`, `src/thinking.ts`, `README.md`, `README.ko.md`, `CHANGELOG.md`, `CHANGELOG.ko.md`, `LICENSE` |
+| 소스 | `feat/pi-refuseless-credits` 브랜치의 `apps/pi-refuseless`. `c0201d6` 기준, 2026-10-28의 커밋하지 않은 작업 트리 |
+| 압축 파일 | `npm pack --ignore-scripts`로 만든 `buyong-pi-refuseless-0.1.0.tgz`, SHA-256 `6e7b0e47fa6d8d021386da7547f13ffd0384d634051023c1adcf2e8287dbe33b` |
+| 압축 파일에 든 파일 | `package.json`, `src/index.ts`, `src/api.ts`, `src/command.ts`, `src/credits.ts`, `src/credits-status.ts`, `src/models.ts`, `src/settings.ts`, `src/thinking.ts`, `README.md`, `README.ko.md`, `CHANGELOG.md`, `CHANGELOG.ko.md`, `LICENSE` |
 | 확장 진입점 | `pi.extensions: ["./src/index.ts"]`. `skills`, `prompts`, `themes`는 `[]` |
-| 호스트 peer 의존성 | `@earendil-works/pi-ai: *`, `@earendil-works/pi-coding-agent: *`. 런타임 `dependencies` 없음 |
+| 명령 | `/pi-refuseless`. 도구와 플래그는 없음 |
+| 호스트 peer 의존성 | `@earendil-works/pi-ai: *`, `@earendil-works/pi-coding-agent: *`, `@earendil-works/pi-tui: *`. 런타임 `dependencies` 없음 |
 | 공급자 | ID `refuseless`, 이름 `Refuseless`, `auth.apiKey`만 사용(OAuth 없음), 기본 URL `https://api.refuseless.com/v1`, API `openai-completions` |
 | 환경 | 설치된 Pi 1.4.0(`~/.nvm/versions/node/v24.14.0/bin/pi`), 작업 공간 Pi SDK 1.3.0, Node.js 24.14.0, macOS 15.7.1 arm64 |
 
 ### 모델 목록 변환
 
-Refuseless 문서에 나온 모델 목록 필드는 `id`, `object`, `created`, `owned_by`(openapi.json, `ModelObject`), 선택 필드 `context_length`(api/models), `reasoning_efforts`와 `reasoning_default`(guides/reasoning)입니다. 가격, 출력 한도, 입력 형식 필드는 없습니다.
+Refuseless 문서에 나온 모델 목록 필드는 `id`, `object`, `created`, `owned_by`(openapi.json, `ModelObject`), 선택 필드 `context_length`(api/models), `reasoning_efforts`와 `reasoning_default`(guides/reasoning), 필수 불리언 필드 `abliterated`(openapi.json, `ModelObject`. api/models는 `-abliterated` 접미사 대신 이 필드로 구분하라고 안내함)입니다. 가격, 출력 한도, 입력 형식 필드는 없습니다.
 
-2026-10-27에 받은 응답에는 모델 6개에 대해 정확히 이 필드만 있습니다.
+2026-10-27에 받은 응답은 `abliterated`가 생기기 전 것이며, 모델 6개에 대해 나머지 필드만 있습니다.
 
 - `context_length`: `deepseek-v4.1-flash-free`는 524,288, 나머지 5개는 1,048,576
 - `reasoning_efforts`: `deepseek-v4.1-flash-abliterated`와 `deepseek-v4.1-flash-fast`는 `["off","low","high","max"]`, 나머지 4개는 `["low","high","max"]`
 - `reasoning_default`: 6개 모두 `"low"`
+- `abliterated`: 없음. 모의 서버는 ID가 `-abliterated`로 끝나는 3개에 `true`, 나머지 3개에 `false`를 넣음. 실제 값은 확인하지 않음
 
 패키지는 모델 목록의 항목마다 다음과 같이 Pi 모델을 만듭니다.
 
@@ -35,10 +39,23 @@ Refuseless 문서에 나온 모델 목록 필드는 `id`, `object`, `created`, `
 | `contextWindow` | 양수인 `context_length`. 없으면 128,000(Pi가 사용자 정의 모델에 쓰는 기본값) |
 | `reasoning`, `thinkingLevelMap` | `reasoning_efforts`에서 가져옴. Pi의 각 생각 수준은 목록에 있는 같은 이름의 값을 보냄(`none`은 `off`로 봄). 목록에 없는 수준은 `null`. 필드가 없으면 생각 수준 없음. `off`만 있으면 `reasoning`은 false |
 | `reasoningDefault`(모델과 함께 저장되는 추가 필드) | `reasoning_default`가 지원 수준 중 하나이고 모델에 생각 수준이 있을 때 그 값 |
+| `abliterated`(모델과 함께 저장되는 추가 필드) | 불리언인 `abliterated`. 아니면 비워 둠. ID는 보지 않음 |
 | `maxTokens` | 131,072(docs.refuseless.com/sdks의 Pi 설정 값). `contextWindow`보다 크지 않음 |
 | `input` | `["text"]` |
 | `cost` | 모두 0 |
 | `compat` | `supportsDeveloperRole: false`. openapi.json의 `ChatMessage.role`에는 `system`, `user`, `assistant`, `tool`만 있음 |
+
+### 크레딧 잔액
+
+`GET /v1/credits`(api/credits)는 `balance`, `reserved`, `available`, `key_limit`를 미국 달러로 돌려주며 크레딧을 쓰지 않습니다. 패키지는 Pi가 `refuseless`에 쓰는 키(저장한 키, 없으면 `REFUSELESS_API_KEY`)로, `models.json`에서 바꾼 주소를 포함한 공급자 기본 URL에서 이 값을 읽습니다. `balance`, `reserved`, `available`이 숫자가 아닌 응답은 오류로 보고, 숫자가 아닌 `key_limit`은 한도 없음으로 봅니다. 금액은 소수점 아래 2자리에서 6자리까지 표시합니다.
+
+| 위치 | 표시 내용 | 읽는 때 |
+| --- | --- | --- |
+| 상태 줄(키 `refuseless-credits`) | `Refuseless <available>`. 예: `Refuseless $41.30`. 키가 없거나 읽기에 실패하면 표시하지 않음 | 대화형 Pi에서 Refuseless 모델을 쓰는 동안만. 세션 시작, 모델 선택, `agent_end`마다, 스위치를 켤 때 |
+| 대화형 Pi의 `/pi-refuseless` | `Available`, `Balance`, `Reserved`, `Key limit`(null이면 `none`) 또는 오류, 그리고 스위치 `Credits in status line` | 패널을 열 때 한 번. 패널을 닫으면 읽기를 취소함 |
+| 다른 모드의 `/pi-refuseless` | 같은 네 줄을 알림(RPC)이나 stderr(print, JSON)로 출력 | 한 번 |
+
+더 새로운 읽기, 다른 공급자 모델로 바꾸기, 스위치 끄기, `session_shutdown`은 진행 중인 읽기를 취소하고 그 결과를 버립니다. 스위치는 Pi 에이전트 폴더의 `refuseless.json`에 `"creditsStatus": false`가 없으면 켜져 있습니다. 스위치를 바꾸면 바로 적용되고, 다른 키는 그대로 둔 채 그 값을 임시 파일과 이름 바꾸기로 파일에 합칩니다. JSON 객체가 아닌 파일은 바꾸지 않으며, 이때 패널이 이유를 보여 주고 바꾼 설정은 Pi를 다시 시작하거나 다시 읽을 때까지만 유지됩니다.
 
 ## 다시 확인하는 방법
 
@@ -77,23 +94,24 @@ REFUSELESS_API_KEY=<키> pnpm --filter @buyong/pi-refuseless cli live --model gl
 | --- | --- | --- | --- |
 | `typecheck`(`tsgo --noEmit`) | 소스 | pass | 종료 코드 0 |
 | `lint`(`biome check .`) | 소스 | pass | 종료 코드 0 |
-| 전체 테스트 58개 | 소스, Pi 1.3.0 | pass | `test/provider.test.ts` 39개, `test/integration.test.ts` 8개, `test/cli.test.ts` 11개. 전체를 3회 연속 통과 |
-| TUI 흐름 테스트 8개 | 소스, Pi 1.4.0 | pass | `REFUSELESS_PI_SDK`를 설치된 Pi로 지정 |
-| 검사기(파일 목록, 런타임, 압축) | 소스, Pi 1.4.0 | pass | pass 63, skipped 2, not_applicable 4 |
-| 압축 파일의 파일이 파일 목록(`verification/inventory.json`)과 같음 | 압축 파일 | pass | 확인한 패키지 표의 파일 9개 |
-| 검사기(파일 목록, 런타임) | 압축 파일, Pi 1.4.0 | pass | pass 41, skipped 1, not_applicable 6 |
-| TUI 흐름 테스트 8개 | 압축 파일, Pi 1.4.0 | pass | `REFUSELESS_PACKAGE_DIR`를 풀어 놓은 압축 파일로 지정 |
+| 전체 테스트 80개 | 소스, Pi 1.3.0 | pass | `test/provider.test.ts` 40개, `test/credits.test.ts` 19개, `test/integration.test.ts` 10개, `test/cli.test.ts` 11개. 전체를 3회 연속 통과 |
+| TUI 흐름 테스트 10개 | 소스, Pi 1.4.0 | pass | `REFUSELESS_PI_SDK`를 설치된 Pi로 지정 |
+| 검사기(파일 목록, 런타임, 압축) | 소스, Pi 1.4.0 | pass | pass 79, skipped 2, not_applicable 4 |
+| 압축 파일의 파일이 파일 목록(`verification/inventory.json`)과 같음 | 압축 파일 | pass | 확인한 패키지 표의 파일 14개 |
+| 검사기(파일 목록, 런타임) | 압축 파일, Pi 1.4.0 | pass | pass 47, skipped 1, not_applicable 6 |
+| TUI 흐름 테스트 10개 | 압축 파일, Pi 1.4.0 | pass | `REFUSELESS_PACKAGE_DIR`를 풀어 놓은 압축 파일로 지정 |
 | 설치된 CLI가 모델 목록을 받아 옴(RPC 모드 시작) | 소스와 압축 파일, Pi 1.4.0 | pass | `get_available_models`가 모의 서버의 모델 6개를 돌려줌. 모의 서버는 `Bearer abl_verify`가 담긴 `GET /v1/models`를 받음 |
 | 설치된 `pi -p`가 저장된 목록으로 요청 | 소스와 압축 파일, Pi 1.4.0 | pass | `POST /v1/chat/completions (Bearer abl_…, model=glm-5.3-flash-abliterated, reasoning_effort=high, messages=2, tools=4)`. 새 세션은 Pi 기본 수준 `medium`으로 시작하고, Refuseless에 `medium`이 없으므로 Pi가 `high`로 올림 |
+| 설치된 `pi -p "/pi-refuseless"` | 소스, Pi 1.4.0 | pass | stderr에 잔액 네 줄을 출력하고 종료 코드 0. 모의 서버는 `GET /v1/credits (Bearer abl_…)`만 받음 |
 | import 검토 | 소스 | pass | 아래 참고 |
 | 배포 도구 | 저장소 | pass | `changelog.mjs check` 종료 코드 0. `dry-run.mjs --list`가 `pi-refuseless`를 `hasConfig: true`, 변경 이력 문제 없음으로 표시. `configProblems`는 비어 있음 |
-| 인증 정보 검사 | 패키지 파일 25개, 압축 파일 안 파일 9개, 보고서 | pass | `abl_unit-test-key` 같은 테스트용 키만 있음. 모의 서버 로그에는 키의 앞 네 글자만 남음. 실제 서비스 확인에 쓴 키는 어느 파일에도 없음 |
-| 유효한 키로 `GET /v1/models` | 실제 서비스, Pi 1.4.0 | pass | 테스트용 키로 RPC 모드를 시작한 뒤 모델마다 Pi의 모델 목록에 나타남 |
-| 실제 대화, 모델마다 10턴, 모델 3개 동시(`cli live`) | 실제 서비스, Pi 1.4.0 | pass | 30턴 중 30턴 통과. [실제 서비스](#실제-서비스) 참고 |
+| 인증 정보 검사 | 패키지 파일 31개, 압축 파일 안 파일 14개, 보고서 | pass | `abl_unit-test-key` 같은 테스트용 키만 있음. 모의 서버 로그에는 키의 앞 네 글자만 남음. 실제 서비스 확인에 쓴 키는 어느 파일에도 없음 |
+| 유효한 키로 `GET /v1/models` | 실제 서비스, Pi 1.4.0, 2026-10-27 | pass | 테스트용 키로 RPC 모드를 시작한 뒤 모델마다 Pi의 모델 목록에 나타남 |
+| 실제 대화, 모델마다 10턴, 모델 3개 동시(`cli live`) | 실제 서비스, Pi 1.4.0, 2026-10-27 | pass | 30턴 중 30턴 통과. [실제 서비스](#실제-서비스) 참고 |
 
 검사기 항목 중 `pass`가 아닌 것은 다음과 같습니다.
 
-- `skipped`, 의미 단위 import·번들 검사: 직접 검토했습니다. 소스 파일은 `@earendil-works/pi-ai`와 그 `compat` 진입점(Pi 1.3.0과 1.4.0의 확장 로더가 연결함), `@earendil-works/pi-coding-agent`의 타입, 패키지 자체 파일만 import하고 전역 `fetch`를 씁니다. 다른 앱이나 개발용 파일은 import하지 않습니다.
+- `skipped`, 의미 단위 import·번들 검사: 직접 검토했습니다. 소스 파일은 `@earendil-works/pi-ai`와 그 `compat` 진입점(Pi 1.3.0과 1.4.0의 확장 로더가 연결함), `@earendil-works/pi-coding-agent`(타입과 `DynamicBorder`, `getSettingsListTheme`, `getAgentDir`), `@earendil-works/pi-tui`(`SettingsList`, `Text`), `node:crypto`, `node:fs`, `node:path`, 패키지 자체 파일만 import하고 전역 `fetch`를 씁니다. 다른 앱이나 개발용 파일은 import하지 않습니다.
 - `skipped`, 풀어 놓은 압축 파일의 런타임·동작(소스 보고서에만 있음): 압축 파일 검사기 실행, 압축 파일 TUI 테스트, 압축 파일 CLI 확인으로 대신했습니다.
 - `not_applicable`: 테마 규격과 스킬·프롬프트·테마 필터(이 패키지에는 없음), 압축 파일 실행의 npm 메타데이터와 압축(압축은 소스에서만 함).
 
@@ -119,6 +137,10 @@ REFUSELESS_API_KEY=<키> pnpm --filter @buyong/pi-refuseless cli live --model gl
 | `/logout` | `Select provider to logout:` → Refuseless → `Removed stored API key for Refuseless. Environment variables and models.json config are unchanged.` `refuseless` 항목만 지워지고, 그 뒤로는 Refuseless 키를 찾지 못함 |
 | 선택한 모델로 요청 | 모델을 고른 뒤 그 세션의 모든 채팅 요청에 그 모델 ID와 Refuseless 키가 담김(도구 호출 왕복 포함). 테스트용으로 설정한 두 번째 공급자(`stub`)는 요청을 하나도 받지 않음 |
 | 새 세션 | 테스트용 두 번째 공급자(`stub`)의 모델을 기본 모델로 저장해 두면, 새 세션은 앞서 고른 Refuseless 모델이 아니라 `stub-model`로 시작하고 Pi는 경고를 표시하지 않음. 상태 줄에는 `(stub) stub-model`이 나옴. Refuseless 모델을 기본 모델로 저장해 두면 새 세션은 그 모델로 시작함 |
+| 상태 줄의 크레딧 | 키가 저장되어 있어도 Refuseless 모델을 고르기 전에는 아무것도 읽지 않음. `glm-5.3-flash-abliterated`를 고르면 상태 줄에 `Refuseless $41.30`이 나오고, 모의 서버는 저장된 키가 담긴 `GET /v1/credits`를 받음. 응답이 끝나면 Pi가 잔액을 다시 읽음 |
+| `/pi-refuseless` | 잔액을 한 번 더 읽고 `Refuseless credits`, `Available  $41.30`, `Balance    $42.50`, `Reserved   $1.20`, `Key limit  none`, `Credits in status line  on`을 표시함 |
+| 끄기 | `Credits in status line`에서 Enter를 누르면 `off`가 나오고 `<agent>/refuseless.json`에 `{"creditsStatus": false}`를 씀. 그 뒤 응답에서는 잔액을 읽지 않으며, 같은 에이전트 폴더로 새 프로세스를 시작해도 같고 거기서 `/pi-refuseless`는 `off`를 표시함 |
+| 키 없이 `/pi-refuseless` | `No Refuseless API key. Run /login and choose Refuseless.`와 `Credits in status line  on`을 표시하고 요청은 보내지 않음 |
 | `/reload` | 키는 저장되어 있고 저장된 모델 목록이 없을 때 `/model`을 열면 목록을 받아 옴. `Reloaded keybindings, extensions, skills, prompts, themes, and context files` 뒤에도 `refuseless` 공급자는 하나이고, Pi가 저장된 목록에서 같은 모델 6개를 되살리며, 모델은 여전히 모의 서버를 가리키고, 다음 요청에 저장된 키를 씀 |
 
 Pi 1.4.0 소스를 보면 대화 요약(compaction)과 캐시 예열도 세션의 모델과 키를 그대로 쓰므로, 다른 공급자로 요청이 가지 않습니다.
@@ -128,13 +150,24 @@ Pi 1.4.0 소스를 보면 대화 요약(compaction)과 캐시 예열도 세션�
 `test/provider.test.ts`는 다음을 확인합니다.
 
 - 모델 목록 요청: `GET /v1/models`는 저장된 키를 보내고, 저장된 키가 없으면 Pi를 거쳐 `REFUSELESS_API_KEY`를 보냅니다. 키가 전혀 없으면 요청을 보내지 않고 저장된 모델 목록을 유지합니다. `401`, `503`, `data`가 없는 응답에는 HTTP 상태와 Refuseless 오류를 담아 실패합니다.
-- 변환: [모델 목록 변환](#모델-목록-변환)의 규칙. `context_length`가 없는 경우, `none` 별칭, 출력 한도보다 작은 컨텍스트, ID가 없는 항목을 포함합니다.
+- 변환: [모델 목록 변환](#모델-목록-변환)의 규칙. `context_length`가 없는 경우, `none` 별칭, 출력 한도보다 작은 컨텍스트, ID가 없는 항목을 포함합니다. `abliterated`는 ID와 관계없이 필드 값을 따르고(접미사가 없는 ID에 `true`, 있는 ID에 `false`), 필드가 없거나 불리언이 아니면 비워 두며, 저장된 모델 목록과 함께 복원됩니다.
 - 저장과 복원: `models.json`으로 주소를 바꾸면 Pi는 바뀐 주소에서 모델 목록을 받아 저장하고, 새 런타임에서 요청 없이 복원합니다. Refuseless 모델 목록에서 빠진 모델은 다음 갱신 때 사라지고, 갱신에 실패하면 이전 모델 목록을 유지합니다.
 - 보내는 생각 수준: 실제 모델 목록과 테스트용 항목(`["high","max"]`, `off`만, `reasoning_efforts` 없음)에서 Pi의 모든 수준을 확인합니다. 모의 서버는 모델이 지원하지 않는 값을 거부합니다. `off`가 없는 모델에 생각 수준 없이 요청하면 `reasoning_effort`를 보내지 않고, `off`만 지원하는 모델에는 이 값을 보내지 않습니다.
 - 시작 수준: `reasoning_default`는 모델이 지원하는 값일 때만 쓰고(`none`은 `off`로 봄), 저장된 모델 목록과 함께 복원됩니다. 모델이 없었거나 생각 수준이 없는 모델에서 Refuseless 모델로 바꾸면, Pi는 `off`를 이어 쓰거나 `off`가 없는 모델에서는 가장 낮은 수준으로 둡니다. 그러면 패키지가 그 수준을 모델의 `reasoning_default`로 바꿉니다. 다른 방법으로 정한 수준은 그대로이며, 이어받은 세션은 바꾸지 않습니다. 테스트는 생각 수준이 있는 이전 모델, Pi 설정이 정한 수준, 이미 기본 생각 수준인 경우를 포함해 각 경우를 확인합니다.
 - 채팅 요청: 모든 모델에서 시스템 프롬프트의 `system` 역할, `reasoning_content`가 있는 텍스트, 도구 호출과 결과, 캐시된 토큰이 포함된 사용량, 응답 도중 취소를 확인합니다. HTTP 401, 402, 404, 429, 503, 잘못된 JSON 조각, `finish_reason`이 없는 스트림, 응답 도중의 `insufficient_credits` 이벤트는 모두 `error` 이벤트 하나로 끝나고 `done`은 나오지 않습니다.
 
 스트리밍과 요청은 Pi에 내장된 OpenAI chat completions 구현을 씁니다.
+
+## 크레딧 표시
+
+`test/credits.test.ts`는 [크레딧 잔액](#크레딧-잔액)의 규칙을 확인합니다.
+
+- 요청: `GET /v1/credits`는 키를 보냅니다. 키 한도는 그대로 쓰고, 없으면 한도 없음으로 봅니다. HTTP 401 `invalid_key`, 429 `rate_limit_exceeded`, 503 `gateway_down`, 금액이 없는 응답에는 HTTP 상태와 Refuseless 오류를 담아 실패합니다.
+- 키와 주소(Pi의 `ModelRegistry`와 `ModelRuntime` 사용): 키가 없으면 요청을 보내지 않습니다. 그다음 `REFUSELESS_API_KEY`, 이어서 저장한 키가 각각 `models.json`의 주소로 갑니다. 공급자 기본 URL이 없으면 `https://api.refuseless.com/v1/credits`로 가며, 테스트는 이 요청을 막습니다.
+- 상태 줄: 세션을 시작하면 표시하고, `agent_end` 뒤에 다시 읽으며, 다른 공급자 모델로 바꾸거나 `session_shutdown`이 오면 지웁니다. 다른 모델을 쓰는 동안에는 읽지 않습니다. print 모드에서는 표시하지도 읽지도 않습니다. 키가 없거나 `401`을 받으면 표시를 지웁니다. 모델을 바꿀 때 진행 중이던 읽기는 취소되고(모의 서버에서 연결이 닫힘) 그 결과는 버려집니다.
+- 스위치: 끄면 표시를 지우고, 모르는 키를 남긴 채 `creditsStatus: false`를 저장합니다. 새 확장 인스턴스는 꺼진 상태로 시작해 아무것도 읽지 않고, 켜면 바로 읽습니다. 올바른 JSON이 아닌 파일은 바꾸지 않고, 호출은 그 이유를 돌려주며, 새 인스턴스는 켜진 상태로 시작합니다.
+- 다른 모드: print 모드에서는 잔액을 stderr로 출력합니다. RPC 모드에서는 잔액(`info`), 키 없음(`error`), `401`(`error`)을 알림으로 보냅니다.
+- 금액 형식: `$41.30`, `$0.00`, `$0.000125`, `$1,234.50`.
 
 ## 실제 서비스
 
@@ -179,3 +212,7 @@ Pi 1.4.0 소스를 보면 대화 요약(compaction)과 캐시 예열도 세션�
 - 출력 한도, 입력 형식, 가격은 모델 목록에 없습니다. refuseless.com이나 Refuseless SDKs 안내에 다른 값이 있어도, 모든 모델은 출력 131,072 토큰(`contextWindow`보다 크지 않음)과 텍스트 입력만 쓰고 비용을 표시하지 않습니다.
 - 모델을 고르지 않은 상태에서 처음 로그인하면 Pi 1.3.0과 1.4.0은 `Saved API key for Refuseless, but no default model is configured for provider "refuseless". Use /model to select a model.`도 표시합니다. 이 문구는 Pi가 표시하며, README는 `/model`로 계속하라고 안내합니다.
 - `models.json`에 모델이 들어 있는 `refuseless` 항목(Refuseless SDKs 안내의 Pi 설정)이 있으면, 이 패키지의 모델 중 ID가 같은 모델을 생각 수준까지 포함해 덮어씁니다. README는 이 항목을 지우라고 안내합니다.
+- 크레딧 표시, `/pi-refuseless`, `abliterated`는 문서의 응답 형식을 따르는 모의 서버로만 확인했습니다. 실제 `GET /v1/credits`와 실제 `abliterated` 값은 확인하지 않았습니다.
+- 상태 줄에는 `available`만 나오며 응답 도중이 아니라 응답이 끝난 뒤에 읽으므로, 긴 응답이 진행되는 동안 줄어든 잔액은 상태 줄에 바로 반영되지 않습니다. `/pi-refuseless`는 열 때 한 번 읽고, 열려 있는 동안에는 새로 읽지 않습니다.
+- `balance`는 유료 크레딧만 셉니다(api/credits). 프로모션 크레딧과 요금제 사용량은 표시하지 않습니다.
+- Refuseless는 키마다 분당 60번까지 잔액을 읽게 합니다. 상태 줄은 세션 시작, 모델 선택, 응답마다 한 번 읽습니다. `429`를 받으면 다음에 읽기에 성공할 때까지 아무것도 표시하지 않습니다.

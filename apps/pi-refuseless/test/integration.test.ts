@@ -1,7 +1,7 @@
 /**
  * The user flow through Pi's own interactive mode: `/login` → Sign in with an API key → Refuseless →
  * key → the model list arrives from `GET /v1/models` → `/model` → prompt, plus restart, `/reload`,
- * cancellation and `/logout`. Requests go to the local mock. Set REFUSELESS_PACKAGE_DIR to check another
+ * cancellation, `/logout`, and the credits in the status line and `/pi-refuseless`. Requests go to the local mock. Set REFUSELESS_PACKAGE_DIR to check another
  * copy of the package, such as an extracted archive.
  */
 
@@ -105,6 +105,7 @@ const refuselessProviders = (pi: InteractivePi) =>
 const modelIds = (pi: InteractivePi) =>
   pi.runtime.services.modelRuntime.getModels("refuseless").map((model) => model.id);
 const chats = () => mock.requests.filter((request) => request.path === "/v1/chat/completions");
+const creditReads = () => mock.requests.filter((request) => request.path === "/v1/credits");
 
 async function waitUntil(predicate: () => boolean, label: string) {
   const deadline = Date.now() + 10_000;
@@ -417,6 +418,73 @@ test(
     await terminal.waitFor("Removed stored API key for Refuseless.", mark);
     expect(await readAuth()).toStrictEqual(UNRELATED);
     expect(await pi.runtime.services.modelRuntime.getAuth("refuseless")).toBe(undefined);
+  },
+  TIMEOUT_MS,
+);
+
+test(
+  "the status line shows the available credits on a Refuseless model, and /pi-refuseless shows the balance and turns that off",
+  async () => {
+    await writeAuth({ refuseless: { type: "api_key", key: "abl_credits-key" } });
+    const pi = await start();
+    const { terminal } = pi;
+    // No Refuseless model yet, so nothing is read.
+    expect(creditReads()).toStrictEqual([]);
+
+    let mark = terminal.mark();
+    await selectModel(pi, "glm-5.3-flash-abliterated");
+    await terminal.waitFor("Refuseless $41.30", mark);
+    expect(creditReads()).toMatchObject([{ method: "GET", authorization: "Bearer abl_credits-key" }]);
+    await promptAndWait(pi, "Say ok.", "Mock Refuseless reply from glm-5.3-flash-abliterated");
+    await waitUntil(() => creditReads().length === 2, "the balance is read again after the reply");
+
+    mark = terminal.mark();
+    await pi.submit("/pi-refuseless");
+    for (const line of [
+      "Refuseless credits",
+      "Available  $41.30",
+      "Balance    $42.50",
+      "Reserved   $1.20",
+      "Key limit  none",
+      "Credits in status line  on",
+    ]) {
+      await terminal.waitFor(line, mark);
+    }
+    expect(creditReads()).toHaveLength(3);
+    mark = terminal.mark();
+    await terminal.type(KEYS.enter);
+    await terminal.waitFor("Credits in status line  off", mark);
+    expect(JSON.parse(await readFile(join(agentDir, "refuseless.json"), "utf8"))).toStrictEqual({
+      creditsStatus: false,
+    });
+    await terminal.type(KEYS.escape);
+
+    // Off: replies no longer read the balance, also after a restart.
+    await promptAndWait(pi, "Use a tool please.", "Tool result:");
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(creditReads()).toHaveLength(3);
+    await stop(pi);
+    const restarted = await start();
+    await selectModel(restarted, "glm-5.3-abliterated");
+    await promptAndWait(restarted, "After restart.", "Mock Refuseless reply from glm-5.3-abliterated");
+    mark = restarted.terminal.mark();
+    await restarted.submit("/pi-refuseless");
+    await restarted.terminal.waitFor("Credits in status line  off", mark);
+    await restarted.terminal.waitFor("Available  $41.30", mark);
+    expect(creditReads()).toHaveLength(4);
+  },
+  TIMEOUT_MS,
+);
+
+test(
+  "/pi-refuseless without a key says how to log in and reads nothing",
+  async () => {
+    const pi = await start();
+    const mark = pi.terminal.mark();
+    await pi.submit("/pi-refuseless");
+    await pi.terminal.waitFor("No Refuseless API key. Run /login and choose Refuseless.", mark);
+    await pi.terminal.waitFor("Credits in status line  on", mark);
+    expect(creditReads()).toStrictEqual([]);
   },
   TIMEOUT_MS,
 );

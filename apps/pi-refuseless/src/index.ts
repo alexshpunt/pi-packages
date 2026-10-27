@@ -3,12 +3,16 @@
  * models `GET /v1/models` returns for that key. Pi fetches the list after login and when `/model` opens,
  * and keeps the last one for offline starts. Requests use Pi's OpenAI chat-completions implementation.
  * Picking a model in a session that had no thinking level starts it at the model's `reasoning_default`.
+ * While a Refuseless model is active, interactive Pi's status line shows the available credits, and
+ * `/pi-refuseless` shows the balance and turns that status line on or off.
  * Registration makes no network call, so login is available before a key exists.
  */
 
 import { type ApiKeyAuth, createProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/compat";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { registerRefuselessCommand } from "./command.ts";
+import { registerCreditsStatus } from "./credits-status.ts";
 import { fetchRefuselessModels, REFUSELESS_BASE_URL, REFUSELESS_PROVIDER_ID } from "./models.ts";
 import { registerThinkingDefault } from "./thinking.ts";
 
@@ -43,4 +47,5 @@ export default function refuseless(pi: ExtensionAPI) {
     }),
   );
   registerThinkingDefault(pi);
+  registerRefuselessCommand(pi, registerCreditsStatus(pi));
 }
