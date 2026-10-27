@@ -107,8 +107,8 @@ class Terminal:
         if was_terminated or self.process.returncode != 0: raise RuntimeError('TUI did not exit cleanly: ' + str(self.process.returncode))
 
 def cancel_running_request(t, report):
-    t.step('/codex-memory-manage\r', 'Saved memories')
-    t.step('\x1b[B\r', 'Create memories from this conversation now?')
+    t.step('/codex-memory-settings\r', 'Remember this conversation now')
+    t.step('\r', 'Remember this conversation now?')
     before = len(events(t.phase)); before_state = state()
     t.send('\r')
     t.wait(lambda: any(e.get('event') == 'model_request' and e.get('kind') == 'extraction' for e in events(t.phase)[before:]), 30)
@@ -118,8 +118,8 @@ def cancel_running_request(t, report):
     report['cancelled_request'] = {'requestId': request['requestId'], 'jobKey': key}
     report['checks']['exact_request_was_running'] = any(j['key'] == key and j['status'] == 'running' for j in state()['jobs'])
     if not report['checks']['exact_request_was_running']: raise RuntimeError('Cancellation probe did not intercept a running request.')
-    t.step('/codex-memory-manage\r', 'Stop current job')
-    t.send('\x1b[B\r'); t.drain()
+    t.step('/codex-memory-settings\r', 'Stop current job')
+    t.send('\r'); t.drain()
     t.send('\x1b'); t.drain()
     t.wait(lambda: any(j['key'] == key and j['status'] == 'cancelled' and j['error'] == 'aborted' for j in state()['jobs']), 20)
     until = time.monotonic() + 3
@@ -133,14 +133,14 @@ t = None
 try:
     if mode == 'lifecycle':
         t = Terminal('lifecycle')
-        t.step('/codex-memory\r', 'Codex Memory')
+        t.step('/codex-memory\r', 'Memory scope')
         t.send('\x1b'); t.drain()
         report['checks']['stored_records_survive_restart'] = any(case['marker'] in r['body'] for r in state()['records'])
         starts = sum(e.get('event') == 'session_start' and e.get('mode') == 'tui' for e in events('lifecycle'))
         t.command('/reload')
         t.wait(lambda: sum(e.get('event') == 'session_start' and e.get('mode') == 'tui' for e in events('lifecycle')) > starts, 45)
         t.fresh()
-        t.step('/codex-memory\r', 'Codex Memory')
+        t.step('/codex-memory\r', 'Memory scope')
         t.send('\x1b'); t.drain()
         report['checks']['reload_and_new_session_work'] = any(case['marker'] in r['body'] for r in state()['records'])
         report['checks']['no_model_request'] = not any(e.get('event') == 'model_request' for e in events('lifecycle')[t.eventStart:])
@@ -156,19 +156,21 @@ try:
         t = Terminal('manage')
         original = next(r for r in state()['records'] if case['marker'] in r['body'])
         def target_menu(path):
-            t.step('/codex-memory-manage\r', 'Saved memories')
-            t.step('\r', 'Search…')
-            t.step('\r', 'Search memories')
-            t.step(path + '\r', 'Memories matching')
-            t.step('\x1b[B\r', 'View memory and source')
+            # Saved memories is the fifth row of /codex-memory.
+            t.step('/codex-memory\r', 'Saved memories')
+            t.step('\x1b[B\x1b[B\x1b[B\x1b[B\r', 'Type to filter')
+            # Typing filters the list; Enter opens the first match.
+            t.send(path); t.drain()
+            t.step('\r', 'View memory and source')
         def close_menus():
+            # After an action the memory list opens again; Esc returns to /codex-memory, Esc closes it.
             t.send('\x1b'); t.drain()
             t.send('\x1b'); t.drain()
         target_menu(original['path'])
         t.step('\x1b[B\r', 'Edit ' + original['path'])
         t.step('\x07', case['corrected'])
         t.step('\r', 'Save this change?')
-        t.step('\r', 'Memories matching')
+        t.step('\r', 'Saved memories')
         close_menus()
         corrected = next(r for r in state()['records'] if case['corrected'] in r['body'])
         report['checks']['ui_correction_saved'] = case['marker'] not in corrected['body'] and corrected['kind'] == 'note'
@@ -178,7 +180,7 @@ try:
         report['checks']['corrected_fresh_answer'] = case['corrected'] in report['corrected_recall']['answer'] and case['region'] in report['corrected_recall']['answer'] and case['marker'] not in report['corrected_recall']['answer']
         target_menu(corrected['path'])
         t.step('\x1b[B\x1b[B\r', 'Forget this memory?')
-        t.step('\r', 'Memories matching')
+        t.step('\r', 'Saved memories')
         close_menus()
         report['checks']['ui_forget_removed_record'] = all(r['path'] != corrected['path'] for r in state()['records'])
         # Allow real automatic rescanning; previously recalled prose must not resurrect the fact.

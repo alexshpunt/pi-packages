@@ -179,6 +179,7 @@ test("compaction skips unchanged extraction, but a later human correction causes
         requests = [];
     const settings = {
         ...DEFAULT_SETTINGS,
+        useMemories: true,
         generateMemories: true,
         extractModel: { provider: "fixture", id: "extract" },
         consolidateModel: { provider: "fixture", id: "consolidate" },
@@ -282,6 +283,7 @@ test("an empty consolidation is a discoverable template, not a stored fact or an
     const scope = workspaceScope(f.dir),
         settings = {
             ...DEFAULT_SETTINGS,
+            useMemories: true,
             generateMemories: true,
             extractModel: { provider: "fixture", id: "extract" },
             consolidateModel: { provider: "fixture", id: "consolidate" },

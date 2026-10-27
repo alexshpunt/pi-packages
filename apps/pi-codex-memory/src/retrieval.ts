@@ -191,7 +191,7 @@ export class MemoryReader {
         const settings = this.store.getSettings(scope);
         if (!settings.useMemories)
             throw new Error(
-                "Agent memory use is disabled. Open /codex-memory to manage it.",
+                "Memory is disabled. The user can turn it on in /codex-memory.",
             );
         this.store.prune(scope, settings, Date.now());
         const documents = new Map(

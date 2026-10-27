@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import {
     type AssistantMessage,
+    clampThinkingLevel,
     getSupportedThinkingLevels,
 } from "@earendil-works/pi-ai";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -41,22 +42,43 @@ export interface ModelReply {
     usage?: MemoryUsage;
 }
 export interface MemoryModel {
-    validate?(model: ModelChoice): void | Promise<void>;
+    /** A null model is the one selected for the main task. */
+    validate?(model: ModelChoice | null): void | Promise<void>;
     complete(request: {
         stage: "extraction" | "consolidation";
-        model: ModelChoice;
+        model: ModelChoice | null;
         system: string;
         input: string;
         maxOutputTokens: number;
         signal: AbortSignal;
     }): Promise<ModelReply>;
 }
+/**
+ * A configured level, or Codex's level for the stage (low to extract, medium to consolidate)
+ * moved to the nearest level the model offers, as Pi does for a session; "off" sends none.
+ */
+function stageReasoning(
+    model: Parameters<typeof clampThinkingLevel>[0],
+    request: {
+        stage: "extraction" | "consolidation";
+        model: ModelChoice | null;
+    },
+) {
+    const level = clampThinkingLevel(
+        model,
+        request.model?.reasoning ??
+            (request.stage === "extraction" ? "low" : "medium"),
+    );
+    return level === "off" ? undefined : level;
+}
 export function piMemoryModel(ctx: ExtensionContext): MemoryModel {
-    const resolveModel = (choice: ModelChoice) => {
-        const model = ctx.modelRegistry.find(choice.provider, choice.id);
+    const resolveModel = (choice: ModelChoice | null) => {
+        const model = choice
+            ? ctx.modelRegistry.find(choice.provider, choice.id)
+            : ctx.model;
         if (!model) throw new MemoryFailure("model_unavailable");
         if (
-            choice.reasoning &&
+            choice?.reasoning &&
             !getSupportedThinkingLevels(model).includes(choice.reasoning)
         )
             throw new MemoryFailure("reasoning_unsupported");
@@ -95,11 +117,7 @@ export function piMemoryModel(ctx: ExtensionContext): MemoryModel {
                             sessionId: ctx.sessionManager.getSessionId(),
                             cacheRetention: "none",
                             maxTokens: request.maxOutputTokens,
-                            reasoning:
-                                request.model.reasoning ??
-                                (request.stage === "extraction"
-                                    ? "low"
-                                    : "medium"),
+                            reasoning: stageReasoning(model, request),
                         },
                     )
                     .result();
@@ -288,44 +306,55 @@ export interface PipelineResult {
     failed: number;
     skipped: number;
 }
-export async function runPipeline(options: {
+export type ExtractionOutcome = "extracted" | "skipped" | "failed";
+export interface StageOptions {
     store: MemoryStore;
     scope: string;
     settings: MemorySettings;
     model: MemoryModel;
-    sources: RolloutSource[];
     signal: AbortSignal;
-    force?: boolean;
-    /** Persisted configuration captured by the runtime before asynchronous source scanning. */
+    /** Persisted configuration captured before asynchronous source scanning. */
     settingsSnapshot?: string;
     now?: () => number;
     checkSource?: (
         source: RolloutSource,
         signal: AbortSignal,
     ) => Promise<boolean>;
-}): Promise<PipelineResult> {
-    const { store, scope, settings, model, signal, force = false } = options;
+}
+/**
+ * A caller's cancellation keeps the job's attempt. A timeout, even one that aborted the signal
+ * such as a job watchdog, is a failure that uses an attempt and waits for the retry delay.
+ */
+function isCancellation(error: unknown, signal: AbortSignal): boolean {
+    return signal.aborted && memoryFailureCode(error) === "aborted";
+}
+/** Whether a scanned source still needs extraction; claim() decides retries and leases. */
+export function needsExtraction(
+    store: MemoryStore,
+    scope: string,
+    source: RolloutSource,
+    nowMs: number,
+): boolean {
+    return (
+        !store.isSourceExcluded(scope, source) &&
+        !store.isBusy(scope, source.id, nowMs) &&
+        !store.hasCompleted(scope, `extract:${source.id}`, source.fingerprint)
+    );
+}
+/**
+ * The two memory stages for one settings snapshot. Every call honours `signal`, and a lease that
+ * expires or a settings change discards late output instead of publishing it.
+ */
+export function createStages(options: StageOptions) {
+    const { store, scope, settings, model, signal } = options;
     const now = options.now ?? Date.now;
     const mask = createMemoryMasker();
     const checkGrounding = createMemoryGroundingGuard();
-    const result: PipelineResult = {
-        extracted: 0,
-        consolidated: false,
-        failed: 0,
-        skipped: 0,
-    };
-    if (
-        !settings.generateMemories ||
-        !settings.extractModel ||
-        !settings.consolidateModel
-    )
-        return result;
     const settingsSnapshot =
         options.settingsSnapshot ?? JSON.stringify(store.getSettings(scope));
     const hasCurrentSettings = () =>
         JSON.stringify(store.getSettings(scope)) === settingsSnapshot;
     if (!hasCurrentSettings()) throw new MemoryFailure("superseded");
-    store.prune(scope, settings, now());
     const checkSource =
         options.checkSource ??
         ((source, requestSignal) =>
@@ -334,10 +363,11 @@ export async function runPipeline(options: {
                 requestSignal,
                 settings.maxInputBytes - 8192,
             ));
+    /** Checks the model before a claim; an unavailable model blocks the job without using an attempt. */
     async function isModelReady(
         key: string,
         fingerprint: string,
-        choice: ModelChoice,
+        choice: ModelChoice | null,
     ): Promise<boolean> {
         try {
             await abortable(
@@ -358,7 +388,6 @@ export async function runPipeline(options: {
                 now(),
                 memoryFailureCode(error),
             );
-            result.failed++;
             return false;
         }
     }
@@ -384,18 +413,17 @@ export async function runPipeline(options: {
             settings.maxInputBytes
         )
             throw new MemoryFailure("input_budget");
-        const choice = (
+        const choice =
             stage === "extraction"
                 ? settings.extractModel
-                : settings.consolidateModel
-        )!;
+                : settings.consolidateModel;
         await abortable(
             Promise.resolve().then(() => model.validate?.(choice)),
             requestSignal,
         );
         requestSignal.throwIfAborted();
         if (!hasCurrentSettings()) throw new MemoryFailure("superseded");
-        store.reserveCall(lease, settings, now(), source);
+        store.recordCall(lease, now(), source);
         try {
             const reply = await abortable(
                 model.complete({
@@ -419,49 +447,11 @@ export async function runPipeline(options: {
             throw error;
         }
     }
-    let attempted = 0;
-    for (const source of options.sources) {
-        signal.throwIfAborted();
-        if (attempted >= settings.maxRolloutsPerRun || !hasCurrentSettings())
-            break;
-        if (
-            store.isSourceExcluded(scope, source) ||
-            store.isBusy(scope, source.id, now())
-        ) {
-            result.skipped++;
-            continue;
-        }
-        if (
-            store.hasCompleted(
-                scope,
-                `extract:${source.id}`,
-                source.fingerprint,
-            )
-        ) {
-            result.skipped++;
-            continue;
-        }
-        if (
-            !(await isModelReady(
-                `extract:${source.id}`,
-                source.fingerprint,
-                settings.extractModel,
-            ))
-        )
-            continue;
-        const lease = store.claim(
-            scope,
-            `extract:${source.id}`,
-            source.fingerprint,
-            now(),
-            settings,
-            force,
-        );
-        if (!lease) {
-            result.skipped++;
-            continue;
-        }
-        attempted++;
+    /** Extracts one claimed source. Settles the lease in every case; rethrows only cancellation. */
+    async function extract(
+        source: RolloutSource,
+        lease: JobLease,
+    ): Promise<ExtractionOutcome> {
         try {
             const envelope = {
                 rollout_path: mask(source.file),
@@ -513,108 +503,198 @@ export async function runPipeline(options: {
                 )
             ) {
                 store.fail(lease, now(), 0, true, "superseded");
-                result.skipped++;
-                continue;
+                return "skipped";
             }
-            result.extracted++;
+            return "extracted";
         } catch (error) {
             const code = memoryFailureCode(error),
+                isCancelled = isCancellation(error, signal),
                 isSuperseded = code === "superseded";
             store.fail(
                 lease,
                 now(),
                 settings.retryDelayMs,
-                signal.aborted || isSuperseded,
+                isCancelled || isSuperseded,
                 code,
             );
-            if (signal.aborted) throw error;
-            if (isSuperseded) result.skipped++;
-            else result.failed++;
+            if (isCancelled) throw error;
+            return isSuperseded ? "skipped" : "failed";
         }
     }
-    signal.throwIfAborted();
-    if (!hasCurrentSettings()) return result;
-    const prepared = consolidationInput(store, scope, settings, now());
-    const state = store.state(scope);
-    if (
-        JSON.stringify(prepared.inputs) === JSON.stringify(state.inputs) &&
-        state.summary
-    )
-        return result;
-    if (
-        !force &&
-        state.consolidatedAtMs &&
-        now() - state.consolidatedAtMs < settings.consolidationCooldownMs
-    )
-        return result;
-    const fingerprint = digest(
-        JSON.stringify({
-            inputs: prepared.inputs,
-            revision: prepared.revision,
-        }),
-    );
-    if (
-        prepared.records.length &&
-        !(await isModelReady(
+    /**
+     * Merges current memories into the summary; skipped while cooling down unless forced.
+     * `onStart` runs once this session holds the summary job and will call the model; an empty
+     * template needs no call.
+     */
+    async function consolidate(
+        force: boolean,
+        onStart?: () => void,
+    ): Promise<{
+        consolidated: boolean;
+        failed: boolean;
+        skipped: boolean;
+    }> {
+        const outcome = { consolidated: false, failed: false, skipped: false };
+        const prepared = consolidationInput(store, scope, settings, now());
+        const state = store.state(scope);
+        if (
+            JSON.stringify(prepared.inputs) === JSON.stringify(state.inputs) &&
+            state.summary
+        )
+            return outcome;
+        if (
+            !force &&
+            state.consolidatedAtMs &&
+            now() - state.consolidatedAtMs < settings.consolidationCooldownMs
+        )
+            return outcome;
+        const fingerprint = digest(
+            JSON.stringify({
+                inputs: prepared.inputs,
+                revision: prepared.revision,
+            }),
+        );
+        if (
+            prepared.records.length &&
+            !(await isModelReady(
+                "consolidation",
+                fingerprint,
+                settings.consolidateModel,
+            ))
+        )
+            return { ...outcome, failed: true };
+        const lease = store.claim(
+            scope,
             "consolidation",
             fingerprint,
-            settings.consolidateModel,
-        ))
-    )
-        return result;
-    const lease = store.claim(
-        scope,
-        "consolidation",
-        fingerprint,
-        now(),
-        settings,
-        force,
-    );
-    if (!lease) return result;
-    try {
-        let summary = EMPTY_SUMMARY;
-        if (prepared.records.length) {
-            const reply = await call(
+            now(),
+            settings,
+            force,
+        );
+        if (!lease) return outcome;
+        if (prepared.records.length) onStart?.();
+        try {
+            let summary = EMPTY_SUMMARY;
+            if (prepared.records.length) {
+                const reply = await call(
+                    lease,
+                    "consolidation",
+                    consolidationPrompt,
+                    prepared.text,
+                );
+                summary = parseConsolidation(
+                    reply.text,
+                    new Set(Object.keys(prepared.inputs)),
+                    new Map(
+                        prepared.records.map((record) => [
+                            record.path,
+                            record.source?.id ?? null,
+                        ]),
+                    ),
+                );
+                checkGrounding(reply.input, summary);
+            }
+            signal.throwIfAborted();
+            const published = store.completeConsolidation(
                 lease,
-                "consolidation",
-                consolidationPrompt,
-                prepared.text,
+                prepared.revision,
+                prepared.inputs,
+                summary,
+                now(),
             );
-            summary = parseConsolidation(
-                reply.text,
-                new Set(Object.keys(prepared.inputs)),
-                new Map(
-                    prepared.records.map((record) => [
-                        record.path,
-                        record.source?.id ?? null,
-                    ]),
-                ),
+            if (!published) store.fail(lease, now(), 0, true, "superseded");
+            return {
+                ...outcome,
+                consolidated: published && prepared.records.length > 0,
+            };
+        } catch (error) {
+            const code = memoryFailureCode(error),
+                isCancelled = isCancellation(error, signal),
+                isSuperseded = code === "superseded";
+            store.fail(
+                lease,
+                now(),
+                settings.retryDelayMs,
+                isCancelled || isSuperseded,
+                code,
             );
-            checkGrounding(reply.input, summary);
+            if (isCancelled) throw error;
+            return isSuperseded
+                ? { ...outcome, skipped: true }
+                : { ...outcome, failed: true };
         }
-        signal.throwIfAborted();
-        const published = store.completeConsolidation(
-            lease,
-            prepared.revision,
-            prepared.inputs,
-            summary,
-            now(),
-        );
-        result.consolidated = published && prepared.records.length > 0;
-        if (!published) store.fail(lease, now(), 0, true, "superseded");
-    } catch (error) {
-        const code = memoryFailureCode(error),
-            isSuperseded = code === "superseded";
-        store.fail(
-            lease,
-            now(),
-            settings.retryDelayMs,
-            signal.aborted || isSuperseded,
-            code,
-        );
-        if (signal.aborted) throw error;
-        if (isSuperseded) result.skipped++;
-        else result.failed++;
     }
+    return { hasCurrentSettings, isModelReady, extract, consolidate };
+}
+/** Extracts the given sources one at a time, then consolidates. Used for explicit runs. */
+export async function runPipeline(
+    options: StageOptions & {
+        sources: RolloutSource[];
+        force?: boolean;
+        /** Called when a job starts or ends, for the status bar. */
+        onJobChange?: () => void;
+    },
+): Promise<PipelineResult> {
+    const { store, scope, settings, signal, force = false } = options;
+    const now = options.now ?? Date.now;
+    const result: PipelineResult = {
+        extracted: 0,
+        consolidated: false,
+        failed: 0,
+        skipped: 0,
+    };
+    if (!settings.generateMemories) return result;
+    const stages = createStages(options);
+    store.prune(scope, settings, now());
+    let attempted = 0;
+    for (const source of options.sources) {
+        signal.throwIfAborted();
+        if (
+            attempted >= settings.maxRolloutsPerRun ||
+            !stages.hasCurrentSettings()
+        )
+            break;
+        if (!needsExtraction(store, scope, source, now())) {
+            result.skipped++;
+            continue;
+        }
+        if (
+            !(await stages.isModelReady(
+                `extract:${source.id}`,
+                source.fingerprint,
+                settings.extractModel,
+            ))
+        ) {
+            result.failed++;
+            continue;
+        }
+        const lease = store.claim(
+            scope,
+            `extract:${source.id}`,
+            source.fingerprint,
+            now(),
+            settings,
+            force,
+        );
+        if (!lease) {
+            result.skipped++;
+            continue;
+        }
+        attempted++;
+        options.onJobChange?.();
+        result[await stages.extract(source, lease)]++;
+        options.onJobChange?.();
+    }
+    signal.throwIfAborted();
+    if (!stages.hasCurrentSettings()) return result;
+    let consolidation: Awaited<ReturnType<typeof stages.consolidate>>;
+    try {
+        consolidation = await stages.consolidate(force, options.onJobChange);
+    } finally {
+        options.onJobChange?.();
+    }
+    result.consolidated = consolidation.consolidated;
+    if (consolidation.failed) result.failed++;
+    if (consolidation.skipped) result.skipped++;
     return result;
 }

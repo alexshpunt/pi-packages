@@ -671,6 +671,8 @@ export async function scanSources(options: {
     allowUnmarked?: boolean;
     sessionDirectories?: readonly string[];
     isCwdExcluded?: (cwd: string) => boolean;
+    /** Skips parsing a session file that cannot have new work, judged from its path and mtime. */
+    shouldRead?: (path: string, mtimeMs: number) => boolean;
 }): Promise<RolloutSource[]> {
     const { agentDir, sessionDir, scope, settings, signal, nowMs } = options;
     const directories = new Set([
@@ -703,7 +705,8 @@ export async function scanSources(options: {
                 const stat = await lstat(path);
                 if (
                     stat.size <= MAX_SESSION_BYTES &&
-                    isSourceEligible(stat.mtimeMs, nowMs, settings)
+                    isSourceEligible(stat.mtimeMs, nowMs, settings) &&
+                    (options.shouldRead?.(path, stat.mtimeMs) ?? true)
                 )
                     candidates.push({ path, updatedAtMs: stat.mtimeMs });
             }

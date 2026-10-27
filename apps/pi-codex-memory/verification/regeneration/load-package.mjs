@@ -6,9 +6,12 @@ import { pathToFileURL } from "node:url";
 // instances as this verification process, without modifying either installation.
 // registerHooks is available in the package's Node.js 22.19+ runtime range.
 const peers = new Map(
-    ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai", "typebox"].map(
-        (name) => [name, import.meta.resolve(name)],
-    ),
+    [
+        "@earendil-works/pi-coding-agent",
+        "@earendil-works/pi-ai",
+        "@earendil-works/pi-tui",
+        "typebox",
+    ].map((name) => [name, import.meta.resolve(name)]),
 );
 registerHooks({
     resolve(specifier, context, nextResolve) {

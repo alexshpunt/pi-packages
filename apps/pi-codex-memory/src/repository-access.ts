@@ -51,7 +51,9 @@ export class RepositoryAccess {
         )
             throw new Error("max_results must be between 1 and 100.");
         if (!this.store.getSettings(this.scope).useMemories)
-            throw new Error("Agent memory use is disabled.");
+            throw new Error(
+                "Memory is disabled. The user can turn it on in /codex-memory.",
+            );
         const values = this.store
             .repositories()
             .filter((repository) => this.canRead(repository.scope));
@@ -90,7 +92,9 @@ export class RepositoryAccess {
         ]);
         signal.throwIfAborted();
         if (!this.store.getSettings(this.scope).useMemories)
-            throw new Error("Agent memory use is disabled.");
+            throw new Error(
+                "Memory is disabled. The user can turn it on in /codex-memory.",
+            );
         const qualified = path ? repositoryPath(path) : undefined;
         const repository =
             selector !== undefined
@@ -100,7 +104,7 @@ export class RepositoryAccess {
                   : undefined;
         if ((selector !== undefined || qualified) && !repository)
             throw new Error(
-                "Unknown repository. Add it in /codex-memory-settings under Repository access first.",
+                "Unknown repository. Add it in /codex-memory-settings under Other repositories first.",
             );
         if (qualified && repository?.scope !== qualified.scope)
             throw new Error(
@@ -123,7 +127,7 @@ export class RepositoryAccess {
                 const accepted = await abortable(
                     ctx.ui.confirm(
                         `Read ${repository.name}'s memory?`,
-                        `${repositoryLabel(repository)}\nAllows reading for this request only. Memories are not merged or changed. To allow it every time, open /codex-memory-settings and choose Repository access.`,
+                        `${repositoryLabel(repository)}\nAllows reading for this request only. Memories are not merged or changed. To allow it every time, open /codex-memory-settings and choose Other repositories.`,
                         { signal: requestSignal },
                     ),
                     requestSignal,

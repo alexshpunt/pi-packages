@@ -17,6 +17,7 @@ export interface MemorySettings {
     useMemories: boolean;
     injectSummary: boolean;
     generateMemories: boolean;
+    /** null follows the model selected for the main task. */
     extractModel: ModelChoice | null;
     consolidateModel: ModelChoice | null;
     minIdleMs: number;
@@ -31,20 +32,19 @@ export interface MemorySettings {
     timeoutMs: number;
     retryDelayMs: number;
     maxAttempts: number;
-    maxCallsPerDay: number;
     maxInjectionBytes: number;
 }
 export const DEFAULT_SETTINGS: Readonly<MemorySettings> = Object.freeze({
-    useMemories: true,
+    useMemories: false,
     injectSummary: true,
     generateMemories: false,
     extractModel: null,
     consolidateModel: null,
-    minIdleMs: 30 * 60_000,
-    consolidationCooldownMs: 60 * 60_000,
+    minIdleMs: 2 * 3_600_000,
+    consolidationCooldownMs: 2 * 3_600_000,
     pollIntervalMs: 60_000,
     maxRolloutsPerRun: 2,
-    maxRolloutAgeDays: 10,
+    maxRolloutAgeDays: 7,
     maxUnusedDays: 30,
     maxSources: 256,
     maxInputBytes: 256 * 1024,
@@ -52,7 +52,6 @@ export const DEFAULT_SETTINGS: Readonly<MemorySettings> = Object.freeze({
     timeoutMs: 120_000,
     retryDelayMs: 15 * 60_000,
     maxAttempts: 3,
-    maxCallsPerDay: 24,
     maxInjectionBytes: 12 * 1024,
 });
 const ranges: Record<string, readonly [number, number]> = {
@@ -68,20 +67,11 @@ const ranges: Record<string, readonly [number, number]> = {
     timeoutMs: [1000, 600_000],
     retryDelayMs: [1000, 86_400_000],
     maxAttempts: [1, 10],
-    maxCallsPerDay: [1, 1000],
     maxInjectionBytes: [1024, 16 * 1024],
 };
-export function settingRange(
-    key: keyof MemorySettings,
-): readonly [number, number] | undefined {
-    return ranges[key];
-}
-/** "custom" is a stored combination the mode menu does not offer: creating without using. */
-export type MemoryMode = "off" | "use" | "create" | "custom";
-export function memoryMode(settings: MemorySettings): MemoryMode {
-    if (!settings.useMemories)
-        return settings.generateMemories ? "custom" : "off";
-    return settings.generateMemories ? "create" : "use";
+/** The /codex-memory switch: on both uses and creates memories, off does neither. */
+export function isMemoryEnabled(settings: MemorySettings): boolean {
+    return settings.useMemories && settings.generateMemories;
 }
 export function parseSettings(value: unknown): MemorySettings {
     if (!value || typeof value !== "object" || Array.isArray(value))
@@ -121,13 +111,6 @@ export function parseSettings(value: unknown): MemorySettings {
         } else if (typeof item !== "boolean")
             throw new Error(`${key} must be a boolean.`);
     }
-    if (
-        settings.generateMemories &&
-        (!settings.extractModel || !settings.consolidateModel)
-    )
-        throw new Error(
-            "Select extraction and consolidation models before enabling generation.",
-        );
     return settings;
 }
 export function isSourceEligible(

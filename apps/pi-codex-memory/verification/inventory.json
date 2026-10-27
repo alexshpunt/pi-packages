@@ -12,11 +12,7 @@
             "pi_codex_memory_search",
             "pi_codex_memory_note"
         ],
-        "commands": [
-            "codex-memory",
-            "codex-memory-manage",
-            "codex-memory-settings"
-        ],
+        "commands": ["codex-memory", "codex-memory-settings"],
         "flags": [],
         "skills": [],
         "prompts": [],
@@ -37,6 +33,9 @@
         "dist/repository-access.js",
         "dist/repository-commands.js",
         "dist/settings-commands.js",
+        "dist/menus.js",
+        "dist/coordinator.js",
+        "dist/saved-memories.js",
         "assets/prompts/extract.md",
         "assets/prompts/consolidate.md",
         "assets/prompts/read.md",

@@ -19,8 +19,9 @@ import {
     isSourceEligible,
     parseSettings,
 } from "../dist/config.js";
-import { MemoryFailure } from "../dist/failure.js";
+import { MemoryFailure, memoryFailureCode } from "../dist/failure.js";
 import {
+    createStages,
     EMPTY_SUMMARY,
     parseConsolidation,
     parseExtraction,
@@ -45,6 +46,7 @@ async function fixture(t) {
     const scope = workspaceScope(dir);
     const settings = parseSettings({
         ...DEFAULT_SETTINGS,
+        useMemories: true,
         generateMemories: true,
         extractModel: { provider: "fixture", id: "extract" },
         consolidateModel: { provider: "fixture", id: "consolidate" },
@@ -171,6 +173,10 @@ test("v2 extraction -> incremental consolidation -> files, recall, citations and
     assert.equal(reopened.records(f.scope)[0].body, record.body);
     reopened.close();
     const otherScope = workspaceScope(join(f.dir, "other"));
+    f.store.saveSettings(otherScope, {
+        ...DEFAULT_SETTINGS,
+        useMemories: true,
+    });
     assert.equal(
         new MemoryReader(f.store, otherScope).list({}).entries.length,
         0,
@@ -363,7 +369,7 @@ test("cross-process lease exclusion, expiry, and ownership checks", async (t) =>
         false,
     );
 });
-test("daily budget and consolidation cooldown apply to actual downstream calls", async (t) => {
+test("consolidation cooldown applies to actual downstream calls", async (t) => {
     const f = await fixture(t);
     await f.run();
     const firstCalls = f.calls.length;
@@ -385,14 +391,52 @@ test("daily budget and consolidation cooldown apply to actual downstream calls",
         now: () => now + DEFAULT_SETTINGS.consolidationCooldownMs,
     });
     assert.equal(f.calls.length, firstCalls + 2);
-    f.store.saveSettings(f.scope, { ...f.settings, maxCallsPerDay: 1 });
-    const before = f.calls.length;
-    await f.run({
-        settings: { ...f.settings, maxCallsPerDay: 1 },
-        sources: [{ ...newer, id: "over-budget" }],
-        force: true,
-    });
-    assert.equal(f.calls.length, before);
+});
+test("a timeout that aborts the job uses an attempt; a caller's cancellation does not", async (t) => {
+    const f = await fixture(t);
+    const hanging = {
+        complete: ({ signal }) =>
+            new Promise((_resolve, reject) =>
+                signal.addEventListener("abort", () => reject(signal.reason), {
+                    once: true,
+                }),
+            ),
+    };
+    const run = async (id, reason) => {
+        const controller = new AbortController();
+        const stages = createStages({
+            store: f.store,
+            scope: f.scope,
+            settings: f.settings,
+            model: hanging,
+            signal: controller.signal,
+        });
+        const source = { ...f.source, id, fingerprint: id };
+        const lease = f.store.claim(
+            f.scope,
+            `extract:${id}`,
+            id,
+            Date.now(),
+            f.settings,
+        );
+        const work = stages.extract(source, lease);
+        setTimeout(() => controller.abort(reason), 10);
+        try {
+            return await work;
+        } catch (error) {
+            return memoryFailureCode(error);
+        }
+    };
+    assert.equal(await run("watchdog", new MemoryFailure("timeout")), "failed");
+    assert.equal(await run("cancelled"), "aborted");
+    const jobs = Object.fromEntries(
+        f.store.status(f.scope).jobs.map((job) => [job.key, job]),
+    );
+    assert.equal(jobs["extract:watchdog"].status, "failed");
+    assert.equal(jobs["extract:watchdog"].attempts, 1);
+    assert.ok(jobs["extract:watchdog"].retry_at > Date.now());
+    assert.equal(jobs["extract:cancelled"].status, "cancelled");
+    assert.equal(jobs["extract:cancelled"].attempts, 0);
 });
 test("literal/normalized/window search, revision-aware cursors, path traversal and Unicode limits", async (t) => {
     const f = await fixture(t);
@@ -862,7 +906,7 @@ test("exact escaped budgets and storage truncation retain endpoints without corr
     assert.ok(record.truncatedBytes > 0);
     assert.ok(Buffer.byteLength(record.body) <= 9000);
 });
-test("unavailable models consume neither attempts nor daily calls; sent failures do consume calls", async (t) => {
+test("unavailable models consume neither attempts nor recorded calls; sent failures are recorded as calls", async (t) => {
     const f = await fixture(t);
     const unavailable = piMemoryModel({
         modelRegistry: { find: () => undefined },
@@ -1042,7 +1086,7 @@ test("model adapter sends configured models, prompts, cap and caller cancellatio
     const signal = new AbortController().signal;
     const registry = {
         find(provider, id) {
-            return { provider, id };
+            return { provider, id, reasoning: true };
         },
         streamSimple(model, context, options) {
             captured = { model, context, options };
@@ -1077,5 +1121,95 @@ test("model adapter sends configured models, prompts, cap and caller cancellatio
         captured.context.tools,
         undefined,
         "consolidation/extraction cannot execute tools",
+    );
+});
+test("each stage asks for the nearest reasoning level the model offers, or none", async () => {
+    const models = {
+        // Like Devin's swe-2: medium and above only.
+        "medium-up": {
+            reasoning: true,
+            thinkingLevelMap: { minimal: null, low: null },
+        },
+        // Like some Ollama models: low and high, no medium.
+        "no-medium": {
+            reasoning: true,
+            thinkingLevelMap: { minimal: null, medium: null },
+        },
+        plain: { reasoning: false },
+    };
+    const sent = [];
+    const adapter = piMemoryModel({
+        sessionManager: { getSessionId: () => "fixture-session" },
+        modelRegistry: {
+            find: (provider, id) => ({ provider, id, ...models[id] }),
+            streamSimple(model, _context, options) {
+                sent.push(`${model.id} ${options.reasoning}`);
+                return {
+                    async result() {
+                        return {
+                            stopReason: "stop",
+                            content: [{ type: "text", text: "{}" }],
+                        };
+                    },
+                };
+            },
+        },
+    });
+    for (const id of Object.keys(models))
+        for (const stage of ["extraction", "consolidation"])
+            await adapter.complete({
+                stage,
+                model: { provider: "fixture", id },
+                system: "instructions",
+                input: "masked",
+                maxOutputTokens: 512,
+                signal: new AbortController().signal,
+            });
+    assert.deepEqual(sent, [
+        "medium-up medium",
+        "medium-up medium",
+        "no-medium low",
+        "no-medium high",
+        "plain undefined",
+        "plain undefined",
+    ]);
+});
+test("model adapter follows the current Pi model for a null choice and fails without one", async () => {
+    let captured;
+    const ctx = {
+        model: { provider: "fixture", id: "main", reasoning: true },
+        sessionManager: { getSessionId: () => "fixture-session" },
+        modelRegistry: {
+            find() {
+                throw new Error("a null choice is not looked up");
+            },
+            streamSimple(model, _context, options) {
+                captured = { model, options };
+                return {
+                    async result() {
+                        return {
+                            stopReason: "stop",
+                            content: [{ type: "text", text: "{}" }],
+                        };
+                    },
+                };
+            },
+        },
+    };
+    const adapter = piMemoryModel(ctx);
+    await adapter.complete({
+        stage: "consolidation",
+        model: null,
+        system: "instructions",
+        input: "masked",
+        maxOutputTokens: 512,
+        signal: new AbortController().signal,
+    });
+    assert.equal(captured.model.id, "main");
+    assert.equal(captured.options.reasoning, "medium");
+    ctx.model = undefined;
+    await assert.rejects(
+        adapter.validate(null),
+        (error) => error.code === "model_unavailable",
     );
 });

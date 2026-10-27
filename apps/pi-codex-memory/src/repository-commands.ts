@@ -1,12 +1,13 @@
 import { isAbsolute } from "node:path";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { MemoryUserError } from "./failure.js";
+import { type Option, type OptionListSettings, pickOption } from "./menus.js";
 import {
     findRepository,
     type RegisteredRepository,
     type RepositoryLocation,
 } from "./repositories.js";
-import { abortable, truncateBytes } from "./safety.js";
+import { abortable } from "./safety.js";
 import type { MemoryStore } from "./store.js";
 
 export interface RepositoryCommandContext {
@@ -18,21 +19,20 @@ export interface RepositoryCommandContext {
         | "readLink"
         | "registerRepository"
         | "setReadLink"
-        | "legacyMemories"
-        | "state"
-        | "document"
-        | "importLegacy"
     >;
     readonly scope: string;
     readonly cwd: string;
-    readonly repositoryScope: string | undefined;
     readonly signal: AbortSignal;
-    /** Stops a running memory job before a change that a job would conflict with. */
-    readonly cancel: () => Promise<void>;
 }
 
-const ALWAYS = "Always allow reads";
-const ASK = "Ask each time";
+/** The option that adds a repository by its path. */
+export const ADD_REPOSITORY = "+add";
+const ALWAYS = "always";
+const ASK = "ask";
+const ACCESS_LABELS = {
+    [ALWAYS]: "Always allow reads",
+    [ASK]: "Ask each time",
+};
 
 function management(memory: RepositoryCommandContext, ctx: ExtensionContext) {
     if (!ctx.hasUI)
@@ -53,8 +53,19 @@ function management(memory: RepositoryCommandContext, ctx: ExtensionContext) {
     check();
     return {
         check,
-        select: (title: string, rows: string[]) =>
-            abortable(ctx.ui.select(title, rows, { signal }), signal),
+        pick: (
+            title: string,
+            description: string,
+            options: readonly Option[],
+            settings: OptionListSettings = {},
+        ) =>
+            abortable(
+                pickOption(ctx, title, description, options, {
+                    ...settings,
+                    signal,
+                }),
+                signal,
+            ),
         input: (title: string, placeholder: string) =>
             abortable(ctx.ui.input(title, placeholder, { signal }), signal),
         confirm: (title: string, text: string) =>
@@ -64,152 +75,131 @@ function management(memory: RepositoryCommandContext, ctx: ExtensionContext) {
 function location(repository: RegisteredRepository): string {
     return repository.worktreeRoots[0] ?? repository.commonDirectory;
 }
-/** Old per-folder memories that can be imported into the current repository scope. */
-export function legacyMemoryCount(memory: RepositoryCommandContext): number {
-    if (!memory.repositoryScope || memory.scope !== memory.repositoryScope)
-        return 0;
-    return memory.store.legacyMemories(memory.cwd).records.length;
+function otherRepositories(memory: RepositoryCommandContext) {
+    return memory.store
+        .repositories()
+        .filter((repository) => repository.scope !== memory.scope);
 }
-/** Lists other repositories with their read state; changing a state needs a confirmation. */
-export async function editRepositoryAccess(
+function access(memory: RepositoryCommandContext, scope: string) {
+    return memory.store.readLink(memory.scope, scope).isEnabled ? ALWAYS : ASK;
+}
+export function repositorySummary(memory: RepositoryCommandContext): string {
+    const count = otherRepositories(memory).length;
+    return count ? `${count} added` : "none";
+}
+/** The repository list that /codex-memory-settings opens in place. */
+export function repositoryOptions(memory: RepositoryCommandContext): {
+    title: string;
+    description: string;
+    options: Option[];
+} {
+    return {
+        title: "Other repositories",
+        description:
+            "Repositories whose memories the agent may read from here. Access goes one way.",
+        options: [
+            ...otherRepositories(memory).map((repository) => ({
+                value: repository.scope,
+                label: repository.name,
+                description: `${ACCESS_LABELS[access(memory, repository.scope)]} · ${location(repository)}`,
+            })),
+            {
+                value: ADD_REPOSITORY,
+                label: "+ Add repository",
+                description: "Add a repository by its folder path",
+            },
+        ],
+    };
+}
+/** Changes read access to a listed repository, or adds one by path; each change is confirmed. */
+export async function editRepository(
     memory: RepositoryCommandContext,
     ctx: ExtensionContext,
+    value: string,
 ): Promise<void> {
     const ui = management(memory, ctx);
-    while (true) {
-        const repositories = memory.store
-            .repositories()
-            .filter((repository) => repository.scope !== memory.scope);
-        const labels = repositories.map(
-            (repository) =>
-                `${repository.name} (${location(repository)}): ${
-                    memory.store.readLink(memory.scope, repository.scope)
-                        .isEnabled
-                        ? ALWAYS
-                        : ASK
-                }`,
+    let found: RepositoryLocation | undefined;
+    let repository = otherRepositories(memory).find(
+        (item) => item.scope === value,
+    );
+    if (value === ADD_REPOSITORY) {
+        const path = await ui.input(
+            "Repository folder (absolute path)",
+            "/path/to/repository",
         );
-        const choice = await ui.select("Repository access", [
-            ...labels,
-            "Add repository…",
-            "Back",
-        ]);
-        if (!choice || choice === "Back") return;
-        ui.check();
-        let found: RepositoryLocation | undefined;
-        let repository = repositories[labels.indexOf(choice)];
-        if (choice === "Add repository…") {
-            const path = await ui.input(
-                "Repository folder (absolute path)",
-                "/path/to/repository",
+        if (!path) return;
+        if (!isAbsolute(path))
+            throw new MemoryUserError(
+                "Enter an absolute path to the repository folder.",
             );
-            if (!path) continue;
-            if (!isAbsolute(path))
-                throw new MemoryUserError(
-                    "Enter an absolute path to the repository folder.",
-                );
-            found = findRepository(path);
-            if (!found)
-                throw new MemoryUserError(
-                    "No Git repository was found at that path.",
-                );
-            if (found.scope === memory.scope)
-                throw new MemoryUserError(
-                    "That is the repository you are working in.",
-                );
-            repository = memory.store.repository(found.scope) ?? {
-                scope: found.scope,
-                name: found.name,
-                commonDirectory: found.commonDirectory,
-                worktreeRoots: [found.worktreeRoot],
-                sessionDirectories: [],
-            };
-        }
-        if (!repository) continue;
-        const isEnabled = memory.store.readLink(
+        found = findRepository(path);
+        if (!found)
+            throw new MemoryUserError(
+                "No Git repository was found at that path.",
+            );
+        if (found.scope === memory.scope)
+            throw new MemoryUserError(
+                "That is the repository you are working in.",
+            );
+        repository = memory.store.repository(found.scope) ?? {
+            scope: found.scope,
+            name: found.name,
+            commonDirectory: found.commonDirectory,
+            worktreeRoots: [found.worktreeRoot],
+            sessionDirectories: [],
+        };
+    }
+    if (!repository) return;
+    const current = access(memory, repository.scope);
+    // Pi marks the current value of a short list with ✓.
+    const state = await ui.pick(
+        repository.name,
+        location(repository),
+        [
+            {
+                value: ALWAYS,
+                label: `${current === ALWAYS ? "✓ " : "  "}${ACCESS_LABELS[ALWAYS]}`,
+                description: "The agent reads its memories without asking",
+            },
+            {
+                value: ASK,
+                label: `${current === ASK ? "✓ " : "  "}${ACCESS_LABELS[ASK]}`,
+                description:
+                    "The agent asks before each request that reads them",
+            },
+        ],
+        { preselect: current },
+    );
+    if (!state) return;
+    const changesLink = state !== current;
+    if (!found && !changesLink) return;
+    const confirmed =
+        state === ALWAYS
+            ? await ui.confirm(
+                  `Always allow reading ${repository.name}'s memory?`,
+                  `The agent can read ${repository.name}'s memory from here without asking. This works in one direction only: ${repository.name} cannot read this repository's memory. Its memories are never copied, changed or added to the summary.`,
+              )
+            : await ui.confirm(
+                  `Ask before each read of ${repository.name}'s memory?`,
+                  "The agent asks you each time it needs this repository's memory. Anything already shown in this conversation stays there.",
+              );
+    if (!confirmed) return;
+    ui.check();
+    if (found) {
+        if (findRepository(found.worktreeRoot)?.scope !== found.scope)
+            throw new MemoryUserError(
+                "The repository moved during confirmation. Add it again.",
+            );
+        memory.store.registerRepository(found);
+    }
+    if (changesLink)
+        memory.store.setReadLink(
             memory.scope,
             repository.scope,
-        ).isEnabled;
-        const state = await ui.select(repository.name, [ALWAYS, ASK, "Back"]);
-        if (!state || state === "Back") continue;
-        const changesLink = (state === ALWAYS) !== isEnabled;
-        if (!found && !changesLink) continue;
-        const confirmed =
-            state === ALWAYS
-                ? await ui.confirm(
-                      `Always allow reading ${repository.name}'s memory?`,
-                      `The agent can read ${repository.name}'s memory from here without asking. This works in one direction only: ${repository.name} cannot read this repository's memory. Its memories are never copied, changed or added to the summary.`,
-                  )
-                : await ui.confirm(
-                      `Ask before each read of ${repository.name}'s memory?`,
-                      "The agent asks you each time it needs this repository's memory. Anything already shown in this conversation stays there.",
-                  );
-        if (!confirmed) continue;
-        ui.check();
-        if (found) {
-            if (findRepository(found.worktreeRoot)?.scope !== found.scope)
-                throw new MemoryUserError(
-                    "The repository moved during confirmation. Add it again.",
-                );
-            memory.store.registerRepository(found);
-        }
-        if (changesLink)
-            memory.store.setReadLink(
-                memory.scope,
-                repository.scope,
-                state === ALWAYS,
-            );
-        ctx.ui.notify(`${repository.name}: ${state}.`, "info");
-    }
-}
-/** Copies every memory saved for this folder before repository scopes existed. */
-export async function importLegacyMemories(
-    memory: RepositoryCommandContext,
-    ctx: ExtensionContext,
-): Promise<void> {
-    const ui = management(memory, ctx);
-    if (!memory.repositoryScope || memory.scope !== memory.repositoryScope)
-        throw new MemoryUserError(
-            "Old folder memories can be imported only into a repository scope.",
+            state === ALWAYS,
         );
-    const legacy = memory.store.legacyMemories(memory.cwd, memory.scope);
-    if (!legacy.records.length)
-        throw new MemoryUserError("This folder has no old memories to import.");
-    const targetRevision = memory.store.state(memory.scope).revision;
-    const notice = [
-        `Copies ${legacy.records.length} memories saved for ${memory.cwd} into this repository's memory. The originals stay where they are, and later changes are not synced. Settings are not copied.`,
-        ...(legacy.affectedPaths.length
-            ? [
-                  `${legacy.affectedPaths.length} memories in this repository come from conversations forgotten in the folder and are removed.`,
-              ]
-            : []),
-        "",
-        truncateBytes(
-            [
-                ...legacy.records.map((record) => record.path),
-                ...legacy.affectedPaths.map((path) => `Removed: ${path}`),
-            ].join("\n"),
-            6000,
-        ),
-    ].join("\n");
-    if (
-        !(await ui.confirm(
-            `Import ${legacy.records.length} old memories for this folder?`,
-            notice,
-        ))
-    )
-        return;
-    ui.check();
-    await memory.cancel();
-    const result = memory.store.importLegacy(
-        memory.cwd,
-        memory.scope,
-        legacy.records.map((record) => record.id),
-        legacy.revision,
-        targetRevision,
-    );
     ctx.ui.notify(
-        `Imported ${result.imported} memories, skipped ${result.skipped}, removed ${result.removed}.`,
+        `${repository.name}: ${ACCESS_LABELS[state as keyof typeof ACCESS_LABELS]}.`,
         "info",
     );
 }

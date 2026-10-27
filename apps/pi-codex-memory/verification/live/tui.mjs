@@ -81,6 +81,7 @@ const scope = store.scopeFor(cwd);
 if (phase === "seed")
     store.saveSettings(scope, {
         ...DEFAULT_SETTINGS,
+        useMemories: true,
         generateMemories: true,
         extractModel: { provider: "claude-bridge", id: "claude-haiku-5-5" },
         consolidateModel: { provider: "claude-bridge", id: "claude-haiku-5-5" },
@@ -88,7 +89,6 @@ if (phase === "seed")
         consolidationCooldownMs: 60000,
         pollIntervalMs: 1000,
         maxRolloutsPerRun: 1,
-        maxCallsPerDay: 24,
         maxAttempts: 2,
         retryDelayMs: 1000,
     });

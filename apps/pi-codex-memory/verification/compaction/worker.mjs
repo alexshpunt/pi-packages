@@ -289,9 +289,9 @@ async function openSession(manager, memoryAgentDir = agentDir) {
             setStatus() {},
             setWidget() {},
             select: async (_title, rows) =>
-                rows.includes("Generate from this conversation")
-                    ? "Generate from this conversation"
-                    : "Close",
+                rows.find((row) =>
+                    row.startsWith("Remember this conversation now"),
+                ),
             confirm: async (title, text) => {
                 report.events.push({
                     event: "verification_consent",
@@ -318,8 +318,12 @@ async function generate(label) {
         const before = report.calls.length,
             eventStart = report.events.length,
             entryStart = active.session.sessionManager.getEntries().length;
-        store.saveSettings(scope, { ...settings, generateMemories: true });
-        await active.session.prompt("/codex-memory-manage");
+        store.saveSettings(scope, {
+            ...settings,
+            useMemories: true,
+            generateMemories: true,
+        });
+        await active.session.prompt("/codex-memory-settings");
         const state = snapshot(),
             source = currentSource(
                 active.session.sessionManager,

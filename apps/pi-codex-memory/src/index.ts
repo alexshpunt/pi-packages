@@ -5,8 +5,8 @@ import {
     VERSION,
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { type CommandOptions, manageCommand, modeCommand } from "./commands.js";
-import { type MemoryMode, memoryMode } from "./config.js";
+import { type CommandOptions, memoryCommand } from "./commands.js";
+import { isMemoryEnabled } from "./config.js";
 import { observeRepository } from "./repositories.js";
 import { MemoryRuntime } from "./runtime.js";
 import { canonicalCwd, OUTPUT_MAX_BYTES, safeError } from "./safety.js";
@@ -17,13 +17,6 @@ import {
     ORIGIN_ENTRY,
     RECALL_ENTRY,
 } from "./sources.js";
-
-const MODE_STATUS: Record<MemoryMode, string> = {
-    off: "Off",
-    use: "Use saved",
-    create: "Use and create",
-    custom: "Custom",
-};
 
 export interface CodexMemoryOptions {
     /** Optional SDK-owned storage directory. Provider authentication remains host-owned. */
@@ -72,12 +65,21 @@ export default function codexMemory(
     };
     const showEvidence = (memory: MemoryRuntime, ctx: ExtensionContext) => {
         if (!ctx?.hasUI) return;
-        const cited = memory.evidence().citations.valid;
-        const parts = [`Memory: ${MODE_STATUS[memoryMode(memory.settings())]}`];
-        if (cited) parts.push(`${cited} cited`);
-        if (memory.isRunning) parts.push("updating…");
-        else if (memory.failure) parts.push("update failed");
-        ctx.ui.setStatus?.("pi-codex-memory", parts.join(" · "));
+        let text: string;
+        try {
+            const cited = memory.evidence().citations.valid;
+            const isOn = isMemoryEnabled(memory.settings());
+            const parts = [`Memory: ${isOn ? "on" : "off"}`];
+            if (cited) parts.push(`${cited} cited`);
+            // Jobs in any session of this scope: creating memories, updating the summary, or failed.
+            const activity = isOn ? memory.activityText() : undefined;
+            if (activity) parts.push(activity);
+            text = parts.join(" · ");
+        } catch {
+            // A busy database must not fail a hook or a tool; the next heartbeat refreshes it.
+            return;
+        }
+        ctx.ui.setStatus?.("pi-codex-memory", text);
     };
     const result = (value: unknown, repository?: object) => {
         const details = repository
@@ -121,8 +123,9 @@ export default function codexMemory(
         memory.start();
         showEvidence(memory, ctx);
     });
+    // New input changes the current conversation; jobs for closed sessions are unaffected.
     pi.on("input", async () => {
-        await runtime?.cancel();
+        await runtime?.cancelCurrent();
         return { action: "continue" };
     });
     pi.on("message_start", (event) => {
@@ -197,7 +200,7 @@ export default function codexMemory(
         runtime?.settled();
     });
     pi.on("session_before_tree", async () => {
-        await runtime?.cancel();
+        await runtime?.cancelCurrent();
     });
     pi.on("session_tree", async (_event, ctx) => {
         const memory = await get(ctx);
@@ -205,7 +208,7 @@ export default function codexMemory(
         memory.prepareInjection();
     });
     pi.on("session_before_compact", async () => {
-        await runtime?.cancel();
+        await runtime?.cancelCurrent();
     });
     pi.on("session_compact", () => {
         runtime?.compacted();
@@ -224,19 +227,9 @@ export default function codexMemory(
     ][] = [
         [
             "codex-memory",
-            "Turn memory off, use saved memories, or use and create memories",
-            modeCommand,
-        ],
-        [
-            "codex-memory-manage",
-            "Review, edit and forget saved memories, or create memories from this conversation",
-            manageCommand,
-        ],
-        [
-            "codex-memory-settings",
-            "Choose the memory model, timing, scope and repository access",
+            "Turn memory on or off, choose its models and scope, and review saved memories",
             (options) =>
-                settingsCommand({
+                memoryCommand({
                     ...options,
                     changeScope: async (mode) => {
                         const memory = options.runtime;
@@ -250,6 +243,11 @@ export default function codexMemory(
                         showEvidence(replacement, options.ctx);
                     },
                 }),
+        ],
+        [
+            "codex-memory-settings",
+            "Memory jobs, timing, limits and other repositories",
+            settingsCommand,
         ],
     ];
     for (const [name, description, open] of pages)
@@ -281,9 +279,7 @@ export default function codexMemory(
                             store: memory.store,
                             scope: memory.scope,
                             cwd: memory.cwd,
-                            repositoryScope: memory.repository?.scope,
                             signal: memory.signal,
-                            cancel: () => memory.cancel(),
                         },
                         show: (text) =>
                             pi.sendMessage({
@@ -500,7 +496,7 @@ export default function codexMemory(
         name: "pi_codex_memory_note",
         label: "Codex memory note",
         description:
-            "Append a scoped memory note only when the user explicitly asks to remember something. Requires user confirmation. For corrections or forgetting, point the user to /codex-memory-manage; never edit generated memory files directly.",
+            "Append a scoped memory note only when the user explicitly asks to remember something. Requires user confirmation. For corrections or forgetting, point the user to Saved memories in /codex-memory; never edit generated memory files directly.",
         parameters: Type.Object(
             {
                 filename: Type.String({
@@ -520,7 +516,9 @@ export default function codexMemory(
             signal?.throwIfAborted();
             const memory = await get(ctx);
             if (!memory.settings().useMemories)
-                throw new Error("Agent memory use is disabled.");
+                throw new Error(
+                    "Memory is disabled. The user can turn it on in /codex-memory.",
+                );
             if (
                 !ctx.hasUI ||
                 !(await ctx.ui.confirm("Save this memory?", params.note, {

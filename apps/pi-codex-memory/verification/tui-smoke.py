@@ -27,7 +27,8 @@ process = subprocess.Popen(command, cwd=work, env=env, stdin=slave, stdout=slave
 os.close(slave)
 output = b""
 
-def read_until(needle, seconds=15):
+def read_until(*needles, seconds=15):
+    """Waits until every needle has appeared in output that arrives after the call."""
     global output
     deadline = time.monotonic() + seconds
     marker = len(output)
@@ -41,12 +42,13 @@ def read_until(needle, seconds=15):
             # Answer terminal capability queries locally; never send a conversation prompt.
             if b"\x1b[6n" in chunk:
                 os.write(master, b"\x1b[1;1R")
-            if needle in output[marker:].decode("utf-8", "replace"):
+            text = output[marker:].decode("utf-8", "replace")
+            if all(needle in text for needle in needles):
                 return
         if process.poll() is not None:
             break
     cleaned = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", output.decode("utf-8", "replace"))
-    raise RuntimeError(f"Expected {needle!r}; terminal tail: {cleaned[-3000:]}")
+    raise RuntimeError(f"Expected {needles!r}; terminal tail: {cleaned[-3000:]}")
 
 def settle_input():
     # Wait for terminal output to quiesce before sending the next key sequence.
@@ -62,19 +64,30 @@ try:
     # Startup currently prints the version/banner; screen rendering then accepts commands.
     read_until("ctrl+c/ctrl+d")
     os.write(master, b"/codex-memory\r")
-    # The title's second line points to the other two commands.
-    read_until("Settings: /codex-memory-settings")
+    # Pi's settings layout: rows with values, the highlighted row explained, Pi's key hint.
+    read_until(
+        "Enabled",
+        "Saved memories",
+        "Turns closed conversations into memories",
+        "Enter/Space to change · Esc to cancel",
+    )
     settle_input()
-    os.write(master, b"\x03")
+    # The memory model row opens Pi's searchable option list in place, led by the current Pi model.
+    os.write(master, b"\x1b[B\r")
+    read_until("Use current Pi model", "Type to filter · Enter to select · Esc to go back")
     settle_input()
-    # The other pages must open after cancelling the first menu.
-    os.write(master, b"/codex-memory-manage\r")
-    read_until("Review saved memories (0)")
+    os.write(master, b"\x1b")
+    read_until("The model that reads closed conversations")
     settle_input()
     os.write(master, b"\x1b")
     settle_input()
+    # The second page must open after closing the first.
     os.write(master, b"/codex-memory-settings\r")
-    read_until("Idle time before creating memories: 30 minutes")
+    read_until(
+        "Create memories after",
+        "Other repositories",
+        "Type to search · Enter/Space to change · Esc to cancel",
+    )
     settle_input()
     os.write(master, b"\x1b")
     settle_input()
@@ -82,10 +95,10 @@ try:
     read_until("Reloaded")
     settle_input()
     os.write(master, b"/codex-memory\r")
-    read_until("Codex Memory")
+    read_until("Memory scope")
     os.write(master, b"\x1b")
     assert b"MODEL_REQUEST_FORBIDDEN_IN_UI_CHECK" not in output
-    print(json.dumps({"status": "pass", "checks": ["mode menu", "cancel", "manage page", "settings page", "reload", "menu after reload"], "modelCalls": 0}))
+    print(json.dumps({"status": "pass", "checks": ["memory page", "model list", "settings page", "reload", "page after reload"], "modelCalls": 0}))
 finally:
     process.terminate()
     try:

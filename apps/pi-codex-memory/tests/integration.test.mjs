@@ -1,13 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import {
-    mkdir,
-    mkdtemp,
-    readFile,
-    rm,
-    utimes,
-    writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -19,11 +12,13 @@ import {
 import {
     createAgentSession,
     DefaultResourceLoader,
+    initTheme,
     ModelRuntime,
     SessionManager,
     SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import { modeCommand } from "../dist/commands.js";
+import { CURSOR_MARKER } from "@earendil-works/pi-tui";
+import { memoryCommand } from "../dist/commands.js";
 import { DEFAULT_SETTINGS } from "../dist/config.js";
 import extension from "../dist/index.js";
 import { EMPTY_SUMMARY } from "../dist/pipeline.js";
@@ -31,6 +26,7 @@ import { MemoryRuntime } from "../dist/runtime.js";
 import { workspaceScope } from "../dist/safety.js";
 import { settingsCommand } from "../dist/settings-commands.js";
 import { MemoryStore } from "../dist/store.js";
+import { pickRow, terminalPicker } from "./ui.mjs";
 
 const packageDir = fileURLToPath(new URL("../", import.meta.url));
 async function directory(t) {
@@ -55,7 +51,7 @@ function fakeContext(f, ui = {}) {
         isIdle: () => true,
     };
 }
-test("three argument-free memory commands are registered; tools validate disabled access, consent and abort", async (t) => {
+test("two argument-free memory commands are registered; tools validate disabled access, consent and abort", async (t) => {
     const f = await directory(t);
     const previous = process.env.PI_CODING_AGENT_DIR;
     process.env.PI_CODING_AGENT_DIR = f.agentDir;
@@ -76,7 +72,7 @@ test("three argument-free memory commands are registered; tools validate disable
     });
     assert.deepEqual(
         [...commands.keys()],
-        ["codex-memory", "codex-memory-manage", "codex-memory-settings"],
+        ["codex-memory", "codex-memory-settings"],
     );
     assert.deepEqual([...tools.keys()].sort(), [
         "pi_codex_memory_list",
@@ -88,6 +84,22 @@ test("three argument-free memory commands are registered; tools validate disable
     await handlers.get("session_start")({}, ctx);
     await commands.get("codex-memory").handler("", ctx);
     assert.match(messages[0].content, /generateMemories/);
+    await assert.rejects(
+        tools
+            .get("pi_codex_memory_list")
+            .execute("list", {}, undefined, undefined, ctx),
+        /Memory is disabled/,
+        "memory is off until the user turns it on",
+    );
+    const configured = new MemoryStore(join(f.agentDir, "pi-codex-memory"));
+    configured.saveSettings(workspaceScope(f.cwd), {
+        ...DEFAULT_SETTINGS,
+        useMemories: true,
+        generateMemories: true,
+        extractModel: { provider: "fixture", id: "local" },
+        consolidateModel: { provider: "fixture", id: "local" },
+    });
+    configured.close();
     const list = await tools
         .get("pi_codex_memory_list")
         .execute("list", {}, undefined, undefined, ctx);
@@ -158,10 +170,10 @@ test("three argument-free memory commands are registered; tools validate disable
     const openMenu = commands.get("codex-memory").handler("", ctx);
     await new Promise((resolve) => setImmediate(resolve));
     const firstClose = closeMenu;
-    await commands.get("codex-memory-manage").handler("", ctx);
+    await commands.get("codex-memory-settings").handler("", ctx);
     assert.deepEqual(notices, ["A memory menu is already open."]);
     assert.equal(closeMenu, firstClose, "a second menu does not open");
-    closeMenu("Close");
+    closeMenu(undefined);
     await openMenu;
     await handlers.get("session_shutdown")();
     await handlers.get("session_start")({}, ctx);
@@ -221,6 +233,7 @@ test("TUI extraction returns control; reopening the menu keeps it running and St
     const store = new MemoryStore(join(f.agentDir, "pi-codex-memory"));
     store.saveSettings(workspaceScope(f.cwd), {
         ...DEFAULT_SETTINGS,
+        useMemories: true,
         generateMemories: true,
         extractModel: { provider: "fixture", id: "extract" },
         consolidateModel: { provider: "fixture", id: "consolidate" },
@@ -230,34 +243,30 @@ test("TUI extraction returns control; reopening the menu keeps it running and St
         statuses = [];
     ctx.ui.notify = (message) => notices.push(message);
     ctx.ui.setStatus = (_key, text) => statuses.push(text);
-    ctx.ui.select = async (_title, rows) => {
-        assert.ok(rows.includes("Generate from this conversation"));
-        return "Generate from this conversation";
-    };
-    await commands.get("codex-memory-manage").handler("", ctx);
+    ctx.ui.custom = terminalPicker(["Remember this conversation now"]);
+    await commands.get("codex-memory-settings").handler("", ctx);
     await new Promise((resolve) => setImmediate(resolve));
-    assert.match(notices[0], /Creating memories/);
+    assert.match(notices[0], /Remembering this conversation/);
     assert.ok(seen && !seen.aborted);
-    const picks = ["Stop current job", "Close"];
-    ctx.ui.select = async (_title, rows) => {
-        const pick = picks.shift();
-        assert.ok(rows.includes(pick));
-        if (pick === "Stop current job")
+    const picker = terminalPicker(["Stop current job", undefined]);
+    let opened = 0;
+    ctx.ui.custom = (factory) => {
+        if (opened++ === 0)
             assert.equal(
                 seen.aborted,
                 false,
                 "opening the menu does not cancel",
             );
-        return pick;
+        return picker(factory);
     };
-    await commands.get("codex-memory-manage").handler("", ctx);
+    await commands.get("codex-memory-settings").handler("", ctx);
     assert.equal(seen.aborted, true);
     assert.ok(notices.includes("Stopped the memory job."));
     assert.equal(messages.length, 0);
-    assert.ok(statuses.includes("Memory: Use and create · updating…"));
+    assert.ok(statuses.includes("Memory: on · creating 1 memory…"));
     assert.equal(
         statuses.at(-1),
-        "Memory: Use and create",
+        "Memory: on",
         "a stopped job is not reported as a failure",
     );
     assert.equal(
@@ -270,123 +279,312 @@ test("TUI extraction returns control; reopening the menu keeps it running and St
     await handlers.get("session_shutdown")();
     store.close();
 });
-test("the mode menu turns creation on with one model after consent; declining saves nothing", async (t) => {
-    const f = await directory(t);
-    const ctx = fakeContext(f, { confirm: async () => false });
-    ctx.hasUI = true;
-    ctx.modelRegistry = {
-        getAvailable: () => [{ provider: "fixture", id: "local" }],
+function terminalContext(f, ui) {
+    return {
+        ...fakeContext(f, { confirm: async () => true, ...ui }),
+        mode: "tui",
+        hasUI: true,
     };
-    ctx.ui.select = async (_title, rows) =>
-        rows.find((row) => row.endsWith("Use and create memories")) ??
-        "fixture/local";
+}
+function repositoryContext(runtime) {
+    return {
+        store: runtime.store,
+        scope: runtime.scope,
+        cwd: runtime.cwd,
+        signal: runtime.signal,
+    };
+}
+function commandOptions(ctx, runtime) {
+    return {
+        ctx,
+        runtime,
+        repositories: repositoryContext(runtime),
+        show() {},
+        changeScope: async () => {},
+    };
+}
+test("turning memory on asks only for consent, follows the current Pi model, and saves nothing when declined", async (t) => {
+    const f = await directory(t);
+    const screens = [],
+        consents = [];
+    let isAccepted = false;
+    const ctx = terminalContext(f, {
+        confirm: async (_title, message) => {
+            consents.push(message);
+            return isAccepted;
+        },
+    });
+    ctx.model = { provider: "fixture", id: "main" };
     const runtime = new MemoryRuntime(ctx, f.agentDir);
-    const options = { ctx, runtime, show() {} };
-    await modeCommand(options);
+    ctx.ui.custom = terminalPicker(["Enabled", undefined], screens);
+    await memoryCommand(commandOptions(ctx, runtime));
     assert.equal(runtime.settings().generateMemories, false);
-    assert.equal(runtime.settings().extractModel, null);
-    ctx.ui.confirm = async () => true;
-    await modeCommand(options);
-    const model = { provider: "fixture", id: "local" };
-    assert.deepEqual(runtime.settings().extractModel, model);
-    assert.deepEqual(runtime.settings().consolidateModel, model);
+    assert.equal(runtime.settings().useMemories, false);
+    assert.match(screens[0], /Enabled\s+off/);
+    assert.match(screens[0], /Memory model\s+Current Pi model/);
+    assert.match(screens[0], /Summary model\s+Current Pi model/);
+    assert.match(screens[0], /Turns closed conversations into memories/);
+    assert.equal(consents.length, 1);
+    assert.match(consents[0], /the current Pi model \(now main \[fixture\]\)/);
+    isAccepted = true;
+    ctx.ui.custom = terminalPicker(["Enabled", undefined], screens);
+    await memoryCommand(commandOptions(ctx, runtime));
+    assert.equal(runtime.settings().useMemories, true);
     assert.equal(runtime.settings().generateMemories, true);
-    ctx.ui.select = async (_title, rows) =>
-        rows.find((row) => row.endsWith("Off"));
-    await modeCommand(options);
+    assert.equal(runtime.settings().extractModel, null);
+    assert.equal(runtime.settings().consolidateModel, null);
+    assert.match(screens.at(-1), /Enabled\s+on/);
+    ctx.ui.custom = terminalPicker(["Enabled", undefined]);
+    await memoryCommand(commandOptions(ctx, runtime));
     assert.equal(runtime.settings().useMemories, false);
     assert.equal(runtime.settings().generateMemories, false);
     await runtime.dispose();
 });
-test("changing the model while creation is on asks for consent again; declining keeps the old model", async (t) => {
+test("an option list opened from a focused settings page shows the cursor in its filter", async (t) => {
     const f = await directory(t);
-    const before = { provider: "fixture", id: "local" },
-        after = { provider: "fixture", id: "other" };
+    const ctx = terminalContext(f, {});
+    ctx.modelRegistry = {
+        getAvailable: () => [{ provider: "fixture", id: "local" }],
+    };
+    let page;
+    ctx.ui.custom = (factory) =>
+        new Promise((resolve) => {
+            initTheme();
+            page = factory(
+                { requestRender() {} },
+                { fg: (_color, text) => text, bold: (text) => text },
+                undefined,
+                resolve,
+            );
+            page.focused = true;
+            page.handleInput("\x1b[B");
+            page.handleInput("\r");
+            assert.ok(
+                page.render(120).some((line) => line.includes(CURSOR_MARKER)),
+            );
+            page.handleInput("\x1b");
+            page.handleInput("\x1b");
+        });
+    const runtime = new MemoryRuntime(ctx, f.agentDir);
+    await memoryCommand(commandOptions(ctx, runtime));
+    assert.ok(page);
+    await runtime.dispose();
+});
+test("each stage picks its own model from the current Pi model and /scoped-models; a change while on asks for consent again", async (t) => {
+    const f = await directory(t);
+    const local = { provider: "fixture", id: "local" },
+        other = { provider: "fixture", id: "other" };
     const store = new MemoryStore(join(f.agentDir, "pi-codex-memory"));
     store.saveSettings(workspaceScope(f.cwd), {
         ...DEFAULT_SETTINGS,
+        useMemories: true,
         generateMemories: true,
-        extractModel: before,
-        consolidateModel: before,
     });
     store.close();
+    const screens = [];
     let consents = 0,
-        isAccepted = false,
-        pick;
-    const ctx = fakeContext(f, {
+        isAccepted = false;
+    const ctx = terminalContext(f, {
         confirm: async () => {
             consents++;
             return isAccepted;
         },
-        select: async (_title, rows) => {
-            const choice = pick
-                ? rows.find((row) => row.startsWith(pick))
-                : "Close";
-            pick = choice?.startsWith("Model") ? "fixture/other" : undefined;
-            return choice;
-        },
     });
-    ctx.hasUI = true;
-    ctx.modelRegistry = { getAvailable: () => [before, after] };
+    ctx.scopedModels = [{ model: local }, { model: other }];
+    ctx.modelRegistry = {
+        getAvailable: () => [
+            local,
+            other,
+            { provider: "fixture", id: "hidden" },
+        ],
+    };
     const runtime = new MemoryRuntime(ctx, f.agentDir);
-    const options = { ctx, runtime, show() {}, changeScope: async () => {} };
-    pick = "Model";
-    await settingsCommand(options);
+    ctx.ui.custom = terminalPicker(
+        [
+            "Memory model",
+            { search: "other", pick: "other [fixture]" },
+            undefined,
+        ],
+        screens,
+    );
+    await memoryCommand(commandOptions(ctx, runtime));
+    assert.match(
+        screens[1],
+        /Use current Pi model\s+Follow the model selected/,
+    );
+    assert.match(screens[1], /local \[fixture\]/);
+    assert.match(screens[1], /other \[fixture\]/);
+    assert.doesNotMatch(screens[1], /hidden/);
+    assert.match(
+        screens[1],
+        /Type to filter · Enter to select · Esc to go back/,
+    );
     assert.equal(consents, 1);
-    assert.deepEqual(runtime.settings().extractModel, before);
+    assert.equal(runtime.settings().extractModel, null, "declined");
     isAccepted = true;
-    pick = "Model";
-    await settingsCommand(options);
-    assert.equal(consents, 2);
-    assert.deepEqual(runtime.settings().extractModel, after);
-    assert.deepEqual(runtime.settings().consolidateModel, after);
+    ctx.ui.custom = terminalPicker(
+        [
+            "Memory model",
+            "other [fixture]",
+            "Summary model",
+            "local [fixture]",
+            undefined,
+        ],
+        screens,
+    );
+    await memoryCommand(commandOptions(ctx, runtime));
+    assert.equal(consents, 3);
+    assert.deepEqual(runtime.settings().extractModel, other);
+    assert.deepEqual(runtime.settings().consolidateModel, local);
+    assert.match(screens.at(-1), /Memory model\s+other \[fixture\]/);
+    assert.match(screens.at(-1), /Summary model\s+local \[fixture\]/);
+    ctx.ui.custom = terminalPicker([
+        "Memory model",
+        "Use current Pi model",
+        undefined,
+    ]);
+    await memoryCommand(commandOptions(ctx, runtime));
+    assert.equal(runtime.settings().extractModel, null);
+    assert.deepEqual(runtime.settings().consolidateModel, local);
     await runtime.dispose();
 });
-test("settings rows save immediately in their units; rejected input and cancelled JSON save nothing", async (t) => {
+test("settings cycle preset values in place, keep a stored custom value in the cycle, and work without a terminal", async (t) => {
     const f = await directory(t);
-    const notices = [];
-    const ctx = fakeContext(f, {
-        notify: (message) => notices.push(message),
-        confirm: async () => true,
-    });
-    ctx.hasUI = true;
+    const screens = [];
+    const ctx = terminalContext(f, {});
     const runtime = new MemoryRuntime(ctx, f.agentDir);
-    const options = { ctx, runtime, show() {}, changeScope: async () => {} };
-    let pick;
-    ctx.ui.select = async (_title, rows) => {
-        const choice = pick
-            ? rows.find((row) => row.startsWith(pick))
-            : "Close";
-        pick = undefined;
-        return choice;
+    ctx.ui.custom = terminalPicker(
+        ["Create memories after", undefined],
+        screens,
+    );
+    await settingsCommand(commandOptions(ctx, runtime));
+    assert.equal(runtime.settings().minIdleMs, 6 * 3_600_000);
+    assert.match(screens[0], /Create memories after\s+2 hours idle/);
+    assert.match(screens[0], /Use conversations from the last\s+7 days/);
+    assert.doesNotMatch(
+        screens[0],
+        /Saved memories/,
+        "it lives in /codex-memory",
+    );
+    assert.match(screens[0], /Type to search · Enter\/Space to change/);
+    assert.match(screens[1], /Create memories after\s+6 hours idle/);
+    assert.match(screens[1], /a closed conversation becomes memory/);
+    assert.match(screens[1], /Default: 2 hours\s+idle\./);
+    await runtime.saveSettings({
+        ...runtime.settings(),
+        minIdleMs: 45 * 60_000,
+    });
+    ctx.ui.custom = terminalPicker(
+        ["Create memories after", undefined],
+        screens,
+    );
+    await settingsCommand(commandOptions(ctx, runtime));
+    assert.match(screens.at(-2), /Create memories after\s+45 minutes idle/);
+    assert.equal(runtime.settings().minIdleMs, 60 * 60_000);
+    const rows = [];
+    const plain = fakeContext(f, {
+        select: async (_title, options) => {
+            rows.push(options);
+            return pickRow(options, picks.shift());
+        },
+    });
+    plain.hasUI = true;
+    const picks = ["Delete unused memories after", "90 days", undefined];
+    await settingsCommand(commandOptions(plain, runtime));
+    assert.ok(rows[0].includes("Delete unused memories after: 30 days"));
+    assert.deepEqual(rows[1], ["7 days", "30 days", "90 days", "365 days"]);
+    assert.equal(runtime.settings().maxUnusedDays, 90);
+    await runtime.dispose();
+});
+test("an in-place change that stops a running job swaps Stop current job for Remember this conversation now", async (t) => {
+    const f = await directory(t);
+    const ctx = terminalContext(f, {});
+    ctx.modelRegistry = {
+        getAvailable: () => [],
+        find: (provider, id) => ({ provider, id }),
+        streamSimple(_model, _context, options) {
+            return {
+                result: () =>
+                    new Promise((_resolve, reject) =>
+                        options.signal.addEventListener(
+                            "abort",
+                            () => reject(options.signal.reason),
+                            { once: true },
+                        ),
+                    ),
+            };
+        },
     };
-    pick = "Idle time";
-    ctx.ui.input = async (_title, value) => {
-        assert.equal(value, "30");
-        return "45";
-    };
-    await settingsCommand(options);
-    assert.equal(runtime.settings().minIdleMs, 45 * 60_000);
-    pick = "Idle time";
-    ctx.ui.input = async () => "0";
-    await settingsCommand(options);
-    assert.equal(runtime.settings().minIdleMs, 45 * 60_000);
-    assert.match(notices.at(-1), /from 1 to 2880 minutes/);
-    pick = "Edit all settings as JSON";
-    ctx.ui.editor = async () => undefined;
-    await settingsCommand(options);
-    pick = "Edit all settings as JSON";
-    ctx.ui.editor = async (_title, text) =>
-        JSON.stringify({ ...JSON.parse(text), generateMemories: true });
-    await settingsCommand(options);
-    assert.equal(runtime.settings().generateMemories, false);
-    assert.match(notices.at(-1), /Select extraction and consolidation models/);
-    pick = "Edit all settings as JSON";
-    ctx.ui.editor = async (_title, text) =>
-        JSON.stringify({ ...JSON.parse(text), useMemories: false });
-    await settingsCommand(options);
-    assert.equal(runtime.settings().useMemories, false);
-    assert.equal(runtime.settings().minIdleMs, 45 * 60_000);
+    ctx.sessionManager.appendMessage({
+        role: "user",
+        content: "A source that keeps the job running.",
+        timestamp: Date.now(),
+    });
+    const store = new MemoryStore(join(f.agentDir, "pi-codex-memory"));
+    store.saveSettings(workspaceScope(f.cwd), {
+        ...DEFAULT_SETTINGS,
+        useMemories: true,
+        generateMemories: true,
+        extractModel: { provider: "fixture", id: "extract" },
+        consolidateModel: { provider: "fixture", id: "consolidate" },
+    });
+    store.close();
+    const runtime = new MemoryRuntime(ctx, f.agentDir);
+    const work = runtime.run("current").catch(() => {});
+    assert.equal(runtime.isRunning, true);
+    const screens = [];
+    ctx.ui.custom = terminalPicker(
+        ["Create memories after", undefined],
+        screens,
+    );
+    await settingsCommand(commandOptions(ctx, runtime));
+    await work;
+    assert.match(screens[0], /Stop current job\s+running/);
+    assert.match(screens[1], /→ Create memories after\s+6 hours idle/);
+    assert.doesNotMatch(screens[1], /Stop current job/);
+    assert.match(screens[1], /Remember this conversation now/);
+    await runtime.dispose();
+});
+test("/codex-memory opens Saved memories; the list returns with its filter after each memory, and Esc goes back to the page", async (t) => {
+    const f = await directory(t);
+    const screens = [];
+    const ctx = terminalContext(f, {
+        editor: async () => "Release gate is violet.",
+    });
+    const clear = "\x7f".repeat(5);
+    ctx.ui.custom = terminalPicker(
+        [
+            "Saved memories",
+            { search: "amber", pick: "Release gate" },
+            "View memory and source",
+            "Release gate",
+            "Edit memory",
+            { search: `${clear}violet`, pick: "Release gate is violet" },
+            "Forget memory",
+            undefined,
+            undefined,
+        ],
+        screens,
+    );
+    const runtime = new MemoryRuntime(ctx, f.agentDir);
+    runtime.store.addNote(runtime.scope, "Release gate is amber.");
+    runtime.store.addNote(runtime.scope, "Region is birch.");
+    await memoryCommand(commandOptions(ctx, runtime));
+    const bodies = runtime.store.records(runtime.scope).map((r) => r.body);
+    assert.deepEqual(bodies, ["Region is birch."]);
+    assert.match(screens[0], /Saved memories\s+2/);
+    assert.match(
+        screens[1],
+        /Type to filter · Enter to select · Esc to go back/,
+    );
+    assert.match(screens[2], /View memory and source/);
+    // After viewing, the list is back with its filter and the memory highlighted.
+    assert.match(screens[3], /^> amber\b/m);
+    assert.match(screens[3], /→ Release gate is amber/);
+    assert.doesNotMatch(screens[3], /Memory scope/);
+    // After forgetting, Esc leaves the list for the /codex-memory page.
+    assert.match(screens.at(-2), /Type to filter/);
+    assert.match(screens.at(-1), /Saved memories\s+1/);
     await runtime.dispose();
 });
 test("real Pi SDK loads extension, executes tools and commands, and receives ephemeral memory context", async (t) => {
@@ -461,6 +659,10 @@ test("real Pi SDK loads extension, executes tools and commands, and receives eph
         onError: (error) => errors.push(error),
     });
     const store = new MemoryStore(join(f.agentDir, "pi-codex-memory"));
+    store.saveSettings(workspaceScope(f.cwd), {
+        ...DEFAULT_SETTINGS,
+        useMemories: true,
+    });
     store.addNote(
         workspaceScope(f.cwd),
         "Only use this local fixture's scoped history.",
@@ -512,7 +714,7 @@ test("real Pi SDK loads extension, executes tools and commands, and receives eph
         });
         return stream;
     };
-    await session.prompt("/codex-memory status");
+    await session.prompt("/codex-memory");
     await session.prompt("List the scoped memory files.");
     assert.equal(errors.length, 0, JSON.stringify(errors));
     assert.ok(seen.length >= 2);
@@ -632,6 +834,7 @@ test("real Pi SDK loads extension, executes tools and commands, and receives eph
     const configured = new MemoryStore(join(f.agentDir, "pi-codex-memory"));
     configured.saveSettings(workspaceScope(f.cwd), {
         ...DEFAULT_SETTINGS,
+        useMemories: true,
         generateMemories: true,
         extractModel: { provider: "fixture", id: "local" },
         consolidateModel: { provider: "fixture", id: "local" },
@@ -645,13 +848,11 @@ test("real Pi SDK loads extension, executes tools and commands, and receives eph
             setWidget() {},
             confirm: async () => true,
             select: async (_title, rows) =>
-                rows.includes("Generate from this conversation")
-                    ? "Generate from this conversation"
-                    : "Close",
+                pickRow(rows, "Remember this conversation now"),
         },
         onError: (error) => errors.push(error),
     });
-    await session.prompt("/codex-memory-manage");
+    await session.prompt("/codex-memory-settings");
     assert.equal(
         nested.length,
         2,
@@ -680,112 +881,6 @@ test("real Pi SDK loads extension, executes tools and commands, and receives eph
     );
     completed.close();
     assert.equal(errors.length, 0, JSON.stringify(errors));
-});
-test("background scheduler waits for foreground idle, runs both stages and releases on shutdown", async (t) => {
-    const f = await directory(t);
-    const sessionDir = join(f.root, "sessions");
-    await mkdir(sessionDir);
-    const at = Date.now() - 3_600_000;
-    const history = [
-        {
-            type: "session",
-            version: 3,
-            id: "historical-auto",
-            cwd: f.cwd,
-            timestamp: new Date(at).toISOString(),
-        },
-        {
-            type: "custom",
-            id: "origin",
-            parentId: null,
-            timestamp: new Date(at).toISOString(),
-            customType: "pi-codex-memory.origin",
-            data: { isInteractiveRoot: true },
-        },
-        {
-            type: "message",
-            id: "user",
-            parentId: "origin",
-            timestamp: new Date(at).toISOString(),
-            message: {
-                role: "user",
-                content: "background task evidence",
-                timestamp: at,
-            },
-        },
-    ];
-    const path = join(sessionDir, "historical.jsonl");
-    await writeFile(
-        path,
-        `${history.map((entry) => JSON.stringify(entry)).join("\n")}\n`,
-    );
-    await utimes(path, at / 1000, at / 1000);
-    let isIdle = false,
-        calls = 0;
-    const ctx = {
-        ...fakeContext(f),
-        mode: "rpc",
-        sessionManager: SessionManager.create(f.cwd, sessionDir),
-        isIdle: () => isIdle,
-        modelRegistry: {
-            find: (provider, id) => ({ provider, id }),
-            streamSimple(_model, context) {
-                calls++;
-                const input = JSON.parse(context.messages[0].content[0].text);
-                const output =
-                    "rendered_conversation" in input
-                        ? {
-                              rollout_summary:
-                                  "A background task was requested.",
-                              rollout_slug: "background",
-                          }
-                        : {
-                              memory_summary:
-                                  EMPTY_SUMMARY +
-                                  input.documents
-                                      .map(
-                                          (document) =>
-                                              `- ${document.path} — background task`,
-                                      )
-                                      .join("\n"),
-                          };
-                return {
-                    async result() {
-                        return {
-                            stopReason: "stop",
-                            content: [
-                                { type: "text", text: JSON.stringify(output) },
-                            ],
-                        };
-                    },
-                };
-            },
-        },
-    };
-    const runtime = new MemoryRuntime(ctx, f.agentDir);
-    t.after(async () => {
-        await runtime.dispose();
-    });
-    runtime.store.saveSettings(runtime.scope, {
-        ...DEFAULT_SETTINGS,
-        pollIntervalMs: 1000,
-        generateMemories: true,
-        extractModel: { provider: "fixture", id: "extract" },
-        consolidateModel: { provider: "fixture", id: "consolidate" },
-    });
-    runtime.start();
-    runtime.busy();
-    await new Promise((resolve) => setTimeout(resolve, 1100));
-    assert.equal(calls, 0);
-    isIdle = true;
-    runtime.settled();
-    const deadline = Date.now() + 5000;
-    while (!runtime.store.state(runtime.scope).summary && Date.now() < deadline)
-        await new Promise((resolve) => setTimeout(resolve, 25));
-    assert.equal(calls, 2);
-    assert.equal(runtime.store.records(runtime.scope).length, 1);
-    assert.equal(runtime.status().isRunning, false);
-    await runtime.dispose();
 });
 test("shutdown closes storage even when activity cleanup fails", async (t) => {
     const f = await directory(t),

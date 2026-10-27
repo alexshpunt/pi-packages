@@ -5,7 +5,6 @@ export type MemoryFailureCode =
     | "model_unavailable"
     | "authentication_unavailable"
     | "reasoning_unsupported"
-    | "daily_budget"
     | "input_budget"
     | "output_length"
     | "stream_incomplete"

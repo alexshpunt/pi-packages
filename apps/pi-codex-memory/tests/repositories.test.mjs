@@ -28,8 +28,8 @@ import {
     SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { manageCommand } from "../dist/commands.js";
 import { DEFAULT_SETTINGS } from "../dist/config.js";
+import { MemoryUserError } from "../dist/failure.js";
 import extension from "../dist/index.js";
 import { EMPTY_SUMMARY, runPipeline } from "../dist/pipeline.js";
 import {
@@ -39,13 +39,10 @@ import {
     repositoryPath,
 } from "../dist/repositories.js";
 import { RepositoryAccess } from "../dist/repository-access.js";
-import {
-    editRepositoryAccess,
-    importLegacyMemories,
-} from "../dist/repository-commands.js";
+import { ADD_REPOSITORY, editRepository } from "../dist/repository-commands.js";
 import { buildInjection, MemoryReader } from "../dist/retrieval.js";
 import { MemoryRuntime } from "../dist/runtime.js";
-import { digest, workspaceScope } from "../dist/safety.js";
+import { digest, safeError, workspaceScope } from "../dist/safety.js";
 import {
     branchExposure,
     currentSource,
@@ -57,11 +54,13 @@ import {
     scanSources,
 } from "../dist/sources.js";
 import { MemoryStore } from "../dist/store.js";
+import { pickRow } from "./ui.mjs";
 
 const signal = () => new AbortController().signal;
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const settings = {
     ...DEFAULT_SETTINGS,
+    useMemories: true,
     generateMemories: true,
     minIdleMs: 60_000,
     extractModel: { provider: "fixture", id: "extract" },
@@ -115,6 +114,8 @@ async function fixture(t) {
     store.registerRepository(a);
     store.registerRepository(b);
     store.registerRepository(findRepository(linked));
+    // Memory is off by default; these tests read from both repositories.
+    enableReading(store, a.scope, b.scope);
     const cleanup = [];
     t.after(async () => {
         for (const fn of cleanup) await fn();
@@ -180,10 +181,24 @@ function managementContext(runtime) {
         store: runtime.store,
         scope: runtime.scope,
         cwd: runtime.cwd,
-        repositoryScope: runtime.repository?.scope,
         signal: runtime.signal,
-        cancel: () => runtime.cancel(),
     };
+}
+/** Memory is off by default; reading tests turn it on for the scopes they read. */
+function enableReading(store, ...scopes) {
+    for (const scope of scopes)
+        store.saveSettings(scope, { ...DEFAULT_SETTINGS, useMemories: true });
+}
+/** Copies every old per-folder memory of `cwd`, as the removed import menu did. */
+function importAllLegacy(store, cwd, scope) {
+    const legacy = store.legacyMemories(cwd, scope);
+    return store.importLegacy(
+        cwd,
+        scope,
+        legacy.records.map((record) => record.id),
+        legacy.revision,
+        store.state(scope).revision,
+    );
 }
 function access(f, scope = f.a.scope) {
     const lifetime = new AbortController(),
@@ -332,6 +347,13 @@ test("internal scope lookups never resolve repository names, while explicit name
     const namedWorkspace = await repository(join(f.root, workspace));
     f.store.registerRepository(namedGlobal);
     f.store.registerRepository(namedWorkspace);
+    enableReading(
+        f.store,
+        workspace,
+        namedGlobal.scope,
+        namedWorkspace.scope,
+        "global",
+    );
     let prompts = 0;
     const ctx = context(plain, {
         confirm: async () => {
@@ -542,10 +564,7 @@ test("legacy import copies more records than the consolidation source limit", as
     } finally {
         database.close();
     }
-    const ctx = context(f.a.worktreeRoot);
-    const runtime = new MemoryRuntime(ctx, f.agentDir);
-    f.cleanup.push(() => runtime.dispose());
-    await importLegacyMemories(managementContext(runtime), ctx);
+    importAllLegacy(f.store, f.a.worktreeRoot, f.a.scope);
     assert.equal(f.store.records(f.a.scope).length, 257);
     assert.equal(f.store.records(oldScope).length, 257);
 });
@@ -1619,7 +1638,7 @@ test("public read tools target one repository, preserve qualified citations, and
     );
     assert.deepEqual(
         [...commands.keys()],
-        ["codex-memory", "codex-memory-manage", "codex-memory-settings"],
+        ["codex-memory", "codex-memory-settings"],
     );
 });
 
@@ -1630,6 +1649,7 @@ test("queued input keeps the answer's consent and evidence until delivery; compa
         notices = [];
     const c = await repository(join(f.root, "repo-c"));
     f.store.registerRepository(c);
+    enableReading(f.store, c.scope);
     const ctx = context(f.a.worktreeRoot, {
         notify: (message, level) => notices.push({ message, level }),
     });
@@ -1981,6 +2001,7 @@ test("an undelivered oversized repository catalog leaves no exposure marker", as
             ),
         );
         f.store.registerRepository(value);
+        enableReading(f.store, value.scope);
         f.store.setReadLink(f.a.scope, value.scope, true);
     }
     await h.handlers.get("session_start")({}, ctx);
@@ -2335,36 +2356,26 @@ test("manual extraction rejects an unbound current session whose repository chan
     );
 });
 
-test("management confirms directional access and legacy import without enabling generation", async (t) => {
+test("management confirms directional access to an added or listed repository without enabling generation", async (t) => {
     const f = await fixture(t),
         ctx = context(f.a.worktreeRoot),
         runtime = new MemoryRuntime(ctx, f.agentDir);
     f.cleanup.push(() => runtime.dispose());
-    let rows = ["Add repository…", "Always allow reads", "Back"];
-    ctx.ui.select = async () => rows.shift();
+    let rows = ["Always allow reads"];
+    const offered = [];
+    ctx.ui.select = async (_title, labels) => {
+        offered.push(labels);
+        return pickRow(labels, rows.shift());
+    };
     ctx.ui.input = async () => f.b.worktreeRoot;
-    await editRepositoryAccess(managementContext(runtime), ctx);
+    await editRepository(managementContext(runtime), ctx, ADD_REPOSITORY);
     assert.equal(f.store.readLink(f.a.scope, f.b.scope).isEnabled, true);
     assert.equal(f.store.readLink(f.b.scope, f.a.scope).isEnabled, false);
-    rows = [
-        (labels) => labels.find((label) => label.startsWith(f.b.name)),
-        "Ask each time",
-        "Back",
-    ];
-    ctx.ui.select = async (_title, labels) => {
-        const row = rows.shift();
-        return typeof row === "function" ? row(labels) : row;
-    };
-    await editRepositoryAccess(managementContext(runtime), ctx);
+    assert.ok(offered[0].some((label) => label.startsWith("✓ Ask each time")));
+    rows = ["Ask each time"];
+    await editRepository(managementContext(runtime), ctx, f.b.scope);
     assert.equal(f.store.readLink(f.a.scope, f.b.scope).isEnabled, false);
-    const note = f.store.addNote(
-        workspaceScope(f.a.worktreeRoot),
-        "Explicit legacy selection.",
-    );
-    await importLegacyMemories(managementContext(runtime), ctx);
-    assert.equal(f.store.records(f.a.scope)[0].id, note.id);
     assert.equal(runtime.settings().generateMemories, false);
-    assert.equal(f.store.records(workspaceScope(f.a.worktreeRoot)).length, 1);
 });
 
 test("legacy import conflicts name the conflicting memory path instead of a generic failure", async (t) => {
@@ -2403,31 +2414,13 @@ test("legacy import conflicts name the conflicting memory path instead of a gene
     } finally {
         database.close();
     }
-    const notices = [],
-        rows = [
-            (labels) => labels.find((label) => label.startsWith("Import")),
-            "Close",
-        ];
-    const ctx = context(f.a.worktreeRoot, {
-        select: async (_title, labels) => {
-            const row = rows.shift();
-            return typeof row === "function" ? row(labels) : row;
-        },
-        notify: (message, level) => notices.push({ message, level }),
-    });
-    const runtime = new MemoryRuntime(ctx, f.agentDir);
-    f.cleanup.push(() => runtime.dispose());
-    await manageCommand({
-        ctx,
-        runtime,
-        repositories: managementContext(runtime),
-        show() {},
-    });
-    assert.equal(notices.length, 1);
-    assert.equal(notices[0].level, "error");
-    assert.match(notices[0].message, /different version/);
-    assert.ok(notices[0].message.includes(note.path));
-    assert.doesNotMatch(notices[0].message, /model configuration/);
+    assert.throws(
+        () => importAllLegacy(f.store, f.a.worktreeRoot, f.a.scope),
+        (error) =>
+            error instanceof MemoryUserError &&
+            /different version/.test(safeError(error)) &&
+            safeError(error).includes(note.path),
+    );
     assert.equal(
         f.store.records(f.a.scope).find((record) => record.id === note.id).body,
         "Divergent wording.",
@@ -2440,15 +2433,19 @@ test("management cancellation and late confirmation after disposal leave persist
         ctx = context(f.a.worktreeRoot),
         runtime = new MemoryRuntime(ctx, f.agentDir);
     f.cleanup.push(() => runtime.dispose());
-    let rows = ["Add repository…", "Always allow reads"],
-        release;
-    ctx.ui.select = async () => rows.shift();
+    let release;
+    ctx.ui.select = async (_title, labels) =>
+        pickRow(labels, "Always allow reads");
     ctx.ui.input = async () => f.b.worktreeRoot;
     ctx.ui.confirm = () =>
         new Promise((resolve) => {
             release = resolve;
         });
-    const pending = editRepositoryAccess(managementContext(runtime), ctx);
+    const pending = editRepository(
+        managementContext(runtime),
+        ctx,
+        ADD_REPOSITORY,
+    );
     await tick();
     await runtime.dispose();
     release(true);

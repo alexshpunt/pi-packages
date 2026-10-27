@@ -27,7 +27,7 @@ actual owning source when warranted and acknowledge material uncertainty.
 Batch independent useful lookups. Follow current instructions, cite only
 memory actually used, never in pull requests, and update memory only when the
 user explicitly asks. For an explicit remember, forget, or correction request,
-use pi_codex_memory_note for an addition, or /codex-memory-manage for a deletion or correction. Do not edit generated
+use pi_codex_memory_note for an addition, or Saved memories in /codex-memory for a deletion or correction. Do not edit generated
 memory files directly; consolidation applies these notes.
 
 Memory citations:

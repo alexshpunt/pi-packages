@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { basename, join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type { MemorySettings } from "./config.js";
-import { MemoryUserError, memoryFailureCode } from "./failure.js";
+import { isMemoryEnabled, type MemorySettings } from "./config.js";
+import { MemoryCoordinator, type RunTally } from "./coordinator.js";
+import { MemoryUserError } from "./failure.js";
 import { type PipelineResult, piMemoryModel, runPipeline } from "./pipeline.js";
 import { findRepository, type RepositoryLocation } from "./repositories.js";
 import { RepositoryAccess } from "./repository-access.js";
@@ -18,7 +20,14 @@ import {
 } from "./sources.js";
 import { MemoryStore } from "./store.js";
 
-/** Owns one Pi session's scheduler and cancellation, not the database's cross-process locks. */
+const JOBS_FAILED =
+    "Some memory jobs failed. Open /codex-memory-settings and choose Show what failed.";
+
+/**
+ * Owns one Pi session's heartbeat, its memory coordinator and its cancellation, not the database's
+ * cross-process locks. While memory is on, the heartbeat marks the session open so no coordinator
+ * turns it into memory before it closes.
+ */
 export class MemoryRuntime {
     readonly store: MemoryStore;
     readonly scope: string;
@@ -29,23 +38,33 @@ export class MemoryRuntime {
     readonly cwd: string;
     private readonly owner = randomUUID();
     private readonly lifetime = new AbortController();
+    private readonly now: () => number;
+    private readonly sleep: (ms: number, signal: AbortSignal) => Promise<void>;
+    private readonly coordinator: MemoryCoordinator;
     private timer: ReturnType<typeof setTimeout> | undefined;
     private operation: AbortController | undefined;
     private pending: Promise<PipelineResult> | undefined;
     private isBusy = false;
     private isManaging = false;
-    private nextScanAtMs = 0;
     private lastError: string | undefined;
     private snapshot = "";
     private snapshotGeneration = -1;
     private injectedBytes = 0;
     private recallMarker: MemoryExposure | undefined;
-    /** Called when a job starts or ends, a job fails, or settings change. */
+    /** Called when the status may have changed: jobs, failures, settings, and every heartbeat. */
     onChange: (() => void) | undefined;
     constructor(
         private ctx: ExtensionContext,
         readonly agentDir: string,
+        options: {
+            readonly now?: () => number;
+            readonly sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
+        } = {},
     ) {
+        this.now = options.now ?? Date.now;
+        this.sleep =
+            options.sleep ??
+            ((ms, signal) => delay(ms, undefined, { signal, ref: false }));
         this.cwd = canonicalCwd(ctx.cwd);
         this.sessionId = ctx.sessionManager.getSessionId();
         this.store = new MemoryStore(join(agentDir, "pi-codex-memory"));
@@ -60,6 +79,19 @@ export class MemoryRuntime {
         this.reader = new MemoryReader(this.store, this.scope, (scope) =>
             this.access.canRead(scope),
         );
+        this.coordinator = new MemoryCoordinator({
+            store: this.store,
+            scope: this.scope,
+            owner: this.owner,
+            signal: this.lifetime.signal,
+            now: this.now,
+            sleep: this.sleep,
+            context: () => this.ctx,
+            scan: (settings, signal, shouldRead) =>
+                this.scan(settings, signal, false, shouldRead),
+            isPaused: () => this.isManaging,
+            changed: () => this.changed(),
+        });
     }
     updateContext(ctx: ExtensionContext): void {
         this.ctx = ctx;
@@ -70,11 +102,36 @@ export class MemoryRuntime {
     get signal(): AbortSignal {
         return this.lifetime.signal;
     }
+    /** A job runs in this Pi session: the current conversation, or closed ones while it coordinates. */
     get isRunning(): boolean {
-        return !!this.pending;
+        return !!this.pending || this.coordinator.isWorking;
     }
+    /**
+     * An error outside jobs in this session, or a job in this scope that failed in any session
+     * within the conversation window and has not succeeded since.
+     */
     get failure(): string | undefined {
-        return this.lastError;
+        if (this.lastError) return this.lastError;
+        if (this.coordinator.error) return this.coordinator.error;
+        const settings = this.settings();
+        return this.store.hasRecentFailure(
+            this.scope,
+            this.now() - settings.maxRolloutAgeDays * 86_400_000,
+        )
+            ? JOBS_FAILED
+            : undefined;
+    }
+    /** What memory jobs in this scope are doing now, in any Pi session, for the status bar. */
+    activityText(): string | undefined {
+        const { extractions, isConsolidating } = this.store.runningJobs(
+            this.scope,
+            this.now(),
+        );
+        if (extractions)
+            return `creating ${extractions} ${extractions === 1 ? "memory" : "memories"}…`;
+        if (isConsolidating || this.coordinator.isConsolidating)
+            return "updating summary…";
+        return this.failure ? "update failed" : undefined;
     }
     /** Short name of the active scope for menu titles and confirmations. */
     scopeName(): string {
@@ -83,9 +140,15 @@ export class MemoryRuntime {
             return `${this.repository.name} (repository)`;
         return `${basename(this.cwd)} (folder)`;
     }
+    /** A status display that fails must not stop the heartbeat or a job. */
+    private changed(): void {
+        try {
+            this.onChange?.();
+        } catch {}
+    }
     private setFailure(value: string | undefined): void {
         this.lastError = value;
-        this.onChange?.();
+        this.changed();
     }
     start(): void {
         if (
@@ -98,51 +161,99 @@ export class MemoryRuntime {
                 this.repository.scope,
                 this.ctx.sessionManager.getSessionDir(),
             );
-        this.store.prune(this.scope, this.settings(), Date.now());
+        this.store.prune(this.scope, this.settings(), this.now());
         this.heartbeat();
         this.schedule();
     }
+    /**
+     * Marks this session open while a scope that can turn it into memory has memory on: the
+     * folder's current scope, which another session may have changed, or Personal, which collects
+     * every folder. Otherwise nothing is recorded.
+     */
     private heartbeat(): void {
-        this.store.activity(
-            this.scope,
-            this.sessionId,
-            this.owner,
-            this.isBusy || !this.ctx.isIdle(),
-            Date.now(),
-        );
+        if (
+            isMemoryEnabled(
+                this.store.getSettings(this.store.scopeFor(this.cwd)),
+            ) ||
+            isMemoryEnabled(this.store.getSettings("global"))
+        )
+            this.store.activity(
+                this.scope,
+                this.sessionId,
+                this.owner,
+                this.isBusy || !this.ctx.isIdle(),
+                this.now(),
+            );
+        else this.store.releaseActivity(this.owner);
+    }
+    /**
+     * One heartbeat: retention cleanup, the open-session mark and the coordinator. The timer runs
+     * it at most every 30 seconds; it returns the scan the coordinator started, if any.
+     */
+    tick(): Promise<void> {
+        if (this.lifetime.signal.aborted) return Promise.resolve();
+        try {
+            this.store.prune(this.scope, this.settings(), this.now());
+            this.store.purgeExpired(this.now());
+            this.heartbeat();
+            if (this.lastError) this.setFailure(undefined);
+        } catch (error) {
+            this.setFailure(safeError(error));
+        }
+        const round = this.coordinator.tick();
+        // Jobs in other sessions show up in this session's status at the next heartbeat.
+        this.changed();
+        return round;
     }
     private schedule(): void {
         if (this.lifetime.signal.aborted) return;
         clearTimeout(this.timer);
-        const delayMs = Math.min(30_000, this.settings().pollIntervalMs);
+        let delayMs = 30_000;
+        try {
+            delayMs = Math.min(delayMs, this.settings().pollIntervalMs);
+        } catch {
+            // A busy database must not stop the heartbeat; try again at the longest interval.
+        }
         this.timer = setTimeout(() => {
             this.timer = undefined;
             if (this.lifetime.signal.aborted) return;
-            try {
-                this.store.prune(this.scope, this.settings(), Date.now());
-                this.heartbeat();
-                if (
-                    !this.isManaging &&
-                    !this.isBusy &&
-                    this.ctx.isIdle() &&
-                    !this.pending &&
-                    Date.now() >= this.nextScanAtMs &&
-                    this.settings().generateMemories
-                ) {
-                    this.nextScanAtMs =
-                        Date.now() + this.settings().pollIntervalMs;
-                    // run() records real failures; cancellation is not one.
-                    void this.run("automatic").catch(() => {});
-                }
-            } catch (error) {
-                this.setFailure(safeError(error));
-            }
+            void this.tick();
             this.schedule();
         }, delayMs);
         this.timer.unref();
     }
+    private scan(
+        settings: MemorySettings,
+        signal: AbortSignal,
+        allowUnmarked: boolean,
+        shouldRead?: (path: string, mtimeMs: number) => boolean,
+    ) {
+        return scanSources({
+            agentDir: this.agentDir,
+            cwd: this.cwd,
+            sessionDir: this.ctx.sessionManager.getSessionDir(),
+            scope: this.scope,
+            settings,
+            signal,
+            nowMs: this.now(),
+            allowUnmarked,
+            sessionDirectories: this.repository
+                ? this.store.repository(this.repository.scope)
+                      ?.sessionDirectories
+                : undefined,
+            isCwdExcluded:
+                this.scope === "global"
+                    ? undefined
+                    : (cwd) => this.store.selectsGlobal(cwd),
+            shouldRead,
+        });
+    }
     isActive(): boolean {
         return !this.lifetime.signal.aborted;
+    }
+    /** False once disposed or once this folder resolves to another memory scope; open menus close. */
+    hasCurrentScope(): boolean {
+        return this.isActive() && this.store.scopeFor(this.cwd) === this.scope;
     }
     setManaging(value: boolean): void {
         this.isManaging = value;
@@ -172,7 +283,7 @@ export class MemoryRuntime {
     injection(): string {
         const settings = this.settings();
         if (!settings.useMemories || !settings.injectSummary) return "";
-        this.store.prune(this.scope, settings, Date.now());
+        this.store.prune(this.scope, settings, this.now());
         // Corrections, forgetting, scope/config changes and expiry invalidate even an active turn.
         if (
             this.snapshotGeneration !== this.store.state(this.scope).generation
@@ -195,15 +306,25 @@ export class MemoryRuntime {
     evidence() {
         return { injectedBytes: this.injectedBytes, ...this.reader.evidence() };
     }
-    async cancel(): Promise<void> {
+    /** Stops the job for the current conversation; jobs for closed sessions keep running. */
+    async cancelCurrent(): Promise<void> {
         this.operation?.abort();
         try {
             await this.pending;
         } catch {}
     }
-    async run(
-        mode: "automatic" | "current" | "import" | "refresh",
-    ): Promise<PipelineResult> {
+    /**
+     * Turns closed conversations that are not memory yet into memory now, then updates the
+     * summary. `onWait` reports a wait for open sessions to check in after a settings change.
+     */
+    createNow(onWait?: (ms: number) => void): Promise<RunTally> {
+        return this.coordinator.runNow(onWait);
+    }
+    /** Stops every job this Pi session runs. A coordinator starts closed sessions again later. */
+    async cancel(): Promise<void> {
+        await Promise.all([this.cancelCurrent(), this.coordinator.cancel()]);
+    }
+    async run(mode: "current" | "import" | "refresh"): Promise<PipelineResult> {
         if (this.pending)
             throw new MemoryUserError("A memory job is already running.");
         if (this.isBusy || !this.ctx.isIdle())
@@ -213,9 +334,7 @@ export class MemoryRuntime {
         const settings = this.settings();
         const settingsSnapshot = JSON.stringify(settings);
         if (!settings.generateMemories)
-            throw new MemoryUserError(
-                "Turn on memory creation in /codex-memory first.",
-            );
+            throw new MemoryUserError("Turn memory on in /codex-memory first.");
         const operation = new AbortController();
         this.operation = operation;
         const signal = AbortSignal.any([
@@ -245,24 +364,7 @@ export class MemoryRuntime {
                     ? current
                         ? [current]
                         : []
-                    : await scanSources({
-                          agentDir: this.agentDir,
-                          cwd: this.cwd,
-                          sessionDir: ctx.sessionManager.getSessionDir(),
-                          scope: this.scope,
-                          settings,
-                          signal,
-                          nowMs: Date.now(),
-                          allowUnmarked: mode === "import",
-                          sessionDirectories: this.repository
-                              ? this.store.repository(this.repository.scope)
-                                    ?.sessionDirectories
-                              : undefined,
-                          isCwdExcluded:
-                              this.scope === "global"
-                                  ? undefined
-                                  : (cwd) => this.store.selectsGlobal(cwd),
-                      });
+                    : await this.scan(settings, signal, mode === "import");
             signal.throwIfAborted();
             return runPipeline({
                 store: this.store,
@@ -272,7 +374,9 @@ export class MemoryRuntime {
                 sources,
                 signal,
                 model: piMemoryModel(ctx),
-                force: mode !== "automatic",
+                now: this.now,
+                force: true,
+                onJobChange: () => this.changed(),
                 checkSource: (source, requestSignal) =>
                     source.id === this.sessionId
                         ? Promise.resolve(
@@ -293,32 +397,24 @@ export class MemoryRuntime {
         };
         const pending = execute();
         this.pending = pending;
-        this.onChange?.();
+        this.changed();
         try {
-            const result = await pending;
-            this.lastError = result.failed
-                ? "Some memory jobs failed. Open /codex-memory-manage and choose Show what failed."
-                : undefined;
-            return result;
-        } catch (error) {
-            const code = memoryFailureCode(error);
-            if (code !== "aborted" && code !== "superseded")
-                this.lastError = safeError(error);
-            throw error;
+            // Failed jobs are on their job rows; other errors reach the caller.
+            return await pending;
         } finally {
             if (this.pending === pending) {
                 this.pending = undefined;
                 this.operation = undefined;
             }
-            this.onChange?.();
+            this.changed();
         }
     }
     async saveSettings(settings: MemorySettings): Promise<void> {
         await this.cancel();
-        this.store.saveSettings(this.scope, settings);
-        if (!settings.generateMemories) this.lastError = undefined;
+        this.store.saveSettings(this.scope, settings, this.now());
+        this.heartbeat();
         this.prepareInjection();
-        this.onChange?.();
+        this.changed();
     }
     status(): object {
         const legacy = this.store.legacyMemories(this.cwd);
@@ -339,7 +435,11 @@ export class MemoryRuntime {
                           excludedSources: legacy.excludedSources,
                       },
             recall: this.evidence(),
-            isRunning: !!this.pending,
+            coordinator: {
+                isLeader: this.coordinator.isLeader,
+                workers: this.coordinator.workerCount,
+            },
+            isRunning: this.isRunning,
             lastError: this.lastError ?? null,
         };
     }
@@ -349,7 +449,8 @@ export class MemoryRuntime {
         this.access.endRequest();
         clearTimeout(this.timer);
         try {
-            await this.cancel();
+            // Every job settles before storage closes, so none writes to a closed database.
+            await Promise.all([this.cancelCurrent(), this.coordinator.close()]);
             this.store.releaseActivity(this.owner);
         } finally {
             this.store.close();

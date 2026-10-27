@@ -79,9 +79,12 @@ export interface JobLease {
     scope: string;
     key: string;
     owner: string;
-    generation: number;
+    /** The scope's lease epoch at claim time; a later epoch voids the lease. */
+    epoch: number;
     fingerprint: string;
 }
+/** How long an open session's heartbeat, and a coordinator's lease, last without renewal. */
+export const ACTIVITY_TTL_MS = 90_000;
 interface JobRow {
     owner: string | null;
     lease_until: number;
@@ -91,6 +94,20 @@ interface JobRow {
     fingerprint: string;
 }
 
+function canClaim(
+    row: JobRow | undefined,
+    fingerprint: string,
+    nowMs: number,
+    settings: MemorySettings,
+    force: boolean,
+): boolean {
+    if (row?.owner && row.lease_until > nowMs) return false;
+    if (row?.fingerprint !== fingerprint) return true;
+    if (row.status === "succeeded") return false;
+    return (
+        force || (row.retry_at <= nowMs && row.attempts < settings.maxAttempts)
+    );
+}
 /** SQLite is authoritative; Markdown is a private, disposable projection. */
 export class MemoryStore {
     private readonly database: DatabaseSync;
@@ -149,6 +166,10 @@ export class MemoryStore {
         }
         this.database.exec(`
             CREATE TABLE IF NOT EXISTS repositories (scope TEXT PRIMARY KEY, value TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS coordinators (scope TEXT PRIMARY KEY, owner TEXT NOT NULL,
+                lease_until INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS epochs (scope TEXT PRIMARY KEY, value INTEGER NOT NULL,
+                changed_at INTEGER NOT NULL);
             CREATE TABLE IF NOT EXISTS repository_reads (source_scope TEXT NOT NULL, target_scope TEXT NOT NULL,
                 enabled INTEGER NOT NULL DEFAULT 0, revision INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY(source_scope, target_scope));
@@ -190,7 +211,11 @@ export class MemoryStore {
             .get(canonicalCwd(cwd)) as { scope: string } | undefined;
         return selected?.scope === "global";
     }
-    selectScope(cwd: string, mode: "workspace" | "global"): string {
+    selectScope(
+        cwd: string,
+        mode: "workspace" | "global",
+        nowMs = Date.now(),
+    ): string {
         const scope = mode === "global" ? "global" : defaultMemoryScope(cwd);
         this.transaction(() => {
             const old = this.scopeFor(cwd);
@@ -201,6 +226,9 @@ export class MemoryStore {
                     "UPDATE scopes SET generation = generation + 1 WHERE scope = ?",
                 )
                 .run(old);
+            // Sessions in this folder now belong to the other scope; both scopes' jobs restart.
+            this.bumpEpoch(old, nowMs, true);
+            this.bumpEpoch(scope, nowMs, true);
             if (mode === "global")
                 this.database
                     .prepare(
@@ -524,6 +552,7 @@ export class MemoryStore {
             }
             if (imported || removed || exclusionsAdded) {
                 this.changed(targetScope, true);
+                this.bumpEpoch(targetScope, nowMs, false);
                 this.publish(targetScope, nowMs);
             }
             return {
@@ -540,7 +569,11 @@ export class MemoryStore {
             .get(scope) as { value: string } | undefined;
         return parseSettings(row ? JSON.parse(row.value) : DEFAULT_SETTINGS);
     }
-    saveSettings(scope: string, value: unknown): MemorySettings {
+    saveSettings(
+        scope: string,
+        value: unknown,
+        nowMs = Date.now(),
+    ): MemorySettings {
         const settings = parseSettings(value);
         this.transaction(() => {
             this.ensureScope(scope);
@@ -554,8 +587,46 @@ export class MemoryStore {
                     "UPDATE scopes SET generation = generation + 1 WHERE scope = ?",
                 )
                 .run(scope);
+            this.bumpEpoch(scope, nowMs, true);
         });
         return settings;
+    }
+    /**
+     * Counts changes that void running jobs: settings, scope selection, edits, forgetting and
+     * imports. New memories, notes and expiry do not, so parallel jobs do not void each other.
+     */
+    epoch(scope: string): number {
+        const row = this.database
+            .prepare("SELECT value FROM epochs WHERE scope = ?")
+            .get(scope) as { value: number } | undefined;
+        return row?.value ?? 0;
+    }
+    /** When the epoch last changed, for example when memory was turned on; 0 if never. */
+    epochChangedAt(scope: string): number {
+        const row = this.database
+            .prepare("SELECT changed_at FROM epochs WHERE scope = ?")
+            .get(scope) as { changed_at: number } | undefined;
+        return row?.changed_at ?? 0;
+    }
+    /**
+     * Voids running jobs: their leases end now, so no session shows or waits for them. Settings
+     * and scope changes also restart the heartbeat period; edits and forgetting do not.
+     */
+    private bumpEpoch(
+        scope: string,
+        nowMs: number,
+        isHeartbeatChange: boolean,
+    ): void {
+        this.database
+            .prepare(
+                `INSERT INTO epochs(scope,value,changed_at) VALUES (?,1,?) ON CONFLICT(scope) DO UPDATE SET value = value + 1${isHeartbeatChange ? ", changed_at = excluded.changed_at" : ""}`,
+            )
+            .run(scope, isHeartbeatChange ? nowMs : 0);
+        this.database
+            .prepare(
+                "UPDATE jobs SET owner = NULL, lease_until = 0, status = 'cancelled', finished_at = ?, attempts = MAX(0, attempts - 1), error = 'superseded' WHERE scope = ? AND owner IS NOT NULL",
+            )
+            .run(nowMs, scope);
     }
     state(scope: string): ScopeState {
         const row = this.database
@@ -637,19 +708,10 @@ export class MemoryStore {
     ): JobLease | null {
         return this.transaction(() => {
             this.ensureScope(scope);
-            const row = this.database
-                .prepare("SELECT * FROM jobs WHERE scope = ? AND key = ?")
-                .get(scope, key) as unknown as JobRow | undefined;
-            if (row?.owner && row.lease_until > nowMs) return null;
-            const isSame = row?.fingerprint === fingerprint;
-            if (isSame && row?.status === "succeeded") return null;
-            if (
-                !force &&
-                isSame &&
-                row &&
-                (row.retry_at > nowMs || row.attempts >= settings.maxAttempts)
-            )
+            const row = this.job(scope, key);
+            if (!canClaim(row, fingerprint, nowMs, settings, force))
                 return null;
+            const isSame = row?.fingerprint === fingerprint;
             const owner = randomUUID();
             this.database
                 .prepare(`INSERT OR REPLACE INTO jobs(scope,key,fingerprint,owner,lease_until,retry_at,attempts,status)
@@ -667,9 +729,75 @@ export class MemoryStore {
                 key,
                 owner,
                 fingerprint,
-                generation: this.state(scope).generation,
+                epoch: this.epoch(scope),
             };
         });
+    }
+    private job(scope: string, key: string): JobRow | undefined {
+        return this.database
+            .prepare("SELECT * FROM jobs WHERE scope = ? AND key = ?")
+            .get(scope, key) as unknown as JobRow | undefined;
+    }
+    /** Whether claim() would take the job now, so a coordinator skips waiting jobs before validating a model. */
+    isClaimable(
+        scope: string,
+        key: string,
+        fingerprint: string,
+        nowMs: number,
+        settings: MemorySettings,
+        force = false,
+    ): boolean {
+        return canClaim(
+            this.job(scope, key),
+            fingerprint,
+            nowMs,
+            settings,
+            force,
+        );
+    }
+    /** When the job last succeeded; a session file not modified since then needs no reading. */
+    succeededAt(scope: string, key: string): number | undefined {
+        const row = this.database
+            .prepare(
+                "SELECT finished_at FROM jobs WHERE scope = ? AND key = ? AND status = 'succeeded'",
+            )
+            .get(scope, key) as { finished_at: number } | undefined;
+        return row?.finished_at;
+    }
+    /** Jobs running now in a scope, in any Pi process. */
+    runningJobs(
+        scope: string,
+        nowMs: number,
+    ): { extractions: number; isConsolidating: boolean } {
+        const keys = (
+            this.database
+                .prepare(
+                    "SELECT key FROM jobs WHERE scope = ? AND owner IS NOT NULL AND lease_until > ?",
+                )
+                .all(scope, nowMs) as { key: string }[]
+        ).map((row) => row.key);
+        return {
+            extractions: keys.filter((key) => key.startsWith("extract:"))
+                .length,
+            isConsolidating: keys.includes("consolidation"),
+        };
+    }
+    /**
+     * Whether a job in the scope failed since `sinceMs` and has not succeeded since, in any Pi
+     * process. A later success replaces the job's row; a forgotten conversation's failure no
+     * longer counts.
+     */
+    hasRecentFailure(scope: string, sinceMs: number): boolean {
+        const keys = this.database
+            .prepare(
+                "SELECT key FROM jobs WHERE scope = ? AND status IN ('failed','blocked') AND finished_at > ?",
+            )
+            .all(scope, sinceMs) as { key: string }[];
+        return keys.some(
+            ({ key }) =>
+                !key.startsWith("extract:") ||
+                !this.isForgotten(scope, key.slice("extract:".length)),
+        );
     }
     hasCompleted(scope: string, key: string, fingerprint: string): boolean {
         return !!this.database
@@ -692,13 +820,14 @@ export class MemoryStore {
                 .get(scope, key) as unknown as JobRow | undefined;
             if (row?.owner && row.lease_until > nowMs) return;
             this.database
-                .prepare(`INSERT OR REPLACE INTO jobs(scope,key,fingerprint,attempts,status,error)
-                VALUES (?,?,?,?,'blocked',?)`)
+                .prepare(`INSERT OR REPLACE INTO jobs(scope,key,fingerprint,attempts,status,finished_at,error)
+                VALUES (?,?,?,?,'blocked',?,?)`)
                 .run(
                     scope,
                     key,
                     fingerprint,
                     row?.fingerprint === fingerprint ? row.attempts : 0,
+                    nowMs,
                     code,
                 );
         });
@@ -714,15 +843,11 @@ export class MemoryStore {
         return (
             row?.owner === lease.owner &&
             row.lease_until > nowMs &&
-            this.state(lease.scope).generation === lease.generation
+            this.epoch(lease.scope) === lease.epoch
         );
     }
-    reserveCall(
-        lease: JobLease,
-        settings: MemorySettings,
-        nowMs: number,
-        source?: RolloutSource,
-    ): void {
+    /** Confirms the lease still owns the job right before a model call, then counts the call in today's usage. */
+    recordCall(lease: JobLease, nowMs: number, source?: RolloutSource): void {
         this.transaction(() => {
             // A scope selection can change after the lease was claimed without changing settings.
             if (
@@ -735,11 +860,6 @@ export class MemoryStore {
             this.database
                 .prepare("INSERT OR IGNORE INTO usage(scope,day) VALUES (?,?)")
                 .run(lease.scope, day);
-            const row = this.database
-                .prepare("SELECT calls FROM usage WHERE scope = ? AND day = ?")
-                .get(lease.scope, day) as { calls: number };
-            if (row.calls >= settings.maxCallsPerDay)
-                throw new MemoryFailure("daily_budget");
             this.database
                 .prepare(
                     "UPDATE usage SET calls = calls + 1 WHERE scope = ? AND day = ?",
@@ -785,11 +905,12 @@ export class MemoryStore {
     ): void {
         this.database
             .prepare(
-                "UPDATE jobs SET owner = NULL, status = ?, retry_at = ?, attempts = CASE WHEN ? THEN MAX(0, attempts - 1) ELSE attempts END, error = ? WHERE scope = ? AND key = ? AND owner = ?",
+                "UPDATE jobs SET owner = NULL, status = ?, retry_at = ?, finished_at = ?, attempts = CASE WHEN ? THEN MAX(0, attempts - 1) ELSE attempts END, error = ? WHERE scope = ? AND key = ? AND owner = ?",
             )
             .run(
                 isCancelled ? "cancelled" : "failed",
                 nowMs + (isCancelled ? 0 : delayMs),
+                nowMs,
                 isCancelled ? 1 : 0,
                 isCancelled ? "aborted" : code,
                 lease.scope,
@@ -901,7 +1022,8 @@ export class MemoryStore {
                 .run(
                     this.mask(summary),
                     JSON.stringify(inputs),
-                    nowMs,
+                    // Only a summary the model wrote starts the interval; an empty template does not.
+                    Object.keys(inputs).length ? nowMs : 0,
                     lease.scope,
                 );
             this.succeeded(lease, nowMs);
@@ -947,13 +1069,14 @@ export class MemoryStore {
             return record;
         });
     }
+    /** Replaces a memory with an edited note, or forgets it with null; returns the note's path. */
     revise(
         scope: string,
         path: string,
         body: string | null,
         nowMs = Date.now(),
-    ): void {
-        this.transaction(() => {
+    ): string | undefined {
+        return this.transaction(() => {
             this.ensureScope(scope);
             const record = this.records(scope, nowMs).find(
                 (item) => item.path === path,
@@ -967,6 +1090,7 @@ export class MemoryStore {
             this.database
                 .prepare("DELETE FROM records WHERE scope = ? AND id = ?")
                 .run(scope, record.id);
+            let notePath: string | undefined;
             if (body !== null) {
                 const masked = this.mask(body).trim();
                 if (!masked || Buffer.byteLength(masked) > SUMMARY_MAX_BYTES)
@@ -974,13 +1098,14 @@ export class MemoryStore {
                         "Correction must contain 1–9000 UTF-8 bytes.",
                     );
                 const id = randomUUID();
+                notePath = `extensions/ad_hoc/notes/${id}.md`;
                 this.put(scope, {
                     ...record,
                     id,
                     source: null,
                     importedFrom: undefined,
                     kind: "note",
-                    path: `extensions/ad_hoc/notes/${id}.md`,
+                    path: notePath,
                     body: masked,
                     isPinned: true,
                     generatedAtMs: nowMs,
@@ -991,8 +1116,10 @@ export class MemoryStore {
                     "UPDATE scopes SET generation = generation + 1 WHERE scope = ?",
                 )
                 .run(scope);
+            this.bumpEpoch(scope, nowMs, false);
             this.changed(scope, true);
             this.publish(scope, nowMs);
+            return notePath;
         });
     }
     setRetention(
@@ -1069,6 +1196,7 @@ export class MemoryStore {
                     "UPDATE scopes SET generation = generation + 1, revision = revision + 1, summary = '' WHERE scope = ?",
                 )
                 .run(scope);
+            this.bumpEpoch(scope, nowMs, false);
             this.publish(scope, nowMs);
         });
     }
@@ -1098,7 +1226,59 @@ export class MemoryStore {
             .prepare(
                 "INSERT OR REPLACE INTO activity(scope,session_id,owner,busy,expires_at) VALUES (?,?,?,?,?)",
             )
-            .run(scope, sessionId, owner, isBusy ? 1 : 0, nowMs + 90_000);
+            .run(
+                scope,
+                sessionId,
+                owner,
+                isBusy ? 1 : 0,
+                nowMs + ACTIVITY_TTL_MS,
+            );
+    }
+    /** Whether any Pi process with memory on still holds this session open, in any scope. */
+    isSessionOpen(sessionId: string, nowMs: number): boolean {
+        return !!this.database
+            .prepare(
+                "SELECT 1 FROM activity WHERE session_id = ? AND expires_at > ?",
+            )
+            .get(sessionId, nowMs);
+    }
+    /**
+     * Takes or renews the scope's coordinator lease. One Pi process per scope coordinates memory
+     * jobs; another takes over once the lease lapses.
+     */
+    lead(scope: string, owner: string, nowMs: number): boolean {
+        return this.transaction(() => {
+            this.ensureScope(scope);
+            const row = this.database
+                .prepare(
+                    "SELECT owner, lease_until FROM coordinators WHERE scope = ?",
+                )
+                .get(scope) as
+                | { owner: string; lease_until: number }
+                | undefined;
+            if (row && row.owner !== owner && row.lease_until > nowMs)
+                return false;
+            this.database
+                .prepare(
+                    "INSERT OR REPLACE INTO coordinators(scope,owner,lease_until) VALUES (?,?,?)",
+                )
+                .run(scope, owner, nowMs + ACTIVITY_TTL_MS);
+            return true;
+        });
+    }
+    /** Removes heartbeats and leases a crashed or killed Pi process left behind. */
+    purgeExpired(nowMs: number): void {
+        this.database
+            .prepare("DELETE FROM activity WHERE expires_at <= ?")
+            .run(nowMs);
+        this.database
+            .prepare("DELETE FROM coordinators WHERE lease_until <= ?")
+            .run(nowMs);
+    }
+    releaseLead(owner: string): void {
+        this.database
+            .prepare("DELETE FROM coordinators WHERE owner = ?")
+            .run(owner);
     }
     releaseActivity(owner: string): void {
         this.database

@@ -130,10 +130,10 @@ try {
         ...DEFAULT_SETTINGS,
         extractModel: choice,
         consolidateModel: choice,
+        useMemories: true,
         generateMemories: true,
         maxAttempts: 1,
         maxRolloutsPerRun: 1,
-        maxCallsPerDay: 6,
         ...(execution.overrides?.[target.key] ?? {}),
     });
     if (!execution.reuseGenerationFrom) store.saveSettings(scope, settings);

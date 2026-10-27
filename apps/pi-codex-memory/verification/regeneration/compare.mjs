@@ -1,3 +1,6 @@
+// Drives the archived 0.1.0 packages recorded in .reports with their original commands and menus
+// (`/codex-memory extract`, Korean labels). It compares those recorded versions and is not
+// updated for later menus.
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { cp, mkdir, readFile, stat } from "node:fs/promises";
@@ -423,7 +426,11 @@ async function generate(name, kit, store, settings, command = "extract") {
         fingerprint: row.source?.fingerprint,
         bodySHA256: sha256(row.body),
     }));
-    store.saveSettings(scope, { ...settings, generateMemories: true });
+    store.saveSettings(scope, {
+        ...settings,
+        useMemories: true,
+        generateMemories: true,
+    });
     try {
         await active.session.prompt(`/codex-memory ${command}`);
     } finally {

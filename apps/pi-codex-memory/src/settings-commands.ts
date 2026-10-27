@@ -3,280 +3,251 @@ import type {
     ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import {
-    type MemorySettings,
-    type ModelChoice,
-    parseSettings,
-    settingRange,
-} from "./config.js";
-import { MemoryUserError } from "./failure.js";
+    type CommandOptions,
+    duration,
+    modelText,
+    resultText,
+} from "./commands.js";
+import { DEFAULT_SETTINGS, isMemoryEnabled } from "./config.js";
+import { memoryFailureCode } from "./failure.js";
+import { openSettings, type SettingRow } from "./menus.js";
 import {
-    editRepositoryAccess,
-    type RepositoryCommandContext,
+    editRepository,
+    repositoryOptions,
+    repositorySummary,
 } from "./repository-commands.js";
 import type { MemoryRuntime } from "./runtime.js";
 import { safeError } from "./safety.js";
 
-/** Settings shown as plain numbers; `scale` converts the shown unit to the stored value. */
-const NUMBER_ROWS = [
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+
+type NumberKey =
+    | "minIdleMs"
+    | "consolidationCooldownMs"
+    | "maxRolloutAgeDays"
+    | "maxUnusedDays";
+/** Settings that Enter and Space cycle through preset values, as Pi's /settings does. */
+const NUMBER_ROWS: readonly {
+    readonly key: NumberKey;
+    readonly label: string;
+    readonly description: string;
+    readonly format: (value: number) => string;
+    readonly presets: readonly number[];
+}[] = [
     {
         key: "minIdleMs",
-        label: "Idle time before creating memories",
-        unit: "minutes",
-        scale: 60_000,
+        label: "Create memories after",
+        description:
+            "How long after its last message a closed conversation becomes memory. Open conversations wait until they close. Shorter makes memories appear sooner but calls the model more often.",
+        format: (value) => `${duration(value)} idle`,
+        presets: [15 * MINUTE, 30 * MINUTE, 60 * MINUTE, 2 * HOUR, 6 * HOUR],
     },
     {
         key: "consolidationCooldownMs",
-        label: "Consolidation interval",
-        unit: "minutes",
-        scale: 60_000,
+        label: "Update the summary every",
+        description:
+            "How often new memories are merged into the summary sent with each request. New memories can be searched right away; a longer interval uses fewer model calls.",
+        format: duration,
+        presets: [
+            15 * MINUTE,
+            30 * MINUTE,
+            60 * MINUTE,
+            2 * HOUR,
+            3 * HOUR,
+            6 * HOUR,
+        ],
+    },
+    {
+        key: "maxRolloutAgeDays",
+        label: "Use conversations from the last",
+        description:
+            "Only conversations with a message in this period become memory. Older conversations are skipped.",
+        format: (value) => `${value} days`,
+        presets: [1, 3, 7, 14, 30],
     },
     {
         key: "maxUnusedDays",
-        label: "Keep unused memories",
-        unit: "days",
-        scale: 1,
+        label: "Delete unused memories after",
+        description:
+            "Memories the agent has not used for this long are deleted. Memories you asked the agent to save or edited yourself are kept.",
+        format: (value) => `${value} days`,
+        presets: [7, 30, 90, 365],
     },
-    {
-        key: "maxCallsPerDay",
-        label: "Model calls per UTC day",
-        unit: "calls",
-        scale: 1,
-    },
-] as const satisfies readonly {
-    key: keyof MemorySettings;
-    label: string;
-    unit: string;
-    scale: number;
-}[];
+];
 
-function modelName(model: ModelChoice): string {
-    const name = `${model.provider}/${model.id}`;
-    return model.reasoning ? `${name} · ${model.reasoning} reasoning` : name;
-}
-function isSameModel(left: ModelChoice | null, right: ModelChoice | null) {
-    return JSON.stringify(left) === JSON.stringify(right);
-}
-export function modelText(settings: MemorySettings): string {
-    const { extractModel, consolidateModel } = settings;
-    if (!extractModel || !consolidateModel) return "not set";
-    return isSameModel(extractModel, consolidateModel)
-        ? modelName(extractModel)
-        : `${modelName(extractModel)} (extraction), ${modelName(consolidateModel)} (consolidation)`;
-}
-/** One model for both stages, with each stage's default reasoning. */
-async function pickModel(
-    ctx: ExtensionContext,
-): Promise<ModelChoice | undefined> {
-    const names = ctx.modelRegistry
-        .getAvailable()
-        .map((model) => `${model.provider}/${model.id}`)
-        .sort();
-    if (!names.length)
-        throw new MemoryUserError(
-            "No models are available. Set up a provider in Pi first.",
-        );
-    const choice = await ctx.ui.select("Choose a model for memories", names);
-    if (!choice) return undefined;
-    const slash = choice.indexOf("/");
-    return { provider: choice.slice(0, slash), id: choice.slice(slash + 1) };
-}
-/** Consent for sending conversation copies; required whenever creation turns on or its models change. */
-async function confirmCreation(
-    runtime: MemoryRuntime,
-    ctx: ExtensionContext,
-    settings: MemorySettings,
-): Promise<boolean> {
-    return ctx.ui.confirm(
-        "Send conversations to create memories?",
-        [
-            `Pi masks copies of conversations in ${runtime.scopeName()} and sends them to ${modelText(settings)}.`,
-            "This uses your provider quota or costs money. Masking can miss private values.",
-            `At most ${settings.maxCallsPerDay} model calls a day, up to ${Math.round(settings.maxInputBytes / 1024)} KiB each. Your Pi sessions are not changed.`,
-        ].join("\n"),
-    );
-}
-function needsConsent(before: MemorySettings, after: MemorySettings): boolean {
-    return (
-        after.generateMemories &&
-        (!before.generateMemories ||
-            !isSameModel(before.extractModel, after.extractModel) ||
-            !isSameModel(before.consolidateModel, after.consolidateModel))
-    );
-}
-/** Turns on "use and create": picks a model if none is set, then asks for consent. */
-export async function enableCreation(
-    runtime: MemoryRuntime,
-    ctx: ExtensionContext,
-): Promise<boolean> {
-    const before = runtime.settings();
-    let models = {};
-    if (!before.extractModel || !before.consolidateModel) {
-        const model = await pickModel(ctx);
-        if (!model) return false;
-        models = { extractModel: model, consolidateModel: model };
-    }
-    const after = parseSettings({
-        ...before,
-        ...models,
-        useMemories: true,
-        generateMemories: true,
-    });
-    if (
-        needsConsent(before, after) &&
-        !(await confirmCreation(runtime, ctx, after))
-    )
-        return false;
-    await runtime.saveSettings(after);
-    ctx.ui.notify(
-        `Memory creation is on. A conversation becomes memory after ${after.minIdleMs / 60_000} idle minutes.`,
-        "info",
-    );
-    return true;
-}
-async function save(
-    runtime: MemoryRuntime,
-    ctx: ExtensionContext,
-    value: unknown,
-): Promise<boolean> {
-    const before = runtime.settings();
-    let after: MemorySettings;
-    try {
-        after = parseSettings(value);
-    } catch (error) {
-        throw new MemoryUserError(
-            error instanceof Error ? error.message : "Invalid settings.",
-        );
-    }
-    if (
-        needsConsent(before, after) &&
-        !(await confirmCreation(runtime, ctx, after))
-    )
-        return false;
-    await runtime.saveSettings(after);
-    return true;
-}
-async function editNumber(
+function numberRow(
     runtime: MemoryRuntime,
     ctx: ExtensionContext,
     row: (typeof NUMBER_ROWS)[number],
-): Promise<void> {
-    const settings = runtime.settings();
-    const input = await ctx.ui.input(
-        `${row.label} (${row.unit})`,
-        String(settings[row.key] / row.scale),
+): SettingRow {
+    const current = runtime.settings()[row.key];
+    const values = [...new Set([...row.presets, current])].sort(
+        (a, b) => a - b,
     );
-    if (input === undefined) return;
-    const [min, max] = settingRange(row.key)!;
-    const value = Number(input.trim());
-    if (
-        !/^\d+$/.test(input.trim()) ||
-        value * row.scale < min ||
-        value * row.scale > max
-    )
-        throw new MemoryUserError(
-            `Enter a whole number from ${Math.ceil(min / row.scale)} to ${Math.floor(max / row.scale)} ${row.unit}.`,
-        );
-    await save(runtime, ctx, { ...settings, [row.key]: value * row.scale });
+    return {
+        id: row.key,
+        label: row.label,
+        value: row.format(current),
+        values: values.map(row.format),
+        description: `${row.description} Default: ${row.format(DEFAULT_SETTINGS[row.key])}.`,
+        apply: async (label) => {
+            const settings = runtime.settings();
+            const value = values.find((item) => row.format(item) === label);
+            if (value === undefined || value === settings[row.key]) return;
+            try {
+                await runtime.saveSettings({ ...settings, [row.key]: value });
+            } catch (error) {
+                ctx.ui.notify(safeError(error), "error");
+            }
+        },
+    };
 }
-async function editJson(
+/**
+ * Turns the current conversation into memory; in the TUI it keeps running after the page closes.
+ * Returns false when the user declines.
+ */
+async function rememberNow(
     runtime: MemoryRuntime,
-    ctx: ExtensionContext,
-): Promise<void> {
-    const text = await ctx.ui.editor(
-        `Memory settings for ${runtime.scopeName()} (JSON)`,
-        JSON.stringify(runtime.settings(), null, 2),
-    );
-    if (text === undefined) return;
-    let value: unknown;
-    try {
-        value = JSON.parse(text);
-    } catch {
-        throw new MemoryUserError(
-            "The text is not valid JSON; nothing was saved.",
-        );
-    }
-    if (await save(runtime, ctx, value))
-        ctx.ui.notify("Memory settings saved.", "info");
-}
-async function editScope(
-    runtime: MemoryRuntime,
-    ctx: ExtensionContext,
-    changeScope: (mode: "workspace" | "global") => Promise<void>,
+    ctx: ExtensionCommandContext,
 ): Promise<boolean> {
-    const current =
-        runtime.scope === "global" ? "Personal" : "This repository or folder";
-    const choice = await ctx.ui.select("Memory scope", [
-        "This repository or folder",
-        "Personal",
-        "Back",
-    ]);
-    if (!choice || choice === "Back" || choice === current) return false;
     if (
         !(await ctx.ui.confirm(
-            `Switch to ${choice === "Personal" ? "personal" : "repository or folder"} memory?`,
-            choice === "Personal"
-                ? "This folder uses your personal memory, which every folder set to Personal shares along with its settings. Existing memories are not copied or merged."
-                : "This repository, its subfolders and worktrees share one memory and its settings. Outside Git, each folder has its own. Existing memories are not copied or merged.",
+            "Remember this conversation now?",
+            `Pi masks a copy of this conversation and sends it to ${modelText(runtime.settings(), ctx)}. This uses your provider quota or costs money.`,
         ))
     )
         return false;
-    await changeScope(choice === "Personal" ? "global" : "workspace");
+    const work = runtime.run("current");
+    if (ctx.mode !== "tui") {
+        const result = await work;
+        ctx.ui.notify(resultText(result), result.failed ? "error" : "info");
+        return true;
+    }
+    // The TUI waits for command handlers before taking input; let the job finish on its own.
     ctx.ui.notify(
-        "Memory scope changed. This scope has its own settings.",
+        "Remembering this conversation. To stop, open /codex-memory-settings.",
         "info",
+    );
+    void work.then(
+        (result) => {
+            if (runtime.isActive())
+                ctx.ui.notify(
+                    resultText(result),
+                    result.failed ? "error" : "info",
+                );
+        },
+        (error) => {
+            if (runtime.isActive() && memoryFailureCode(error) !== "aborted")
+                ctx.ui.notify(safeError(error), "error");
+        },
     );
     return true;
 }
-export async function settingsCommand(options: {
-    ctx: ExtensionCommandContext;
-    runtime: MemoryRuntime;
-    repositories: RepositoryCommandContext;
-    show: (text: string) => void;
-    changeScope: (mode: "workspace" | "global") => Promise<void>;
-}): Promise<void> {
+async function forgetAll(
+    runtime: MemoryRuntime,
+    ctx: ExtensionContext,
+): Promise<void> {
+    if (
+        !(await ctx.ui.confirm(
+            "Forget all memories in this scope?",
+            `Clears every memory and summary for ${runtime.scopeName()}. The conversations they came from will not create them again. Your Pi sessions are not changed.`,
+        ))
+    )
+        return;
+    await runtime.cancel();
+    runtime.store.reset(runtime.scope);
+    ctx.ui.notify("All memories in this scope were forgotten.", "info");
+}
+function settingRows(
+    runtime: MemoryRuntime,
+    options: CommandOptions,
+): SettingRow[] {
+    const { ctx, repositories } = options;
+    const settings = runtime.settings();
+    return [
+        ...(runtime.isRunning
+            ? [
+                  {
+                      id: "stop",
+                      label: "Stop current job",
+                      value: "running",
+                      description: "Stops the memory job that is running now.",
+                  },
+              ]
+            : isMemoryEnabled(settings)
+              ? [
+                    {
+                        id: "remember",
+                        label: "Remember this conversation now",
+                        value: "",
+                        description: `Turns this conversation into memory now instead of after it closes. Calls ${modelText(settings, ctx)}.`,
+                    },
+                ]
+              : []),
+        ...(runtime.failure
+            ? [
+                  {
+                      id: "failure",
+                      label: "Show what failed",
+                      value: "",
+                      description:
+                          "Shows the last error and recent memory jobs.",
+                  },
+              ]
+            : []),
+        ...NUMBER_ROWS.map((row) => numberRow(runtime, ctx, row)),
+        {
+            id: "repositories",
+            label: "Other repositories",
+            value: repositorySummary(repositories),
+            description:
+                "Repositories whose memories the agent may read from here, and whether it asks first. Access goes one way; their memories are never copied or changed.",
+            options: () => repositoryOptions(repositories),
+        },
+        {
+            id: "reset",
+            label: "Forget all memories in this scope",
+            value: "",
+            description: `Deletes every memory and summary for ${runtime.scopeName()}. The conversations they came from will not create them again.`,
+        },
+    ];
+}
+
+/** `/codex-memory-settings`: memory jobs, timing, limits and other repositories. */
+export async function settingsCommand(options: CommandOptions): Promise<void> {
     const { ctx, runtime, show } = options;
     if (!ctx.hasUI) {
-        show(JSON.stringify(runtime.settings(), null, 2));
+        show(JSON.stringify(runtime.status(), null, 2));
         return;
     }
+    let selectedId: string | undefined;
     while (true) {
-        const settings = runtime.settings();
-        const numbers = NUMBER_ROWS.map(
-            (row) =>
-                `${row.label}: ${settings[row.key] / row.scale} ${row.unit}`,
+        const choice = await openSettings(
+            ctx,
+            "Codex Memory settings",
+            () => settingRows(runtime, options),
+            { selectedId, isSearchable: true },
         );
-        const rows = [
-            `Model: ${modelText(settings)}`,
-            ...numbers,
-            `Memory scope: ${runtime.scope === "global" ? "Personal" : "This repository or folder"}`,
-            "Repository access",
-            "Edit all settings as JSON",
-            "Close",
-        ];
-        const choice = await ctx.ui.select(
-            `Memory settings · ${runtime.scopeName()}`,
-            rows,
-        );
-        if (!choice || choice === "Close") return;
+        if (!choice || !runtime.hasCurrentScope()) return;
+        selectedId = choice.id;
         try {
-            const number = NUMBER_ROWS[numbers.indexOf(choice)];
-            if (number) await editNumber(runtime, ctx, number);
-            else if (choice === rows[0]) {
-                const model = await pickModel(ctx);
-                if (model)
-                    await save(runtime, ctx, {
-                        ...settings,
-                        extractModel: model,
-                        consolidateModel: model,
-                    });
-            } else if (choice.startsWith("Memory scope")) {
-                if (await editScope(runtime, ctx, options.changeScope)) return;
-            } else if (choice === "Repository access")
-                await editRepositoryAccess(options.repositories, ctx);
-            else if (choice === "Edit all settings as JSON")
-                await editJson(runtime, ctx);
+            if (choice.id === "remember") {
+                if (await rememberNow(runtime, ctx)) return;
+            } else if (choice.id === "stop") {
+                await runtime.cancel();
+                ctx.ui.notify("Stopped the memory job.", "info");
+            } else if (choice.id === "failure") {
+                show(JSON.stringify(runtime.status(), null, 2));
+                return;
+            } else if (choice.id === "repositories" && choice.value)
+                await editRepository(options.repositories, ctx, choice.value);
+            else if (choice.id === "reset") await forgetAll(runtime, ctx);
         } catch (error) {
+            if (!runtime.isActive() || memoryFailureCode(error) === "aborted")
+                return;
             ctx.ui.notify(safeError(error), "error");
+            if (!runtime.hasCurrentScope()) return;
         }
     }
 }
