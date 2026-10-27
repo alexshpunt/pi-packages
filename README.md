@@ -13,6 +13,7 @@ These apps install into Pi. Each README states its requirements, setup, and firs
 | [`apps/pi-claude-bridge`](apps/pi-claude-bridge) | `@buyong/pi-claude-bridge` | Claude models in Pi through Claude Code and the Agent SDK |
 | [`apps/pi-devin`](apps/pi-devin) | `@buyong/pi-devin` | Unofficial provider for Devin models with a Devin account |
 | [`apps/pi-ollama-cloud`](apps/pi-ollama-cloud) | `@buyong/pi-ollama-cloud` | Ollama Cloud provider, web tools, and usage reports |
+| [`apps/pi-refuseless`](apps/pi-refuseless) | `@buyong/pi-refuseless` | Refuseless provider: API-key login and the models your key can use |
 | [`apps/pi-codex`](apps/pi-codex) | `@buyong/pi-codex` | The four Codex extensions below and the `imagegen` skill in one bundle |
 | [`apps/pi-codex-auto-review`](apps/pi-codex-auto-review) | `@buyong/pi-codex-auto-review` | Execution approval review inspired by Codex's "Approve for me" |
 | [`apps/pi-codex-computer-use`](apps/pi-codex-computer-use) | `@buyong/pi-codex-computer-use` | Codex Computer Use and Browser Use through the Codex Desktop runtime |
@@ -111,5 +112,5 @@ Shared CI adds a latest-Pi compatibility check and a live-service check for this
 
 The repository root is under the MIT License ([`LICENSE`](LICENSE)). Each package carries its own `LICENSE`, and some also carry a `NOTICE`:
 
-- MIT: `pi-claude-bridge`, `pi-devin`, `pi-ollama-cloud`, and `typescript-config`.
+- MIT: `pi-claude-bridge`, `pi-devin`, `pi-ollama-cloud`, `pi-refuseless`, and `typescript-config`.
 - Apache-2.0: `pi-codex`, `pi-codex-auto-review`, `pi-codex-computer-use`, `pi-codex-fast-mode`, `pi-codex-image-gen`, `pi-redact`, and `redact`.

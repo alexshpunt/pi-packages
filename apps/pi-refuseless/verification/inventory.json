@@ -1,0 +1,27 @@
+{
+  "resources": {
+    "extensions": ["src/index.ts"],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
+  "names": {
+    "tools": [],
+    "commands": [],
+    "flags": [],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
+  "requiredFiles": [
+    "package.json",
+    "src/index.ts",
+    "src/models.ts",
+    "src/thinking.ts",
+    "README.md",
+    "README.ko.md",
+    "CHANGELOG.md",
+    "CHANGELOG.ko.md",
+    "LICENSE"
+  ]
+}
