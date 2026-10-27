@@ -7,8 +7,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
-const REASONING_EFFORTS = ["off", "low", "high", "max"];
-
 /** `GET https://api.refuseless.com/v1/models` as it answered on 2026-10-27; the mock serves it unchanged. */
 export const MOCK_CATALOG = [
   ["glm-5.3-abliterated", 1_048_576, ["low", "high", "max"]],
@@ -225,7 +223,7 @@ async function handle(request: MockRequest, response: ServerResponse, options: M
   if (!body || typeof body.model !== "string") return apiError(response, 400, "bad_request", "Missing model.");
   const entry = catalog.find((model) => model.id === body.model);
   if (!entry) return apiError(response, 404, "model_not_found", `Unknown model '${body.model}'.`);
-  const offered = entry.reasoning_efforts ?? REASONING_EFFORTS;
+  const offered = entry.reasoning_efforts ?? [];
   if (body.reasoning_effort !== undefined && !offered.includes(body.reasoning_effort)) {
     return apiError(
       response,

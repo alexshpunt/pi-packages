@@ -3,13 +3,9 @@ import type { Model, ModelThinkingLevel, RefreshModelsContext, ThinkingLevelMap 
 export const REFUSELESS_PROVIDER_ID = "refuseless";
 export const REFUSELESS_BASE_URL = "https://api.refuseless.com/v1";
 
-/** `reasoning_effort` values Refuseless accepts; "none" is an alias of "off" (docs.refuseless.com/guides/reasoning). */
-const EFFORTS = ["off", "low", "high", "max"] as const;
-type Effort = (typeof EFFORTS)[number];
-
 /**
  * A Refuseless chat model. `reasoningDefault` is the catalog's `reasoning_default`, the level Refuseless uses
- * when a request sets no `reasoning_effort`; each effort has the Pi thinking level of the same name. Pi saves
+ * when a request sets no `reasoning_effort`, as the Pi thinking level of the same name. Pi saves
  * and restores the field with the rest of the model.
  */
 export type RefuselessModel = Model<"openai-completions"> & { reasoningDefault?: ModelThinkingLevel };
@@ -22,39 +18,41 @@ export type RefuselessModel = Model<"openai-completions"> & { reasoningDefault?:
 const DEFAULT_CONTEXT_WINDOW = 128_000;
 const MAX_OUTPUT_TOKENS = 131_072;
 
-function effort(value: unknown): Effort | undefined {
-  return value === "none" ? "off" : EFFORTS.find((entry) => entry === value);
-}
+/**
+ * The Pi thinking level a catalog value names. Refuseless takes "none" as "off"
+ * (docs.refuseless.com/guides/reasoning).
+ */
+const levelName = (value: unknown) => (value === "none" ? "off" : value);
 
 /**
- * Pi thinking levels from the catalog's `reasoning_efforts` and `reasoning_default`. A model without
- * `reasoning_efforts` may take every documented value. Levels a model does not offer map to `null`, so Pi
- * never shows or sends a value Refuseless rejects. A default the model does not offer is ignored.
+ * Pi thinking levels from the catalog's `reasoning_efforts` and `reasoning_default`. Each Pi level sends the
+ * value of the same name that the model lists; the other levels map to `null`, so Pi never shows or sends a
+ * value the model does not list. A model without `reasoning_efforts` has no thinking levels, and a default the
+ * model does not list is ignored.
  */
 function thinkingLevels(
   reported: unknown,
   reportedDefault: unknown,
 ): Pick<RefuselessModel, "reasoning" | "thinkingLevelMap" | "reasoningDefault"> {
-  const offered = Array.isArray(reported)
-    ? EFFORTS.filter((entry) => reported.some((value) => effort(value) === entry))
-    : EFFORTS;
-  const level = (entry: Effort) => (offered.includes(entry) ? entry : null);
-  const thinkingLevelMap: ThinkingLevelMap = {
+  const listed = new Map(
+    (Array.isArray(reported) ? reported : [])
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => [levelName(value), value]),
+  );
+  const level = (name: ModelThinkingLevel) => listed.get(name) ?? null;
+  const thinkingLevelMap = {
     off: level("off"),
-    minimal: null,
+    minimal: level("minimal"),
     low: level("low"),
-    medium: null,
+    medium: level("medium"),
     high: level("high"),
-    xhigh: null,
+    xhigh: level("xhigh"),
     max: level("max"),
-  };
-  const reasoning = offered.some((entry) => entry !== "off");
-  const fallback = effort(reportedDefault);
-  return {
-    reasoning,
-    thinkingLevelMap,
-    ...(reasoning && fallback && offered.includes(fallback) ? { reasoningDefault: fallback } : {}),
-  };
+  } satisfies ThinkingLevelMap;
+  const levels = Object.keys(thinkingLevelMap) as ModelThinkingLevel[];
+  const reasoning = levels.some((name) => name !== "off" && thinkingLevelMap[name] !== null);
+  const fallback = levels.find((name) => name === levelName(reportedDefault) && thinkingLevelMap[name] !== null);
+  return { reasoning, thinkingLevelMap, ...(reasoning && fallback ? { reasoningDefault: fallback } : {}) };
 }
 
 /** A Pi chat model from one `GET /v1/models` entry, or undefined when the entry has no ID. */

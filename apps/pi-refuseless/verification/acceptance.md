@@ -10,7 +10,7 @@ Local verification passed for the source package and its npm archive. The automa
 | --- | --- |
 | Package | `@buyong/pi-refuseless` 0.1.0 |
 | Source | `apps/pi-refuseless` on branch `feat/pi-refuseless`, based on `c9f293a`, uncommitted working tree of 2026-10-27 |
-| Archive | `buyong-pi-refuseless-0.1.0.tgz` from `npm pack --ignore-scripts`, SHA-256 `3ea9eb75f3335a9b6a4939be1416d526fff1b25ad15b669324f276155675a228` |
+| Archive | `buyong-pi-refuseless-0.1.0.tgz` from `npm pack --ignore-scripts`, SHA-256 `5a5cdc0ca57b2efaeab0771ff80422592e9fac8ec36c5098b6944deb6e8cc290` |
 | Archive files | `package.json`, `src/index.ts`, `src/models.ts`, `src/thinking.ts`, `README.md`, `README.ko.md`, `CHANGELOG.md`, `CHANGELOG.ko.md`, `LICENSE` |
 | Extension entry | `pi.extensions: ["./src/index.ts"]`; `skills`, `prompts` and `themes` are `[]` |
 | Host peers | `@earendil-works/pi-ai: *`, `@earendil-works/pi-coding-agent: *`; no runtime `dependencies` |
@@ -33,7 +33,7 @@ The package turns each catalog entry into a Pi model as follows:
 | --- | --- |
 | `id`, `name` | `id`; entries without a string `id` are skipped |
 | `contextWindow` | `context_length` when positive, else 128,000 (Pi's default for custom models) |
-| `reasoning`, `thinkingLevelMap` | From `reasoning_efforts` (`none` counts as `off`); levels not listed map to `null`. Without the field, all of `off`, `low`, `high`, `max`. `reasoning` is false when only `off` is offered |
+| `reasoning`, `thinkingLevelMap` | From `reasoning_efforts`: each Pi thinking level sends the listed value of the same name (`none` counts as `off`), and levels not listed map to `null`. Without the field, no thinking levels. `reasoning` is false when only `off` is listed |
 | `reasoningDefault` (extra field, saved with the model) | `reasoning_default` when it is one of the offered levels and the model has thinking levels |
 | `maxTokens` | 131,072 (the Pi setup in docs.refuseless.com/sdks), capped at `contextWindow` |
 | `input` | `["text"]` |
@@ -119,7 +119,7 @@ Validator entries that are not `pass`:
 | `/logout` | `Select provider to logout:` → Refuseless → `Removed stored API key for Refuseless. Environment variables and models.json config are unchanged.` Only the `refuseless` entry is removed, and no Refuseless key resolves afterwards. |
 | Selected model routing | After picking a model, every chat request of the session carries that model ID and the Refuseless key, including a tool round trip. A second provider configured for the test (`stub`) receives nothing. |
 | New session | With the test's second provider (`stub`) saved as the default, a new session starts on `stub-model`, not on the previously picked Refuseless model, and Pi shows no warning. The status line shows `(stub) stub-model`. With the Refuseless model saved as the default, a new session starts on it. |
-| `/reload` | With a saved key and no saved model list, opening `/model` fetches the list. After `Reloaded keybindings, extensions, skills, prompts, themes, and context files` there is still one `refuseless` provider with the same six models, still pointed at the mock, and the saved key is used for the next request. |
+| `/reload` | With a saved key and no saved model list, opening `/model` fetches the list. After `Reloaded keybindings, extensions, skills, prompts, themes, and context files` there is still one `refuseless` provider, Pi restores the same six models from the saved list, they still point at the mock, and the saved key is used for the next request. |
 
 Pi 1.4.0's source also shows that compaction and cache warming use the session's own model and key, so they do not reach another provider.
 
@@ -174,7 +174,7 @@ Every turn also had to end with `stopReason` `stop`, and every reply had to come
 - A model picked in `/model` with Enter applies to the current session only. A new session starts on the first model Pi finds in this order: a `--models` model, the saved default model (Ctrl+S in `/model`), then the first available model, preferring Pi's built-in default for each provider; Refuseless has none. Pi prints no warning for this, so `/model` and the status line are the only indication.
 - Pi's own model-restore fallback (`Could not restore model …. Using …`) applies to resumed sessions whose saved model is unavailable. These checks did not reach it, because the test harness starts a new session each time.
 - The model list is fetched by interactive Pi (after login, when `/model` opens, at startup) and by RPC-mode startup. `pi -p` and `pi --list-models` use only the saved list, and `pi update --models` does not refresh catalogs of extension providers (observed with Pi 1.4.0). A first `pi -p --model refuseless/…` in a fresh agent directory therefore needs one interactive session first.
-- If a catalog entry omits `reasoning_efforts`, Pi offers all four thinking levels, and a model rejects a level it does not offer with `400`, which Pi shows.
+- If a catalog entry omits `reasoning_efforts`, the model has no thinking levels in Pi. Its requests carry no `reasoning_effort`, so Refuseless uses the model's own default.
 - When you switch from no model, or from a model without thinking levels, Pi does not tell extensions where the thinking level came from. So a per-model or default thinking level of `off` (or of the model's lowest level, when it has no `off`) is replaced by `reasoning_default` too. A new session that starts on a Refuseless model follows Pi's own rule: `--thinking`, then the `/settings` default, else `medium`, which Pi moves up to `high`.
 - Output limits, input types and prices are not in the catalog. All models use 131,072 output tokens (capped at `contextWindow`), text-only input and no cost display, even where refuseless.com or the Refuseless SDKs guide states other values.
 - After a first login without a selected model, Pi 1.3.0 and 1.4.0 also print `Saved API key for Refuseless, but no default model is configured for provider "refuseless". Use /model to select a model.` The message comes from Pi; the README tells users to continue with `/model`.

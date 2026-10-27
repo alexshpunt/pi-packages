@@ -435,7 +435,8 @@ test(
     await pi.submit("/reload");
     await pi.terminal.waitFor("Reloaded keybindings, extensions", mark);
     expect(refuselessProviders(pi)).toHaveLength(1);
-    expect(modelIds(pi)).toStrictEqual(CATALOG_IDS);
+    // Pi restores the saved model list in the background after it registers the provider again.
+    await vi.waitFor(() => expect(modelIds(pi)).toStrictEqual(CATALOG_IDS));
     expect(
       pi.runtime.services.modelRuntime.getModels("refuseless").every((model) => model.baseUrl === mock.baseUrl),
     ).toBe(true);

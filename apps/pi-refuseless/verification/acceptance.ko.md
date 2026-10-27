@@ -10,7 +10,7 @@
 | --- | --- |
 | 패키지 | `@buyong/pi-refuseless` 0.1.0 |
 | 소스 | `feat/pi-refuseless` 브랜치의 `apps/pi-refuseless`. `c9f293a` 기준, 2026-10-27의 커밋하지 않은 작업 트리 |
-| 압축 파일 | `npm pack --ignore-scripts`로 만든 `buyong-pi-refuseless-0.1.0.tgz`, SHA-256 `3ea9eb75f3335a9b6a4939be1416d526fff1b25ad15b669324f276155675a228` |
+| 압축 파일 | `npm pack --ignore-scripts`로 만든 `buyong-pi-refuseless-0.1.0.tgz`, SHA-256 `5a5cdc0ca57b2efaeab0771ff80422592e9fac8ec36c5098b6944deb6e8cc290` |
 | 압축 파일에 든 파일 | `package.json`, `src/index.ts`, `src/models.ts`, `src/thinking.ts`, `README.md`, `README.ko.md`, `CHANGELOG.md`, `CHANGELOG.ko.md`, `LICENSE` |
 | 확장 진입점 | `pi.extensions: ["./src/index.ts"]`. `skills`, `prompts`, `themes`는 `[]` |
 | 호스트 peer 의존성 | `@earendil-works/pi-ai: *`, `@earendil-works/pi-coding-agent: *`. 런타임 `dependencies` 없음 |
@@ -33,7 +33,7 @@ Refuseless 문서에 나온 모델 목록 필드는 `id`, `object`, `created`, `
 | --- | --- |
 | `id`, `name` | `id`. 문자열 `id`가 없는 항목은 건너뜀 |
 | `contextWindow` | 양수인 `context_length`. 없으면 128,000(Pi가 사용자 정의 모델에 쓰는 기본값) |
-| `reasoning`, `thinkingLevelMap` | `reasoning_efforts`에서 가져옴(`none`은 `off`로 봄). 목록에 없는 수준은 `null`. 필드가 없으면 `off`, `low`, `high`, `max` 모두. `off`만 지원하면 `reasoning`은 false |
+| `reasoning`, `thinkingLevelMap` | `reasoning_efforts`에서 가져옴. Pi의 각 생각 수준은 목록에 있는 같은 이름의 값을 보냄(`none`은 `off`로 봄). 목록에 없는 수준은 `null`. 필드가 없으면 생각 수준 없음. `off`만 있으면 `reasoning`은 false |
 | `reasoningDefault`(모델과 함께 저장되는 추가 필드) | `reasoning_default`가 지원 수준 중 하나이고 모델에 생각 수준이 있을 때 그 값 |
 | `maxTokens` | 131,072(docs.refuseless.com/sdks의 Pi 설정 값). `contextWindow`보다 크지 않음 |
 | `input` | `["text"]` |
@@ -119,7 +119,7 @@ REFUSELESS_API_KEY=<키> pnpm --filter @buyong/pi-refuseless cli live --model gl
 | `/logout` | `Select provider to logout:` → Refuseless → `Removed stored API key for Refuseless. Environment variables and models.json config are unchanged.` `refuseless` 항목만 지워지고, 그 뒤로는 Refuseless 키를 찾지 못함 |
 | 선택한 모델로 요청 | 모델을 고른 뒤 그 세션의 모든 채팅 요청에 그 모델 ID와 Refuseless 키가 담김(도구 호출 왕복 포함). 테스트용으로 설정한 두 번째 공급자(`stub`)는 요청을 하나도 받지 않음 |
 | 새 세션 | 테스트용 두 번째 공급자(`stub`)의 모델을 기본 모델로 저장해 두면, 새 세션은 앞서 고른 Refuseless 모델이 아니라 `stub-model`로 시작하고 Pi는 경고를 표시하지 않음. 상태 줄에는 `(stub) stub-model`이 나옴. Refuseless 모델을 기본 모델로 저장해 두면 새 세션은 그 모델로 시작함 |
-| `/reload` | 키는 저장되어 있고 저장된 모델 목록이 없을 때 `/model`을 열면 목록을 받아 옴. `Reloaded keybindings, extensions, skills, prompts, themes, and context files` 뒤에도 `refuseless` 공급자는 하나이고 모델 6개도 같으며 여전히 모의 서버를 가리키고, 다음 요청에 저장된 키를 씀 |
+| `/reload` | 키는 저장되어 있고 저장된 모델 목록이 없을 때 `/model`을 열면 목록을 받아 옴. `Reloaded keybindings, extensions, skills, prompts, themes, and context files` 뒤에도 `refuseless` 공급자는 하나이고, Pi가 저장된 목록에서 같은 모델 6개를 되살리며, 모델은 여전히 모의 서버를 가리키고, 다음 요청에 저장된 키를 씀 |
 
 Pi 1.4.0 소스를 보면 대화 요약(compaction)과 캐시 예열도 세션의 모델과 키를 그대로 쓰므로, 다른 공급자로 요청이 가지 않습니다.
 
@@ -174,7 +174,7 @@ Pi 1.4.0 소스를 보면 대화 요약(compaction)과 캐시 예열도 세션�
 - `/model`에서 Enter로 고른 모델은 지금 세션에만 적용됩니다. 새 세션은 Pi가 `--models`로 정한 모델, 저장된 기본 모델(`/model`에서 Ctrl+S), 사용 가능한 첫 모델 순으로 찾은 모델로 시작합니다. 사용 가능한 첫 모델을 고를 때는 공급자별 Pi 내장 기본 모델을 우선하는데, Refuseless에는 이 기본 모델이 없습니다. Pi는 이때 경고를 표시하지 않으므로 `/model`과 상태 줄로만 알 수 있습니다.
 - Pi 자체의 모델 복원 대체(`Could not restore model …. Using …`)는 이어받은 세션에 저장된 모델을 쓸 수 없을 때 동작합니다. 테스트 하네스가 매번 새 세션을 만들기 때문에 이번 확인에서는 이 경로에 닿지 않았습니다.
 - 모델 목록은 대화형 Pi(로그인 직후, `/model`을 열 때, 시작할 때)와 RPC 모드 시작 때 받아 옵니다. `pi -p`와 `pi --list-models`는 저장된 목록만 쓰고, `pi update --models`는 확장이 추가한 공급자의 모델 목록을 갱신하지 않습니다(Pi 1.4.0에서 관찰). 그래서 새 에이전트 폴더에서 처음 `pi -p --model refuseless/…`를 쓰려면 먼저 대화형 세션을 한 번 열어야 합니다.
-- 모델 목록 항목에 `reasoning_efforts`가 없으면 Pi는 생각 수준 네 가지를 모두 보여 줍니다. 모델이 지원하지 않는 수준은 Refuseless가 `400`으로 거부하고, Pi가 그 오류를 표시합니다.
+- 모델 목록 항목에 `reasoning_efforts`가 없으면 Pi에 그 모델의 생각 수준이 없습니다. 요청에 `reasoning_effort`를 담지 않으므로 Refuseless가 모델의 기본값을 씁니다.
 - 모델이 없었거나 생각 수준이 없는 모델에서 바꿀 때, Pi는 확장에 생각 수준이 어디서 왔는지 알려 주지 않습니다. 그래서 모델별 생각 수준이나 기본 생각 수준을 `off`(`off`가 없는 모델에서는 가장 낮은 수준)로 정해 둔 설정도 `reasoning_default`로 바뀝니다. Refuseless 모델로 시작하는 새 세션은 Pi 규칙을 따릅니다. `--thinking`, `/settings`의 기본 생각 수준, 둘 다 없으면 `medium` 순이고, Pi가 `medium`을 `high`로 올립니다.
 - 출력 한도, 입력 형식, 가격은 모델 목록에 없습니다. refuseless.com이나 Refuseless SDKs 안내에 다른 값이 있어도, 모든 모델은 출력 131,072 토큰(`contextWindow`보다 크지 않음)과 텍스트 입력만 쓰고 비용을 표시하지 않습니다.
 - 모델을 고르지 않은 상태에서 처음 로그인하면 Pi 1.3.0과 1.4.0은 `Saved API key for Refuseless, but no default model is configured for provider "refuseless". Use /model to select a model.`도 표시합니다. 이 문구는 Pi가 표시하며, README는 `/model`로 계속하라고 안내합니다.

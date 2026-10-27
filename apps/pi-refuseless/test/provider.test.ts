@@ -281,6 +281,11 @@ describe("model list from GET /v1/models", () => {
           reasoning_default: "none",
         } as never,
         { id: "stray-default", reasoning_efforts: ["high", "max"], reasoning_default: "low" } as never,
+        {
+          id: "other-names",
+          reasoning_efforts: ["minimal", "medium", "xhigh", "ultra"],
+          reasoning_default: "medium",
+        } as never,
         { id: "" },
         { object: "model" } as never,
       ],
@@ -299,11 +304,15 @@ describe("model list from GET /v1/models", () => {
       ["high-max", 1_048_576, 131_072, true, "high,max", "high"],
       // Only "off": no thinking levels in Pi, so no default either.
       ["only-off", 1_048_576, 131_072, false, "off", undefined],
-      // No reasoning_efforts: every documented value.
-      ["unlisted", 1_048_576, 131_072, true, "off,low,high,max", undefined],
+      // No reasoning_efforts: no thinking levels.
+      ["unlisted", 1_048_576, 131_072, false, "off", undefined],
       ["small", 32_768, 32_768, true, "off,high", "off"],
       ["stray-default", 128_000, 128_000, true, "high,max", undefined],
+      // Every value named like a Pi level is used; "ultra" is not a Pi level.
+      ["other-names", 128_000, 128_000, true, "minimal,medium,xhigh", "medium"],
     ]);
+    // Each level sends the value the model lists.
+    expect(models.find((model) => model.id === "small")!.thinkingLevelMap).toMatchObject({ off: "none", high: "high" });
   });
 
   test("Pi fetches with REFUSELESS_API_KEY when no key is saved", async () => {
@@ -504,7 +513,7 @@ describe("requests", () => {
       "deepseek-v4.1-flash-abliterated": full,
       "high-max": [undefined, "high", "high", "high", "high", "max", "max"],
       "only-off": levels.map(() => undefined),
-      unlisted: full,
+      unlisted: levels.map(() => undefined),
     };
     for (const [id, efforts] of Object.entries(expected)) {
       for (const [index, level] of levels.entries()) {
