@@ -1,17 +1,22 @@
-import { measureRebuildScenario } from "../rebuild-cases.js";
+import { INLINE_RESULT_BYTES, LARGE_RESULT_BYTES, measureRebuildScenario } from "../rebuild-cases.js";
 import { expect, type Facts, type VerificationCheck } from "../types.js";
 
 export default {
 	name: "06-result-persistence", mode: "live",
-	inputs: { scenarios: ["image-result", "large-result"], largeResultBytes: 90 * 1024 },
-	expected: { shortfallTokens: 0, faithfulRequestPrefix: true, referencedFilesUnchanged: true },
+	inputs: { scenarios: ["image-result", "inline-result", "large-result"], inlineResultBytes: INLINE_RESULT_BYTES, largeResultBytes: LARGE_RESULT_BYTES },
+	expected: { shortfallTokens: 0, faithfulRequestPrefix: true, referencedFilesUnchanged: true, inlineResultNotPersisted: true },
 	async run(context) {
 		const measurements: Facts[] = [];
-		for (const scenario of ["image-result", "large-result"] as const) {
+		for (const scenario of ["image-result", "inline-result", "large-result"] as const) {
 			const measurement = await measureRebuildScenario(context, scenario);
 			measurements.push({ scenario, ...measurement });
 			const before = (measurement.beforeShapes as Facts).storedResults as Facts;
 			const after = (measurement.afterShapes as Facts).storedResults as Facts;
+			if (scenario === "inline-result") {
+				expect(!((measurement.afterShapes as Facts).toolResults as Facts[]).some(result => result.hasPersistedOutput) && after.regularFiles === 0,
+					"inline-result-persisted-after-rebuild", { measurements });
+				continue;
+			}
 			const originalFiles = before.referencedFiles as Facts[];
 			const currentFiles = after.referencedFiles as Facts[];
 			expect(originalFiles.length > 0 && originalFiles.every(file => currentFiles.some(current =>

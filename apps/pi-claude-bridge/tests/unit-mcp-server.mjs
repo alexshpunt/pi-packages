@@ -124,6 +124,20 @@ describe("MCP tool schema advertisement", () => {
 	it("preserves anyOf branches", () => {
 		expect(listed.properties.either.anyOf).toStrictEqual([{ type: "string" }, { type: "number" }]);
 	});
+
+	// Without a declared limit, Claude Code saves a result over 50,000 characters
+	// to a file and shows Claude a 2KB preview of what pi returned in full.
+	it("declares the largest result size Claude Code accepts on every tool", async () => {
+		const { request } = await connectClient(createToolServer("custom-tools", [
+			{ name: "read", description: "r", inputSchema: { type: "object", properties: {} }, handler: async () => ({ content: [] }) },
+			{ name: "bash", description: "b", inputSchema: { type: "object", properties: {} }, handler: async () => ({ content: [] }) },
+		]));
+		const tools = (await request("tools/list", {})).result.tools;
+		expect(tools.map((tool) => tool._meta)).toStrictEqual([
+			{ "anthropic/maxResultSizeChars": 500_000 },
+			{ "anthropic/maxResultSizeChars": 500_000 },
+		]);
+	});
 });
 
 describe("MCP tool invocation", () => {

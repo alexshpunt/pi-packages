@@ -1,5 +1,15 @@
 # Changelog
 
+## UNRELEASED
+
+### Improved
+
+- The bridge now uses Claude Code 2.1.311 (Agent SDK `^0.3.311`).
+
+### Fixed
+
+- Pass Pi tool results to Claude in full up to 500,000 characters. Claude Code used to save a result over 50,000 characters to a file and show Claude only a 2KB preview, and replaced one over 25,000 tokens with an error naming that file, because the bridge did not declare `anthropic/maxResultSizeChars` on its tools. Results already replaced in an earlier turn keep their preview.
+
 ## 0.13.1 — 2026-10-21
 
 ### Improved

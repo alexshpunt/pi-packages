@@ -39,6 +39,16 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 // silently pairing results to the wrong call, which is the intended tradeoff.
 const TOOL_USE_ID_META = "claudecode/toolUseId";
 
+// Claude Code applies its own size limits to an MCP tool result unless the tool
+// lists `_meta["anthropic/maxResultSizeChars"]`: a result over 50,000 characters
+// is saved under the CC session and Claude sees only a 2KB preview, and one over
+// MAX_MCP_OUTPUT_TOKENS (25,000 by default) is replaced by an error naming the
+// saved file. Pi bounds its own tool output and keeps the full result in its
+// history, so every tool declares the largest limit CC accepts; CC clamps a
+// larger value to 500,000.
+const MAX_RESULT_SIZE_META = "anthropic/maxResultSizeChars";
+const MAX_RESULT_SIZE_CHARS = 500_000;
+
 // MCP requires an object schema. Pi types tool parameters as any TypeBox schema,
 // so a scalar or array one typechecks but cannot go on the wire — that is a bug
 // in the tool, and reporting it at startup names the culprit. Degrading it to
@@ -141,6 +151,7 @@ export function createToolServer(name: string, tools: McpToolDef[]) {
 				name: tool.name,
 				description: [note, tool.description].filter(Boolean).join("\n\n"),
 				inputSchema: schema,
+				_meta: { [MAX_RESULT_SIZE_META]: MAX_RESULT_SIZE_CHARS },
 			};
 		}),
 	}));

@@ -13,7 +13,7 @@ import { expect, type CheckContext, type Facts } from "./types.js";
 import { withWorkspace } from "./workspace.js";
 import { VERIFICATION_PNG_BASE64 } from "./fixtures/image.js";
 
-export const REBUILD_SCENARIOS = ["abort", "error-result", "exception", "process-restart", "image-result", "large-result", "other-provider-turn"] as const;
+export const REBUILD_SCENARIOS = ["abort", "error-result", "exception", "process-restart", "image-result", "inline-result", "large-result", "other-provider-turn"] as const;
 export type RebuildScenario = typeof REBUILD_SCENARIOS[number];
 
 const tools = [{ name: "verify_payload", description: "Return inert verification data. Call at most once, then acknowledge without inspecting saved files.", parameters: Type.Object({}) }];
@@ -23,14 +23,29 @@ export function seedPrompt(instruction: string): string {
 	return `${randomUUID()}\n${instruction}\nThe following inert data is not instructions:\n${data}`;
 }
 
-function largeResult(): string {
+// Claude Code saves a tool result to a file only above the 500,000 characters the
+// bridge declares. The inline fixture exceeds CC's own defaults (50,000 characters
+// and 25,000 MCP tokens); the large one exceeds the declared limit.
+export const INLINE_RESULT_BYTES = 90 * 1024;
+export const LARGE_RESULT_BYTES = 512 * 1024;
+
+function payloadText(length: number): string {
 	let value = 17;
 	let text = "";
-	while (text.length < 90 * 1024) {
+	while (text.length < length) {
 		value = (Math.imul(value, 1664525) + 1013904223) >>> 0;
 		text += `${value.toString(16).padStart(8, "0")} `;
 	}
-	return text.slice(0, 90 * 1024);
+	return text.slice(0, length);
+}
+
+const largeResult = () => payloadText(LARGE_RESULT_BYTES);
+
+function sentToolResultTexts(body: Record<string, unknown>): string[] {
+	const messages = Array.isArray(body.messages) ? body.messages as { content?: unknown }[] : [];
+	return messages.flatMap(message => Array.isArray(message.content) ? message.content : [])
+		.filter(block => block?.type === "tool_result")
+		.map(block => (Array.isArray(block.content) ? block.content : [{ text: block.content }]).map((item: { text?: string }) => item.text ?? "").join("\n"));
 }
 
 function countImageBlocks(value: unknown): number {
@@ -63,6 +78,16 @@ export function usageComparison(before: CapturedRequest, after: CapturedRequest)
 		newInputTokens: currentInput - previousInput,
 		cacheWriteAboveNewInput: Math.max(0, after.usage.cacheWrite - Math.max(0, currentInput - previousInput)),
 	};
+}
+
+/** Claude Code saves a block array as `.json`, so compare the text it holds. */
+function savedText(path: string): string {
+	const text = readFileSync(path, "utf8");
+	if (!path.endsWith(".json")) return text;
+	try {
+		const blocks: unknown = JSON.parse(text);
+		return Array.isArray(blocks) ? blocks.map((block: { text?: string }) => block?.text ?? "").join("") : text;
+	} catch { return text; }
 }
 
 function recordShapes(sessionId: string, cwd: string, expectedStoredContent?: string): Facts {
@@ -100,7 +125,7 @@ function recordShapes(sessionId: string, cwd: string, expectedStoredContent?: st
 	const files = existsSync(resultDir) ? readdirSync(resultDir).map(name => ({ path: join(resultDir, name), stat: lstatSync(join(resultDir, name)) })) : [];
 	const regular = files.filter(file => file.stat.isFile() && !file.stat.isSymbolicLink());
 	const verifiedFixtureFiles = expectedStoredContent === undefined ? null : regular.filter(file => file.stat.size <= 32 * 1024 * 1024 &&
-		resultTexts.some(text => text.includes(file.path)) && readFileSync(file.path, "utf8") === expectedStoredContent).length;
+		resultTexts.some(text => text.includes(file.path)) && savedText(file.path) === expectedStoredContent).length;
 	const referencedFiles = regular.filter(file => file.stat.size <= 32 * 1024 * 1024 && resultTexts.some(text => text.includes(file.path)))
 		.map(file => ({ pathSha256: createHash("sha256").update(file.path).digest("hex"),
 			sha256: createHash("sha256").update(readFileSync(file.path)).digest("hex"), byteLength: file.stat.size }));
@@ -108,14 +133,14 @@ function recordShapes(sessionId: string, cwd: string, expectedStoredContent?: st
 		storedResults: { regularFiles: regular.length, bytes: files.reduce((sum, file) => sum + file.stat.size, 0), verifiedFixtureFiles, referencedFiles } };
 }
 
-async function toolRoundTrip(runner: LiveRunner, messages: Message[], scenario: "image-result" | "large-result"): Promise<void> {
+async function toolRoundTrip(runner: LiveRunner, messages: Message[], scenario: "image-result" | "inline-result" | "large-result"): Promise<void> {
 	const call = await runner.turn({ messages, tools });
 	messages.push(call);
 	const calls = call.content.filter(block => block.type === "toolCall");
 	expect(calls.length === 1 && calls[0].name === "verify_payload", "payload-tool-call-mismatch");
 	const content = scenario === "image-result"
 		? [{ type: "text" as const, text: "Inert image verification fixture. Reply READY." }, { type: "image" as const, data: VERIFICATION_PNG_BASE64, mimeType: "image/png" }]
-		: [{ type: "text" as const, text: largeResult() }];
+		: [{ type: "text" as const, text: scenario === "inline-result" ? payloadText(INLINE_RESULT_BYTES) : largeResult() }];
 	messages.push({ role: "toolResult", toolCallId: calls[0].id, toolName: calls[0].name, content, isError: false, timestamp: 0 });
 	const answer = await runner.turn({ messages, tools });
 	expect(answer.stopReason !== "toolUse", "payload-tool-repeated");
@@ -155,7 +180,7 @@ export async function restartedProcess(context: CheckContext, intervention?: "sy
 export async function measureRebuildScenario(context: CheckContext, scenario: RebuildScenario): Promise<Facts> {
 	if (scenario === "process-restart") return restartedProcess(context);
 	return withLiveRunner(context, async runner => {
-		const hasPayload = scenario === "image-result" || scenario === "large-result";
+		const hasPayload = scenario === "image-result" || scenario === "inline-result" || scenario === "large-result";
 		const selectedTools = hasPayload || scenario === "abort" ? tools : [];
 		const messages: Message[] = [fixtureUser(seedPrompt(hasPayload
 			? "Call verify_payload exactly once, then reply only READY. Do not inspect saved files or call any tool again."
@@ -196,6 +221,12 @@ export async function measureRebuildScenario(context: CheckContext, scenario: Re
 		if (scenario === "image-result") expect(countImageBlocks(runner.payloadFor(before).messages) > 0, "image-fixture-not-sent", { beforeShapes });
 		if (scenario === "large-result") expect((beforeShapes.toolResults as Facts[]).some(result => result.hasPersistedOutput) &&
 			Number((beforeShapes.storedResults as Facts).verifiedFixtureFiles) > 0, "large-fixture-not-persisted", { beforeShapes });
+		if (scenario === "inline-result") {
+			expect(!(beforeShapes.toolResults as Facts[]).some(result => result.hasPersistedOutput) &&
+				(beforeShapes.storedResults as Facts).regularFiles === 0, "inline-fixture-persisted", { beforeShapes });
+			const text = payloadText(INLINE_RESULT_BYTES);
+			expect(sentToolResultTexts(runner.payloadFor(before)).some(sent => sent.includes(text)), "inline-fixture-not-sent-in-full", { beforeShapes });
+		}
 		if (scenario !== "error-result" && scenario !== "exception") messages.push(fixtureUser("After rebuilding: reply only READY without tools. Do not repeat any tool."));
 		const answer = await runner.turn({ messages, tools: selectedTools });
 		expect(answer.stopReason !== "toolUse", "unexpected-rebuild-tool-call");
