@@ -47,7 +47,7 @@ Commands:
 
 class UsageError extends Error {}
 
-/** The provider the extension registers, from a Pi API stub that ignores its session event handlers. */
+/** The provider the extension registers, from a Pi API stub that ignores its event handlers and command. */
 function registeredProvider(): Provider {
   let provider: Provider | undefined;
   refuseless({
@@ -55,6 +55,7 @@ function registeredProvider(): Provider {
       provider = value;
     },
     on: () => {},
+    registerCommand: () => {},
   } as unknown as ExtensionAPI);
   if (!provider) throw new Error("The extension registered no provider");
   return provider;
@@ -173,9 +174,10 @@ async function showModels(options: { dir?: string; mock?: boolean }) {
       String(model.maxTokens),
       getSupportedThinkingLevels(model).join(", "),
       model.reasoningDefault ?? "-",
+      model.abliterated === undefined ? "-" : model.abliterated ? "yes" : "no",
     ]);
     console.log(`GET ${baseUrl}/models`);
-    console.log(table([["ID", "Context", "Max output", "Thinking", "Default"], ...rows]));
+    console.log(table([["ID", "Context", "Max output", "Thinking", "Default", "Abliterated"], ...rows]));
     console.log("\nCatalog entries as reported:");
     for (const entry of entries) console.log(JSON.stringify(entry));
     return 0;

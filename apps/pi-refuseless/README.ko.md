@@ -2,7 +2,7 @@
 
 [English](README.md) | **한국어**
 
-[Pi](https://github.com/earendil-works/pi)에 [Refuseless](https://docs.refuseless.com/introduction)를 모델 공급자로 추가합니다. Pi의 `/login`에서 Refuseless API 키를 입력하면 `/model`에 그 키로 쓸 수 있는 Refuseless 모델이 나옵니다.
+[Pi](https://github.com/earendil-works/pi)에 [Refuseless](https://docs.refuseless.com/introduction)를 모델 공급자로 추가합니다. Pi의 `/login`에서 Refuseless API 키를 입력하면 `/model`에 그 키로 쓸 수 있는 Refuseless 모델이 나옵니다. Refuseless 모델을 쓰는 동안에는 상태 줄에 쓸 수 있는 크레딧이 나옵니다.
 
 ## 요구 사항
 
@@ -45,7 +45,7 @@ Refuseless가 키를 거부해도 Pi는 키를 저장합니다. 이때 `Saved AP
 
 ## 모델
 
-이 패키지에는 고정된 모델 목록이 없습니다. Pi는 `/login` 직후, `/model`을 열 때, 대화형 Pi를 시작할 때 키로 Refuseless에서 모델 목록을 받아 오고, 받은 모델을 모두 표시합니다. 마지막으로 받은 목록은 저장해 두었다가, 목록을 받아 올 수 없을 때(예: `pi -p`, `pi --list-models`) 씁니다. 저장된 목록을 새로 받으려면 대화형 Pi에서 `/model`을 한 번 여세요.
+이 패키지에는 고정된 모델 목록이 없습니다. Pi는 `/login` 직후, `/model`을 열 때, 대화형 Pi를 시작할 때 키로 Refuseless에서 모델 목록을 받아 오고, abliterated 여부와 관계없이 받은 모델을 모두 표시합니다. Refuseless는 모델마다 abliterated(가중치에서 거부 동작을 없앤 모델)인지 표시하며, 이 표시는 [`cli models`](#직접-써-보기)로 볼 수 있습니다. 마지막으로 받은 목록은 저장해 두었다가, 목록을 받아 올 수 없을 때(예: `pi -p`, `pi --list-models`) 씁니다. 저장된 목록을 새로 받으려면 대화형 Pi에서 `/model`을 한 번 여세요.
 
 Pi는 모델마다 다음 값을 씁니다.
 
@@ -78,12 +78,29 @@ Pi는 생각 수준을 다음 값으로 Refuseless에 보냅니다.
 | medium, high | `high` |
 | xhigh, max | `max` |
 
+## 크레딧 확인하기
+
+대화형 Pi에서 Refuseless 모델을 쓰는 동안 화면 맨 아래 상태 줄에 새 요청이 쓸 수 있는 크레딧이 나옵니다. 예: `Refuseless $41.30`. Pi는 Refuseless 모델로 세션을 시작할 때, `/model`에서 Refuseless 모델을 고를 때, 응답이 끝날 때마다 잔액을 읽어 옵니다. 잔액을 읽을 때는 크레딧이 들지 않습니다.
+
+잔액 전체를 보려면 `/pi-refuseless`를 실행하세요.
+
+| 줄 | 뜻 |
+| --- | --- |
+| Available | 새 요청이 쓸 수 있는 금액. 잔액에서 진행 중인 요청이 잡아 둔 금액을 뺀 값이며, Key limit을 넘지 않습니다. 상태 줄에는 이 금액이 나옵니다. |
+| Balance | 진행 중인 요청이 잡아 둔 금액을 포함한 유료 크레딧. 무료 프로모션 크레딧과 요금제 사용량은 들어가지 않으므로, Available이 `$0.00`이어도 프로모션·요금제 모델 요청은 성공할 수 있습니다. |
+| Reserved | 진행 중인 요청이 지금 잡아 둔 금액. 요청이 끝나면 쓰지 않은 금액은 잔액으로 돌아옵니다. |
+| Key limit | 이 키의 지출 한도(또는 워크스페이스 한도)에서 남은 금액. 키에 한도가 없으면 `none`. |
+
+상태 줄 표시를 끄려면 `/pi-refuseless`에서 **Credits in status line**을 고르고 Enter나 Space를 누르세요. 다시 켤 때도 같은 방법을 씁니다. 닫으려면 Escape를 누르세요. 바꾼 설정은 바로 적용되고 Pi 에이전트 폴더의 `refuseless.json`(기본값 `~/.pi/agent/refuseless.json`)에 저장되므로 다음 세션에도 유지됩니다.
+
+키가 없거나 Refuseless가 응답하지 않으면 상태 줄에 크레딧이 나오지 않습니다. 이때 `/pi-refuseless`를 실행하면 이유가 나옵니다. 예: `No Refuseless API key. Run /login and choose Refuseless.` 대화형 Pi가 아닐 때 `/pi-refuseless`는 잔액을 알림으로 보여 주고, `pi -p`에서는 stderr로 출력합니다.
+
 ## 오류
 
 Refuseless가 요청을 거부하면 Pi는 응답을 멈추고 Refuseless의 오류를 표시합니다. 예를 들면 다음과 같습니다.
 
 - `401 invalid_key`: 키가 잘못되었습니다. `/login`을 다시 실행하세요.
-- `402 insufficient_credits`: 크레딧을 충전하세요. 응답 도중에 이 오류로 끝날 수도 있습니다.
+- `402 insufficient_credits`: 크레딧을 충전하세요. 응답 도중에 이 오류로 끝날 수도 있습니다. Refuseless는 요청을 시작하기 전에 그 요청에 들 수 있는 최대 금액을 잡아 두므로, Available이 그보다 적으면 응답이 일찍 끝날 수 있습니다. 쓸 수 있는 금액은 `/pi-refuseless`로 확인하세요.
 - `429 model_busy` 또는 `model_warming`: 잠시 뒤에 다시 시도하세요.
 
 ## models.json에도 refuseless가 있을 때
@@ -94,7 +111,7 @@ Refuseless [SDKs](https://docs.refuseless.com/sdks.md) 안내의 Pi 설정은 `~
 
 - 저장한 Refuseless 키를 지우려면 `/logout`을 실행하고 **Refuseless**를 고르세요. Pi가 `Removed stored API key for Refuseless. Environment variables and models.json config are unchanged.`를 표시합니다. `REFUSELESS_API_KEY`와 다른 공급자의 키는 남습니다.
 - 저장소를 업데이트한 뒤에는 `/reload`를 실행하거나 Pi를 다시 시작하세요.
-- 패키지를 제거하려면 `pi remove /path/to/pi-packages/apps/pi-refuseless`를 실행하세요. 저장소 폴더와 저장한 키는 남으므로, 키도 지우려면 먼저 `/logout`을 실행하세요.
+- 패키지를 제거하려면 `pi remove /path/to/pi-packages/apps/pi-refuseless`를 실행하세요. 저장소 폴더, 저장한 키, `refuseless.json`은 남으므로, 키도 지우려면 먼저 `/logout`을 실행하세요.
 
 ## 개발과 검증
 
@@ -119,7 +136,7 @@ Refuseless 키 없이 로컬 모의 서버로 Pi와 이 패키지를 써 보려�
 pnpm --filter @buyong/pi-refuseless cli pi --mock
 ```
 
-Pi에서 `/login`을 실행하고 **Sign in with an API key**, **Refuseless**를 고른 뒤 `abl_`로 시작하는 아무 키나 입력하세요. 그다음 `/model`에서 Refuseless 모델을 고르고 메시지를 보내세요. 모의 서버는 실제 Refuseless 모델 목록을 저장해 둔 사본에서 모델 6개를 생각 수준·기본 생각 수준과 함께 보여 주고, `Mock Refuseless reply from <모델>`로 답합니다. 메시지에 `tool`, `credits`, `busy`가 들어 있으면 각각 `bash` 도구 호출, `insufficient_credits` 오류로 끝나는 응답, `429` 응답을 돌려줍니다.
+Pi에서 `/login`을 실행하고 **Sign in with an API key**, **Refuseless**를 고른 뒤 `abl_`로 시작하는 아무 키나 입력하세요. 그다음 `/model`에서 Refuseless 모델을 고르고 메시지를 보내세요. 모의 서버는 실제 Refuseless 모델 목록을 저장해 둔 사본에서 모델 6개를 생각 수준·기본 생각 수준과 함께 보여 주고, `Mock Refuseless reply from <모델>`로 답합니다. 잔액으로는 Refuseless 문서의 예시 값을 돌려주므로 상태 줄에 `Refuseless $41.30`이 나옵니다. 메시지에 `tool`, `credits`, `busy`가 들어 있으면 각각 `bash` 도구 호출, `insufficient_credits` 오류로 끝나는 응답, `429` 응답을 돌려줍니다.
 
 Pi를 끝내면 명령이 `Run again in this directory:`와 함께 다시 시작하는 명령을 출력합니다. 그 명령을 실행하면 키와 모델 목록이 재시작 뒤에도 남아 있는지 확인할 수 있습니다.
 
@@ -135,7 +152,7 @@ Pi에서 키로 로그인한 뒤 모델을 골라 써 보거나, 모델 목록�
 pnpm --filter @buyong/pi-refuseless cli models --dir <폴더>
 ```
 
-`cli models`는 Pi에 등록되는 모델을 생각 수준·기본 생각 수준과 함께 보여 준 뒤, Refuseless가 돌려준 모델 항목을 그대로 출력합니다. 채팅 요청은 보내지 않습니다. `--dir` 없이 실행하면 `REFUSELESS_API_KEY`를 쓰고, `--mock`을 주면 모의 서버의 목록을 보여 줍니다.
+`cli models`는 Pi에 등록되는 모델을 생각 수준·기본 생각 수준·abliterated 여부와 함께 보여 준 뒤, Refuseless가 돌려준 모델 항목을 그대로 출력합니다. 채팅 요청은 보내지 않습니다. `--dir` 없이 실행하면 `REFUSELESS_API_KEY`를 쓰고, `--mock`을 주면 모의 서버의 목록을 보여 줍니다.
 
 실제 모델과의 대화 전체를 확인하려면 다음을 실행하세요(채팅 요청은 크레딧을 씁니다).
 
@@ -155,6 +172,7 @@ REFUSELESS_API_KEY=<키> pnpm --filter @buyong/pi-refuseless cli live --model gl
 - 자동 테스트는 로컬 모의 서버로 실행하며, 모의 서버는 2026-10-27에 Refuseless가 돌려준 모델 목록을 씁니다.
 - 2026-10-27에 실제 서비스에서 `cli live`로 `glm-5.3-abliterated`, `glm-5.3-flash-abliterated`, `deepseek-v4.1-flash-abliterated`가 10턴을 모두 통과했습니다. 목록의 다른 모델은 실제 서비스에서 써 보지 않았습니다.
 - `deepseek-v4.1-flash-abliterated`는 `high`를 포함한 어떤 생각 수준에서도 생각 내용을 돌려주지 않았습니다. Refuseless API에 직접 요청해도 같았으므로, Pi에도 이 모델의 생각 내용은 나오지 않습니다.
+- 크레딧 표시, `/pi-refuseless`, abliterated 표시는 로컬 모의 서버로만 확인했습니다. 모의 서버의 abliterated 값은 모델 ID를 보고 정한 것이며, 실제 서비스에서 받은 값이 아닙니다.
 
 검사 항목과 결과는 [verification/acceptance.ko.md](verification/acceptance.ko.md)에 있습니다.
 

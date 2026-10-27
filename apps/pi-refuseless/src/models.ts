@@ -1,14 +1,19 @@
 import type { Model, ModelThinkingLevel, RefreshModelsContext, ThinkingLevelMap } from "@earendil-works/pi-ai";
+import { getJson } from "./api.ts";
 
 export const REFUSELESS_PROVIDER_ID = "refuseless";
 export const REFUSELESS_BASE_URL = "https://api.refuseless.com/v1";
 
 /**
  * A Refuseless chat model. `reasoningDefault` is the catalog's `reasoning_default`, the level Refuseless uses
- * when a request sets no `reasoning_effort`, as the Pi thinking level of the same name. Pi saves
- * and restores the field with the rest of the model.
+ * when a request sets no `reasoning_effort`, as the Pi thinking level of the same name. `abliterated` is the
+ * catalog's flag: true when refusal behavior was removed from the weights, false for standard weights, whatever
+ * the ID says (docs.refuseless.com/api/models). Pi saves and restores both fields with the rest of the model.
  */
-export type RefuselessModel = Model<"openai-completions"> & { reasoningDefault?: ModelThinkingLevel };
+export type RefuselessModel = Model<"openai-completions"> & {
+  reasoningDefault?: ModelThinkingLevel;
+  abliterated?: boolean;
+};
 
 /**
  * Values the catalog does not carry. A missing `context_length` uses Pi's default context for custom models.
@@ -63,6 +68,7 @@ function chatModel(entry: unknown): RefuselessModel | undefined {
     context_length: contextLength,
     reasoning_efforts: efforts,
     reasoning_default: reportedDefault,
+    abliterated,
   } = entry as Record<string, unknown>;
   if (typeof id !== "string" || !id) return undefined;
   const contextWindow = typeof contextLength === "number" && contextLength > 0 ? contextLength : DEFAULT_CONTEXT_WINDOW;
@@ -73,6 +79,7 @@ function chatModel(entry: unknown): RefuselessModel | undefined {
     api: "openai-completions",
     baseUrl: REFUSELESS_BASE_URL,
     ...thinkingLevels(efforts, reportedDefault),
+    ...(typeof abliterated === "boolean" ? { abliterated } : {}),
     input: ["text"],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     contextWindow,
@@ -90,12 +97,7 @@ export function catalogModels(entries: readonly unknown[]): RefuselessModel[] {
 /** The `data` entries of `GET <baseUrl>/models`. Throws with the HTTP status and Refuseless error on failure. */
 export async function requestCatalog(baseUrl: string, key: string, signal?: AbortSignal): Promise<unknown[]> {
   const url = `${baseUrl}/models`;
-  const response = await fetch(url, { headers: { authorization: `Bearer ${key}` }, signal });
-  const body = (await response.json().catch(() => undefined)) as { data?: unknown; error?: any } | undefined;
-  if (!response.ok) {
-    const reason = [body?.error?.code, body?.error?.message].filter(Boolean).join(": ");
-    throw new Error(`GET ${url} failed with HTTP ${response.status}${reason ? ` (${reason})` : ""}`);
-  }
+  const body = await getJson(url, key, signal);
   if (!Array.isArray(body?.data)) throw new Error(`GET ${url} returned no model list`);
   return body.data;
 }

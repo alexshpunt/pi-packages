@@ -2,7 +2,7 @@
 
 **English** | [한국어](README.ko.md)
 
-Adds [Refuseless](https://docs.refuseless.com/introduction) to [Pi](https://github.com/earendil-works/pi) as a model provider. You enter your Refuseless API key in Pi's `/login`, and `/model` lists the models Refuseless offers for that key.
+Adds [Refuseless](https://docs.refuseless.com/introduction) to [Pi](https://github.com/earendil-works/pi) as a model provider. You enter your Refuseless API key in Pi's `/login`, and `/model` lists the models Refuseless offers for that key. While you use a Refuseless model, the status line shows your available credits.
 
 ## Requirements
 
@@ -45,7 +45,7 @@ To start new sessions on a Refuseless model, select it in `/model` with Ctrl+S; 
 
 ## Models
 
-The package has no fixed model list. Pi fetches the list from Refuseless with your key after `/login`, when `/model` opens and when interactive Pi starts, and shows every model Refuseless returns. Pi saves the last list and uses it when it cannot fetch, for example in `pi -p` and `pi --list-models`. To refresh the saved list, open `/model` once in interactive Pi.
+The package has no fixed model list. Pi fetches the list from Refuseless with your key after `/login`, when `/model` opens and when interactive Pi starts, and shows every model Refuseless returns, abliterated or not. Refuseless marks each model as abliterated (refusal behavior removed from the weights) or not, and [`cli models`](#try-it-by-hand) shows that mark. Pi saves the last list and uses it when it cannot fetch, for example in `pi -p` and `pi --list-models`. To refresh the saved list, open `/model` once in interactive Pi.
 
 For each model, Pi uses:
 
@@ -78,12 +78,29 @@ Pi sends each level to Refuseless as follows:
 | medium, high | `high` |
 | xhigh, max | `max` |
 
+## Check your credits
+
+While a Refuseless model is active in interactive Pi, the status line at the bottom shows the credits a new request can use, as in `Refuseless $41.30`. Pi reads the balance when a session starts on a Refuseless model, when you pick one in `/model`, and after each reply. Reading the balance spends no credits.
+
+Run `/pi-refuseless` to see the whole balance:
+
+| Line | Meaning |
+| --- | --- |
+| Available | What a new request can use: the balance minus what requests in progress hold, capped by the key limit. The status line shows this amount. |
+| Balance | Your paid credits, including what requests in progress hold. Free promo credits and plan allowances are not included, so a request on a promo or plan model can still succeed when Available is `$0.00`. |
+| Reserved | What requests in progress hold right now. The unused part returns to the balance when each request ends. |
+| Key limit | What this key's spend budget, or its workspace's limit, still allows. `none` when the key has no budget. |
+
+To turn the status line off, select **Credits in status line** in `/pi-refuseless` and press Enter or Space; do the same to turn it on again. Press Escape to close. Pi applies the change at once and saves it in `refuseless.json` in its agent directory (`~/.pi/agent/refuseless.json` by default), so later sessions keep it.
+
+Without a key, or when Refuseless does not answer, the status line shows no credits. `/pi-refuseless` then shows the reason, for example `No Refuseless API key. Run /login and choose Refuseless.` Outside interactive Pi, `/pi-refuseless` reports the balance as a notification, or on stderr in `pi -p`.
+
 ## Errors
 
 When Refuseless rejects a request, Pi stops the reply and shows the Refuseless error, for example:
 
 - `401 invalid_key`: the key is wrong. Run `/login` again.
-- `402 insufficient_credits`: top up your credits. This can also end a reply partway.
+- `402 insufficient_credits`: top up your credits. This can also end a reply partway: before a request starts, Refuseless holds its worst-case cost, and when Available is lower, the reply can stop early. `/pi-refuseless` shows how much is available.
 - `429 model_busy` or `model_warming`: try again a little later.
 
 ## If models.json also defines refuseless
@@ -94,7 +111,7 @@ The Pi setup in the Refuseless [SDKs](https://docs.refuseless.com/sdks.md) guide
 
 - Run `/logout` and choose **Refuseless** to remove the saved Refuseless key. Pi shows `Removed stored API key for Refuseless. Environment variables and models.json config are unchanged.` `REFUSELESS_API_KEY` and other providers' keys stay.
 - After you update the checkout, run `/reload` or restart Pi.
-- Run `pi remove /path/to/pi-packages/apps/pi-refuseless` to uninstall the package. This keeps the checkout and the saved key; to remove the key, run `/logout` first.
+- Run `pi remove /path/to/pi-packages/apps/pi-refuseless` to uninstall the package. This keeps the checkout, the saved key and `refuseless.json`; to remove the key, run `/logout` first.
 
 ## Development and verification
 
@@ -119,7 +136,7 @@ To try Pi with the package against the local mock, without a Refuseless key:
 pnpm --filter @buyong/pi-refuseless cli pi --mock
 ```
 
-In Pi, run `/login`, choose **Sign in with an API key** and **Refuseless**, and enter any key that starts with `abl_`. Then run `/model`, choose a Refuseless model, and send a message. The mock lists six models from a saved copy of the real Refuseless list, with their thinking levels and default levels, and replies with `Mock Refuseless reply from <model>`. A message that contains `tool`, `credits` or `busy` makes the mock call the `bash` tool, end the reply with `insufficient_credits`, or return `429`.
+In Pi, run `/login`, choose **Sign in with an API key** and **Refuseless**, and enter any key that starts with `abl_`. Then run `/model`, choose a Refuseless model, and send a message. The mock lists six models from a saved copy of the real Refuseless list, with their thinking levels and default levels, and replies with `Mock Refuseless reply from <model>`. For the balance, it returns the example from the Refuseless documentation, so the status line shows `Refuseless $41.30`. A message that contains `tool`, `credits` or `busy` makes the mock call the `bash` tool, end the reply with `insufficient_credits`, or return `429`.
 
 When you exit Pi, the command prints `Run again in this directory:` and a command. Run that command to check that the key and the model list survive a restart.
 
@@ -135,7 +152,7 @@ Log in with your key in Pi. Try a model if you like, or exit right away if you o
 pnpm --filter @buyong/pi-refuseless cli models --dir <directory>
 ```
 
-`cli models` shows each model as Pi registers it, with its thinking levels and default level, and then each model entry exactly as Refuseless returned it. It sends no chat request. Without `--dir`, it uses `REFUSELESS_API_KEY`; with `--mock`, it shows the mock's list.
+`cli models` shows each model as Pi registers it, with its thinking levels, default level and abliterated mark, and then each model entry exactly as Refuseless returned it. It sends no chat request. Without `--dir`, it uses `REFUSELESS_API_KEY`; with `--mock`, it shows the mock's list.
 
 To check a whole conversation with real models (chat requests spend credits):
 
@@ -155,6 +172,7 @@ REFUSELESS_API_KEY=<your key> pnpm --filter @buyong/pi-refuseless cli live --mod
 - The automated tests run against the local mock, which serves the model list Refuseless returned on 2026-10-27.
 - On 2026-10-27, `cli live` passed all 10 turns with `glm-5.3-abliterated`, `glm-5.3-flash-abliterated` and `deepseek-v4.1-flash-abliterated` on the real service. The other models in the list have not been tried on the real service.
 - `deepseek-v4.1-flash-abliterated` returned no thinking text at any level, including `high`. A direct request to the Refuseless API gave the same result, so Pi shows no thinking for this model.
+- The credits display, `/pi-refuseless` and the abliterated mark were tested only against the local mock. The mock's abliterated marks are set from the model IDs, not taken from the real service.
 
 [verification/acceptance.md](verification/acceptance.md) records the checks and their results.
 

@@ -1,13 +1,17 @@
 /**
  * Local stand-in for https://api.refuseless.com/v1, used by the tests and `pnpm cli mock|pi --mock`.
- * It follows the documented wire shapes (docs.refuseless.com: authentication, api/chat-completions, guides/*)
- * and accepts any key that starts with `abl_`. It never contacts Refuseless.
+ * It follows the documented wire shapes (docs.refuseless.com: authentication, api/chat-completions, api/models,
+ * api/credits, guides/*) and accepts any key that starts with `abl_`. It never contacts Refuseless.
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
-/** `GET https://api.refuseless.com/v1/models` as it answered on 2026-10-27; the mock serves it unchanged. */
+/**
+ * `GET https://api.refuseless.com/v1/models` as it answered on 2026-10-27, plus the `abliterated` flag the catalog
+ * added later. The flag values are not from the real catalog: the mock sets true for the IDs that end in
+ * `-abliterated`.
+ */
 export const MOCK_CATALOG = [
   ["glm-5.3-abliterated", 1_048_576, ["low", "high", "max"]],
   ["glm-5.3-flash-abliterated", 1_048_576, ["low", "high", "max"]],
@@ -20,10 +24,22 @@ export const MOCK_CATALOG = [
   object: "model",
   created: 1_793_061_929,
   owned_by: "refuseless",
+  abliterated: (id as string).endsWith("-abliterated"),
   context_length: contextLength as number,
   reasoning_efforts: efforts as string[],
   reasoning_default: "low",
 }));
+
+/** `GET /v1/credits`: the example in docs.refuseless.com/api/credits. */
+export const MOCK_CREDITS = {
+  object: "credits",
+  balance: 42.5,
+  reserved: 1.2,
+  available: 41.3,
+  key_limit: null,
+  unit: "usd",
+  updated_at: 1_793_836_800,
+};
 
 /** One request as the mock received it. `authorization` is kept for assertions; `describeRequest` redacts it. */
 export interface MockRequest {
@@ -214,6 +230,11 @@ async function handle(request: MockRequest, response: ServerResponse, options: M
   if (request.method === "GET" && request.path === "/v1/models") {
     response.writeHead(200, { "content-type": "application/json" });
     response.end(JSON.stringify({ object: "list", data: catalog }));
+    return;
+  }
+  if (request.method === "GET" && request.path === "/v1/credits") {
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify(MOCK_CREDITS));
     return;
   }
   if (request.method !== "POST" || request.path !== "/v1/chat/completions") {

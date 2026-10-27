@@ -7,7 +7,7 @@
   },
   "names": {
     "tools": [],
-    "commands": [],
+    "commands": ["pi-refuseless"],
     "flags": [],
     "skills": [],
     "prompts": [],
@@ -16,7 +16,12 @@
   "requiredFiles": [
     "package.json",
     "src/index.ts",
+    "src/api.ts",
+    "src/command.ts",
+    "src/credits.ts",
+    "src/credits-status.ts",
     "src/models.ts",
+    "src/settings.ts",
     "src/thinking.ts",
     "README.md",
     "README.ko.md",

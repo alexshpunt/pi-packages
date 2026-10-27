@@ -15,9 +15,10 @@ function cli(...args: string[]) {
 test("models --mock shows the catalog as Pi registers it, then each entry as reported", () => {
   const { code, stdout } = cli("models", "--mock");
   expect(code).toBe(0);
-  expect(stdout).toMatch(/glm-5\.3-abliterated\s+1048576\s+131072\s+low, high, max\s+low\n/);
-  expect(stdout).toMatch(/deepseek-v4\.1-flash-fast\s+1048576\s+131072\s+off, low, high, max\s+low\n/);
-  expect(stdout).toMatch(/deepseek-v4\.1-flash-free\s+524288\s+131072\s+low, high, max\s+low\n/);
+  expect(stdout).toMatch(/ID\s+Context\s+Max output\s+Thinking\s+Default\s+Abliterated\n/);
+  expect(stdout).toMatch(/glm-5\.3-abliterated\s+1048576\s+131072\s+low, high, max\s+low\s+yes\n/);
+  expect(stdout).toMatch(/deepseek-v4\.1-flash-fast\s+1048576\s+131072\s+off, low, high, max\s+low\s+no\n/);
+  expect(stdout).toMatch(/deepseek-v4\.1-flash-free\s+524288\s+131072\s+low, high, max\s+low\s+no\n/);
   const reported = stdout
     .split("Catalog entries as reported:\n")[1]!
     .trim()
