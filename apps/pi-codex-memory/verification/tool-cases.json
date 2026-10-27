@@ -1,0 +1,70 @@
+{
+    "cases": [
+        {
+            "name": "empty-scope-list",
+            "tool": "pi_codex_memory_list",
+            "args": {},
+            "expect": {
+                "isError": false,
+                "textIncludes": "\"entries\": []",
+                "maxTextBytes": 24576
+            }
+        },
+        {
+            "name": "empty-scope-search",
+            "tool": "pi_codex_memory_search",
+            "args": {
+                "queries": ["fixture"]
+            },
+            "expect": {
+                "isError": false,
+                "textIncludes": "\"matches\": []",
+                "maxTextBytes": 24576
+            }
+        },
+        {
+            "name": "missing-memory-file",
+            "tool": "pi_codex_memory_read",
+            "args": {
+                "path": "rollout_summaries/missing.md"
+            },
+            "expect": {
+                "isError": true,
+                "textIncludes": "not found"
+            }
+        },
+        {
+            "name": "reject-parent-path",
+            "tool": "pi_codex_memory_read",
+            "args": {
+                "path": "../auth.json"
+            },
+            "expect": {
+                "isError": true,
+                "textIncludes": "relative path"
+            }
+        },
+        {
+            "name": "reject-empty-queries",
+            "tool": "pi_codex_memory_search",
+            "args": {
+                "queries": []
+            },
+            "expect": {
+                "isError": true
+            }
+        },
+        {
+            "name": "note-needs-user-confirmation",
+            "tool": "pi_codex_memory_note",
+            "args": {
+                "filename": "fixture.md",
+                "note": "synthetic history"
+            },
+            "expect": {
+                "isError": true,
+                "textIncludes": "not confirmed"
+            }
+        }
+    ]
+}

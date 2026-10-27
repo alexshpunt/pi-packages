@@ -2,7 +2,7 @@
 
 **English** | [한국어](README.ko.md)
 
-Extensions for the [Pi coding agent](https://pi.dev), plus the masking library two of them use, developed in one Turborepo workspace. Each package is installed, versioned, and released on its own. Pi users can pick a package below; contributors start at [Develop](#develop).
+Extensions for the [Pi coding agent](https://pi.dev), plus the masking library three of them use, developed in one Turborepo workspace. Each package is installed, versioned, and released on its own. Pi users can pick a package below; contributors start at [Develop](#develop).
 
 ## Choose a package
 
@@ -14,14 +14,17 @@ These apps install into Pi. Each README states its requirements, setup, and firs
 | [`apps/pi-devin`](apps/pi-devin) | `@buyong/pi-devin` | Unofficial provider for Devin models with a Devin account |
 | [`apps/pi-ollama-cloud`](apps/pi-ollama-cloud) | `@buyong/pi-ollama-cloud` | Ollama Cloud provider, web tools, and usage reports |
 | [`apps/pi-refuseless`](apps/pi-refuseless) | `@buyong/pi-refuseless` | Refuseless provider: API-key login and the models your key can use |
-| [`apps/pi-codex`](apps/pi-codex) | `@buyong/pi-codex` | The four Codex extensions below and the `imagegen` skill in one bundle |
+| [`apps/pi-codex`](apps/pi-codex) | `@buyong/pi-codex` | The five Codex extensions below and the `imagegen` skill in one bundle |
 | [`apps/pi-codex-auto-review`](apps/pi-codex-auto-review) | `@buyong/pi-codex-auto-review` | Execution approval review inspired by Codex's "Approve for me" |
 | [`apps/pi-codex-computer-use`](apps/pi-codex-computer-use) | `@buyong/pi-codex-computer-use` | Codex Computer Use and Browser Use through the Codex Desktop runtime |
 | [`apps/pi-codex-fast-mode`](apps/pi-codex-fast-mode) | `@buyong/pi-codex-fast-mode` | OpenAI Fast and Ultrafast service tiers |
 | [`apps/pi-codex-image-gen`](apps/pi-codex-image-gen) | `@buyong/pi-codex-image-gen` | Codex-compatible `image_gen` tool and `imagegen` skill |
+| [`apps/pi-codex-memory`](apps/pi-codex-memory) | `@buyong/pi-codex-memory` | Codex memory v2 extraction, consolidation, recall and `/codex-memory` management (Pi 1.4.0+) |
 | [`apps/pi-redact`](apps/pi-redact) | `@buyong/pi-redact` | Masks credentials in tool results and every model request before they reach a language model |
 
-Install an app by its npm name, for example:
+The new memory package is available from this source checkout; registry publication has not been established. See its README for local installation.
+
+Install a published app by its npm name, for example:
 
 ```sh
 pi install npm:@buyong/pi-codex
@@ -33,7 +36,7 @@ The shared packages are not Pi packages; do not install them with `pi install`.
 
 | Package | npm name | Description |
 | --- | --- | --- |
-| [`packages/redact`](packages/redact) | `@buyong/redact` | Credential, private-key, and opt-in PII masking library for Node.js code; `pi-codex-auto-review` and `pi-redact` install it from npm |
+| [`packages/redact`](packages/redact) | `@buyong/redact` | Credential, private-key, and opt-in PII masking library for Node.js code; `pi-codex-auto-review`, `pi-codex-memory`, and `pi-redact` depend on it |
 | [`packages/typescript-config`](packages/typescript-config) | Not published | Shared `tsconfig` bases for this workspace |
 
 ## Repository layout
@@ -86,7 +89,7 @@ Pushing a `<folder name>-v<version>` tag verifies, packs, and publishes only tha
 
 - These packages compile TypeScript with `tsc` into `dist/` and publish that output; [Develop](#develop) describes the build order.
 - `@buyong/pi-codex-auto-review` and `@buyong/pi-redact` install `@buyong/redact` from npm. Release a new `redact` version first; `pnpm release` and the dry run stop if that version is not on npm.
-- `@buyong/pi-codex` bundles the other four extensions through `bundleDependencies`, using the workspace code at the `pi-codex` release tag. Release changed components first, then the bundle. pnpm packs `bundleDependencies` only with hoisted linking, so shared CI packs this package alone with `pnpm pack --config.node-linker=hoisted`.
+- `@buyong/pi-codex` bundles the five component extensions through `bundleDependencies`, using the workspace code at the `pi-codex` release tag. Release changed components first, then the bundle. pnpm packs `bundleDependencies` only with hoisted linking, so shared CI packs this package alone with `pnpm pack --config.node-linker=hoisted`.
 - npm Trusted Publishers registered from the previous repository point at `buYoung/pi-codex-auto-review` and `npm-package.yml`. Before a package's first release from this repository, change its Trusted Publisher to `buYoung/pi-packages` and `pi-packages.yml`.
 - The Docker and Windows checks and evidence-saving scripts for `pi-codex-auto-review` remain in the previous repository (`buYoung/pi-codex-auto-review`). `test:unit` in this repository covers unit and integration checks on the current OS only. Step-by-step verification records are in the `auto-review`, `computer-use`, `image-gen`, `pi-guard`, and `reviewer-redact` folders under [`docs/verification/`](docs/verification) at the repository root.
 
@@ -113,4 +116,4 @@ Shared CI adds a latest-Pi compatibility check and a live-service check for this
 The repository root is under the MIT License ([`LICENSE`](LICENSE)). Each package carries its own `LICENSE`, and some also carry a `NOTICE`:
 
 - MIT: `pi-claude-bridge`, `pi-devin`, `pi-ollama-cloud`, `pi-refuseless`, and `typescript-config`.
-- Apache-2.0: `pi-codex`, `pi-codex-auto-review`, `pi-codex-computer-use`, `pi-codex-fast-mode`, `pi-codex-image-gen`, `pi-redact`, and `redact`.
+- Apache-2.0: `pi-codex`, `pi-codex-auto-review`, `pi-codex-computer-use`, `pi-codex-fast-mode`, `pi-codex-image-gen`, `pi-codex-memory`, `pi-redact`, and `redact`.

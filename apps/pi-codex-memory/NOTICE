@@ -1,0 +1,9 @@
+pi-codex-memory includes adapted memory v2 prompts and behavior from OpenAI Codex.
+Copyright OpenAI. Licensed under the Apache License, Version 2.0.
+Source: https://github.com/openai/codex
+Reference revision: 4610b573e59b211bf9430cf6ffb97cfb84623090
+
+Modifications: Pi session projection, scope isolation, SQLite-authoritative storage,
+JSON-only tool-free consolidation, cancellable scheduling, private Markdown projections,
+management UI, configurable timing and budgets, and package-prefixed retrieval tools.
+This package is not affiliated with or endorsed by OpenAI.

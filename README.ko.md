@@ -2,7 +2,7 @@
 
 [English](README.md) | **한국어**
 
-[Pi 코딩 에이전트](https://pi.dev)용 확장과, 그중 두 확장이 쓰는 가림 라이브러리를 하나의 Turborepo 작업 공간에서 개발합니다. 패키지마다 따로 설치하고 버전을 매기고 배포합니다. Pi 사용자는 아래에서 패키지를 고르고, 기여자는 [개발](#개발)부터 보세요.
+[Pi 코딩 에이전트](https://pi.dev)용 확장과, 그중 세 확장이 쓰는 가림 라이브러리를 하나의 Turborepo 작업 공간에서 개발합니다. 패키지마다 따로 설치하고 버전을 매기고 배포합니다. Pi 사용자는 아래에서 패키지를 고르고, 기여자는 [개발](#개발)부터 보세요.
 
 ## 패키지 고르기
 
@@ -14,14 +14,17 @@
 | [`apps/pi-devin`](apps/pi-devin) | `@buyong/pi-devin` | Devin 계정으로 Devin 모델을 쓰는 비공식 공급자 |
 | [`apps/pi-ollama-cloud`](apps/pi-ollama-cloud) | `@buyong/pi-ollama-cloud` | Ollama Cloud 공급자, 웹 도구, 사용량 조회 |
 | [`apps/pi-refuseless`](apps/pi-refuseless) | `@buyong/pi-refuseless` | Refuseless 공급자: API 키 로그인과 그 키로 쓸 수 있는 모델 |
-| [`apps/pi-codex`](apps/pi-codex) | `@buyong/pi-codex` | 아래 Codex 확장 4개와 `imagegen` 스킬을 묶은 통합 패키지 |
+| [`apps/pi-codex`](apps/pi-codex) | `@buyong/pi-codex` | 아래 Codex 확장 5개와 `imagegen` 스킬을 묶은 통합 패키지 |
 | [`apps/pi-codex-auto-review`](apps/pi-codex-auto-review) | `@buyong/pi-codex-auto-review` | Codex의 "Approve for me"를 참고한 실행 승인 검토 |
 | [`apps/pi-codex-computer-use`](apps/pi-codex-computer-use) | `@buyong/pi-codex-computer-use` | Codex Desktop 런타임을 통한 Codex Computer Use·Browser Use |
 | [`apps/pi-codex-fast-mode`](apps/pi-codex-fast-mode) | `@buyong/pi-codex-fast-mode` | OpenAI Fast·Ultrafast 서비스 등급 |
 | [`apps/pi-codex-image-gen`](apps/pi-codex-image-gen) | `@buyong/pi-codex-image-gen` | Codex 호환 `image_gen` 도구와 `imagegen` 스킬 |
+| [`apps/pi-codex-memory`](apps/pi-codex-memory) | `@buyong/pi-codex-memory` | Codex memory v2 추출·통합·조회와 `/codex-memory` 관리(Pi 1.4.0+) |
 | [`apps/pi-redact`](apps/pi-redact) | `@buyong/pi-redact` | 도구 결과와 모든 모델 요청의 인증 정보를 언어 모델로 보내기 전에 가림 |
 
-앱은 npm 이름으로 설치합니다. 예:
+새 메모리 패키지는 소스 체크아웃에서 사용할 수 있으며 npm 게시 여부는 확인하지 않았습니다. 로컬 설치는 해당 README를 따르세요.
+
+게시된 앱은 npm 이름으로 설치합니다. 예:
 
 ```sh
 pi install npm:@buyong/pi-codex
@@ -33,7 +36,7 @@ pi install npm:@buyong/pi-codex
 
 | 패키지 | npm 이름 | 설명 |
 | --- | --- | --- |
-| [`packages/redact`](packages/redact) | `@buyong/redact` | Node.js 코드에서 인증 정보·개인 키와 선택한 개인정보(PII)를 가리는 라이브러리. `pi-codex-auto-review`와 `pi-redact`가 npm에서 설치 |
+| [`packages/redact`](packages/redact) | `@buyong/redact` | Node.js 코드에서 인증 정보·개인 키와 선택한 개인정보(PII)를 가리는 라이브러리. `pi-codex-auto-review`, `pi-codex-memory`, `pi-redact`가 의존 |
 | [`packages/typescript-config`](packages/typescript-config) | 게시하지 않음 | 이 작업 공간의 공용 `tsconfig` 기본 설정 |
 
 ## 저장소 구성
@@ -86,7 +89,7 @@ pi -e ./apps/pi-ollama-cloud        # load an app in Pi for one session
 
 - 이 패키지들은 TypeScript를 `tsc`로 `dist/`에 컴파일해 배포합니다. 빌드 순서는 [개발](#개발)에 있습니다.
 - `@buyong/pi-codex-auto-review`와 `@buyong/pi-redact`는 `@buyong/redact`를 npm에서 설치합니다. `redact`의 새 버전을 먼저 배포하세요. 그 버전이 npm에 없으면 `pnpm release`와 dry-run이 멈춥니다.
-- `@buyong/pi-codex`는 나머지 확장 4개를 `bundleDependencies`로 묶으며, `pi-codex` 배포 태그 시점의 작업 공간 코드를 넣습니다. 바뀐 구성 요소를 먼저 배포한 뒤 통합 패키지를 배포하세요. pnpm은 hoisted 연결에서만 `bundleDependencies`를 포장하므로, 공통 CI는 이 패키지만 `pnpm pack --config.node-linker=hoisted`로 포장합니다.
+- `@buyong/pi-codex`는 구성 확장 5개를 `bundleDependencies`로 묶으며, `pi-codex` 배포 태그 시점의 작업 공간 코드를 넣습니다. 바뀐 구성 요소를 먼저 배포한 뒤 통합 패키지를 배포하세요. pnpm은 hoisted 연결에서만 `bundleDependencies`를 포장하므로, 공통 CI는 이 패키지만 `pnpm pack --config.node-linker=hoisted`로 포장합니다.
 - 이전 저장소에서 등록한 npm Trusted Publisher는 `buYoung/pi-codex-auto-review`와 `npm-package.yml`을 가리킵니다. 이 저장소에서 처음 배포하기 전에 패키지마다 `buYoung/pi-packages`와 `pi-packages.yml`로 바꾸세요.
 - `pi-codex-auto-review`의 Docker·Windows 검증과 증거 저장 스크립트는 이전 저장소(`buYoung/pi-codex-auto-review`)에 남아 있습니다. 이 저장소의 `test:unit`은 현재 OS의 단위·통합 검증만 다룹니다. 단계별 검증 기록은 저장소 루트 [`docs/verification/`](docs/verification)의 `auto-review`, `computer-use`, `image-gen`, `pi-guard`, `reviewer-redact` 폴더에 있습니다.
 
@@ -113,4 +116,4 @@ pi -e ./apps/pi-ollama-cloud        # load an app in Pi for one session
 저장소 루트는 MIT License([`LICENSE`](LICENSE))를 따릅니다. 패키지마다 자체 `LICENSE`가 있고, 일부에는 `NOTICE`도 있습니다.
 
 - MIT: `pi-claude-bridge`, `pi-devin`, `pi-ollama-cloud`, `pi-refuseless`, `typescript-config`
-- Apache-2.0: `pi-codex`, `pi-codex-auto-review`, `pi-codex-computer-use`, `pi-codex-fast-mode`, `pi-codex-image-gen`, `pi-redact`, `redact`
+- Apache-2.0: `pi-codex`, `pi-codex-auto-review`, `pi-codex-computer-use`, `pi-codex-fast-mode`, `pi-codex-image-gen`, `pi-codex-memory`, `pi-redact`, `redact`

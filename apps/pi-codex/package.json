@@ -1,7 +1,7 @@
 {
     "name": "@buyong/pi-codex",
     "version": "0.4.1",
-    "description": "Pi용 Codex 통합 패키지: 자동 승인 검토, Computer Use, Fast 모드, 이미지 생성을 함께 설치합니다.",
+    "description": "Pi용 Codex 통합 패키지: 자동 승인 검토, Computer Use, Fast 모드, 이미지 생성, 메모리를 함께 설치합니다.",
     "license": "Apache-2.0",
     "keywords": [
         "pi-package",
@@ -27,7 +27,8 @@
             "./node_modules/@buyong/pi-codex-auto-review/dist/index.js",
             "./node_modules/@buyong/pi-codex-computer-use/dist/index.js",
             "./node_modules/@buyong/pi-codex-fast-mode/dist/index.js",
-            "./node_modules/@buyong/pi-codex-image-gen/dist/index.js"
+            "./node_modules/@buyong/pi-codex-image-gen/dist/index.js",
+            "./node_modules/@buyong/pi-codex-memory/dist/index.js"
         ],
         "skills": [
             "./node_modules/@buyong/pi-codex-image-gen/skills"
@@ -43,13 +44,15 @@
         "@buyong/pi-codex-auto-review": "workspace:*",
         "@buyong/pi-codex-computer-use": "workspace:*",
         "@buyong/pi-codex-fast-mode": "workspace:*",
-        "@buyong/pi-codex-image-gen": "workspace:*"
+        "@buyong/pi-codex-image-gen": "workspace:*",
+        "@buyong/pi-codex-memory": "workspace:*"
     },
     "bundleDependencies": [
         "@buyong/pi-codex-auto-review",
         "@buyong/pi-codex-computer-use",
         "@buyong/pi-codex-fast-mode",
-        "@buyong/pi-codex-image-gen"
+        "@buyong/pi-codex-image-gen",
+        "@buyong/pi-codex-memory"
     ],
     "peerDependencies": {
         "@earendil-works/pi-ai": "*",

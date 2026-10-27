@@ -1,0 +1,79 @@
+{
+    "name": "@buyong/pi-codex-memory",
+    "version": "0.1.0",
+    "description": "Codex memory v2 for Pi: background extraction, consolidation, scoped recall, and memory management.",
+    "license": "Apache-2.0",
+    "type": "module",
+    "keywords": [
+        "pi-package",
+        "pi-extension",
+        "codex",
+        "memory"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/buYoung/pi-packages.git",
+        "directory": "apps/pi-codex-memory"
+    },
+    "homepage": "https://github.com/buYoung/pi-packages/tree/main/apps/pi-codex-memory#readme",
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
+    },
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": "./dist/index.js"
+    },
+    "pi": {
+        "extensions": [
+            "./dist/index.js"
+        ],
+        "skills": [],
+        "prompts": [],
+        "themes": []
+    },
+    "scripts": {
+        "build": "tsc",
+        "typecheck": "tsc --noEmit",
+        "lint": "biome check .",
+        "test": "node --test tests/*.test.mjs",
+        "test:unit": "node --test tests/*.test.mjs",
+        "benchmark": "node verification/timing.mjs",
+        "prepack": "tsc && node ../../scripts/codex/check-package.mjs ."
+    },
+    "dependencies": {
+        "@buyong/redact": "workspace:*"
+    },
+    "peerDependencies": {
+        "@earendil-works/pi-ai": "*",
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*",
+        "typebox": "*"
+    },
+    "devDependencies": {
+        "@earendil-works/pi-coding-agent": "catalog:memory",
+        "@earendil-works/pi-ai": "catalog:memory",
+        "@earendil-works/pi-tui": "catalog:memory",
+        "@repo/typescript-config": "workspace:*",
+        "@types/node": "catalog:",
+        "typescript": "catalog:",
+        "typebox": "catalog:"
+    },
+    "engines": {
+        "node": ">=22.19.0"
+    },
+    "files": [
+        "dist/**/*.js",
+        "dist/**/*.d.ts",
+        "dist/**/*.js.map",
+        "assets/prompts/*.md",
+        "README.md",
+        "README.ko.md",
+        "CHANGELOG.md",
+        "CHANGELOG.ko.md",
+        "LICENSE",
+        "NOTICE",
+        "docs/*.md"
+    ]
+}

@@ -11,6 +11,7 @@ const packageDirectories = {
     "@buyong/pi-codex-computer-use": "apps/pi-codex-computer-use",
     "@buyong/pi-codex-fast-mode": "apps/pi-codex-fast-mode",
     "@buyong/pi-codex-image-gen": "apps/pi-codex-image-gen",
+    "@buyong/pi-codex-memory": "apps/pi-codex-memory",
     "@buyong/redact": "packages/redact",
 };
 const requiredFiles = {
@@ -87,6 +88,16 @@ const requiredFiles = {
         "skills/imagegen/references/prompting.md",
         "skills/imagegen/references/sample-prompts.md",
     ],
+    "@buyong/pi-codex-memory": [
+        "dist/index.js", "dist/index.d.ts", "dist/config.js", "dist/store.js",
+        "dist/safety.js", "dist/sources.js", "dist/pipeline.js", "dist/retrieval.js",
+        "dist/runtime.js", "dist/commands.js", "dist/failure.js", "dist/repositories.js",
+        "dist/repository-access.js", "dist/repository-commands.js", "dist/settings-commands.js", "dist/menus.js", "dist/coordinator.js", "dist/saved-memories.js",
+        "assets/prompts/extract.md",
+        "assets/prompts/consolidate.md", "assets/prompts/read.md", "README.md", "README.ko.md",
+        "LICENSE", "NOTICE", "docs/verification.md", "docs/verification.ko.md",
+        "CHANGELOG.md", "CHANGELOG.ko.md",
+    ],
     "@buyong/redact": [
         "dist/index.js",
         "dist/index.d.ts",
@@ -149,6 +160,7 @@ async function verifyPackage(packageDirectory) {
             "@buyong/pi-codex-computer-use",
             "@buyong/pi-codex-fast-mode",
             "@buyong/pi-codex-image-gen",
+            "@buyong/pi-codex-memory",
         ];
         assert.deepEqual(
             manifest.dependencies,

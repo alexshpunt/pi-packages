@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### New
+
+- Includes Codex memory v2 with `/codex-memory` management, scoped recall and opt-in automatic generation (`@buyong/pi-codex-memory` 0.1.0); requires Pi 1.4.0+ and Node.js 22.19+.
+
 ## [0.4.1] - 2026-10-21
 
 ### Improved

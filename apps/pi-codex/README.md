@@ -2,14 +2,14 @@
 
 **English** | [한국어](README.ko.md)
 
-Install automatic approval review, Computer Use and Browser Use, OpenAI Fast mode, and image generation in one Pi package. The bundle includes the four individual Codex extensions (`@buyong/pi-codex-auto-review`, `@buyong/pi-codex-computer-use`, `@buyong/pi-codex-fast-mode`, and `@buyong/pi-codex-image-gen`) and the `imagegen` skill; each component keeps its own commands and settings.
+Install automatic approval review, Computer Use and Browser Use, OpenAI Fast mode, image generation, and memory v2 in one Pi package. The bundle includes the five individual Codex extensions (`@buyong/pi-codex-auto-review`, `@buyong/pi-codex-computer-use`, `@buyong/pi-codex-fast-mode`, `@buyong/pi-codex-image-gen`, and `@buyong/pi-codex-memory`) and the `imagegen` skill; each component keeps its own commands and settings.
 
 Use the bundle when you want several of these features together. If you need only one, use its individual package guide below. The bundle adds no separate automation or approval engine and does not supply Codex Desktop or account access.
 
 ## Before installing
 
 - Node.js 22.19 or later and a configured Pi conversation provider/model.
-- Pi 1.0.0 or later. The repository builds against Pi 1.3.0. The automatic-review guarded CLI and SDK reject Pi versions before 1.0.0.
+- Pi 1.4.0 or later for the complete bundle. Memory uses Pi 1.4.0 APIs; the other components retain their own compatibility requirements.
 - The feature-specific requirements in the table. You can leave unused features off.
 
 | Feature | Additional requirement | Initial state without saved settings |
@@ -18,6 +18,7 @@ Use the bundle when you want several of these features together. If you need onl
 | [Computer Use](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-computer-use/README.md) | Installed Codex Desktop runtime; Browser Use in Chrome also needs the ChatGPT Chrome extension and its native messaging host. Checked live on macOS; Windows is unverified; Linux is unsupported. | Computer Use and Browser Use both on, so the extension can start the Desktop runtime; turn them off with `/computer-use` |
 | [Fast mode](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-fast-mode/README.md) | An `openai` or `openai-codex` model in Fast mode's allowlist; Ultrafast has extra authentication and endpoint requirements | Standard; no acceleration selected |
 | [Image generation](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-image-gen/README.md) | Pi's `openai-codex` subscription login | Tool and skill hidden without login |
+| [Memory v2](https://github.com/buYoung/pi-packages/blob/main/apps/pi-codex-memory/README.md) | Pi 1.4.0; explicitly selected extraction/consolidation models | Repository-scoped recall, shared across its worktrees; generation off until enabled in `/codex-memory` |
 
 **Do not enable the bundle alongside the same individual extensions.** Tools, commands, and event handlers can register twice. If those packages are already installed, follow [migration](#switch-from-individual-packages) before loading the bundle.
 
@@ -35,7 +36,7 @@ An unversioned source selects the latest published release; append `@<version>` 
 
 ## Switch from individual packages
 
-1. Run `pi list` and find any of the four individual packages listed above in global or project settings.
+1. Run `pi list` and find any of the five individual packages listed above in global or project settings.
 2. Remove those entries with `pi remove <source>`, or `pi remove --local <source>` for a project entry.
 3. Install the bundle in the intended scope and restart Pi.
 
@@ -61,6 +62,8 @@ Configure other features separately:
 
 If you do not use Computer Use, turn off both Computer Use and Browser Use in `/computer-use`. Choosing a service tier or image model does not switch the conversation model; tier activation still depends on the conversation model's compatibility. Existing saved preferences override the initial states in the [Before installing](#before-installing) table.
 
+Use `/codex-memory` to manage notes, choose models and budgets, and enable background memory generation. `/codex-memory status` does not call a model. Use `repositories` to manage explicitly confirmed reads of other repositories, and `legacy` to selectively import old cwd memories; neither automatically merges scopes. Generation sends masked session copies to the selected providers and uses their billing or subscription quotas.
+
 The component guides also cover `/approve-model`, `/approve retry`, the `/codex-fast` subcommands, settings files, and failures. Follow them before granting persistent app permissions or using a paid service tier.
 
 ## Protected startup is a separate choice
@@ -76,7 +79,7 @@ Run from the [pi-packages](https://github.com/buYoung/pi-packages) repository ro
 ```sh
 pnpm install
 pnpm --filter "@buyong/pi-codex..." build
-pnpm --filter @buyong/pi-codex-auto-review exec pi -ne -e ../pi-codex
+pi -ne -e ./apps/pi-codex
 ```
 
 The build first builds the components, then stages their publishable files and runtime dependencies inside the bundle. `-ne` disables automatic extension discovery, and `-e` loads this package for this run only, without saving it to Pi's settings. Desktop prerequisites and subscription login still apply.
@@ -85,7 +88,7 @@ Rebuild after changing a component: the bundle loads its staged copies, not the 
 
 ## Package contents and release order (maintainers)
 
-The manifest lists the four extensions as `workspace:*` dependencies and packages them through `bundleDependencies`; packing writes their workspace versions. `pi.extensions` and `pi.skills` point to their original entry points and skill directory. Development dependencies, Pi hosts, and the private Codex runtime are excluded.
+The manifest lists the five extensions as `workspace:*` dependencies and packages them through `bundleDependencies`; packing writes their workspace versions. `pi.extensions` and `pi.skills` point to their original entry points and skill directory. Development dependencies, Pi hosts, and the private Codex runtime are excluded.
 
 Release changed components first, then the bundle. The bundle packs each component from this repository at the bundle's release tag, so an unreleased component change would ship inside the bundle under that component's current version. See the [repository release process](https://github.com/buYoung/pi-packages#shared-ci-and-per-package-releases) for releases and package-specific Trusted Publishing.
 
