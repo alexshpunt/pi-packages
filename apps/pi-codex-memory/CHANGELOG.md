@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-28
+
 ### New
 
 - Extract and consolidate decisions and context from Pi conversations, then recall them with citations in later sessions. Turn memory on, choose its models and scope, and manage saved memories in `/codex-memory`; change timing and limits in `/codex-memory-settings`.
