@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-10-28
+
 ### Improved
 
 - Refactor asynchronous requests, account selection, cache coordination, catalog refresh, usage reporting, and CLI resource cleanup with Effect 4.0.6 while preserving public Promise APIs, request policies, and storage formats.
