@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-29
+
+### Fixed
+
+- Pi no longer exits with an uncaught exception after an OAuth token refresh.
+
 ## [0.1.1] - 2026-10-29
 
 ### Fixed

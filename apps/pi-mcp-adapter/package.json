@@ -1,6 +1,6 @@
 {
   "name": "@buyong/pi-mcp-adapter",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP adapter for Pi: connects the servers in mcp.json, with configurable output limits and tool metadata for other extensions.",
   "license": "MIT",
   "engines": {
