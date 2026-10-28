@@ -10,6 +10,7 @@ import { Effect } from "effect";
 import { HttpClientRequest } from "effect/http";
 import { isAuthenticationError, RPCError } from "../src/core/errors.ts";
 import { fromHttpClientError, makeNodeHttpClient } from "../src/core/protocol/http.ts";
+import { DevinHttpResponse } from "../src/core/protocol/http/response.ts";
 import { unaryCodecs } from "../src/core/protocol/protobuf.ts";
 import { close, connectClient, run, runSync, STATUS_METHOD, statusResponse } from "./helpers.ts";
 
@@ -113,4 +114,11 @@ test("HTTP upgrade is rejected and its socket is closed", async (t) => {
   server.on("request", (_req, res) => res.writeHead(101, { connection: "upgrade", upgrade: "websocket" }).end());
   const request = Effect.scoped(Effect.flatMap(makeNodeHttpClient(), (http) => http.execute(HttpClientRequest.get(`http://127.0.0.1:${address.port}/`)))).pipe(Effect.mapError(fromHttpClientError));
   await expect(run(request)).rejects.toThrow(/upgrade/);
+});
+
+test("a response never hands over its connection for an HTTP upgrade", async () => {
+  const response = new DevinHttpResponse(HttpClientRequest.get("http://127.0.0.1/"), new Response("ok"), () => {});
+  const error = await run(Effect.flip(response.upgrade));
+  expect(error.reason._tag).toBe("StatusCodeError");
+  expect(fromHttpClientError(error).message).toMatch(/upgrade/);
 });

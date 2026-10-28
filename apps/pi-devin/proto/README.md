@@ -23,7 +23,7 @@ Definitions that the base descriptor does not have. This package added them from
 
 ## Verification
 
-First install the dev dependencies from the repository root. The compiler is the app's dev dependency `@bufbuild/buf` 1.74.0 (Apache-2.0). Platform binaries come as optional packages and need no install scripts.
+First install the dev dependencies from the repository root. The compiler is the app's dev dependency `@bufbuild/buf` 1.75.0 (Apache-2.0). Platform binaries come as optional packages and need no install scripts.
 
 ```bash
 pnpm --filter @buyong/pi-devin install --frozen-lockfile --ignore-scripts

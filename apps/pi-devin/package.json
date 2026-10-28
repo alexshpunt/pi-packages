@@ -47,8 +47,8 @@
     "cli": "node cli.ts"
   },
   "dependencies": {
-    "@effect/platform-node": "4.0.5",
-    "effect": "4.0.5",
+    "@effect/platform-node": "4.0.7",
+    "effect": "4.0.7",
     "protobufjs": "8.8.1"
   },
   "peerDependencies": {
@@ -57,7 +57,7 @@
     "@earendil-works/pi-tui": "*"
   },
   "devDependencies": {
-    "@bufbuild/buf": "1.74.0",
+    "@bufbuild/buf": "1.75.0",
     "@earendil-works/pi-ai": "catalog:devin",
     "@earendil-works/pi-coding-agent": "catalog:devin",
     "@earendil-works/pi-tui": "catalog:devin",

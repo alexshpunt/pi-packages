@@ -37,6 +37,13 @@ export class DevinHttpResponse extends Inspectable.Class implements HttpClientRe
   get urlParamsBody() { return this.web.urlParamsBody; }
   get arrayBuffer() { return this.web.arrayBuffer; }
 
+  /** The transports reject `101` responses before one is built, so no connection is ever handed over. */
+  get upgrade(): Effect.Effect<never, HttpClientError.HttpClientError> {
+    return Effect.fail(new HttpClientError.HttpClientError({
+      reason: new HttpClientError.StatusCodeError({ request: this.request, response: this, description: "HTTP upgrade is not supported." }),
+    }));
+  }
+
   /** Stops an unread or partly read body. Responses that arrive after their request ended are discarded the same way. */
   get discard(): Effect.Effect<void> {
     return Effect.sync(() => this.abandon(undefined));
