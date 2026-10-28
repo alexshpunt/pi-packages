@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## 0.13.2 — 2026-10-28
 
 ### Improved
 
@@ -10,6 +10,8 @@
 ### Fixed
 
 - Pass Pi tool results to Claude in full up to 52,224 characters, Pi's tool output limit (50KB) plus room for the line Pi adds when it cuts output. Previously, because the bridge did not declare `anthropic/maxResultSizeChars` on its tools, Claude Code saved a result over 50,000 characters to a file and showed Claude only a 2KB preview, and replaced one over 25,000 tokens with an error naming that file. Results Claude Code already turned into a preview or an error before this update stay that way.
+- When a connection drops mid-response and Claude Code retries the request, the partial text from the failed attempt no longer appears in front of the retried answer. Text from attempts that finished normally is kept.
+- With `CLAUDE_BRIDGE_DEBUG=1`, running several tool calls in parallel no longer writes a false `BUG:` warning to the bridge log. The tool results were already delivered correctly.
 
 ## 0.13.1 — 2026-10-21
 
