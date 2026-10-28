@@ -5,25 +5,40 @@ import { readReleaseTargets } from "./pi-apps.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const apps = readReleaseTargets();
+const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
 
-/** Adds every target that installs or bundles a selected one through `workspace:`, so a component change rechecks it. */
-function withDependents(selected) {
-  const names = new Set(selected.map((app) => app.name));
-  for (let isGrowing = true; isGrowing; ) {
-    isGrowing = false;
-    for (const app of apps) {
-      if (!names.has(app.name) && app.workspaceDependencies.some((name) => names.has(name))) {
-        names.add(app.name);
-        isGrowing = true;
-      }
-    }
-  }
-  return apps.filter((app) => names.has(app.name));
+// Turbo owns the workspace/dev/optional dependency graph and pnpm's resolved lockfile graph.
+// Keep CI selection separate from readReleaseTargets' runtime-only release ordering.
+function affectedNames(baseCommit, filters = ["--affected"]) {
+  const output = execFileSync(process.execPath, [
+    fileURLToPath(new URL("../node_modules/turbo/bin/turbo", import.meta.url)),
+    "ls", "--output=json", ...filters,
+  ], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "inherit"],
+    env: { ...process.env, TURBO_SCM_BASE: baseCommit, TURBO_SCM_HEAD: "HEAD" },
+  });
+  return JSON.parse(output).packages.items.map(({ name }) => name);
+}
+
+// Only ordinary block catalogs can be narrowed through the lockfile. Other workspace
+// settings (or YAML aliases that could connect catalogs to those settings) stay global.
+function workspaceSettings(source) {
+  if (/(?:^|[\s:[,{])[&*][\w-]+/m.test(source)) return source;
+  let inCatalog = false;
+  return source.split(/\r?\n/).filter((line) => {
+    if (!line.trim() || line.trimStart().startsWith("#")) return false;
+    if (/^\S/.test(line)) inCatalog = /^catalogs?:\s*(?:#.*)?$/.test(line);
+    return !inCatalog;
+  }).join("\n");
 }
 
 const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
 const isRelease = process.env.GITHUB_EVENT_NAME === "push" && process.env.GITHUB_REF?.startsWith("refs/tags/");
 let selectedApps;
+let checkAutoReviewPlatforms;
+let checkSelection = true;
 
 if (isRelease) {
   const tag = process.env.GITHUB_REF.slice("refs/tags/".length);
@@ -37,19 +52,40 @@ if (isRelease) {
     selectedApps = apps;
   } else {
     if (!/^[0-9a-f]{40}$/i.test(baseCommit)) throw new Error("Invalid base commit in GitHub event.");
-    const changedFiles = execFileSync("git", ["diff", "--name-only", "-z", baseCommit, "HEAD"], {
-      cwd: root,
-      encoding: "utf8",
-    }).split("\0").filter(Boolean);
-    const hasSharedChanges = changedFiles.some((path) =>
-      /^(?:package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|biome\.json$|turbo\.json$|\.npmrc$|packages\/|scripts\/|\.github\/workflows\/pi-packages\.yml$)/.test(path),
+    // HEAD is GitHub's merge checkout on PRs, and the pushed tip on branch pushes.
+    const changedFiles = git("diff", "--name-only", "--no-renames", "-z", baseCommit, "HEAD").split("\0").filter(Boolean);
+    let hasGlobalChanges = changedFiles.some((path) =>
+      /^(?:package\.json$|biome\.json$|turbo\.json$|\.npmrc$|scripts\/(?!codex\/)|\.github\/workflows\/pi-packages\.yml$)/.test(path),
     );
-    selectedApps = hasSharedChanges
-      ? apps
-      : withDependents(apps.filter((app) => changedFiles.some((path) => path.startsWith(`${app.path}/`))));
+    if (changedFiles.includes("pnpm-workspace.yaml")) {
+      hasGlobalChanges ||= !changedFiles.includes("pnpm-lock.yaml") ||
+        workspaceSettings(git("show", `${baseCommit}:pnpm-workspace.yaml`)) !==
+        workspaceSettings(git("show", "HEAD:pnpm-workspace.yaml"));
+    }
+    checkSelection = hasGlobalChanges || changedFiles.includes("pnpm-lock.yaml") || changedFiles.includes("pnpm-workspace.yaml");
+    if (hasGlobalChanges) {
+      selectedApps = apps;
+    } else {
+      const names = new Set(affectedNames(baseCommit));
+      checkAutoReviewPlatforms = names.has("@buyong/pi-codex-auto-review");
+      // Shared archive checks affect their callers, not unrelated source-distributed apps.
+      if (changedFiles.some((path) => path.startsWith("scripts/codex/"))) {
+        const consumers = apps.filter((app) => {
+          const manifest = JSON.parse(readFileSync(new URL(`../${app.path}/package.json`, import.meta.url), "utf8"));
+          return Object.values(manifest.scripts ?? {}).some((command) => command.includes("scripts/codex/"));
+        });
+        if (consumers.length) {
+          for (const name of affectedNames(baseCommit, consumers.map((app) => `--filter=...${app.name}`))) names.add(name);
+        }
+      }
+      selectedApps = apps.filter((app) => names.has(app.name));
+    }
   }
 }
 
+checkAutoReviewPlatforms ??= selectedApps.some(({ slug }) =>
+  slug === "pi-codex-auto-review" || (isRelease && slug === "pi-codex"),
+);
 const matrix = { include: selectedApps.map(({ slug, path, name }) => ({ slug, path, name })) };
-appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify(matrix)}\nhas-packages=${selectedApps.length > 0}\nis-release=${isRelease}\n`);
+appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify(matrix)}\nhas-packages=${selectedApps.length > 0}\nis-release=${isRelease}\ncheck-auto-review-platforms=${checkAutoReviewPlatforms}\ncheck-selection=${checkSelection}\n`);
 console.log(`${isRelease ? "Release" : "Checks"}: ${selectedApps.map((app) => app.name).join(", ") || "no affected packages"}`);

@@ -17,6 +17,7 @@ jobs:
       matrix: ${{ steps.targets.outputs.matrix }}
       has-packages: ${{ steps.targets.outputs.has-packages }}
       is-release: ${{ steps.targets.outputs.is-release }}
+      check-auto-review-platforms: ${{ steps.targets.outputs.check-auto-review-platforms }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -26,9 +27,14 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --filter pi-packages --frozen-lockfile --ignore-scripts
       - name: Select affected apps or the tagged release
         id: targets
         run: node scripts/select-pi-packages.mjs
+      - name: Test package selection
+        if: steps.targets.outputs.check-selection == 'true'
+        run: node --test scripts/select-pi-packages.test.mjs
 
   checks:
     needs: select
@@ -52,28 +58,29 @@ jobs:
           package-manager-cache: false
       - uses: pnpm/action-setup@v4
       - run: pnpm install --frozen-lockfile
-      # Compiled packages type-check and test against their own and their workspace dependencies' dist/.
-      - run: pnpm --filter "$PACKAGE_NAME..." run --if-present build
+      # prepack builds the selected package; only its dependencies need an earlier build.
+      # The Codex bundle's prepack already builds its complete dependency tree.
+      - name: Build and check the distributable package
+        run: |
+          pack_args=()
+          if node -e "process.exit(require('./$PACKAGE_DIR/package.json').bundleDependencies ? 0 : 1)"; then
+            pack_args+=(--config.node-linker=hoisted)
+          else
+            pnpm --filter "$PACKAGE_NAME^..." run --if-present build
+          fi
+          pnpm --dir "$PACKAGE_DIR" pack "${pack_args[@]}" --pack-destination "$RUNNER_TEMP/package"
       - run: pnpm --filter "$PACKAGE_NAME" run --if-present lint
       - run: pnpm --filter "$PACKAGE_NAME" typecheck
       - run: pnpm --filter "$PACKAGE_NAME" run --if-present test:unit
-      - name: Check the distributable package
-        # pnpm packs bundleDependencies only with hoisted linking; the package's prepack stages the bundle itself.
-        run: |
-          pack_args=()
-          if node -e "process.exit(require('./$PACKAGE_DIR/package.json').bundleDependencies ? 0 : 1)"; then pack_args+=(--config.node-linker=hoisted); fi
-          pnpm --dir "$PACKAGE_DIR" pack "${pack_args[@]}" --pack-destination "$RUNNER_TEMP/package"
       - name: Verify Ollama source and packed runtime contracts
         if: matrix.slug == 'pi-ollama-cloud'
         run: pnpm --filter @buyong/pi-ollama-cloud exec tsx scripts/cli/verify.ts --offline --report "$RUNNER_TEMP/ollama-offline.json"
 
   # Auto Review's path, shell and PowerShell policy differs by OS; ubuntu already runs in `checks`.
-  # The Codex bundle ships a copy of Auto Review, so its selection runs these checks too.
+  # Bundle releases still require these checks; unrelated component changes do not.
   auto-review-platforms:
     needs: select
-    if: >-
-      contains(fromJSON(needs.select.outputs.matrix).include.*.slug, 'pi-codex-auto-review') ||
-      contains(fromJSON(needs.select.outputs.matrix).include.*.slug, 'pi-codex')
+    if: needs.select.outputs.check-auto-review-platforms == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -275,11 +282,14 @@ jobs:
           version=$(node -p "require('./$PACKAGE_DIR/package.json').version")
           (cd "$PACKAGE_DIR" && node "$GITHUB_WORKSPACE/scripts/release/changelog.mjs" notes "$version") > "$RUNNER_TEMP/release-notes.md"
 
-      - run: pnpm --filter "$PACKAGE_NAME..." run --if-present build
       - name: Pack with resolved workspace and catalog references
         run: |
           pack_args=()
-          if node -e "process.exit(require('./$PACKAGE_DIR/package.json').bundleDependencies ? 0 : 1)"; then pack_args+=(--config.node-linker=hoisted); fi
+          if node -e "process.exit(require('./$PACKAGE_DIR/package.json').bundleDependencies ? 0 : 1)"; then
+            pack_args+=(--config.node-linker=hoisted)
+          else
+            pnpm --filter "$PACKAGE_NAME^..." run --if-present build
+          fi
           pnpm --dir "$PACKAGE_DIR" pack "${pack_args[@]}" --pack-destination "$RUNNER_TEMP/package"
       - name: Publish the selected package to npm through OIDC
         env:
