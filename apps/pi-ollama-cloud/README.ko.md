@@ -238,7 +238,7 @@ import type { UsageData } from "@buyong/pi-ollama-cloud/src/usage/api.ts";
 
 ## 개발과 검증
 
-이 절은 소스 체크아웃에서 작업하는 기여자용입니다. 모노레포 루트에서 Node.js 22.19 이상과 `pnpm@10.29.2`로 실행합니다.
+이 절은 소스 체크아웃에서 작업하는 기여자용입니다. 모노레포 루트에서 Node.js 22.19 이상과 `pnpm@10.34.9`로 실행합니다.
 
 ```bash
 pnpm install --frozen-lockfile

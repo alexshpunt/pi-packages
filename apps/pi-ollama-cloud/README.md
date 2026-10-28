@@ -238,7 +238,7 @@ import type { UsageData } from "@buyong/pi-ollama-cloud/src/usage/api.ts";
 
 ## Development and verification
 
-This section is for contributors working in a source checkout. Run from the monorepo root with Node.js 22.19 or later and `pnpm@10.29.2`.
+This section is for contributors working in a source checkout. Run from the monorepo root with Node.js 22.19 or later and `pnpm@10.34.9`.
 
 ```bash
 pnpm install --frozen-lockfile
