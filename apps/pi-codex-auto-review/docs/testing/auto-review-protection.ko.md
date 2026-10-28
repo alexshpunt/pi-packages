@@ -79,8 +79,6 @@ pnpm --filter @buyong/pi-codex-auto-review test:unit
 | 자동 컨텍스트 | 신뢰한 루트부터 현재 위치까지의 지침, 전역·파일 우선순위 | 신뢰하지 않은 프로젝트, 보호 경로 별칭, 초과 바이트 | 출처와 내용이 Pi·검토자에 전달되며 다시 불러온 뒤 갱신 |
 | MCP 최종 실행 | 일반 읽기 전용·설정상 허용, 검토로 승인된 정확한 호출 | 엄격 요청에서 annotation·이전 승인으로 검토 생략, 거부, 등록 변경, 검토 취소 | 실제 Pi 클라이언트와 stdio 서버의 호출·파일 효과 일치 |
 | 프로젝트 MCP 시작 | 저장된 신뢰 또는 명시적인 신뢰 선택 | 결정 없는 프로젝트, 명시적인 비신뢰 선택 | 도구 호출 전 서버 시작 효과도 신뢰 결정으로 제한 |
-| MCP 추가 승인 | 원래 도구·연결·실제 입력과 일치하는 추가 요청 | 위조된 호출 ID, 다른 도구·커넥터 지목, 필수 사용자 입력의 자동 처리 | 원래 호출에 묶인 새 승인만 허용 |
-| MCP 동시 호출 | 서로 다른 입력의 동시 호출 중 승인된 파일 변경 | 호출자 ID 재사용으로 다른 요청의 승인 차용 | 내부 연결 ID가 다르고, 거부 대상 파일은 불변 |
 | MCP 이름 충돌 | `node_repl/js`에 대한 명시적 사용자 승인 | 승인 UI 없음, 명시적 거부 | 실제 stdio 서버의 대상 파일 변경 여부와 승인 창 횟수 일치 |
 | Pi 제어 파일 | 사용자가 호스트에서 직접 바꾼 MCP 설정 | 모델의 MCP 설정·신뢰한 확장 진입점·상대 import 모듈 변경 | 파일 불변, 다시 불러온 뒤 외부 효과 차단. 사용자 변경은 다음 시작에 적용 |
 | 검토 응답 타입 | 문자열 위험 등급과 정상 승인 | 배열·`null` 등 잘못된 등급·승인 수준 | 외부 파일 불변, 기술 실패가 다음 모델 요청에 전달 |
@@ -103,7 +101,7 @@ pnpm --filter @buyong/pi-codex-auto-review test:unit
 | [`guardian_review_cancellation.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/tests/suite/guardian_review_cancellation.rs#L39) | 직접 도구와 중첩 코드 실행에서 검토를 취소한 뒤 늦게 온 승인이 실행으로 이어지지 않는지 확인합니다. |
 | [`execpolicy`](https://github.com/openai/codex/tree/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/execpolicy) | 이전 Rust 기반 버전에서 원본 Starlark 엔진과 예제 검증·실행 파일 경로·네트워크 규칙 변환을 연결했습니다. |
 | [`agents_md.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/src/agents_md.rs) | 프로젝트 루트·지침 우선순위·바이트 한도·신뢰 상태를 확인합니다. |
-| [`mcp_tool_call.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/src/mcp_tool_call.rs), [`session/mcp.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/src/session/mcp.rs) | annotation 우선순위, 엄격한 자동 검토, 민감한 중첩 승인과 호출 출처 결합을 확인합니다. |
+| [`mcp_tool_call.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/src/mcp_tool_call.rs), [`session/mcp.rs`](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/core/src/session/mcp.rs) | annotation 우선순위, 엄격한 자동 검토와 호출 출처 결합을 확인합니다. |
 
 현재 재생 하네스는 [`tests/harness/scenarios.mjs`](../../tests/harness/scenarios.mjs)에, 시나리오는 [`tests/conformance/protection.test.mjs`](../../tests/conformance/protection.test.mjs)에 있습니다. 이전 OS 격리 검사는 [`v0.1.2`의 테스트](https://github.com/buYoung/pi-codex-auto-review/blob/v0.1.2/test/native/sandbox.test.mjs)에 남아 있습니다. 하네스 자체도 호출 누락·초과와 이미 취소된 요청을 검사합니다.
 
@@ -117,7 +115,7 @@ ARM64 커널에서 x64 프로그램을 실행한 추가 검증에서는 142개 �
 
 macOS의 첫 최종 집계는 패키지 검사의 20초 관찰 시간을 넘겼습니다. 관찰 시간을 늘린 진단용 사본은 12.6초에 정상 완료되었고, 원래 검사와 20초 제한을 유지한 재집계도 통과했습니다. 처음 지연된 구체적 원인은 밝히지 못했습니다. [패키지 시간 관찰 검증 기록](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/24-macos-package-timing.json)에 처음 실패와 이후 성공을 함께 남겼습니다.
 
-일반 MCP 승인과 엄격 검토는 다릅니다. Codex의 일반 경로는 자동 검토자를 써도 annotation과 승인 모드를 따르지만, 엄격 검토는 그런 생략 조건을 허용하지 않습니다. 중첩 요청은 원래 호출의 엄격 검토 요구를 낮출 수 없습니다. 바로잡은 동작과 회귀 검사는 [MCP 승인 경로 검증 기록](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/19-mcp-routing.json)에 있습니다.
+일반 MCP 승인과 엄격 검토는 다릅니다. Codex의 일반 경로는 자동 검토자를 써도 annotation과 승인 모드를 따르지만, 엄격 검토는 그런 생략 조건을 허용하지 않습니다. 바로잡은 동작과 회귀 검사는 [MCP 승인 경로 검증 기록](https://github.com/buYoung/pi-packages/blob/main/docs/verification/auto-review/19-mcp-routing.json)에 있습니다.
 
 현재 E2E 검사는 [`tests/e2e/guard.test.mjs`](../../tests/e2e/guard.test.mjs)에 있습니다. 수정 전에 실제 Pi·OS 경로에서 배열 위험 등급이 외부 파일을 바꾸는 현상, 제한된 경로의 `[]`가 형제 파일 쓰기를 허용하는 현상, `node_repl/js`가 승인 없이 MCP 효과를 내는 현상을 재현했습니다. 감사 JSON 실패와 거부 중단 후 직접 명령 실패도 같은 방식으로 재현했습니다. 기본 패키지 검사를 공개 Pi 세션과 실제 MCP 서버까지 실행하도록 넓혔기 때문에, 하위 프로세스 관찰 한도를 20초에서 60초로 바꿨습니다. 실제 실행기의 취소·제한 시간 검사는 따로 유지합니다.
 
@@ -127,7 +125,7 @@ CLI 관찰기는 Pi 0.99.1의 확장 호환 레지스트리가 가리키는 실�
 
 첫 ARM64 Docker 실행에서는 154개 중 정상 `grep` 대조군 하나가 실패했습니다. 추가 검사와 실제 마운트 관찰로, 존재하지 않는 `.git`이 `/dev/null`에 바인딩되고 `nodev` 때문에 읽기가 거부된다는 것을 확인했습니다. `.git/HEAD` 하위 차단도 함께 넘겨 런타임이 읽기 전용 빈 디렉터리를 만들도록 해결했습니다. 원래 부모 차단은 유지했고, 읽기 선언을 늘린 초기 수정은 별도 대조군에서 필요 없음을 확인한 뒤 되돌렸습니다. SDK 호출자가 고른 읽기 전용 경로도 보존합니다. 추가 대조군은 정상 검색, 일반 디렉터리 생성, Pi 설정 생성 차단을 함께 확인합니다. 허용 루트와 절대 차단 루트가 직접 또는 별칭으로 겹치면 실제 경로로 정규화한 뒤 실행 전에 거부합니다.
 
-추가 승인 연결 검사에서는 같은 호출자 ID를 쓴 두 MCP 요청이 겹칠 때 거부 대상 파일이 바뀌는 것을 재현했습니다. MCP 전송마다 내부에서 만든 고유 ID로 추가 승인을 연결하도록 고쳤습니다. 실제 Pi에 등록한 도구를 동시에 호출해, 두 검토 입력이 각각 보존되고 승인된 파일만 바뀌는지 확인합니다.
+추가 승인 연결 검사에서는 같은 호출자 ID를 쓴 두 MCP 요청이 겹칠 때 거부 대상 파일이 바뀌는 것을 재현했고, 이후 MCP 전송마다 만든 고유 ID로 추가 승인을 연결했습니다. 지금은 Auto Review가 MCP 서버에 연결하지 않고 추가 승인 요청에도 답하지 않습니다. MCP 호출은 Pi의 `tool_call` 훅에서 검토하므로, 이 연결과 동시 호출 검사는 없앰습니다.
 
 ### 이전 OS 격리 검증의 범위
 
@@ -138,7 +136,7 @@ CLI 관찰기는 Pi 0.99.1의 확장 호환 레지스트리가 가리키는 실�
 - 미리 만든 하드링크와 좁게 승인한 파일의 다른 이름을 검사했습니다. 실행 중 격리 밖의 호스트 프로그램이 동시에 링크 구조를 바꾸는 경우는 다루지 않았습니다. 검사 실패와 한도 초과는 실행을 막았습니다.
 - Linux x64 호스트 실행과 ARM64 커널의 x64 실행은 기록을 나눴습니다. 최종 집계에는 같은 소스의 실제 Linux x64 호스트 결과가 필요했습니다.
 - Windows 검증은 실제 운영체제에서 원본 규칙 엔진, 승인 정책, 지원하지 않는 네이티브 실행의 사전 거부를 따로 확인했습니다. Windows 네이티브 격리가 성공한다는 뜻은 아닙니다.
-- 외부 MCP 실행기는 신뢰하는 통합 계층입니다. 이미 외부 서버로 보낸 요청의 취소 효과나 모든 공급자의 계정 식별·부수 효과는 보장하지 않습니다. 비어 있는 승인 폼은 처리하고, 일반 입력 폼과 URL elicitation은 거부했습니다. Pi에 없는 Computer Use 분류와 승인 예외는 제거했습니다.
+- 외부 MCP 실행기는 신뢰하는 통합 계층입니다. 이미 외부 서버로 보낸 요청의 취소 효과나 모든 공급자의 계정 식별·부수 효과는 보장하지 않습니다. Auto Review는 MCP 서버의 elicitation 요청에 답하지 않습니다. Pi에 없는 Computer Use 분류와 승인 예외는 제거했습니다.
 - 패턴 문자가 들어간 네이티브 권한 루트는 런타임이 문자 그대로 표현할 수 없어 차단했습니다. 일반 작업 공간 안의 특수 문자 파일명 지원과는 별개입니다. 신뢰한 확장의 디렉터리는 제어 코드로 보호하지만, 임의의 신뢰 확장이 그 밖의 위치에서 실행하거나 import하는 의존 관계를 모두 자동으로 분석하지는 않습니다.
 - HTTPS CONNECT, SOCKS5 TCP, IPv6, 직접 UDP 차단을 검사했습니다. SOCKS5 UDP나 모든 네트워크 프로토콜을 지원·검증했다는 뜻은 아닙니다.
 - 독점 Codex 모델과 모든 판단이 같다고 보장하지 않습니다. 공개 정책·흐름과, 선택한 GLM5.3 모델에서 관찰한 결과는 구분됩니다.

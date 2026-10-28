@@ -12,7 +12,6 @@ import {
     createWriteToolDefinition,
     type ExtensionAPI,
     type ExtensionFactory,
-    type McpExtensionOptions,
     type ReadToolOptions,
     type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
@@ -33,10 +32,7 @@ import {
 import type { ReviewProvider } from "./reviewer.js";
 import { GuardController, guardedToolParameters } from "./tools/controller.js";
 import { PiExecutor, type ToolExecutor } from "./tools/executor.js";
-import {
-    createGuardedMcpExtension,
-    type McpToolPolicies,
-} from "./tools/mcp.js";
+import { type McpToolPolicies, mcpToolCall } from "./tools/mcp.js";
 export interface GuardOptions {
     cwd?: string;
     agentDir?: string;
@@ -49,7 +45,8 @@ export interface GuardOptions {
     readOptions?: Omit<ReadToolOptions, "operations">;
     /** Trusted code directories are protected against model writes, including imported siblings. */
     trustedExtensionPaths?: readonly string[];
-    mcp?: McpExtensionOptions | false;
+    /** `false` leaves calls to MCP tools unreviewed. */
+    mcp?: false;
     mcpToolPolicies?: McpToolPolicies;
 }
 export function createGuardExtension(options: GuardOptions = {}) {
@@ -327,11 +324,30 @@ export function createGuardExtension(options: GuardOptions = {}) {
             const guard = await ready(context.cwd);
             guard.reviewContext.message(event.message);
         });
-        // Like Codex dynamic and extension tools, other extension tools run without approval;
-        // shell, file, network and MCP actions keep their own review paths.
+        // MCP tools that Pi's MCP extension or a replacement registers are reviewed before Pi runs
+        // them. Like Codex dynamic and extension tools, other extension tools run without approval.
         pi.on("tool_call", async (event, context) => {
             const guard = await ready(context.cwd);
             guard.noteCall(event);
+            if (options.mcp === false) return;
+            try {
+                await guard.reviewExternalCall(
+                    event,
+                    () =>
+                        mcpToolCall(
+                            pi,
+                            event.toolName,
+                            options.mcpToolPolicies,
+                        ),
+                    context,
+                );
+            } catch (error) {
+                return {
+                    block: true,
+                    reason:
+                        error instanceof Error ? error.message : String(error),
+                };
+            }
         });
         pi.on("tool_execution_end", async (event, context) => {
             const guard = await ready(context.cwd);
@@ -372,6 +388,7 @@ export function createGuardExtension(options: GuardOptions = {}) {
                 },
                 callIdentity,
             );
+            await guard.completeExternalCall(event.toolCallId, event.isError);
             guard.completeCall(event.toolCallId);
         });
         pi.on("user_bash", async (event, context) => {
@@ -386,21 +403,6 @@ export function createGuardExtension(options: GuardOptions = {}) {
             await closeState(state);
         });
         registerApprovalCommands(pi, () => ready(), settingsStore);
-        if (options.mcp !== false) {
-            try {
-                const mcp = await createGuardedMcpExtension(
-                    agentDir,
-                    () => assertReady(state),
-                    options.mcp,
-                    options.mcpToolPolicies,
-                    () => ready(),
-                );
-                await (typeof mcp === "function" ? mcp : mcp.factory)(pi);
-            } catch (error) {
-                await closeState(state);
-                throw error;
-            }
-        }
     };
     return {
         factory,

@@ -23,7 +23,7 @@ pi
 - Pi가 관리하는 확장에는 호스트 SDK를 제공합니다. 관리 패키지에 별도의 SDK 복사본이나 심볼릭 링크를 추가하지 마세요.
 - 설치를 제거하려면 `pi list`에 표시된 소스로 `pi remove <source>`를 실행합니다. 프로젝트 범위의 항목은 `--local`로 제거합니다.
 
-일반 확장 등록은 보호 로컬 도구와 보호 MCP 어댑터를 연결합니다. MCP 중복 연결을 피하도록 Pi의 기본 MCP 확장을 대체합니다. **등록만으로 보호 시작을 보장하지는 않습니다.** Pi 1.3.0은 새 CLI 시작 중 확장 로딩 오류가 나면 종료 코드 1로 끝나지만, 다시 로드와 SDK 로딩의 오류 처리는 별개입니다. Auto Review는 정책·규칙·SQLite 초기화를 세션 시작이나 첫 사용으로 미루며, 실패하면 다시 로드하거나 재시작할 때까지 보호 작업을 차단합니다. 다시 로드 이후까지 포함해 실행 전 준비 상태를 명시적으로 확인하려면 [보호 CLI·SDK](#보호가-준비된-상태에서-시작하기)를 사용하세요.
+일반 확장 등록은 보호 로컬 도구를 연결합니다. Auto Review는 MCP 서버에 연결하지 않습니다. Pi 내장 MCP 지원이나 이를 대체하는 확장(예: pi-mcp-adapter)이 서버에 연결하고, Auto Review는 그 도구 호출을 검토합니다([MCP 승인](#mcp-승인) 참고). **등록만으로 보호 시작을 보장하지는 않습니다.** Pi 1.3.0은 새 CLI 시작 중 확장 로딩 오류가 나면 종료 코드 1로 끝나지만, 다시 로드와 SDK 로딩의 오류 처리는 별개입니다. Auto Review는 정책·규칙·SQLite 초기화를 세션 시작이나 첫 사용으로 미루며, 실패하면 다시 로드하거나 재시작할 때까지 보호 작업을 차단합니다. 다시 로드 이후까지 포함해 실행 전 준비 상태를 명시적으로 확인하려면 [보호 CLI·SDK](#보호가-준비된-상태에서-시작하기)를 사용하세요.
 
 ## 승인 방식과 검토 모델 선택
 
@@ -75,7 +75,7 @@ TUI 또는 UI가 연결된 RPC 세션에서 다음 명령을 실행합니다.
 
 보호 CLI와 `createGuardedRuntime()`은 확장과 제어기의 준비 상태를 확인합니다. 매니페스트의 peer 범위와 관계없이 **Pi 1.0.0 미만의 버전은 `UNSUPPORTED_PI`로 거부합니다.** 세션이 인터페이스에 다시 연결될 때마다(`session.bindExtensions()`를 호출할 때마다 세션이 새로 시작됩니다), 그리고 사용자의 직접 셸 호출에도 준비 상태를 확인합니다.
 
-이 진입점은 자동 확장 탐색을 끕니다. 추가 확장은 명시적으로 로드하고 코드를 신뢰해야 합니다. 다른 확장의 도구에는 승인 제어가 자동으로 추가되지 않습니다. 로컬 셸·파일 도구와 보호 MCP 어댑터는 기존 승인 경로를 유지합니다.
+이 진입점은 자동 확장 탐색을 끕니다. 추가 확장은 명시적으로 로드하고 코드를 신뢰해야 합니다. 다른 확장의 도구에는 승인 제어가 자동으로 추가되지 않습니다. 로컬 셸·파일 도구와 MCP 도구는 기존 승인 경로를 유지합니다. 이 진입점은 Pi의 MCP 확장을 직접 로드합니다([MCP 승인](#mcp-승인) 참고).
 
 프로젝트 지침·설정·MCP 서버는 Pi에 저장된 신뢰 결정과 전역 `defaultProjectTrust`를 따릅니다. 저장되거나 명시한 신뢰가 없으면 프로젝트 자원을 시작하지 않습니다. `--trust-project` 또는 SDK의 `isProjectTrusted: true`는 이번 실행의 시작 프로젝트를 신뢰합니다. 이후 디렉터리를 바꾸면 각 디렉터리의 신뢰 기록을 따릅니다.
 
@@ -164,7 +164,7 @@ try {
 | `model` 또는 `modelSelection` | 모델 객체 또는 `{ provider, id }`. 함께 사용할 수 없습니다. |
 | `trustedExtensionPaths` | 시작 `cwd` 기준의 확장 진입 경로. 같은 디렉터리의 import를 포함해 코드 디렉터리를 보호합니다. |
 | `profile` | `readOnlyPaths` 등을 포함한 사용자 지정 권한 프로필. 확장이 켜져 있고 Full Access가 꺼져 있으면 필수 가드 제어·규칙 파일·확장 코드 보호도 적용합니다. |
-| `mcp` | MCP 확장 옵션. `false`면 보호 MCP 어댑터를 끕니다. |
+| `mcp` | Pi MCP 확장의 옵션. `false`면 MCP 확장을 로드하지 않고 MCP 호출도 검토하지 않습니다. |
 | `mcpToolPolicies` | `server/tool` 키별 `approvalMode` 설정 |
 | `modelRuntime`, `settingsManager`, `sessionManager` | 애플리케이션이 제공하는 Pi 서비스와 세션 저장소 |
 | `trustedExtensions`, `externalExtensions` | 명시적인 인라인 통합. 호출자가 코드의 신뢰를 책임집니다. |
@@ -277,7 +277,7 @@ TUI·RPC 승인 창에서는 **Allow once**, **Allow for this session**, **Save 
 
 조건을 충족하는 MCP 도구와 스킬 스크립트는 별도의 패키지 승인을 재사용할 수 있습니다.
 
-- MCP 지문에는 서버 설정, 초기화에서 받은 식별 정보·버전과 도구 정의를 포함합니다.
+- MCP 지문에는 서버 이름과 등록된 도구 정의(매개변수, 설명, annotation, 확장이 알려 주는 `_meta`)를 포함합니다. 서버 버전이 바뀌어도 도구 정의가 같으면 승인을 재사용합니다.
 - 스킬 지문에는 `SKILL.md`가 있는 디렉터리의 파일을 포함합니다. `<script>` 또는 `<interpreter> <script>` 단일 명령만 해당하며, 심볼릭 링크가 있는 스킬은 캐시하지 않습니다.
 - 자동 승인과 **Save as an allow rule**은 `<agentDir>/guard/package-approvals.json`에 저장합니다. **Allow for this session**은 세션에만 적용하고 **Allow once**는 재사용하지 않습니다.
 - 내용이 바뀌면 다시 검토합니다. 추가 경로·도메인, 위치를 알 수 없는 셸 대상(Windows의 WSL·POSIX 루트 경로, 와일드카드·공급자·원격 공유 경로 등), 권한 상승, 규칙의 확인 요구, 엄격한 MCP 검토와 필수 사용자 입력은 항상 새 판단을 요구합니다.
@@ -350,9 +350,11 @@ TUI·RPC 승인 창에서는 **Allow once**, **Allow for this session**, **Save 
 
 ## MCP 승인
 
-어댑터는 Pi에 등록한 서버, `<agentDir>/mcp.json`과 신뢰한 프로젝트의 `.pi/mcp.json`을 사용합니다. 세션이 인터페이스에 다시 연결되면(`session.bindExtensions()`) 어댑터는 이전 연결을 닫고 새 연결을 만듭니다. 승인은 실제 서버·도구 등록에 묶이며 검토 중 등록이 바뀌거나 취소되면 실행하지 않습니다.
+Auto Review는 MCP 서버에 연결하지 않습니다. Pi 내장 MCP 지원이나 이를 대체하는 확장(예: pi-mcp-adapter)이 서버에 연결하고 도구를 `mcp__<server>__<tool>` 이름으로 등록합니다. Auto Review는 이런 도구의 호출을 Pi가 실행하기 전에 Pi의 `tool_call` 훅에서 검토하고, 검토가 거부하면 호출을 막습니다. 검토 중 도구 등록이 바뀌거나 취소되어도 호출을 막습니다.
 
-SDK `mcpToolPolicies`는 `server/tool` 키별 승인 모드를 선택합니다.
+보호 CLI와 `createGuardedRuntime()`은 Pi의 MCP 확장을 직접 로드합니다. 이 확장은 `<agentDir>/mcp.json`과 신뢰한 프로젝트의 `.pi/mcp.json`을 읽고, 인증 정보는 `<agentDir>/mcp-auth.json`에, 서버 로그는 `<agentDir>/mcp.log`에 둡니다. 세션이 인터페이스에 다시 연결되면(`session.bindExtensions()`) 이전 연결을 닫고 새 연결을 만듭니다.
+
+SDK `mcpToolPolicies`는 `server/tool` 키별 승인 모드를 선택합니다. Pi는 도구 이름에서 영문자·숫자·`_`가 아닌 문자를 `_`로 바꾸므로, 키의 도구 부분도 같은 방식으로 바꿨을 때 같으면 일치합니다.
 
 | 모드 | 일반 승인 동작 |
 | --- | --- |
@@ -361,9 +363,13 @@ SDK `mcpToolPolicies`는 `server/tool` 키별 승인 모드를 선택합니다.
 | `writes` | `readOnlyHint`가 `true`일 때만 검토를 생략합니다. |
 | `approve` | 일반 검토를 생략합니다. |
 
-엄격한 검토, 민감 작업과 필수 사용자 입력은 이런 일반 생략 조건보다 우선합니다. `codex_requires_user_input`을 모델이 대신 승인하지 않습니다. 빈 승인 폼은 처리하지만 입력 필드가 있는 일반 폼과 URL 인증 요청은 거부합니다.
+엄격한 검토, 민감 작업과 필수 사용자 입력은 이런 일반 생략 조건보다 우선합니다. 이 표시는 도구의 `_meta`에 있는 `codex_strict_auto_review`, `codex_sensitive_action`, `codex_requires_user_input`에서 읽습니다. Pi 내장 MCP 지원은 `_meta`를 다른 확장에 넘기지 않으므로, 이 표시는 `tool-meta` 이벤트 채널에 답하는 MCP 확장(예: pi-mcp-adapter)을 쓸 때만 적용됩니다. `codex_requires_user_input`을 모델이 대신 승인하지 않습니다. `node_repl`이라는 이름의 서버(Codex Computer Use 런타임의 이름)의 `js` 도구에도 같은 규칙을 적용합니다.
 
-`node_repl` 서버(Codex Computer Use 런타임)의 `js` 도구에도 같은 규칙을 적용합니다. 실행 중인 MCP 호출이 보내는 승인 요청은 그 호출의 도구·연결·입력과 일치해야 하며, 다른 도구나 커넥터의 승인을 대신 요청할 수 없습니다. Off 상태에서도 호출자의 취소·시간 초과 신호를 transport까지 전달하므로 인증 대기가 끝난 뒤 취소된 요청을 늦게 보내지 않습니다. 실패·취소·시간 초과 요청의 로컬 추적 상태도 해제합니다. 이미 전달한 요청의 취소는 외부 서버에 달려 있습니다.
+`tool_call` 훅에서 검토하므로 다음 한계가 있습니다.
+
+- Auto Review보다 나중에 로드한 확장의 `tool_call` 핸들러는 검토 뒤에 실행되므로, Pi가 실행할 입력을 바꿀 수 있습니다.
+- 실행 중인 MCP 호출이 보내는 승인 요청(`elicitation/create`)에 Auto Review는 답하지 않습니다. Pi의 MCP 지원과 pi-mcp-adapter도 이 요청을 처리하지 않습니다.
+- 승인 뒤 실행 중인 호출의 취소와 시간 초과는 Pi와 MCP 확장을 따릅니다. 이미 보낸 요청의 취소는 외부 서버에 달려 있습니다.
 
 ## Windows와 PowerShell
 

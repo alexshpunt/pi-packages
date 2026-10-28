@@ -1,4 +1,3 @@
-import { AsyncLocalStorage } from "node:async_hooks";
 import type { ToolAnnotations } from "@earendil-works/pi-coding-agent";
 import {
     decision,
@@ -25,6 +24,12 @@ export interface ExternalToolIdentity {
     readonly requiresStrictReview?: boolean;
     /** Version and content fingerprint used to reuse an earlier approval of the same tool. */
     readonly packageApproval?: PackageApproval;
+}
+/** A call to another extension's external tool, as the reviewer sees it. */
+export interface ExternalToolCall {
+    readonly identity: ExternalToolIdentity;
+    /** The registered definition: parameters, description, annotations and namespace. */
+    readonly schema: Json;
 }
 /** Literal ordering of Codex mcp_tool_call.rs requires_mcp_tool_approval. */
 export function requiresMcpApproval(
@@ -66,16 +71,3 @@ export function externalPolicy(
         requiresUserInput: identity.requiresUserInput === true,
     });
 }
-export interface ExternalInvocation {
-    readonly toolCallId: string;
-    readonly identity: ExternalToolIdentity;
-    readonly arguments: Readonly<Record<string, Json>>;
-    readonly signal: AbortSignal;
-    checkCurrent(): Promise<void>;
-    approveNested(
-        identity: ExternalToolIdentity,
-        args: Record<string, Json>,
-    ): Promise<boolean>;
-}
-/** The invocation comes from the final execute wrapper, never from model arguments. */
-export const externalInvocations = new AsyncLocalStorage<ExternalInvocation>();

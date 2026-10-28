@@ -75,11 +75,10 @@ export function isPackageCacheEligible(policy: PolicyDecision): boolean {
     );
 }
 
+/** The registered tool definition, including its `_meta` when known, is the MCP tool's version. */
 export function mcpPackageApproval(input: {
     readonly server: string;
     readonly tool: string;
-    readonly configDigest: string;
-    readonly serverInfo: unknown;
     readonly definition: unknown;
 }): PackageApproval {
     return {
@@ -92,8 +91,6 @@ export function mcpPackageApproval(input: {
             kind: "mcp",
             server: input.server,
             tool: input.tool,
-            configDigest: input.configDigest,
-            serverInfo: JSON.parse(JSON.stringify(input.serverInfo ?? null)),
             definition: JSON.parse(JSON.stringify(input.definition ?? null)),
         }),
     };

@@ -56,8 +56,8 @@ import {
 import { redactedEnvironmentNames, reviewEnvironment } from "./environment.js";
 import type { ToolExecutor } from "./executor.js";
 import {
+    type ExternalToolCall,
     type ExternalToolIdentity,
-    externalInvocations,
     externalPolicy,
 } from "./external.js";
 import { withApprovalMutationQueue } from "./mutation-queue.js";
@@ -126,6 +126,8 @@ export class GuardController {
         string,
         { token: string; isEnabled: boolean }
     >();
+    /** Calls `reviewExternalCall` admitted that Pi is running, by tool call ID. */
+    private reviewedCalls = new Map<string, GuardAction>();
     /** Codex Full Access: applies until Pi exits or another approval mode is chosen; never saved. */
     private isFullAccessEnabled = false;
     constructor(
@@ -232,6 +234,7 @@ export class GuardController {
         this.reviewContext.reset(sessionId, manager);
         this.approvals.reset(sessionId);
         this.sources.clear();
+        this.reviewedCalls.clear();
         this.activeReviews.clear();
         this.retryArguments.clear();
     }
@@ -322,6 +325,7 @@ export class GuardController {
         this.stopped.abort();
         this.approvals.reset();
         this.externalTools.clear();
+        this.reviewedCalls.clear();
         await this.options.executor.close();
         await this.settingsUpdates;
         await this.approvals.close();
@@ -573,154 +577,35 @@ export class GuardController {
                 const identity = JSON.parse(
                     JSON.stringify(identify()),
                 ) as ExternalToolIdentity;
-                const identityDigest = digest(identity),
-                    cwd = await canonicalPath(context.cwd, context.cwd);
-                const action = createAction(
-                    {
-                        toolCallId,
-                        tool: definition.name,
-                        args: {
-                            arguments: args,
-                            externalTool: JSON.parse(JSON.stringify(identity)),
-                            schema,
-                            ...(identity.connectedAccountEmail
-                                ? {
-                                      connected_account_email:
-                                          identity.connectedAccountEmail,
-                                  }
-                                : {}),
-                        },
-                        cwd,
-                        source: this.sources.get(toolCallId) ?? "model",
-                        sessionId: context.sessionManager.getSessionId(),
-                        policyRevision: this.policy.revision,
-                    },
-                    this.policy.profile,
-                );
-                const authorizationVersion = this.reviewContext.scopeVersion,
-                    turn = this.reviewContext.turnIdentity;
-                const checkCurrent = async () => {
-                    this.assertReady();
-                    signal.throwIfAborted();
-                    if (
-                        this.externalTools.get(definition.name)?.token !==
-                            token ||
-                        !this.isExternalTool(definition.name) ||
-                        digest(JSON.parse(JSON.stringify(identify()))) !==
-                            identityDigest
-                    )
-                        throw new GuardError(
-                            "STALE_EXTERNAL_TOOL",
-                            "External registration changed; a fresh action must be reviewed",
-                        );
-                    if (
-                        this.reviewContext.scopeVersion !==
-                            authorizationVersion ||
-                        this.reviewContext.turnIdentity !== turn ||
-                        this.sessionId !== action.sessionId ||
-                        this.policy.revision !== action.policyRevision ||
-                        (await canonicalPath(context.cwd, context.cwd)) !== cwd
-                    )
-                        throw new GuardError(
-                            "STALE_APPROVAL",
-                            "External execution context changed after admission",
-                        );
-                    signal.throwIfAborted();
-                };
-                const approve = async (
-                    candidate: GuardAction,
-                    candidateIdentity: ExternalToolIdentity,
-                ) => {
-                    await checkCurrent();
-                    const admission = await this.requestAdmission(
-                        candidate,
-                        this.isFullAccessEnabled
-                            ? decision(
-                                  candidate,
-                                  "allow",
-                                  "Full Access permits this action",
-                              )
-                            : externalPolicy(
-                                  candidate,
-                                  candidateIdentity,
-                                  this.options.settings,
-                              ),
-                        context,
-                        signal,
-                        "",
-                        candidateIdentity.packageApproval,
-                    );
-                    if (!admission.isAllowed)
-                        throw this.denied(admission, args);
-                    await checkCurrent();
-                };
+                const identityDigest = digest(identity);
+                const { action, admit } = await this.bindExternalCall({
+                    toolCallId,
+                    tool: definition.name,
+                    args,
+                    call: { identity, schema },
+                    isCurrent: () =>
+                        this.externalTools.get(definition.name)?.token ===
+                            token &&
+                        this.isExternalTool(definition.name) &&
+                        digest(JSON.parse(JSON.stringify(identify()))) ===
+                            identityDigest,
+                    context,
+                    signal,
+                });
                 try {
-                    await approve(action, identity);
-                    const result = await externalInvocations.run(
-                        {
-                            toolCallId,
-                            identity,
-                            arguments: args,
+                    await admit();
+                    const result = await execute.call(
+                        definition,
+                        toolCallId,
+                        args as typeof params,
+                        signal,
+                        onUpdate,
+                        observeToolUserInput(
+                            context,
+                            action,
+                            this.reviewContext,
                             signal,
-                            checkCurrent,
-                            approveNested: async (
-                                nestedIdentity,
-                                nestedArgs,
-                            ) => {
-                                if (
-                                    nestedIdentity.server !== identity.server ||
-                                    nestedIdentity.registration !==
-                                        identity.registration
-                                )
-                                    return false;
-                                const nested = createAction(
-                                    {
-                                        toolCallId: `${toolCallId}:elicitation:${randomUUID()}`,
-                                        tool: definition.name,
-                                        args: {
-                                            arguments: nestedArgs,
-                                            externalTool: JSON.parse(
-                                                JSON.stringify(nestedIdentity),
-                                            ),
-                                            schema,
-                                            originatingActionDigest:
-                                                action.digest,
-                                            ...(nestedIdentity.connectedAccountEmail
-                                                ? {
-                                                      connected_account_email:
-                                                          nestedIdentity.connectedAccountEmail,
-                                                  }
-                                                : {}),
-                                        },
-                                        cwd,
-                                        source: "nested",
-                                        sessionId: action.sessionId,
-                                        policyRevision: action.policyRevision,
-                                    },
-                                    this.policy.profile,
-                                );
-                                try {
-                                    await approve(nested, nestedIdentity);
-                                    return true;
-                                } catch {
-                                    return false;
-                                }
-                            },
-                        },
-                        () =>
-                            execute.call(
-                                definition,
-                                toolCallId,
-                                args as typeof params,
-                                signal,
-                                onUpdate,
-                                observeToolUserInput(
-                                    context,
-                                    action,
-                                    this.reviewContext,
-                                    signal,
-                                ),
-                            ),
+                        ),
                     );
                     await this.options.audit.record(
                         action,
@@ -739,6 +624,163 @@ export class GuardController {
                     lifetime.abort();
                     this.completeCall(toolCallId);
                 }
+            },
+        };
+    }
+    /**
+     * Reviews a call to an external tool that another extension registered, such as an MCP tool,
+     * from Pi's `tool_call` hook; denial throws so the hook can block the call. Pi then runs the
+     * tool itself, so `tool_call` handlers that run after this one can still change its input.
+     */
+    async reviewExternalCall(
+        event: ToolCallEvent,
+        describe: () => ExternalToolCall | undefined,
+        context: ExtensionContext,
+    ): Promise<void> {
+        this.assertReady();
+        // Adapted tools are reviewed in their own execute wrapper.
+        if (
+            !this.options.settings.isEnabled ||
+            this.externalTools.has(event.toolName)
+        )
+            return;
+        const call = describe();
+        if (!call) return;
+        const callDigest = digest(call);
+        const lifetime = new AbortController();
+        const signal = AbortSignal.any([
+            lifetime.signal,
+            this.stopped.signal,
+            this.approvals.lifecycle.signal,
+            ...(context.signal ? [context.signal] : []),
+        ]);
+        try {
+            signal.throwIfAborted();
+            const args = JSON.parse(canonicalJson(event.input ?? {})) as Record<
+                string,
+                Json
+            >;
+            const { action, admit } = await this.bindExternalCall({
+                toolCallId: event.toolCallId,
+                tool: event.toolName,
+                args,
+                call,
+                isCurrent: () => {
+                    const current = describe();
+                    return (
+                        current !== undefined && digest(current) === callDigest
+                    );
+                },
+                context,
+                signal,
+            });
+            try {
+                await admit();
+            } catch (error) {
+                await this.options.audit.record(action, "execution", "failed");
+                throw error;
+            }
+            this.reviewedCalls.set(event.toolCallId, action);
+        } finally {
+            lifetime.abort();
+        }
+    }
+    /** Records how an external call that `reviewExternalCall` admitted ended. */
+    async completeExternalCall(
+        toolCallId: string,
+        isError: boolean,
+    ): Promise<void> {
+        const action = this.reviewedCalls.get(toolCallId);
+        if (!action) return;
+        this.reviewedCalls.delete(toolCallId);
+        await this.options.audit.record(
+            action,
+            "execution",
+            isError ? "failed" : "settled",
+        );
+    }
+    /** Binds one external call to the current registration, session, context and policy. */
+    private async bindExternalCall(input: {
+        toolCallId: string;
+        tool: string;
+        args: Record<string, Json>;
+        call: ExternalToolCall;
+        isCurrent: () => boolean;
+        context: ExtensionContext;
+        signal: AbortSignal;
+    }): Promise<{ action: GuardAction; admit: () => Promise<void> }> {
+        const { args, context, signal } = input,
+            identity = input.call.identity;
+        const cwd = await canonicalPath(context.cwd, context.cwd);
+        const action = createAction(
+            {
+                toolCallId: input.toolCallId,
+                tool: input.tool,
+                args: {
+                    arguments: args,
+                    externalTool: JSON.parse(JSON.stringify(identity)),
+                    schema: input.call.schema,
+                    ...(identity.connectedAccountEmail
+                        ? {
+                              connected_account_email:
+                                  identity.connectedAccountEmail,
+                          }
+                        : {}),
+                },
+                cwd,
+                source: this.sources.get(input.toolCallId) ?? "model",
+                sessionId: context.sessionManager.getSessionId(),
+                policyRevision: this.policy.revision,
+            },
+            this.policy.profile,
+        );
+        const authorizationVersion = this.reviewContext.scopeVersion,
+            turn = this.reviewContext.turnIdentity;
+        const checkCurrent = async () => {
+            this.assertReady();
+            signal.throwIfAborted();
+            if (!input.isCurrent())
+                throw new GuardError(
+                    "STALE_EXTERNAL_TOOL",
+                    "External registration changed; a fresh action must be reviewed",
+                );
+            if (
+                this.reviewContext.scopeVersion !== authorizationVersion ||
+                this.reviewContext.turnIdentity !== turn ||
+                this.sessionId !== action.sessionId ||
+                this.policy.revision !== action.policyRevision ||
+                (await canonicalPath(context.cwd, context.cwd)) !== cwd
+            )
+                throw new GuardError(
+                    "STALE_APPROVAL",
+                    "External execution context changed after admission",
+                );
+            signal.throwIfAborted();
+        };
+        return {
+            action,
+            admit: async () => {
+                await checkCurrent();
+                const admission = await this.requestAdmission(
+                    action,
+                    this.isFullAccessEnabled
+                        ? decision(
+                              action,
+                              "allow",
+                              "Full Access permits this action",
+                          )
+                        : externalPolicy(
+                              action,
+                              identity,
+                              this.options.settings,
+                          ),
+                    context,
+                    signal,
+                    "",
+                    identity.packageApproval,
+                );
+                if (!admission.isAllowed) throw this.denied(admission, args);
+                await checkCurrent();
             },
         };
     }
