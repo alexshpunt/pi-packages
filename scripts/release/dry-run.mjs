@@ -16,7 +16,7 @@ import { parseArgs, promisify } from "node:util";
 import release from "release-it";
 import semver from "semver";
 import { changelogProblems, inspectChangelogs, localDate, stampChangelogs } from "./changelog.mjs";
-import { collectDraftInputs, DRAFT_EFFORT, DRAFT_MODEL, draftModeFor } from "./changelog-draft.mjs";
+import { collectDraftInputs, DRAFT_EFFORT, DRAFT_MODEL, draftModeFor, needsFallbackDraft } from "./changelog-draft.mjs";
 import { NoPrompt } from "./prompts.mjs";
 import {
   configProblems,
@@ -268,7 +268,8 @@ async function main() {
   } else if (willDraft && changelogs.ko !== undefined) {
     isChangelogDrafted = true;
     const source = `${draftInputs.commitCount} commit(s) since ${draftInputs.sinceTag ?? "the first commit"}`;
-    check("changelog", "warn", `${changelogIssues.join("; ")}. pnpm release drafts the entries with claude from ${source} and writes them only after a confirmation.`);
+    const fallback = needsFallbackDraft(changelogs, draftMode) ? ` If claude finds no user-visible change, the draft is "### Fixed: Other bug fixes".` : "";
+    check("changelog", "warn", `${changelogIssues.join("; ")}. pnpm release drafts the entries with claude from ${source} and writes them only after a confirmation.${fallback}`);
   } else {
     check("changelog", "fail", `${changelogIssues.join("; ")}. No draft would run: there are no commits since ${draftInputs.sinceTag ?? "the first commit"}.`);
   }

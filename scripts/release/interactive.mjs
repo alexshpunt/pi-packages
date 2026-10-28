@@ -5,7 +5,8 @@
 //   pnpm release
 //
 // After the app is chosen, `claude -p` drafts the CHANGELOG.md / CHANGELOG.ko.md entries the unreleased sections still
-// miss (see changelog-draft.mjs). The draft is written only after a confirmation and then rides in the release commit.
+// miss (see changelog-draft.mjs). When it finds no user-visible change and both sections are empty, the draft is the
+// common "Other bug fixes" entry. The draft is written only after a confirmation and then rides in the release commit.
 //
 // Nothing is published from here. Pushing the `<app folder>-v<version>` tag triggers .github/workflows/pi-packages.yml.
 // Each confirmation is `(Y/n)`: Enter approves it, push included. Declining or cancelling stops the whole flow and
@@ -25,7 +26,9 @@ import {
   DRAFT_MODEL,
   draftChangelog,
   draftModeFor,
+  FALLBACK_DRAFT,
   isEmptyDraft,
+  needsFallbackDraft,
 } from "./changelog-draft.mjs";
 import { InquirerPrompt, ReleaseStopped, requireAnswer } from "./prompts.mjs";
 import {
@@ -107,8 +110,9 @@ async function whileCancellable(stage, task) {
 }
 
 /**
- * Drafts the entries the unreleased sections miss and writes them after a confirmation. A failed, empty, unpaired or
- * declined draft leaves both files as they are; the changelog check that follows decides whether the release goes on.
+ * Drafts the entries the unreleased sections miss and writes them after a confirmation. An empty draft for empty
+ * sections becomes FALLBACK_DRAFT. A failed, otherwise empty, unpaired or declined draft leaves both files as they are;
+ * the changelog check that follows decides whether the release goes on.
  */
 async function offerChangelogDraft() {
   const changelogs = readChangelogs(target);
@@ -131,8 +135,12 @@ async function offerChangelogDraft() {
     return;
   }
   if (isEmptyDraft(drafted.draft)) {
-    console.info("claude found no user-visible change missing from the changelog.");
-    return;
+    if (!needsFallbackDraft(changelogs, drafted.mode)) {
+      console.info("claude found no user-visible change missing from the changelog.");
+      return;
+    }
+    console.info("claude found no user-visible change; the draft is the common entry.");
+    drafted = { ...drafted, draft: FALLBACK_DRAFT };
   }
   const action = drafted.mode === "convert" ? "replaces the current unreleased entries" : "is added to the unreleased section";
   for (const language of LANGUAGES) {

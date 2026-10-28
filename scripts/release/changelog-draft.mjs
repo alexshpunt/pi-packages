@@ -169,6 +169,18 @@ export function parseDraft(structured) {
 
 export const isEmptyDraft = (draft) => ["en", "ko"].every((code) => SECTIONS.every((section) => !draft[code][section.key].length));
 
+/** The common entry for a release whose commits hold no user-visible change, such as documentation-only edits. */
+export const FALLBACK_DRAFT = {
+  en: { new: [], improved: [], fixed: ["Other bug fixes"], removed: [] },
+  ko: { new: [], improved: [], fixed: ["기타 버그 수정"], removed: [] },
+};
+
+/** An empty draft takes FALLBACK_DRAFT only when it would be appended and neither unreleased section has entries. */
+export function needsFallbackDraft(changelogs, mode) {
+  const inspected = inspectChangelogs(changelogs);
+  return mode === "append" && !inspected.en.sections.length && !inspected.ko.sections.length;
+}
+
 /** Both files after applying the draft: appended to the current entries, or replacing an older-format section. */
 export function applyDraft(changelogs, draft, mode) {
   const style = styleOf(changelogs.en);
