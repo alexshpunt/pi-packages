@@ -2,9 +2,16 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-28
+
 ### New
 
 - Includes Codex memory v2 with `/codex-memory` management, scoped recall and opt-in automatic generation (`@buyong/pi-codex-memory` 0.1.0); requires Pi 1.4.0+ and Node.js 22.19+.
+- Fast and Ultrafast support follows the OpenAI Codex model catalog, so models such as `gpt-6.1-terra` can be selected without an extension update (included `@buyong/pi-codex-fast-mode` 0.5.0).
+
+### Improved
+
+- The bundle now requires Pi 1.4.0 or later, up from 1.0.0, because the included memory extension uses Pi 1.4.0 APIs. The other components keep their own compatibility requirements.
 
 ## [0.4.1] - 2026-10-21
 
