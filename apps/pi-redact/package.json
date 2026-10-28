@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@buyong/redact": "workspace:*",
-    "effect": "4.0.6"
+    "effect": "4.0.7"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
