@@ -2,9 +2,13 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-28
+
 ### New
 
 - Like the Codex CLI, Fast and Ultrafast support now follows the OpenAI Codex model catalog, so models such as `gpt-6.1-terra` can be selected without an extension update. The catalog is read at session start with Pi's `openai-codex` login, or else the `openai` provider's login, and its speed tiers are saved for use when neither lookup works; unlisted models, and sessions with neither a lookup nor saved tiers, use the built-in list.
+- While the catalog loads at session start, the first request and `/codex-fast` commands wait up to five seconds for it, so they use the catalog's tiers instead of the built-in list.
+- With `--offline` or `PI_OFFLINE` set, the extension skips the catalog lookup and uses the saved tiers in `<agentDir>/codex-fast-mode/service-tiers.json`.
 
 ## [0.4.1] - 2026-10-21
 
