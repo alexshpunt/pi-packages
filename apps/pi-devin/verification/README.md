@@ -2,7 +2,9 @@
 
 This document is **for developers working in a source checkout**. `tests/`, `verification/` and the handoffs are not included in the npm archive. Installed users follow "Checking the installation" in the package README.
 
-Verification needs Node >=22.19.0, pnpm, npm, the system `tar`, the dev dependencies and **Pi 1.3.0**. The current run evidence uses Node 24.14.0. Installing npm dependencies may reach the public registry. A real Devin account, browser, inference or publishing each needs separate run approval and is not part of the automated checks below.
+Verification needs Node >=22.19.0, pnpm, npm, the system `tar`, the dev dependencies and **Pi 1.4.0**. Installing npm dependencies may reach the public registry. A real Devin account, browser, inference or publishing each needs separate run approval and is not part of the automated checks below.
+
+The committed evidence snapshots were recorded on Pi 1.3.0 with Node 24.14.0. The formal live check and Linux were not rerun on Pi 1.4.0.
 
 ## 1. Isolated environment and pinned Pi path
 
@@ -15,7 +17,7 @@ mkdir -p "$check_dir/home" "$check_dir/tmp" "$check_dir/agent" "$check_dir/work"
 : > "$check_dir/user.npmrc"
 : > "$check_dir/global.npmrc"
 PI_ROOT="$(node -p 'require("fs").realpathSync("node_modules/@earendil-works/pi-coding-agent")')"
-node -e 'const p=require(process.argv[1]+"/package.json"); console.log(p.version); if(p.version!=="1.3.0") process.exit(1)' "$PI_ROOT"
+node -e 'const p=require(process.argv[1]+"/package.json"); console.log(p.version); if(p.version!=="1.4.0") process.exit(1)' "$PI_ROOT"
 
 check_env() {
   env -i PATH="$PATH" HOME="$check_dir/home" TMPDIR="$check_dir/tmp" \
@@ -76,17 +78,21 @@ check_env env PI_DEVIN_TEST_PACKAGE_ROOT="$artifact_dir" PI_DEVIN_TEST_PI_ROOT="
   pnpm exec vitest run --config verification/scripts/artifact-vitest.config.mjs
 ```
 
-Expected: the extracted resource check `pass` and provider checks **68/68**. These checks cover the account login object, catalog, exact UIDs, protobuf, images, tool results, retries, compression, cancellation, session replacement, provider lifetimes across shutdown and the next session start, the prompt cache, Fusion and SDK mode binding. They do not run the tool runner in place of Pi. The configuration fixes the suites to `tests/pi-provider*`, `pi-integration`, `pi-runtime`, `pi-lifecycle*` and `pi-lifetime`. Running all of `tests/*.test.ts` against the artifact is not supported: the archive does not contain the CLI (`cli.ts`, `src/cli/`), so the CLI tests have nothing to load from it. Only the imports Vitest resolves for the tests are redirected to the extracted artifact; processes the tests start are not.
+Expected: the extracted resource check `pass` and provider checks **72/72** across 7 test files.
+
+These checks cover the account login object, catalog, exact UIDs, protobuf, images, tool results, retries, compression, cancellation, session replacement, provider lifetimes across shutdown and the next session start, the prompt cache, Fusion and SDK mode binding. They do not run the tool runner in place of Pi.
+
+The configuration fixes the suites to `tests/pi-provider*`, `pi-integration`, `pi-runtime`, `pi-lifecycle*` and `pi-lifetime`. Running all of `tests/*.test.ts` against the artifact is not supported: the archive does not contain the CLI (`cli.ts`, `src/cli/`), so the CLI tests have nothing to load from it. Only the imports Vitest resolves for the tests are redirected to the extracted artifact; processes the tests start are not.
 
 Check the real Pi execution path of the extracted artifact by passing `--package-root "$artifact_dir" --pi-root "$PI_ROOT"` to the step 6 runner. The Pi process sandbox then also refuses reads of the source `src/`, `index.ts` and `cli.ts`, and the help scenario checks that refusal (`EPERM`) as a control.
 
-`artifact-vitest.config.mjs` is a source-only Vitest configuration that redirects the production imports of the source tests to the extracted artifact and pins host imports to the **public entries** of `PI_ROOT`. The tests and fake inputs are only check tools, not runtime dependencies of the archive. It uses a Vite `resolveId` plugin, and Vitest compiles the redirected artifact files with its own TypeScript transform, so Pi's real load path is checked by the step 6 runner below. Setting `PI_DEVIN_TEST_REPORT_DIR` to an existing directory saves the mapping record of the Vitest process.
+`artifact-vitest.config.mjs` is a source-only Vitest configuration that redirects the production imports of the source tests to the extracted artifact and pins host imports to the **public entries** of `PI_ROOT`. The tests and fake inputs are only check tools, not runtime dependencies of the archive. The configuration uses a Vite `resolveId` plugin, and Vitest compiles the redirected artifact files with its own TypeScript transform, so Pi's real load path is checked by the step 6 runner below. Setting `PI_DEVIN_TEST_REPORT_DIR` to an existing directory saves the mapping record of the Vitest process.
 
 The recorded sandbox run predates the move to Vitest and used the former Node preload (`artifact-loader.mjs`). It used an extraction path containing spaces and Hangul characters, and a separate cwd. Its provider checks (44 at that time) passed even while the OS sandbox (`sandbox-exec`) refused network outside loopback, the real HOME outside the repository and Node, and reads of the source `apps/pi-devin/src/`, `index.ts` and `cli.ts`. Source tests run without the loader under the same profile fail with `EPERM` (negative control). The command above, which only sets environment variables, does not by itself provide the same OS isolation.
 
 ## 5. Local Pi registration and cleanup
 
-Run this step only with the temporary settings too. The version of the `pi` executable must match the `PI_ROOT` checked earlier.
+Run these commands through `check_env`. The version of the `pi` executable must match the `PI_ROOT` checked earlier.
 
 ```bash
 check_env pi install "$artifact_dir"
@@ -123,4 +129,5 @@ Expected: exit code 0 and `outcome: "pass"` in the report. The scope is:
 - The handoff snapshots under `handoffs/` and `followup/handoffs/` are verification records from each implementation point. Do not overwrite past records because their hashes differ from the current code.
 - `package-check.json`, `extracted-check.json` and `handoffs/05-package-checks.json` are the distribution evidence. Read them together with the real archive path and hash, dependencies, commands run, how `skipped` was covered, and limits.
 - If the final README or runtime files change, build a new archive and redo the extracted-artifact checks.
-- Live service, CLI parity and the earlier cleanup findings are judged separately. The records of steps 2–5 above do not include the Node 22.19.0 minimum run or other OSes. The real Pi execution path and the Node 22.19.0 results are in `followup/handoffs/05-host-contract.json`.
+- Live service, CLI parity and the earlier cleanup findings are judged separately.
+- The records of steps 2–5 above do not include the Node 22.19.0 minimum run or other OSes. The real Pi execution path and the Node 22.19.0 results are in `followup/handoffs/05-host-contract.json`.

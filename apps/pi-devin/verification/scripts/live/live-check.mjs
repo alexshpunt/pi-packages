@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Runner for the 07 live check. Prepares the immutable 06 archive in a temporary state and runs only the cases of the
-// approved plan with the pinned Pi 1.3.0 bin. Every Pi process goes through sandbox-exec (refuses real HOME reads and
+// approved plan with the pinned Pi 1.4.0 bin. Every Pi process goes through sandbox-exec (refuses real HOME reads and
 // writes outside the state) and the live-guard preload (enforces hosts, UIDs, the overall cap and the free tier).
 // API key environment variables never reach the child environment. Not shipped.
 // `--plan 08 --pin <json>` selects the 08 plan instead: the 07 cases plus one long RPC session, pinned to the archive the
@@ -613,7 +613,7 @@ const { values } = parseArgs({ args: rest, options: { archive: { type: "string" 
   plan: { type: "string" }, pin: { type: "string" } } });
 const need = (name) => { if (!values[name]) { console.error(`--${name} is required`); process.exit(2); } return values[name]; };
 if (process.platform !== "darwin" || !existsSync("/usr/bin/sandbox-exec")) { console.error("sandbox-exec unavailable: live check is blocked"); process.exit(2); }
-if (piPackage.version !== "1.3.0") { console.error(`Pi ${piPackage.version} is not the pinned 1.3.0`); process.exit(2); }
+if (piPackage.version !== "1.4.0") { console.error(`Pi ${piPackage.version} is not the pinned 1.4.0`); process.exit(2); }
 if (![undefined, "07", "08"].includes(values.plan)) { console.error(`unknown plan ${values.plan}`); process.exit(2); }
 const PLAN = values.plan === "08" ? plan08(JSON.parse(readFileSync(resolve(need("pin")), "utf8"))) : PLAN_07;
 

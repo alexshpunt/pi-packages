@@ -15,7 +15,7 @@ An **unofficial** provider that lets you use Devin models in [Pi](https://github
 
 ## Requirements
 
-- Node.js 22.19.0 or later and Pi (tested with 1.3.0)
+- Node.js 22.19.0 or later and Pi (tested with 1.4.0)
 - A Devin account that may use the Devin CLI, with quota left. Without both, you cannot chat even after a successful login.
 
 ## Installation
@@ -34,7 +34,7 @@ After a user-wide install, run these in a shell from any directory. After a `-l`
 
 ```bash
 node --version   # 22.19.0 or later
-pi --version     # tested with 1.3.0
+pi --version     # tested with 1.4.0
 pi list          # "User packages:" includes npm:@buyong/pi-devin and its installed path
 ```
 
@@ -77,7 +77,9 @@ There are two toggles, both off by default. Changes apply to all sessions at onc
 - **Recommended models only**: `/model` shows only the models that have a variant Devin marks as Recommended, plus Devin Fusion. Devin marks single variants such as `swe-2-high`, but the list keeps the model itself (`swe-2`), so you still pick the thinking level with `/thinking`. The recommended level is not applied automatically. If your account has no recommended models, the full list is shown.
 - **Usage in status line**: the TUI footer shows the remaining daily and weekly quota as bars, plus this session's input and output tokens, like `devin day ▕█████████░▏98% week ▕█████████░▏98% · ↑263 ↓49`. A bar turns to the warning color at 40% or less and to the error color at 20% or less. It appears only while a Devin model, including Devin Fusion, is selected, and disappears when you switch to another provider's model. `/devin` shows usage whichever model is selected.
 
-Quota is not live. It is refreshed when you log in and by the account check right before each model request, including requests from subagents and the Fusion sidekick that use the same Pi agent directory, so the usage of the message you just sent shows up after the next request. `/devin` and the status line send no network requests; the status line picks up quota recorded by other Pi processes at the end of each turn. Credits, per-request costs and usage history are not shown.
+Quota is not live. It is refreshed when you log in and by the account check right before each model request, including requests from subagents and the Fusion sidekick that use the same Pi agent directory, so the usage of the message you just sent shows up after the next request.
+
+`/devin` and the status line send no network requests; the status line picks up quota recorded by other Pi processes at the end of each turn. Credits, per-request costs and usage history are not shown.
 
 If a filter change removes the model you are using from the list, you can keep using it in the current session. When you reopen the session, that model is not restored, so pick a model from the list again.
 
@@ -168,12 +170,12 @@ node "$cli" chat --model swe-2-medium --prompt "Please say hello briefly." \
 
 | Item | Tested with |
 | --- | --- |
-| Pi | 1.3.0 |
+| Pi | 1.4.0 and 1.3.0 |
 | Node.js | 22.19.0, 24.14.0 |
-| OS | macOS arm64. Linux arm64 passed automated tests only (real Pi screens and a real account were not checked) |
-| Real account | With SWE-2 models: login, model list, chat, thinking level changes, tool calls, Fusion, the recommended model filter, and quota and usage in the `/devin` notification in RPC mode (2026-10-20) |
+| OS | macOS arm64. Linux arm64 passed automated tests only on Pi 1.3.0 (real Pi screens and a real account were not checked) |
+| Real account | With SWE-2 models: login, model list, chat, thinking level changes, tool calls, Fusion, the recommended model filter, and quota and usage in the `/devin` notification in RPC mode (Pi 1.3.0, 2026-10-20); one SWE-2 chat request without tools or thinking (Pi 1.4.0, 2026-10-29) |
 
-The TUI-only screens (the `/devin` screen, the status line and the Fusion picker) were not checked with a real account. Other Pi versions and Windows were not checked either.
+The TUI-only screens (the `/devin` screen, the status line and the Fusion picker) were not checked with a real account. The full set of real-account checks and Linux were not rerun on Pi 1.4.0. Other Pi versions and Windows were not checked either.
 
 ## Development
 
