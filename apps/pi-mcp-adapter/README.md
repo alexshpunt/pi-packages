@@ -14,7 +14,13 @@ Connects [MCP](https://modelcontextprotocol.io) servers to [Pi](https://github.c
 
 ## Installation
 
-This package is not on npm yet. Install it from a checkout of this repository. Pi does not install the dependencies of a local package, so install them first:
+Install from npm:
+
+```bash
+pi install npm:@buyong/pi-mcp-adapter
+```
+
+To install from a checkout instead, install its dependencies first; Pi does not install dependencies for local packages:
 
 ```bash
 cd /path/to/pi-packages
@@ -36,7 +42,7 @@ You can also turn off `mcp` under **Built-in** in `pi config`. The adapter takes
 Warning: Extension package "builtin:mcp": Extension <path>/src/index.ts registers command `/mcp`, so built-in extension `mcp` was not loaded. …
 ```
 
-Restart Pi, or run `/reload` in a running Pi. Pi loads a local package from its directory instead of copying it, so keep the checkout in place.
+Restart Pi, or run `/reload` in a running Pi. If you installed from a checkout, keep it in place: Pi loads a local package from its directory instead of copying it.
 
 To try the package for one session without installing it, start Pi with `pi -e /path/to/pi-packages/apps/pi-mcp-adapter`.
 
