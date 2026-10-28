@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-28
+
 ### New
 
 - MCP servers connect to Pi through this package instead of Pi's built-in MCP support, with the same `mcp.json`, `/mcp` manager, and tool exposures.
