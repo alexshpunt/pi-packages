@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 import type { SessionState } from "../../src/features/session/types.js";
+import type { BridgeRuntimeOptions } from "../../src/app/types.js";
 import type { ExtensionAPI, ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import { createBridgeRuntime } from "../../src/app/runtime.js";
 import { PiBridge } from "../../src/adapters/pi/registration.js";
@@ -25,8 +26,8 @@ import { InstanceRegistry } from "../../src/adapters/pi/instance-registry.js";
 import { SessionEvents } from "../../src/app/session-events.js";
 
 /** Verification-only adapters. Production exports no test API or flat service bag. */
-export function createBridgeHarness() {
-	const runtime = createBridgeRuntime();
+export function createBridgeHarness(options?: BridgeRuntimeOptions) {
+	const runtime = createBridgeRuntime(options);
 	const piBridge = runtime.runSync(PiBridge);
 	const diagnostics = runtime.runSync(Diagnostics);
 	const configuration = runtime.runSync(Configuration);

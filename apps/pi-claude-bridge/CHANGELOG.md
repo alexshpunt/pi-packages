@@ -1,5 +1,11 @@
 # Changelog
 
+## UNRELEASED
+
+### New
+
+- Another extension can create its own bridge instance with `createClaudeBridgeExtension({ getChildEnv })` from `src/index.ts` and register it instead of the default export. Just before each Claude Code process for a model request or a summary starts, the bridge calls `getChildEnv({ purpose })` and adds the returned variables to that process only, over the ones the bridge sets. They are not written to Pi's environment, logs, or error messages. If `getChildEnv` throws or returns anything other than a plain object of strings, the request fails without starting Claude Code. The default export works as before.
+
 ## 0.13.2 — 2026-10-28
 
 ### Improved

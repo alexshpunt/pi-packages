@@ -4,8 +4,15 @@ import type { Options, query, SDKMessage, SDKUserMessage } from "@anthropic-ai/c
 import type { Model } from "@earendil-works/pi-ai";
 import type { Effect } from "effect";
 
+/** Which kind of Claude Code child is about to start. */
+export type ClaudeChildPurpose = "provider" | "summary";
+
+/** Supplies variables for one Claude Code child; they override the bridge's child environment. */
+export type GetChildEnv = (context: { purpose: ClaudeChildPurpose }) => Readonly<Record<string, string>>;
+
 export interface SdkQueryClientServices {
-	readonly invokeQuery: (input: Parameters<typeof query>[0]) => ReturnType<typeof query>;
+	/** `purpose` is required when the client was created with `getChildEnv`. */
+	readonly invokeQuery: (input: Parameters<typeof query>[0], purpose?: ClaudeChildPurpose) => ReturnType<typeof query>;
 	readonly setQuery: (fn: typeof query | null) => void;
 }
 

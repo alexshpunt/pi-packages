@@ -148,6 +148,23 @@ Add the following to `~/.pi/agent/subagents.json`:
 {"promptInheritance": {"claude-bridge": "portable"}}
 ```
 
+### Creating the bridge from another extension
+
+An extension can create its own bridge instance and register it instead of the default export. Use `getChildEnv` to give that instance's Claude Code processes variables the rest of Pi must not see, such as a login token:
+
+```ts
+import { createClaudeBridgeExtension } from "@buyong/pi-claude-bridge/src/index.ts";
+
+export default createClaudeBridgeExtension({
+  getChildEnv: ({ purpose }) => ({ CLAUDE_CODE_OAUTH_TOKEN: token }),
+});
+```
+
+- The bridge calls `getChildEnv` just before each Claude Code process starts. `purpose` is `"provider"` for model requests and `"summary"` for summaries.
+- The returned variables apply only to that process and override the ones the bridge sets for it. The bridge does not write them to Pi's environment, settings, logs, or error messages.
+- If `getChildEnv` throws or returns anything other than a plain object of strings, the request fails without starting Claude Code. The error message does not include the values.
+- Load one bridge instance per Pi process. If Pi also loads the installed package, the instance that registers first serves requests.
+
 ## Debugging
 
 Set `CLAUDE_BRIDGE_DEBUG=1` to enable debug output:

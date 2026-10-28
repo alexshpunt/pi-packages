@@ -148,6 +148,23 @@ Pi의 도구는 Claude Code에 연결되며, Pi에서는 평소처럼 사용합�
 {"promptInheritance": {"claude-bridge": "portable"}}
 ```
 
+### 다른 확장에서 브리지 만들기
+
+확장은 브리지 인스턴스를 직접 만들어 기본 내보내기 대신 등록할 수 있습니다. 로그인 토큰처럼 Pi의 다른 부분에 보이면 안 되는 변수를 그 인스턴스의 Claude Code 프로세스에만 넘기려면 `getChildEnv`를 씁니다.
+
+```ts
+import { createClaudeBridgeExtension } from "@buyong/pi-claude-bridge/src/index.ts";
+
+export default createClaudeBridgeExtension({
+  getChildEnv: ({ purpose }) => ({ CLAUDE_CODE_OAUTH_TOKEN: token }),
+});
+```
+
+- 브리지는 Claude Code 프로세스를 시작하기 직전마다 `getChildEnv`를 부릅니다. `purpose`는 모델 요청이면 `"provider"`, 요약이면 `"summary"`입니다.
+- 돌려받은 변수는 그 프로세스에만 적용되고, 브리지가 그 프로세스에 정하는 변수보다 우선합니다. 브리지는 이 값을 Pi의 환경, 설정, 로그, 오류 메시지에 쓰지 않습니다.
+- `getChildEnv`가 예외를 던지거나 문자열 값만 담은 일반 객체가 아닌 것을 돌려주면 Claude Code를 시작하지 않고 요청을 실패로 끝냅니다. 오류 메시지에는 값이 들어가지 않습니다.
+- Pi 프로세스 하나에는 브리지 인스턴스를 하나만 불러오세요. 설치한 패키지도 함께 불러오면 먼저 등록한 인스턴스가 요청을 처리합니다.
+
 ## 디버깅
 
 `CLAUDE_BRIDGE_DEBUG=1`을 설정하면 디버그 출력을 켭니다.

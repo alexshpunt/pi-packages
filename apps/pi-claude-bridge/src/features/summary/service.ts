@@ -67,7 +67,7 @@ export function createIsolatedSummary(dependencies: IsolatedSummaryDependencies)
 						cwd, providerSettings, model, cliModel, reasoning: options?.reasoning,
 						systemPrompt: context.systemPrompt, debugOptions: diagnostics.makeCliDebugOptions("compact-summary"),
 					}),
-				});
+				}, "summary");
 				if (options?.signal) {
 					if (options.signal.aborted) onAbort();
 					else options.signal.addEventListener("abort", onAbort, { once: true });

@@ -67,7 +67,7 @@ export function createQueryCompletion({ lifetimeScope, consumer, queries, sessio
 			const { queryOptions, promptStream, queryCtx, customToolNameToPi, model, options, isReentrant, syncResult, cwd, cliModel, context, initialPromptAck } = input;
 			// 3. Start SDK query and claim it for this context
 			let wasAborted = false;
-			const sdkQuery = yield* fromSync(() => client.invokeQuery({ prompt: promptStream.stream, options: queryOptions })).pipe(
+			const sdkQuery = yield* fromSync(() => client.invokeQuery({ prompt: promptStream.stream, options: queryOptions }, "provider")).pipe(
 				Effect.tapError(() => Effect.sync(() => promptStream.fail(new Error("query failed to start")))),
 			);
 			const execution = new QueryExecution(sdkQuery, lifetimeScope);
