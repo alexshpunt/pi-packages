@@ -160,7 +160,8 @@ function reportState() {
   if (!headBefore) return;
   try {
     console.info(`HEAD before: ${headBefore}\nHEAD now: ${git("rev-parse", "HEAD")}`);
-    console.info(`Remaining index/worktree changes:\n${statusLines() || "(clean)"}`);
+    // Untracked files never enter the release commit, so only tracked changes are reported.
+    console.info(`Remaining index/worktree changes:\n${statusLines("--untracked-files=no") || "(clean)"}`);
     if (target) console.info(`Version on disk (${target.path}): ${readVersion(target)}`);
     if (prompt.tagName) console.info(`Local tag ${prompt.tagName}: ${readLocalTag(prompt.tagName) ?? "(not present locally)"}`);
     const pushState = prompt.completed.includes("push")
