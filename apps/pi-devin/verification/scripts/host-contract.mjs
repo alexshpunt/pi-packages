@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Verifies the provider contract by connecting the pinned Pi 1.3.0 bin's TUI, print, JSON and RPC paths to a loopback mock Devin service.
+// Verifies the provider contract by connecting the pinned Pi 1.4.0 bin's TUI, print, JSON and RPC paths to a loopback mock Devin service.
 // Each scenario runs inside macOS sandbox-exec with a fresh temporary HOME/agent/cwd. The sandbox refuses network outside the mock
 // service port, reads of the real HOME (except the repository, Node and temp paths) and writes outside the temp paths. Not shipped.
 //
@@ -863,7 +863,7 @@ const report = {
 let blockedReason;
 if (process.platform !== "darwin" || !existsSync("/usr/bin/sandbox-exec")) blockedReason = "sandbox-exec unavailable: isolation cannot be proven";
 else if (!python) blockedReason = "python3 unavailable: TUI PTY cannot be owned";
-else if (piPackage.version !== "1.3.0") blockedReason = `Pi ${piPackage.version} is not the pinned 1.3.0`;
+else if (piPackage.version !== "1.4.0") blockedReason = `Pi ${piPackage.version} is not the pinned 1.4.0`;
 if (blockedReason) {
   report.outcome = "blocked"; report.blockedReason = blockedReason;
 } else {
