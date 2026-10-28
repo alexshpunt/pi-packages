@@ -160,7 +160,7 @@ export class McpOAuthCredentialStore {
         });
       }),
       () => work,
-      (release) => Effect.ignore(fromPromise(release)),
+      (release) => Effect.ignore(fromPromise(() => release())),
     );
   }
 
