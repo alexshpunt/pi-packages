@@ -1,6 +1,6 @@
 {
   "name": "@buyong/pi-refuseless",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Refuseless provider for Pi: API-key login and the abliterated chat models.",
   "license": "MIT",
   "engines": {
