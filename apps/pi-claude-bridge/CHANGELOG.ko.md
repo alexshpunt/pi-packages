@@ -2,6 +2,12 @@
 
 0.12.0까지의 변경 이력은 영문 [CHANGELOG.md](CHANGELOG.md)에만 있습니다.
 
+## UNRELEASED
+
+### 새로워진 것
+
+- 다른 확장이 `src/index.ts`의 `createClaudeBridgeExtension({ getChildEnv })`로 브리지 인스턴스를 따로 만들어 기본 내보내기 대신 등록할 수 있습니다. 브리지는 모델 요청이나 요약을 처리할 Claude Code 프로세스를 시작하기 직전마다 `getChildEnv({ purpose })`를 부르고, 돌려받은 변수를 그 프로세스에만 더합니다. 이 변수는 브리지가 정하는 변수보다 우선하며, Pi의 환경, 로그, 오류 메시지에는 쓰이지 않습니다. `getChildEnv`가 예외를 던지거나 문자열 값만 담은 일반 객체가 아닌 것을 돌려주면 Claude Code를 시작하지 않고 요청을 실패로 끝냅니다. 기본 내보내기는 이전과 같이 동작합니다.
+
 ## 0.13.2 — 2026-10-28
 
 ### 달라진 것
