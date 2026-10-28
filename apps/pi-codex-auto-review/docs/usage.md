@@ -23,7 +23,7 @@ pi
 - Pi supplies the host SDK to managed extensions. Do not add a second SDK copy or symbolic link to the managed package.
 - Remove an installation with `pi remove <source>`, using the source shown by `pi list`. Use `--local` when removing a project-scoped entry.
 
-Normal extension registration connects the guarded local tools and the guarded MCP adapter. It replaces Pi's built-in MCP extension to avoid duplicate connections. **Registration is not a protected-startup guarantee:** Pi 1.3.0 exits with code 1 for extension loading errors on a fresh CLI startup, but reload and SDK loading have separate error handling. Auto Review defers policy, rule, and SQLite initialization to session start or first use; failures block protected operations until reload or restart. Use the [guarded CLI or SDK](#run-with-protected-startup) for an explicit readiness check before execution, including after reload.
+Normal extension registration connects the guarded local tools. Auto Review does not connect MCP servers: Pi's built-in MCP support, or an extension that replaces it such as pi-mcp-adapter, connects them, and Auto Review reviews their tool calls (see [MCP approvals](#mcp-approvals)). **Registration is not a protected-startup guarantee:** Pi 1.3.0 exits with code 1 for extension loading errors on a fresh CLI startup, but reload and SDK loading have separate error handling. Auto Review defers policy, rule, and SQLite initialization to session start or first use; failures block protected operations until reload or restart. Use the [guarded CLI or SDK](#run-with-protected-startup) for an explicit readiness check before execution, including after reload.
 
 ## Choose an approval method and review model
 
@@ -75,7 +75,7 @@ Selections save to `<agentDir>/guard/settings.json`, or to an explicit `settings
 
 The guarded CLI and `createGuardedRuntime()` check extension and controller readiness. They reject Pi versions before **1.0.0** with `UNSUPPORTED_PI`, regardless of the broader manifest peer range. They also check readiness each time the session is bound to an interface again (every `session.bindExtensions()` call starts the session anew) and for direct user shell calls.
 
-These entry points disable automatic extension discovery. Load any additional extension explicitly and treat its code as trusted. Other extension tools do not automatically gain an approval gate; local shell/file tools and the guarded MCP adapter retain theirs.
+These entry points disable automatic extension discovery. Load any additional extension explicitly and treat its code as trusted. Other extension tools do not automatically gain an approval gate; local shell/file tools and MCP tools retain theirs. These entry points load Pi's MCP extension themselves (see [MCP approvals](#mcp-approvals)).
 
 Project instructions, settings, and MCP servers follow Pi's saved trust decision and global `defaultProjectTrust`. Without saved or explicit trust, project resources do not start. `--trust-project` or SDK `isProjectTrusted: true` trusts the initial project for this run; later directory changes use each directory's own trust record.
 
@@ -164,7 +164,7 @@ try {
 | `model` or `modelSelection` | A model object or `{ provider, id }`; cannot be used together |
 | `trustedExtensionPaths` | Extension entry paths, resolved from the initial `cwd`. Protects the containing directories, including sibling imports. |
 | `profile` | Custom permission profile, including `readOnlyPaths`. Required guard control/rule-file and extension-code protection applies while the extension is on and Full Access is off. |
-| `mcp` | MCP extension options; `false` disables the guarded MCP adapter |
+| `mcp` | Options for Pi's MCP extension; `false` loads no MCP extension and leaves MCP calls unreviewed |
 | `mcpToolPolicies` | `approvalMode` overrides keyed by `server/tool` |
 | `modelRuntime`, `settingsManager`, `sessionManager` | Optional Pi services and session storage supplied by the embedding application |
 | `trustedExtensions`, `externalExtensions` | Explicit inline integrations; the caller owns trust in their code |
@@ -277,7 +277,7 @@ TUI/RPC approval dialogs offer **Allow once**, **Allow for this session**, and *
 
 Eligible MCP tools and skill scripts can reuse a separate package approval:
 
-- MCP fingerprints include server configuration, initialization identity/version, and the tool definition.
+- MCP fingerprints include the server name and the registered tool definition: parameters, description, annotations, and `_meta` when an extension reports it. A new server version with an unchanged definition reuses the approval.
 - Skill fingerprints include files in the directory containing `SKILL.md`. Only a single `<script>` or `<interpreter> <script>` command qualifies; symbolic-link-containing skills are not cached.
 - Automatic approvals and **Save as an allow rule** persist in `<agentDir>/guard/package-approvals.json`. **Allow for this session** is session-only; **Allow once** is not reused.
 - Changed content is reviewed again. Additional paths/domains, shell targets without a known location (such as WSL or POSIX-root paths on Windows, wildcard, provider, or remote share paths), escalation, rule prompts, strict MCP review, and required user input always require a fresh decision.
@@ -350,9 +350,11 @@ Invalid entries cause `INVALID_SETTINGS`; redaction validation errors name the k
 
 ## MCP approvals
 
-The adapter uses servers registered with Pi, `<agentDir>/mcp.json`, and trusted projects' `.pi/mcp.json`. When the session is bound to an interface again (`session.bindExtensions()`), the adapter closes the old connections and creates new ones. Approval binds to the actual server/tool registration; a registration change during review or cancellation prevents execution.
+Auto Review does not connect MCP servers. Pi's built-in MCP support, or an extension that replaces it such as pi-mcp-adapter, connects them and registers their tools as `mcp__<server>__<tool>`. Auto Review reviews each call to such a tool in Pi's `tool_call` hook, before Pi runs it, and blocks the call when the review denies it. A change to the tool's registration during review, or cancellation, also blocks the call.
 
-SDK `mcpToolPolicies` selects an approval mode for a `server/tool` key:
+The guarded CLI and `createGuardedRuntime()` load Pi's MCP extension themselves. It reads `<agentDir>/mcp.json` and trusted projects' `.pi/mcp.json`, and keeps credentials in `<agentDir>/mcp-auth.json` and server logs in `<agentDir>/mcp.log`. When the session is bound to an interface again (`session.bindExtensions()`), it closes the old connections and creates new ones.
+
+SDK `mcpToolPolicies` selects an approval mode for a `server/tool` key. Pi replaces characters other than letters, digits, and `_` in tool names, so a key matches when its tool part is the same after that replacement:
 
 | Mode | Normal approval behavior |
 | --- | --- |
@@ -361,9 +363,13 @@ SDK `mcpToolPolicies` selects an approval mode for a `server/tool` key:
 | `writes` | Skips review only when `readOnlyHint` is `true` |
 | `approve` | Skips normal review |
 
-Strict review, sensitive operations, and required user input override these normal skip paths. `codex_requires_user_input` is not approved by the model on your behalf. The adapter handles empty approval forms but rejects ordinary forms with input fields and URL authentication requests.
+Strict review, sensitive operations, and required user input override these normal skip paths. They come from the tool's `_meta`: `codex_strict_auto_review`, `codex_sensitive_action`, and `codex_requires_user_input`. Pi's built-in MCP support does not pass `_meta` to other extensions, so these flags apply only with an MCP extension that answers the `tool-meta` event channel, such as pi-mcp-adapter. `codex_requires_user_input` is not approved by the model on your behalf. The same rules apply to the `js` tool of a server named `node_repl` (the Codex Computer Use runtime's name).
 
-The same rules apply to the `js` tool of the `node_repl` server (the Codex Computer Use runtime). An approval request that a running MCP call sends must match that call's tool, connection, and input; it cannot ask approval for another tool or connector instead. Caller cancellation and timeout signals reach the transport, including while Off, so authentication waits cannot later dispatch a cancelled request. Failed, cancelled, or timed-out requests release their local tracking. Already-dispatched cancellation depends on the external server.
+Reviewing in the `tool_call` hook has these limits:
+
+- `tool_call` handlers of extensions loaded after Auto Review run after its review and can still change the input that Pi runs.
+- Auto Review does not answer approval requests that a running MCP call sends (`elicitation/create`). Pi's MCP support and pi-mcp-adapter do not handle them either.
+- After approval, cancellation and timeouts of the running call follow Pi and the MCP extension. Cancelling a request already sent depends on the external server.
 
 ## Windows and PowerShell
 

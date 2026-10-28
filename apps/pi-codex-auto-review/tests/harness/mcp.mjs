@@ -1,11 +1,8 @@
-import { randomUUID } from "node:crypto";
-
 /** Protocol-shaped MCP transport; Pi's real client, registration and execute pipeline remain active. */
 export class FixtureMcpTransport {
     messages = new Set();
     errors = new Set();
     closed = new Set();
-    requests = new Map();
     calls = [];
     replies = [];
     methods = [];
@@ -37,8 +34,6 @@ export class FixtureMcpTransport {
         if (message.method) this.methods.push(message.method);
         if (!message.method) {
             this.replies.push(message);
-            this.requests.get(message.id)?.(message.result);
-            this.requests.delete(message.id);
             return;
         }
         if (message.id === undefined) return;
@@ -87,24 +82,24 @@ export class FixtureMcpTransport {
             this.emit({ jsonrpc: "2.0", id: message.id, result }),
         );
     }
-    async elicit(meta, schema = { type: "object", properties: {} }) {
-        const id = randomUUID(),
-            response = new Promise((resolve) => this.requests.set(id, resolve));
-        this.emit({
-            jsonrpc: "2.0",
-            id,
-            method: "elicitation/create",
-            params: {
-                mode: "form",
-                message: "Owned approval fixture",
-                requestedSchema: schema,
-                _meta: meta,
-            },
-        });
-        return response;
-    }
 }
 export const mcpText = (text) => ({ content: [{ type: "text", text }] });
+/** Answers the `tool-meta` channel as pi-mcp-adapter does; Pi's MCP extension drops `_meta`. */
+export function toolMetaFixture(server, tools) {
+    return (api) =>
+        api.events.on("tool-meta", (request) =>
+            request.reply(
+                Object.fromEntries(
+                    tools
+                        .filter((tool) => tool._meta)
+                        .map((tool) => [
+                            `mcp__${server}__${tool.name}`,
+                            { ...tool._meta },
+                        ]),
+                ),
+            ),
+        );
+}
 export function mcpFixture(server, transport) {
     return {
         loadConfig: () => ({

@@ -1,12 +1,16 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
     type CreateAgentSessionOptions,
     createAgentSessionFromServices,
     createAgentSessionRuntime,
     createAgentSessionServices,
     createCodemodeExtension,
+    createMcpExtension,
+    type ExtensionFactory,
     type InlineExtension,
+    type McpExtensionOptions,
     type ModelRuntime,
     ProjectTrustStore,
     SessionManager,
@@ -51,9 +55,92 @@ export async function assertSupportedPi(): Promise<string> {
         "Host Pi version could not be verified",
     );
 }
-export interface GuardedRuntimeOptions extends GuardOptions {
+/**
+ * Pi's MCP extension for a guarded session, using `mcp.json`, `mcp-auth.json` and `mcp.log` in
+ * `agentDir`. Pi's defaults use its global agent directory, and Pi does not export its config and
+ * credential helpers, so they are loaded from the host SDK files.
+ */
+async function createSessionMcpExtension(
+    agentDir: string,
+    options: McpExtensionOptions,
+): Promise<InlineExtension> {
+    const sdk = new URL("./", pathToFileURL(getPiSDKEntryPath()));
+    const [runtime, config, auth] = await Promise.all([
+        import(new URL("extensions/mcp/runtime.js", sdk).href),
+        import(new URL("extensions/mcp/config.js", sdk).href),
+        import(new URL("core/auth-storage.js", sdk).href),
+    ]);
+    const mcp = createMcpExtension({
+        ...options,
+        loadConfig:
+            options.loadConfig ??
+            ((context) =>
+                config.loadMcpConfig({
+                    agentDir,
+                    cwd: context.cwd,
+                    projectTrusted: context.isProjectTrusted(),
+                })),
+        credentials:
+            options.credentials ??
+            new runtime.McpOAuthCredentialStore(
+                new auth.FileAuthStorageBackend(
+                    join(agentDir, "mcp-auth.json"),
+                ),
+                agentDir,
+            ),
+        logPath: options.logPath ?? join(agentDir, "mcp.log"),
+    });
+    const factory: ExtensionFactory = (api) => {
+        let hasStarted = false;
+        let shutdown: ((...args: unknown[]) => unknown) | undefined;
+        return mcp(
+            new Proxy(api, {
+                get(target, key, receiver) {
+                    if (key !== "on") return Reflect.get(target, key, receiver);
+                    return (
+                        event: string,
+                        handler: (...args: unknown[]) => unknown,
+                    ) => {
+                        if (event === "session_shutdown") {
+                            shutdown = handler;
+                            return target.on(
+                                "session_shutdown",
+                                async (...args) => {
+                                    hasStarted = false;
+                                    await handler(...args);
+                                },
+                            );
+                        }
+                        if (event === "session_start")
+                            return target.on(
+                                "session_start",
+                                async (event, context) => {
+                                    // Pi rebinds modes with another session_start, without a preceding shutdown.
+                                    if (hasStarted)
+                                        await shutdown?.(
+                                            { type: "session_shutdown" },
+                                            context,
+                                        );
+                                    hasStarted = true;
+                                    await handler(event, context);
+                                },
+                            );
+                        return Reflect.apply(target.on, target, [
+                            event,
+                            handler,
+                        ]);
+                    };
+                },
+            }),
+        );
+    };
+    return { name: "mcp", factory };
+}
+export interface GuardedRuntimeOptions extends Omit<GuardOptions, "mcp"> {
     cwd: string;
     agentDir: string;
+    /** Options for Pi's MCP extension; `false` loads no MCP extension and reviews no MCP calls. */
+    mcp?: McpExtensionOptions | false;
     modelRuntime?: ModelRuntime;
     settingsManager?: SettingsManager;
     /** Explicit trust for the initially selected project; later cwd changes use their own trust record. */
@@ -121,12 +208,22 @@ export async function createGuardedRuntime(options: GuardedRuntimeOptions) {
         }
         const guard = createGuardExtension({
             ...options,
+            mcp: options.mcp === false ? false : undefined,
             trustedExtensionPaths,
             cwd: input.cwd,
             agentDir: input.agentDir,
         });
         try {
             await guard.initialize();
+            const mcp =
+                options.mcp === false
+                    ? []
+                    : [
+                          await createSessionMcpExtension(
+                              input.agentDir,
+                              options.mcp ?? {},
+                          ),
+                      ];
             const external = (options.externalExtensions ?? []).map(
                 (extension) =>
                     guardedExternalExtension(extension, () =>
@@ -146,6 +243,7 @@ export async function createGuardedRuntime(options: GuardedRuntimeOptions) {
                             factory: guard.factory,
                         },
                         createCodemodeExtension({ models: false }),
+                        ...mcp,
                         ...external,
                         ...(options.trustedExtensions ?? []),
                     ],

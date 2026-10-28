@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Improved
+
+- MCP review reads each tool's `_meta` (`codex_strict_auto_review`, `codex_sensitive_action`, `codex_requires_user_input`, and the connector and account fields) from extensions that answer the `tool-meta` event channel, such as pi-mcp-adapter. Pi's built-in MCP support does not pass `_meta` on, so with it these flags stay unset.
+- The guarded CLI and `createGuardedRuntime()` load Pi's MCP extension themselves, configured by their `mcp` option. `createGuardExtension()` now accepts only `mcp: false`, which leaves MCP calls unreviewed. MCP package approvals are keyed by the registered tool definition instead of the server configuration and version, so MCP approvals saved by earlier versions are reviewed once more.
+
+### Fixed
+
+- Auto Review no longer connects MCP servers or registers `/mcp`. Installed next to pi-mcp-adapter or another MCP extension, it showed a second `/mcp` command and started every MCP server twice. Pi's built-in MCP support, or the extension that replaces it, now connects the servers, and Auto Review reviews each MCP tool call in Pi's `tool_call` hook before Pi runs it.
+
+### Removed
+
+- Answers to approval requests that a running MCP call sends (`elicitation/create`), and the transport checks that bound each sent `tools/call` to its reviewed call. `tool_call` handlers of extensions loaded after Auto Review can now change MCP input after its review.
+
 ## [0.7.1] - 2026-10-21
 
 ### Improved

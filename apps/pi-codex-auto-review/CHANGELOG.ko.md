@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### 달라진 것
+
+- MCP 검토는 `tool-meta` 이벤트 채널에 답하는 확장(예: pi-mcp-adapter)에서 각 도구의 `_meta`(`codex_strict_auto_review`, `codex_sensitive_action`, `codex_requires_user_input`, 커넥터·계정 필드)를 읽습니다. Pi 내장 MCP 지원은 `_meta`를 넘기지 않으므로, 이를 쓸 때는 이 표시가 설정되지 않습니다.
+- 보호 CLI와 `createGuardedRuntime()`은 `mcp` 옵션으로 설정한 Pi MCP 확장을 직접 로드합니다. `createGuardExtension()`은 이제 `mcp: false`만 받으며, 이 값을 주면 MCP 호출을 검토하지 않습니다. MCP 패키지 승인은 서버 설정·버전 대신 등록된 도구 정의를 기준으로 하므로, 이전 버전이 저장한 MCP 승인은 한 번 더 검토합니다.
+
+### 해결된 것
+
+- Auto Review가 더 이상 MCP 서버에 연결하거나 `/mcp`를 등록하지 않습니다. pi-mcp-adapter 같은 MCP 확장과 함께 설치하면 `/mcp`가 하나 더 보이고 모든 MCP 서버가 두 번 시작되던 문제를 해결했습니다. 이제 서버 연결은 Pi 내장 MCP 지원이나 이를 대체하는 확장이 맡고, Auto Review는 Pi가 MCP 도구를 실행하기 전에 `tool_call` 훅에서 호출을 검토합니다.
+
+### 제거된 것
+
+- 실행 중인 MCP 호출이 보내는 승인 요청(`elicitation/create`)에 대한 응답과, 보내는 `tools/call`마다 검토한 호출과 묶던 전송 단계 검사를 없앴습니다. 이제 Auto Review보다 나중에 로드한 확장의 `tool_call` 핸들러는 검토 뒤에 MCP 입력을 바꿀 수 있습니다.
+
 ## [0.7.1] - 2026-10-21
 
 ### 달라진 것
