@@ -83,6 +83,17 @@ if (isRelease) {
   }
 }
 
+// `pnpm release` pushes main and the release tag together. The tag's run checks that package at the same commit,
+// including its platform checks, so the branch run leaves it out.
+if (process.env.GITHUB_EVENT_NAME === "push" && !isRelease) {
+  const tagsAtTip = new Set(git("tag", "--points-at", "HEAD").split("\n").filter(Boolean));
+  const released = selectedApps.filter((app) => tagsAtTip.has(`${app.slug}-v${app.version}`));
+  if (released.length) {
+    selectedApps = selectedApps.filter((app) => !released.includes(app));
+    if (released.some(({ slug }) => slug === "pi-codex-auto-review" || slug === "pi-codex")) checkAutoReviewPlatforms = false;
+  }
+}
+
 checkAutoReviewPlatforms ??= selectedApps.some(({ slug }) =>
   slug === "pi-codex-auto-review" || (isRelease && slug === "pi-codex"),
 );

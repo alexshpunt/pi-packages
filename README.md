@@ -65,7 +65,7 @@ pi -e ./apps/pi-ollama-cloud        # load an app in Pi for one session
 
 ## Shared CI and per-package releases
 
-`.github/workflows/pi-packages.yml` runs CI and npm publishing for the public packages: non-private `apps/*` packages with a `pi` manifest, and non-private `packages/*` packages (currently `redact`). On pull requests and pushes to `main`, it type-checks, runs the declared lint and unit tests, and packs each changed public package. A change to the lock file, the catalog, shared code, shared check settings, or the workflow verifies every public package. A manual run only verifies; it never publishes.
+`.github/workflows/pi-packages.yml` runs CI and npm publishing for the public packages: non-private `apps/*` packages with a `pi` manifest, and non-private `packages/*` packages (currently `redact`). On pull requests and pushes to `main`, it type-checks, runs the declared lint and unit tests, and packs each changed public package. A change to the lock file, the catalog, shared code, shared check settings, or the workflow verifies every public package. When the pushed `main` commit also carries a package's release tag, as after `pnpm release`, the `main` run skips that package because the tag run checks it. A manual run only verifies; it never publishes.
 
 ### Before you release
 

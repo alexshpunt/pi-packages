@@ -65,7 +65,7 @@ pi -e ./apps/pi-ollama-cloud        # load an app in Pi for one session
 
 ## 공통 CI와 패키지별 배포
 
-`.github/workflows/pi-packages.yml` 하나가 공개 패키지의 CI와 npm 배포를 맡습니다. 공개 패키지는 `pi` 매니페스트가 있고 `private`이 아닌 `apps/*` 패키지와, `private`이 아닌 `packages/*` 패키지(현재 `redact`)입니다. PR과 `main` push에서는 변경된 공개 패키지마다 타입 검사, 선언된 린트·단위 테스트, 패키징을 실행합니다. 잠금 파일·catalog·공용 코드·공통 검사 설정·workflow가 바뀌면 모든 공개 패키지를 검증합니다. 수동 실행은 검증만 하고 배포하지 않습니다.
+`.github/workflows/pi-packages.yml` 하나가 공개 패키지의 CI와 npm 배포를 맡습니다. 공개 패키지는 `pi` 매니페스트가 있고 `private`이 아닌 `apps/*` 패키지와, `private`이 아닌 `packages/*` 패키지(현재 `redact`)입니다. PR과 `main` push에서는 변경된 공개 패키지마다 타입 검사, 선언된 린트·단위 테스트, 패키징을 실행합니다. 잠금 파일·catalog·공용 코드·공통 검사 설정·workflow가 바뀌면 모든 공개 패키지를 검증합니다. `pnpm release` 뒤처럼 push한 `main` 커밋에 패키지의 배포 태그도 있으면, 그 패키지는 태그 실행이 검사하므로 `main` 실행에서 빠집니다. 수동 실행은 검증만 하고 배포하지 않습니다.
 
 ### 배포 전 확인
 

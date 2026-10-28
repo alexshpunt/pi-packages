@@ -259,6 +259,20 @@ test("branch pushes use the whole before-to-tip range", (t) => {
   expectNames(f.select("push", { before: f.base }, "refs/heads/main"), [memory, bundle, ollama]);
 });
 
+test("branch pushes leave a package released at the tip to its tag run", (t) => {
+  const f = fixture(t);
+  f.put("apps/pi-codex-auto-review/index.js", "export const changed = true;\n");
+  f.put("apps/pi-ollama-cloud/index.js", "export const changed = true;\n");
+  f.commit();
+  const push = () => f.select("push", { before: f.base }, "refs/heads/main");
+  assert.equal(push()["check-auto-review-platforms"], "true");
+  f.git("tag", "pi-codex-auto-review-v1.0.0");
+  const selected = push();
+  expectNames(selected, [bundle, ollama]);
+  assert.equal(selected["check-auto-review-platforms"], "false");
+  expectNames(f.select(), [review, bundle, ollama]);
+});
+
 test("manual and initial pushes retain full verification", (t) => {
   const f = fixture(t);
   expectNames(f.select("workflow_dispatch", {}), all);
