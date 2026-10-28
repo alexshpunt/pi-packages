@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-28
+
 ### New
 
 - `/redact` shows the masking state, the settings in use, and this session's counts, and turns masking on or off for the current session or as the global default. While masking is off, Pi's status bar shows `redact off`, and the write guard still blocks `{{REDACTED}}`.
