@@ -14,11 +14,13 @@ import {
 } from "./config.js";
 import { FastController } from "./fast-controller.js";
 import { type ModelSpeedSetting, showFastSettings } from "./fast-ui.js";
+import { ServiceTierCatalog } from "./service-tier-catalog.js";
 
 const SERVICE_TIER = "priority";
 const COMMAND_NAME = "codex-fast";
 const STATUS_KEY = "codex-fast-mode";
 const SETTINGS_DIRECTORY = "codex-fast-mode";
+const TIER_CACHE_FILE = "service-tiers.json";
 const MODEL_FAMILY_ORDER = ["astra", "sol", "luna"];
 const COMMAND_USAGE =
     "Usage: /codex-fast [status|on|off], /codex-fast session <standard|fast|ultrafast|clear>, /codex-fast speed <standard|fast|ultrafast>, /codex-fast <fast|ultrafast> <on|off>, or /codex-fast model <provider/id> <standard|fast|ultrafast|inherit>";
@@ -73,9 +75,11 @@ function compareModelSettings(
 }
 
 export default function codexFastModeExtension(pi: ExtensionAPI): void {
-    const fastController = new FastController(SERVICE_TIER);
+    const catalog = new ServiceTierCatalog();
+    const fastController = new FastController(catalog, SERVICE_TIER);
     let cfg: FastConfig = { ...DEFAULT_CONFIG };
     let store: FastSettingsStore | undefined;
+    let sessionLifetime: AbortController | undefined;
 
     const updateStatus = (ctx: ExtensionContext) => {
         ctx.ui.setStatus(STATUS_KEY, fastController.statusSegment(ctx, cfg));
@@ -312,6 +316,7 @@ export default function codexFastModeExtension(pi: ExtensionAPI): void {
             ),
         handler: (args, ctx) =>
             runCommand(ctx, async () => {
+                await catalog.ready;
                 const value = args.trim();
                 if (!value) return openFastSettings(ctx);
                 if (value === "status") return showStatus(ctx);
@@ -361,6 +366,9 @@ export default function codexFastModeExtension(pi: ExtensionAPI): void {
     });
 
     pi.on("session_start", async (_event, ctx) => {
+        sessionLifetime?.abort();
+        const lifetime = new AbortController();
+        sessionLifetime = lifetime;
         store = new FastSettingsStore(
             defaultSettingsPath(),
             join(ctx.cwd, ".pi", SETTINGS_DIRECTORY, "settings.json"),
@@ -381,6 +389,15 @@ export default function codexFastModeExtension(pi: ExtensionAPI): void {
             pi.getFlag("fast") === true,
         );
         updateStatus(ctx);
+        void catalog
+            .load(
+                ctx.modelRegistry,
+                join(getAgentDir(), SETTINGS_DIRECTORY, TIER_CACHE_FILE),
+                lifetime.signal,
+            )
+            .then(() => {
+                if (!lifetime.signal.aborted) updateStatus(ctx);
+            });
     });
     pi.on("model_select", async (_event, ctx) => {
         const hasChanged = fastController.applyDesiredState(ctx, cfg);
@@ -388,10 +405,13 @@ export default function codexFastModeExtension(pi: ExtensionAPI): void {
         if (hasChanged && cfg.notifyOnModelSwitch)
             report(ctx, describeState(ctx));
     });
-    pi.on("before_provider_request", (event, ctx) =>
-        fastController.injectProviderPayload(event, ctx, cfg),
-    );
+    pi.on("before_provider_request", async (event, ctx) => {
+        await catalog.ready;
+        return fastController.injectProviderPayload(event, ctx, cfg);
+    });
     pi.on("session_shutdown", (_event, ctx) => {
+        sessionLifetime?.abort();
+        sessionLifetime = undefined;
         ctx.ui.setStatus(STATUS_KEY, undefined);
     });
 }

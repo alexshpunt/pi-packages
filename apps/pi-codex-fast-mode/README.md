@@ -8,7 +8,7 @@ The selected tier applies to requests. Response tiers can differ; the Codex back
 
 ## Requirements
 
-Use Node.js 22.19 or later and Pi 1.0.0 or later with configured model access. This repository builds against Pi 1.3.0. For Fast, select an available model in the [local allowlist](#supported-models-and-payloads); Ultrafast has additional API, authentication, and endpoint requirements. The list does not supply account access or establish backend availability.
+Use Node.js 22.19 or later and Pi 1.0.0 or later with configured model access. This repository builds against Pi 1.3.0. For Fast, select an available model that [supports Fast](#supported-models-and-payloads); Ultrafast has additional API, authentication, and endpoint requirements. Model support checks do not supply account access or establish backend availability.
 
 ## Quick start
 
@@ -24,7 +24,7 @@ pi
 
 In Pi:
 
-1. With `/model`, select a model in the [local Fast allowlist](#supported-models-and-payloads).
+1. With `/model`, select a model that [supports Fast](#supported-models-and-payloads).
 2. Run `/codex-fast`. The view opens on the session row, so press **↓** to reach your current model's row, select Fast under `Speed` with **→** or **Tab**, press Enter to save, and press Esc to close the view.
 3. Run `/codex-fast status` to confirm that requests for the desired tier are enabled on the selected model.
 4. Send a short prompt to make a model request, for example:
@@ -99,7 +99,7 @@ Without session speed, switching models recalculates the model-specific or inher
 | `modelServiceTiers` | `{}` | Speeds keyed by exact `provider/id`: `standard`, `fast`, or `ultrafast` take precedence over global speed; `null` restores global inheritance. |
 | `persistState` | `true` | `false` keeps global/model speed changes in memory only; session speed is never saved either way |
 | `notifyOnModelSwitch` | `true` | Notifies when a model switch changes activation |
-| `supportedModels` | Built-in list below | Replaces the Fast allowlist with exact `provider/id` strings. `[]` disables Fast support; it does not change Ultrafast checks. |
+| `supportedModels` | Unset | When set to exact `provider/id` strings, this list decides Fast support instead of the catalog and built-in list. `[]` disables Fast support; it does not change Ultrafast checks. |
 | `desiredActive`, `active`, `fast.enabled` | Unset | Legacy booleans: `true` means global Fast and `false` means global Standard. Within each layer, precedence is `serviceTier`, then `desiredActive`, `active`, and `fast.enabled`. |
 
 Each file's global speed is resolved on its own first, so legacy booleans in the project file can override `serviceTier` in the global file. Model settings merge by ID, with project values taking precedence for the same model. A global-file model override also takes precedence over a project's global speed. A project `null` entry masks the global-file model override and restores global-speed inheritance.
@@ -110,14 +110,22 @@ After manual edits, run `/reload`. Invalid or unreadable settings report `Could 
 
 ## Supported models and payloads
 
-This is the extension's **default local Fast allowlist**, not a promise that your provider/account offers every listed model or service tier:
+Like the Codex CLI, the extension uses the OpenAI Codex model catalog to decide which models can request Fast and Ultrafast. When the catalog adds a model, you can select it without updating the extension.
 
-| Provider | Model IDs |
-| --- | --- |
-| `openai` | `gpt-5.4`, `gpt-5.5`, `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6-sol`, `gpt-6-luna` |
-| `openai-codex` | All of the above plus `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna` |
+- At session start, the extension reads the catalog with a login configured in Pi. With an `openai-codex` login, it first reads `https://chatgpt.com/backend-api/codex/models`. Without that login, or if the lookup fails, it reads `/models` at the `openai` provider's address (by default `https://api.openai.com/v1/models`) with that provider's API key or ChatGPT OAuth.
+- A model whose catalog `service_tiers` include `priority` can request Fast; one that includes `ultrafast` can request Ultrafast. The catalog applies to the `openai` and `openai-codex` providers by model ID.
+- After a successful lookup, the extension saves only each model's speed tiers to `<agentDir>/codex-fast-mode/service-tiers.json`. It uses this file when neither lookup works: you have no login, use `--offline` or `PI_OFFLINE`, or the lookups fail or take longer than five seconds in total.
+- While the catalog loads, the first request and `/codex-fast` commands wait for it for up to five seconds.
+- Models the catalog does not list, and sessions where the lookups fail with no saved file, use the built-in list below.
 
-Ultrafast can be requested for `gpt-6-astra` or `gpt-6.1-sol` through these routes:
+| Provider | Built-in Fast model IDs | Built-in Ultrafast model IDs |
+| --- | --- | --- |
+| `openai` | `gpt-5.4`, `gpt-5.5`, `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6-sol`, `gpt-6-luna` | `gpt-6-astra`, `gpt-6.1-sol` |
+| `openai-codex` | All of the above plus `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna` | `gpt-6-astra`, `gpt-6.1-sol` |
+
+Neither the catalog nor the built-in list promises that your provider/account offers every model or service tier.
+
+Ultrafast can be requested for models the catalog or built-in list allows, through these routes:
 
 | Provider and API | Authentication | Default endpoint |
 | --- | --- | --- |
@@ -142,9 +150,9 @@ The [Sol service-tier PoC](https://github.com/buYoung/pi-codex-auto-review/blob/
 
 | Symptom | What to check |
 | --- | --- |
-| Preference retained but not active | Check the selected `provider/id` and your `supportedModels` override. Saving a choice does not mean the current model supports it. |
+| Preference retained but not active | Check whether the catalog or built-in list supports that tier for the selected `provider/id`, and whether you set a `supportedModels` override. The catalog is read with an `openai-codex` or `openai` login. Saving a choice does not mean the current model supports it. |
 | Saved changes do not change the current model's speed | Check `status` for a session override; use `session clear` to remove it. Otherwise model settings take precedence over global speed: press `R` on that model or use `model <provider/id> inherit`. |
-| A model's Ultrafast setting is rejected | The model or its route does not meet the Ultrafast requirements in [Supported models and payloads](#supported-models-and-payloads): model ID, configured authentication, provider and API, and endpoint. The previous tier remains selected; the command does not fall back to Fast. Global Ultrafast is not rejected; models that cannot request it get no tier. |
+| A model's Ultrafast setting is rejected | The model or its route does not meet the Ultrafast requirements in [Supported models and payloads](#supported-models-and-payloads): Ultrafast support in the catalog or built-in list, configured authentication, provider and API, and endpoint. The previous tier remains selected; the command does not fall back to Fast. Global Ultrafast is not rejected; models that cannot request it get no tier. |
 | No injection after a prompt | Check the selected model and whether its provider payload has a matching `model` field. Other-model requests and incompatible payloads are left unchanged. |
 | Settings load/save error | Follow the reported settings path. After a load error the extension uses defaults and keeps changes in memory only; a failed save restores the previous tier. |
 
