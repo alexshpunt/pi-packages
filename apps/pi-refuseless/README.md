@@ -11,13 +11,19 @@ Adds [Refuseless](https://docs.refuseless.com/introduction) to [Pi](https://gith
 
 ## Installation
 
-This package is not on npm yet. Install it from a checkout of this repository:
+Install from npm:
+
+```bash
+pi install npm:@buyong/pi-refuseless
+```
+
+Or install from a checkout of this repository:
 
 ```bash
 pi install /path/to/pi-packages/apps/pi-refuseless
 ```
 
-Then restart Pi, or run `/reload` in a running Pi. Pi loads a local package from its directory instead of copying it, so keep the checkout in place.
+Then restart Pi, or run `/reload` in a running Pi. If you installed from a checkout, keep it in place: Pi loads a local package from its directory instead of copying it.
 
 To try the package for one session without installing it, start Pi with `pi -e /path/to/pi-packages/apps/pi-refuseless`.
 
@@ -110,8 +116,8 @@ The Pi setup in the Refuseless [SDKs](https://docs.refuseless.com/sdks.md) guide
 ## Logout, update and removal
 
 - Run `/logout` and choose **Refuseless** to remove the saved Refuseless key. Pi shows `Removed stored API key for Refuseless. Environment variables and models.json config are unchanged.` `REFUSELESS_API_KEY` and other providers' keys stay.
-- After you update the checkout, run `/reload` or restart Pi.
-- Run `pi remove /path/to/pi-packages/apps/pi-refuseless` to uninstall the package. This keeps the checkout, the saved key and `refuseless.json`; to remove the key, run `/logout` first.
+- After updating the package or checkout, run `/reload` or restart Pi.
+- To uninstall, run `pi remove npm:@buyong/pi-refuseless` for an npm installation, or `pi remove /path/to/pi-packages/apps/pi-refuseless` for a local installation. This keeps the checkout, the saved key and `refuseless.json`; to remove the key, run `/logout` first.
 
 ## Development and verification
 

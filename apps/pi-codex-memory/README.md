@@ -17,7 +17,13 @@ It adapts the extraction and consolidation design of [Codex memory v2](https://g
 
 ## Install
 
-The package is not published to npm yet, so build it from the repository source and register it with Pi:
+Install from npm:
+
+```sh
+pi install npm:@buyong/pi-codex-memory
+```
+
+Or build from the repository source and register the local package with Pi:
 
 ```sh
 git clone https://github.com/buYoung/pi-packages.git
@@ -27,9 +33,9 @@ pnpm --filter "@buyong/pi-codex-memory..." build
 pi install ./apps/pi-codex-memory
 ```
 
-After installation, start Pi and the `/codex-memory` and `/codex-memory-settings` commands are available. Removing the extension with `pi remove ./apps/pi-codex-memory` keeps your stored memories.
+After installation, start Pi and the `/codex-memory` and `/codex-memory-settings` commands are available. To remove the extension, use `pi remove npm:@buyong/pi-codex-memory` for an npm installation or `pi remove ./apps/pi-codex-memory` for a local installation. Your stored memories remain.
 
-The `@buyong/pi-codex` bundle built from the repository source also includes this extension; the bundle published to npm does not include it yet. Do not enable both the bundle and this package.
+The `@buyong/pi-codex` bundle also includes this extension. Do not enable both the bundle and this package.
 
 ## Quick start
 

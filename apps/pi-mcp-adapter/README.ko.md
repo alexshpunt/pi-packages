@@ -14,7 +14,13 @@
 
 ## 설치
 
-이 패키지는 아직 npm에 없습니다. 이 저장소의 체크아웃에서 설치하세요. Pi는 로컬 패키지의 의존성을 설치하지 않으므로 의존성을 먼저 설치하세요.
+npm에서 설치하세요.
+
+```bash
+pi install npm:@buyong/pi-mcp-adapter
+```
+
+저장소에서 설치하려면 의존성을 먼저 설치하세요. Pi는 로컬 패키지의 의존성을 설치하지 않습니다.
 
 ```bash
 cd /path/to/pi-packages
@@ -36,7 +42,7 @@ pi install /path/to/pi-packages/apps/pi-mcp-adapter
 Warning: Extension package "builtin:mcp": Extension <path>/src/index.ts registers command `/mcp`, so built-in extension `mcp` was not loaded. …
 ```
 
-Pi를 다시 시작하거나 실행 중인 Pi에서 `/reload`를 실행하세요. Pi는 로컬 패키지를 복사하지 않고 그 디렉터리에서 불러오므로 체크아웃을 그대로 두세요.
+Pi를 다시 시작하거나 실행 중인 Pi에서 `/reload`를 실행하세요. 저장소에서 설치했다면 그 위치를 그대로 두세요. Pi는 로컬 패키지를 복사하지 않고 그 디렉터리에서 불러옵니다.
 
 설치하지 않고 한 세션에서만 써 보려면 `pi -e /path/to/pi-packages/apps/pi-mcp-adapter`로 Pi를 시작하세요.
 

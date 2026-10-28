@@ -11,13 +11,19 @@
 
 ## 설치
 
-이 패키지는 아직 npm에 없습니다. 이 저장소를 내려받은 위치에서 설치하세요.
+npm에서 설치하세요.
+
+```bash
+pi install npm:@buyong/pi-refuseless
+```
+
+또는 이 저장소를 내려받은 위치에서 설치하세요.
 
 ```bash
 pi install /path/to/pi-packages/apps/pi-refuseless
 ```
 
-그다음 Pi를 다시 시작하거나, 실행 중인 Pi에서 `/reload`를 실행하세요. Pi는 로컬 패키지를 복사하지 않고 그 위치에서 읽으므로 저장소 폴더를 옮기거나 지우지 마세요.
+그다음 Pi를 다시 시작하거나, 실행 중인 Pi에서 `/reload`를 실행하세요. 저장소에서 설치했다면 그 폴더를 옮기거나 지우지 마세요. Pi는 로컬 패키지를 복사하지 않고 그 위치에서 읽습니다.
 
 설치하지 않고 한 세션만 써 보려면 `pi -e /path/to/pi-packages/apps/pi-refuseless`로 Pi를 시작하세요.
 
@@ -110,8 +116,8 @@ Refuseless [SDKs](https://docs.refuseless.com/sdks.md) 안내의 Pi 설정은 `~
 ## 로그아웃, 업데이트, 제거
 
 - 저장한 Refuseless 키를 지우려면 `/logout`을 실행하고 **Refuseless**를 고르세요. Pi가 `Removed stored API key for Refuseless. Environment variables and models.json config are unchanged.`를 표시합니다. `REFUSELESS_API_KEY`와 다른 공급자의 키는 남습니다.
-- 저장소를 업데이트한 뒤에는 `/reload`를 실행하거나 Pi를 다시 시작하세요.
-- 패키지를 제거하려면 `pi remove /path/to/pi-packages/apps/pi-refuseless`를 실행하세요. 저장소 폴더, 저장한 키, `refuseless.json`은 남으므로, 키도 지우려면 먼저 `/logout`을 실행하세요.
+- 패키지나 저장소를 업데이트한 뒤에는 `/reload`를 실행하거나 Pi를 다시 시작하세요.
+- 패키지를 제거하려면 npm 설치는 `pi remove npm:@buyong/pi-refuseless`, 로컬 설치는 `pi remove /path/to/pi-packages/apps/pi-refuseless`를 실행하세요. 저장소 폴더, 저장한 키, `refuseless.json`은 남으므로, 키도 지우려면 먼저 `/logout`을 실행하세요.
 
 ## 개발과 검증
 

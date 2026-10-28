@@ -17,7 +17,13 @@ Pi 대화에서 프로젝트의 결정과 맥락을 기억으로 남기고 다�
 
 ## 설치
 
-아직 npm에 게시하지 않았으므로 저장소 소스에서 빌드해 Pi에 등록합니다.
+npm에서 설치하세요.
+
+```sh
+pi install npm:@buyong/pi-codex-memory
+```
+
+또는 저장소 소스에서 빌드해 로컬 패키지를 Pi에 등록하세요.
 
 ```sh
 git clone https://github.com/buYoung/pi-packages.git
@@ -27,9 +33,9 @@ pnpm --filter "@buyong/pi-codex-memory..." build
 pi install ./apps/pi-codex-memory
 ```
 
-설치한 뒤 Pi를 시작하면 `/codex-memory`와 `/codex-memory-settings` 명령을 쓸 수 있습니다. `pi remove ./apps/pi-codex-memory`로 등록을 지워도 저장된 기억은 남습니다.
+설치한 뒤 Pi를 시작하면 `/codex-memory`와 `/codex-memory-settings` 명령을 쓸 수 있습니다. 확장을 제거하려면 npm 설치는 `pi remove npm:@buyong/pi-codex-memory`, 로컬 설치는 `pi remove ./apps/pi-codex-memory`를 실행하세요. 저장된 기억은 남습니다.
 
-저장소 소스로 빌드한 `@buyong/pi-codex` 번들에도 이 확장이 들어 있습니다. npm에 게시된 번들에는 아직 없습니다. 번들과 이 패키지를 함께 켜면 안 됩니다.
+`@buyong/pi-codex` 번들에도 이 확장이 들어 있습니다. 번들과 이 패키지를 함께 켜면 안 됩니다.
 
 ## 빠른 시작
 
