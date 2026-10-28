@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-29
+
+### Fixed
+
+- Other bug fixes
+
 ## [0.1.0] - 2026-10-28
 
 ### New

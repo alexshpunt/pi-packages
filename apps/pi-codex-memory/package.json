@@ -1,6 +1,6 @@
 {
     "name": "@buyong/pi-codex-memory",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Codex memory v2 for Pi: background extraction, consolidation, scoped recall, and memory management.",
     "license": "Apache-2.0",
     "type": "module",
