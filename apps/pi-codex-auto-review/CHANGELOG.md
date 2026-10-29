@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-29
+
 ### Improved
 
 - MCP review reads each tool's `_meta` (`codex_strict_auto_review`, `codex_sensitive_action`, `codex_requires_user_input`, and the connector and account fields) from extensions that answer the `tool-meta` event channel, such as pi-mcp-adapter. Pi's built-in MCP support does not pass `_meta` on, so with it these flags stay unset.

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-10-29
+
+### Improved
+
+- Update Effect and `@effect/platform-node` to 4.0.7 and adapt the HTTP response wrapper to the updated API.
+
 ## [0.1.6] - 2026-10-25
 
 ### Improved

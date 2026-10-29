@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.1 — 2026-10-29
+
+### Improved
+
+- Update the Effect runtime dependency to 4.0.7.
+
 ## 0.14.0 — 2026-10-29
 
 ### New

@@ -1,6 +1,6 @@
 {
     "name": "@buyong/pi-codex-auto-review",
-    "version": "0.7.1",
+    "version": "0.8.0",
     "description": "Automatic execution approval review for Pi, inspired by Codex's \"Approve for me\". Reviews tool execution with rules and Pi's current model, requesting user approval when needed.",
     "license": "Apache-2.0",
     "keywords": [

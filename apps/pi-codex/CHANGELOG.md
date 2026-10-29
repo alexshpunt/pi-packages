@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-29
+
+### New
+
+- With Computer Use on, `/computer-use-check` connects to the native service through a temporary runtime and lists apps once, without operating an app or touching the session's server.
+
+### Improved
+
+- Include Auto Review 0.8.0, Computer Use 0.3.0, and Memory 0.1.1.
+
+### Fixed
+
+- Auto Review no longer starts MCP servers twice or registers a second `/mcp` alongside another MCP extension. The host's MCP support connects the servers; Auto Review reviews calls through Pi's `tool_call` hook.
+- Browser Use tasks no longer fail with `The browser access host is unavailable`. Runtime approval dialogs still apply.
+
+### Removed
+
+- Auto Review's embedded MCP configuration: `createGuardExtension()` now accepts only `mcp: false`, which disables MCP review. MCP connections require Pi's built-in support or a replacement such as pi-mcp-adapter.
+- Auto Review's answers to MCP approval requests (`elicitation/create`) and transport-level binding of reviewed inputs. Extensions loaded after Auto Review can change MCP input after review.
+
 ## [0.5.0] - 2026-10-28
 
 ### New

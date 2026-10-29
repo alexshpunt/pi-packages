@@ -1,6 +1,6 @@
 {
     "name": "@buyong/pi-codex-computer-use",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "description": "Codex Computer Use and Browser Use for Pi. Runs the runtime installed by the Codex Desktop app with the same host flow Codex uses; nothing from OpenAI is bundled.",
     "license": "Apache-2.0",
     "keywords": [

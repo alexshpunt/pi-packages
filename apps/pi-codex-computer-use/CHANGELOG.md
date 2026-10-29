@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-29
+
 ### New
 
 - With Computer Use on, `/computer-use-check` now connects to the native service through a temporary runtime and lists apps once, so the report shows whether Computer Use actually answers. No app is operated, and the session's server is not touched.

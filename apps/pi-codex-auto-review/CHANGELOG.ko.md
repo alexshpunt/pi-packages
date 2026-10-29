@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-29
+
 ### 달라진 것
 
 - MCP 검토는 `tool-meta` 이벤트 채널에 답하는 확장(예: pi-mcp-adapter)에서 각 도구의 `_meta`(`codex_strict_auto_review`, `codex_sensitive_action`, `codex_requires_user_input`, 커넥터·계정 필드)를 읽습니다. Pi 내장 MCP 지원은 `_meta`를 넘기지 않으므로, 이를 쓸 때는 이 표시가 설정되지 않습니다.

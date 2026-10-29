@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-29
+
+### 새로워진 것
+
+- Computer Use가 켜져 있으면 `/computer-use-check`가 임시 런타임으로 네이티브 서비스에 접속해 앱 목록을 한 번 조회합니다. 앱을 조작하거나 세션의 서버를 건드리지 않습니다.
+
+### 달라진 것
+
+- Auto Review 0.8.0, Computer Use 0.3.0, Memory 0.1.1을 포함합니다.
+
+### 해결된 것
+
+- Auto Review가 다른 MCP 확장과 함께 MCP 서버를 두 번 시작하거나 `/mcp`를 중복 등록하던 문제를 해결했습니다. 서버 연결은 호스트의 MCP 지원이 맡고, Auto Review는 Pi의 `tool_call` 훅에서 호출을 검토합니다.
+- Browser Use 작업이 `The browser access host is unavailable`로 더는 실패하지 않습니다. 런타임 승인 대화상자는 그대로 동작합니다.
+
+### 제거된 것
+
+- Auto Review의 내장 MCP 설정을 없앴습니다. `createGuardExtension()`은 이제 MCP 검토를 끄는 `mcp: false`만 받습니다. MCP 연결에는 Pi 내장 지원이나 pi-mcp-adapter 같은 대체 확장이 필요합니다.
+- Auto Review가 MCP 승인 요청(`elicitation/create`)에 답하거나 검토한 입력을 전송 단계에서 묶던 기능을 없앴습니다. Auto Review보다 나중에 로드한 확장은 검토 뒤에 MCP 입력을 바꿀 수 있습니다.
+
 ## [0.5.0] - 2026-10-28
 
 ### 새로워진 것
