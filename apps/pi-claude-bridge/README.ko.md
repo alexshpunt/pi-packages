@@ -17,7 +17,7 @@ Claude Code와 [Agent SDK](https://github.com/anthropics/claude-agent-sdk-typesc
 
 ## 설치
 
-Pi 1.0.0 이상과 Node.js 22.19.0 이상이 필요합니다. 패키지 로딩과 타입 검사는 Pi 1.2.0과 1.3.0에서 마지막으로 확인했습니다.
+Pi 1.0.0 이상과 Node.js 22.19.0 이상이 필요합니다. 패키지 로딩과 타입 검사는 Pi 1.4.0에서 마지막으로 확인했고, 그 전에는 Pi 1.2.0과 1.3.0에서 확인했습니다.
 
 ```
 pi install npm:@buyong/pi-claude-bridge
@@ -58,7 +58,7 @@ pi install npm:@buyong/pi-claude-bridge
 
 Pi의 도구는 Claude Code에 연결되며, Pi에서는 평소처럼 사용합니다. 브리지는 `bash` 인자를 그대로 전달하고 기본 제한 시간을 더하지 않습니다. 실행 시간 제한은 Pi의 도구가 정합니다. 스킬과 선택된 도구의 지침은 Claude Code의 시스템 프롬프트로 전달되며, 턴 도중에 보낸 조정 메시지는 다음 도구 호출 경계에서 Claude에 도착합니다.
 
-**추론 옵션:** 추론을 켜면(`/thinking`으로 수준을 고르거나 Shift+Tab으로 순환) 브리지는 4.6 세대 이후 Claude 모델에 adaptive thinking과 요약 표시(summarized display)를 요청합니다. Claude 4.5 모델은 Claude Code의 기본 처리와 effort 대응을 그대로 따릅니다. 카탈로그가 추론 끄기를 허용하지 않는 모델(예: Sonnet 5.5)에는 추론 끄기 요청을 보내지 않습니다. Haiku 5.5는 추론을 끌 수 없는 모델로 등록합니다. Pi 1.3.0 카탈로그는 끄기를 허용하지만 Claude Code가 추론을 계속하기 때문입니다.
+**추론 옵션:** 추론을 켜면(`/thinking`으로 수준을 고르거나 Shift+Tab으로 순환) 브리지는 4.6 세대 이후 Claude 모델에 adaptive thinking과 요약 표시(summarized display)를 요청합니다. Claude 4.5 모델은 Claude Code의 기본 처리와 effort 대응을 그대로 따릅니다. 카탈로그가 추론 끄기를 허용하지 않는 모델(예: Sonnet 5.5)에는 추론 끄기 요청을 보내지 않습니다. Haiku 5.5는 추론을 끌 수 없는 모델로 등록합니다. Pi 1.4.0 카탈로그는 끄기를 허용하지만 Claude Code가 추론을 계속하기 때문입니다.
 
 **시스템 프롬프트 갱신:** 새 쿼리를 시작하거나 세션을 이어 쓸 때마다 Pi에서 캡처한 현재 프로젝트 문맥·스킬·지침을 전달합니다(공급자는 `snapshot: false`를 씁니다). 이미 실행 중인 쿼리의 MCP 도구는 실시간으로 갱신하지 않습니다.
 

@@ -11,7 +11,7 @@ Pi 안에서는 페이지 세 개로 관리합니다. `/redact`는 현재 상태
 ## 요구 사항
 
 - Node.js 22.19 이상
-- Pi 1.3.0. `@earendil-works/pi-coding-agent` 1.3.0으로 빌드하고 테스트했습니다. 이전 버전은 테스트하지 않았습니다.
+- Pi 1.3.0 이상. `@earendil-works/pi-coding-agent` 1.3.0과 1.4.0으로 테스트했습니다. 이전 버전은 테스트하지 않았습니다.
 
 ## 설치
 

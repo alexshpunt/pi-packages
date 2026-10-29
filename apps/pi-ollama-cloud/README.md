@@ -8,7 +8,7 @@ Source and releases live in [`buYoung/pi-packages`](https://github.com/buYoung/p
 
 ## Install and first use
 
-You need Node.js 22.19 or later, Pi, and an [Ollama Cloud API key](https://ollama.com). The package is developed and tested with Pi 1.3.0, and CI also checks compatibility with the latest Pi.
+You need Node.js 22.19 or later, Pi, and an [Ollama Cloud API key](https://ollama.com). The package is developed and tested with Pi 1.4.0, and CI also checks compatibility with the latest Pi.
 
 If you installed from Git, or still use commands or import paths from 0.13 or earlier, first follow [Move from earlier versions](#move-from-earlier-versions), so that only one copy of the extension loads. Otherwise install from npm:
 
@@ -51,7 +51,7 @@ The web tools use the same account as model requests: the API key of the account
 
 - **`ollama_web_search`**: Each result shows a body preview of up to 500 characters by default. To read more of one result, repeat the same `query` and `max_results` with `expand=<result number, starting at 1>`. To continue, keep `query`, `max_results`, and `expand` and pass each returned `nextOffset` as `offset`; the result also names this next call. `offset` without `expand` is a position in the result-list text.
 - **`ollama_web_fetch`**: Returns the page body in 3000-character pieces by default. `full=true` is not unlimited; it requests the largest piece that fits the output limit. While body text remains, the result includes `nextOffset`; pass it as `offset` with the same `url` until no `nextOffset` is returned.
-- The combined `content` and `details` follow Pi's output limit (51,200 bytes and 2,000 lines in Pi 1.3.0). Titles, URLs, links, and body text in `details` are length-limited previews as well.
+- The combined `content` and `details` follow Pi's output limit (51,200 bytes and 2,000 lines in Pi 1.4.0). Titles, URLs, links, and body text in `details` are length-limited previews as well.
 - `offset` is a UTF-16 position in a JavaScript string. Pass `nextOffset` as is rather than calculating it. Reading on makes no extra API call while the cached entry is within its lifetime (24 hours by default) and has not been evicted. After the entry expires or is evicted, or another call refreshes it with `refresh=true`, the search or page is fetched again and its text can change.
 - Both tools accept `refresh=true` to bypass the cache. `# live query` in a result means a new request or a shared in-flight request; `# from cache` means a cached result.
 
@@ -76,7 +76,7 @@ In the TUI, **+ Add account** in `/ollama` asks for the key or reference first, 
 }
 ```
 
-Pi 1.3.0 caches `!command` results until the process exits. If the command returns a new key, restart Pi to read it; `/reload` does not run the command again.
+Pi 1.4.0 caches `!command` results until the process exits. If the command returns a new key, restart Pi to read it; `/reload` does not run the command again.
 
 ### Per-session rotation
 
@@ -299,7 +299,7 @@ Choose from the `@inquirer/prompts` menu; the menu labels are in Korean:
 - **기능별 검증 (오프라인)** / **전체 기능·배포물 검증 (오프라인)** (check by feature / check everything and the archive): Runs simulated checks of authentication, models, cache, renderers, cancellation, and the generation pipeline. Diagnostics run in a process separate from the menu.
 - **종료** (exit): Ends the menu. `Ctrl+C` also stops and exits.
 
-Chats use real API quota. Like the existing generation and verification scripts, the CLI uses the `ollama-cloud` API key stored in Pi's `auth.json` first, then `OLLAMA_API_KEY`. Keys are never printed to the screen or written to files. Stored literal, `$ENV`, `${ENV}`, and `!command` values are resolved with Pi's official resolver. Pi 1.3.0 runs `!command` synchronously for up to 10 seconds, so cancellation can be delayed that long.
+Chats use real API quota. Like the existing generation and verification scripts, the CLI uses the `ollama-cloud` API key stored in Pi's `auth.json` first, then `OLLAMA_API_KEY`. Keys are never printed to the screen or written to files. Stored literal, `$ENV`, `${ENV}`, and `!command` values are resolved with Pi's official resolver. Pi 1.4.0 runs `!command` synchronously for up to 10 seconds, so cancellation can be delayed that long.
 
 A chat registers the selected model's configuration in Pi's model runtime temporarily, and just before sending it checks that the model ID in the request body matches your input. The key is passed only in runtime memory; no session file or personal setting is saved. Requests are limited to 120 seconds, and output to the smaller of the model limit and 4096 tokens. Errors are shown and the menu returns; temporary directories are cleaned up. A successful chat confirms inference through the model setup path. The extension's registration, commands, tools, and events are checked separately by the source and archive checks and by loading it in Pi as shown below.
 

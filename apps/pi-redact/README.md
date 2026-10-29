@@ -11,7 +11,7 @@ Detection comes from [`@buyong/redact`](https://github.com/buYoung/pi-packages/b
 ## Requirements
 
 - Node.js 22.19 or later.
-- Pi 1.3.0. The package is built and tested against `@earendil-works/pi-coding-agent` 1.3.0; earlier versions are not tested.
+- Pi 1.3.0 or later. The package is tested with `@earendil-works/pi-coding-agent` 1.3.0 and 1.4.0; earlier versions are not tested.
 
 ## Install
 

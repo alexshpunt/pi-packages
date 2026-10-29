@@ -174,7 +174,7 @@ REFUSELESS_API_KEY=<키> pnpm --filter @buyong/pi-refuseless cli live --model gl
 
 ## 테스트 환경
 
-- Pi 1.4.0(설치된 CLI)과 Pi 1.3.0(자동 테스트에서만), Node.js 24.14.0, macOS
+- Pi 1.4.0(설치된 CLI와 자동 테스트), Node.js 24.14.0, macOS
 - 자동 테스트는 로컬 모의 서버로 실행하며, 모의 서버는 2026-10-27에 Refuseless가 돌려준 모델 목록을 씁니다.
 - 2026-10-27에 실제 서비스에서 `cli live`로 `glm-5.3-abliterated`, `glm-5.3-flash-abliterated`, `deepseek-v4.1-flash-abliterated`가 10턴을 모두 통과했습니다. 목록의 다른 모델은 실제 서비스에서 써 보지 않았습니다.
 - `deepseek-v4.1-flash-abliterated`는 `high`를 포함한 어떤 생각 수준에서도 생각 내용을 돌려주지 않았습니다. Refuseless API에 직접 요청해도 같았으므로, Pi에도 이 모델의 생각 내용은 나오지 않습니다.

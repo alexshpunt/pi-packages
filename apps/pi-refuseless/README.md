@@ -174,7 +174,7 @@ REFUSELESS_API_KEY=<your key> pnpm --filter @buyong/pi-refuseless cli live --mod
 
 ## Tested environments
 
-- Pi 1.4.0 (installed CLI) and Pi 1.3.0 (automated tests only), with Node.js 24.14.0 on macOS.
+- Pi 1.4.0 (installed CLI and automated tests) with Node.js 24.14.0 on macOS.
 - The automated tests run against the local mock, which serves the model list Refuseless returned on 2026-10-27.
 - On 2026-10-27, `cli live` passed all 10 turns with `glm-5.3-abliterated`, `glm-5.3-flash-abliterated` and `deepseek-v4.1-flash-abliterated` on the real service. The other models in the list have not been tried on the real service.
 - `deepseek-v4.1-flash-abliterated` returned no thinking text at any level, including `high`. A direct request to the Refuseless API gave the same result, so Pi shows no thinking for this model.

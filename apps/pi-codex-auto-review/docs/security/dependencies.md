@@ -14,7 +14,7 @@ Run `pnpm pack` in the package directory to apply the prepack checks. The curren
 
 ## Development dependencies in this repository
 
-In pi-packages, development uses Pi 1.3.0 from the root `pnpm-lock.yaml`. Its `minimatch` resolves `brace-expansion 5.0.12` without an override, and both dependency security checks in `tests/unit/dependency-security.test.mjs` passed on 2026-10-21. When you update dependencies, check the installed version and run these security regression checks again.
+In pi-packages, development uses Pi 1.4.0 from the root `pnpm-lock.yaml`. Its `minimatch` resolves `brace-expansion 5.0.12` without an override, and both dependency security checks in `tests/unit/dependency-security.test.mjs` passed on 2026-10-29. When you update dependencies, check the installed version and run these security regression checks again.
 
 These results apply to environments installed with this repository's lockfile. They do not change dependencies in separately installed Pi hosts or other projects. In other environments, check the dependencies actually resolved and that environment's own audit results.
 
