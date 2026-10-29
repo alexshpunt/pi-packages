@@ -63,7 +63,11 @@ The first command reports requirements and an ordered setup guide. The second re
 
 The check inspects installed files and can run the installed runtime's setup/validation commands. It does not itself install or copy the runtime, repair native-host registration, grant privacy permissions, change feature switches, or operate apps/tabs. Those validation scripts belong to the installed Desktop runtime; update Desktop if they fail.
 
+When Computer Use is on, the last check, `Computer Use connection`, starts a separate temporary `cua_repl` with only Computer Use, calls `cua.listApps` once, and closes it. `ok` means the native service answered with an app list. The session's own server and its REPL bindings are not touched, and no app is operated. The check accepts only the plain `js` execution approval described in [What an approval allows](#what-an-approval-allows) and declines every other approval request. With Computer Use off, without a runtime, or on a simulated platform, this check is `skipped`.
+
 Resolve requirements in this order: Desktop installation and login, native service/permissions if using Computer Use, Chrome extension/native host if using Browser Use, then rerun the check. You can leave an unused surface off even when its prerequisites are missing.
+
+Browser Use works in Pi. Origin approvals from the Chrome extension still apply, and Chrome's extension and native messaging host are unchanged.
 
 ### Where runtime discovery looks
 

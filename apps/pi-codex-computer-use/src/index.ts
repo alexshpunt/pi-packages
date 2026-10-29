@@ -404,6 +404,7 @@ export default function codexComputerUseExtension(pi: ExtensionAPI): void {
             await prepareServer(ctx, "settings-change");
         },
         describeServer,
+        log,
     });
 }
 
@@ -429,6 +430,10 @@ export {
     openConnection,
     PROTOCOL_VERSION,
 } from "./connection.js";
+export {
+    type ConnectionCheckOptions,
+    checkServiceConnection,
+} from "./connection-check.js";
 export {
     type ApprovalChoice,
     AUTO_APPROVE_RESPONSE,

@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { delimiter, dirname, join, resolve } from "node:path";
+import { basename, delimiter, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import {
     APP_PATH_OVERRIDE_VARIABLE,
@@ -19,6 +19,11 @@ export const CUA_REPL_SERVER_NAME = "cua_repl";
 export const SURFACES_VARIABLE = "CUA_REPL_ENABLED_SURFACES";
 /** Filtered by the bridge to the enabled services (`browser`, `sky`). */
 export const TRUSTED_SERVICES_VARIABLE = "NODE_REPL_TRUSTED_SERVICES";
+/**
+ * Desktop adds this preload module to the command line of its own runtime sessions;
+ * `withoutBrowserAccessImport` keeps it out of the command line Pi launches.
+ */
+export const BROWSER_ACCESS_IMPORT_BASENAME = "require-browser-access.mjs";
 /** Where sky looks for the native service first (then `$CODEX_HOME/computer-use`, then the bundle id). */
 export const SERVICE_APP_PATH_VARIABLE = "SKY_CUA_SERVICE_PATH";
 export const CODEX_DESKTOP_BUNDLE_ID = "com.openai.codex";
@@ -179,7 +184,9 @@ async function readServerConfig(
     const servers = asRecord(asRecord(parsed)?.mcpServers);
     const server = asRecord(servers?.[CUA_REPL_SERVER_NAME]);
     if (!server || !isString(server.command)) return undefined;
-    const args = Array.isArray(server.args) ? server.args.filter(isString) : [];
+    const args = withoutBrowserAccessImport(
+        Array.isArray(server.args) ? server.args.filter(isString) : [],
+    );
     const env = Object.fromEntries(
         Object.entries(asRecord(server.env) ?? {}).filter(
             (entry): entry is [string, string] => isString(entry[1]),
@@ -206,6 +213,26 @@ async function readServerConfig(
         outputTokenLimit,
         startupTimeoutSec,
     };
+}
+
+/**
+ * Drops the `--import <…>/require-browser-access.mjs` pair from the plugin-cache command line.
+ * With the preload, browser commands fail with `The browser access host is unavailable`; runtime
+ * approval elicitation still applies without it.
+ */
+export function withoutBrowserAccessImport(args: string[]): string[] {
+    const kept: string[] = [];
+    for (let index = 0; index < args.length; index += 1) {
+        const next = args[index + 1];
+        if (
+            args[index] === "--import" &&
+            next !== undefined &&
+            basename(next) === BROWSER_ACCESS_IMPORT_BASENAME
+        )
+            index += 1;
+        else kept.push(args[index]);
+    }
+    return kept;
 }
 
 function appPathFromRuntimeRoot(runtimeRoot: string): string | undefined {

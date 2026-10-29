@@ -2,11 +2,13 @@ import type {
     ExtensionAPI,
     ExtensionCommandContext,
 } from "@earendil-works/pi-coding-agent";
+import { checkServiceConnection } from "./connection-check.js";
 import {
     checkPrerequisites,
     formatPrerequisiteReport,
     formatSetupGuide,
 } from "./install.js";
+import type { BridgeLog } from "./log.js";
 import { describePlatform, detectPlatform } from "./platform.js";
 import { describeRuntime, discoverRuntime } from "./runtime.js";
 import {
@@ -75,6 +77,8 @@ export interface CommandDependencies {
     ): Promise<void>;
     /** Current runtime connection state, including startup failures. */
     describeServer(): string;
+    /** Records the connection check's MCP traffic with the session server's. */
+    log: BridgeLog;
 }
 
 type NotifyType = Parameters<ExtensionCommandContext["ui"]["notify"]>[1];
@@ -129,6 +133,14 @@ async function runCheck(
     report(ctx, "Checking Computer Use prerequisites…");
     const settings = deps.getSettings();
     const prerequisites = await checkPrerequisites();
+    prerequisites.checks.push(
+        await checkServiceConnection({
+            runtime: prerequisites.runtime,
+            isComputerUseEnabled: settings.state.computerUse,
+            log: deps.log,
+            sessionId: ctx.sessionManager.getSessionId(),
+        }),
+    );
     const counts = {
         missing: prerequisites.checks.filter(
             (check) => check.status === "missing",
