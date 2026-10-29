@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+import { Effect } from "effect";
 import { APP_ROOT, bufVersion, runBuf, sha256 } from "./lib/buf.mjs";
 
 const USAGE = `Usage: node verification/scripts/verify-proto.mjs [--source <proto-root>] [--report <file>] [--mutation-control]
@@ -76,10 +77,10 @@ async function runtimeChecks(source, additions) {
   let frames = 0;
   for (const sample of readdirSync(samples).filter((name) => statSync(join(samples, name)).isDirectory()).sort()) {
     const request = capturedJSON(readFileSync(join(samples, sample, "request.txt"), "utf8"));
-    const original = roundTrip(parsed, "exa.api_server_pb.GetChatMessageRequest", runtime.chatRequestCodec.encode(request));
+    const original = roundTrip(parsed, "exa.api_server_pb.GetChatMessageRequest", Effect.runSync(runtime.chatRequestCodec.encode(request)));
     request.clientSessionId = "probe-session";
     request.chatMessagePrompts = (request.chatMessagePrompts ?? []).map((prompt, index) => index === 0 ? { ...prompt, modelUid: "probe-model" } : prompt);
-    const probed = runtime.chatRequestCodec.encode(request);
+    const probed = Effect.runSync(runtime.chatRequestCodec.encode(request));
     const augmented = roundTrip(parsed, "exa.api_server_pb.GetChatMessageRequest", probed);
     const withoutAdditions = roundTrip(originalOnly, "exa.api_server_pb.GetChatMessageRequest", probed);
     record(`GetChatMessage/${sample}/request`, original.isIdentical && augmented.isIdentical
@@ -88,28 +89,28 @@ async function runtimeChecks(source, additions) {
     let responseOk = true;
     for (const part of readFileSync(join(samples, sample, "response.txt"), "utf8").split(CAPTURE_SEPARATOR).filter((value) => value.trim())) {
       frames++;
-      responseOk &&= roundTrip(parsed, "exa.api_server_pb.GetChatMessageResponse", runtime.chatResponseCodec.encode(capturedJSON(part))).isIdentical;
+      responseOk &&= roundTrip(parsed, "exa.api_server_pb.GetChatMessageResponse", Effect.runSync(runtime.chatResponseCodec.encode(capturedJSON(part)))).isIdentical;
     }
     record(`GetChatMessage/${sample}/response`, responseOk);
   }
-  const models = runtime.unaryCodecs(MODELS_METHOD);
+  const models = Effect.runSync(runtime.unaryCodecs(MODELS_METHOD));
   const catalog = JSON.parse(readFileSync(join(APP_ROOT, "tests/fixtures/model-catalog.json"), "utf8"));
-  const catalogBytes = models.response.encode(catalog);
+  const catalogBytes = Effect.runSync(models.response.encode(catalog));
   const catalogTrip = roundTrip(parsed, "exa.api_server_pb.GetCliModelConfigsResponse", catalogBytes);
   record("GetCliModelConfigs/response/catalog-fixture", catalogTrip.isIdentical, { configs: catalog.clientModelConfigs.length, bytes: catalogBytes.length });
   const probe = { clientModelConfigs: [{ modelUid: "probe-model", modelInfo: { modelUid: "probe-model", aliases: ["probe-alias", "probe-family"] } }] };
-  const aliasBytes = models.response.encode(probe);
+  const aliasBytes = Effect.runSync(models.response.encode(probe));
   const aliasTrip = roundTrip(parsed, "exa.api_server_pb.GetCliModelConfigsResponse", aliasBytes);
-  record("ModelInfo.aliases", aliasTrip.isIdentical && JSON.stringify(models.response.decode(aliasBytes)) === JSON.stringify(probe)
+  record("ModelInfo.aliases", aliasTrip.isIdentical && JSON.stringify(Effect.runSync(models.response.decode(aliasBytes))) === JSON.stringify(probe)
     && !roundTrip(originalOnly, "exa.api_server_pb.GetCliModelConfigsResponse", aliasBytes).isIdentical);
   const displays = ["DISPLAY_OPTION_MODEL_ROUTER", "DISPLAY_OPTION_QUICK_REVIEW", "DISPLAY_OPTION_HIDDEN_TOOL", "DISPLAY_OPTION_WIRE_7", "DISPLAY_OPTION_MODERN_AGENT_CHAT"];
-  const displayBytes = models.request.encode({ metadata: { supportedModelDisplays: displays } });
+  const displayBytes = Effect.runSync(models.request.encode({ metadata: { supportedModelDisplays: displays } }));
   const displayTrip = roundTrip(parsed, "exa.api_server_pb.GetCliModelConfigsRequest", displayBytes);
   const displayOriginal = roundTrip(originalOnly, "exa.api_server_pb.GetCliModelConfigsRequest", displayBytes);
   record("DisplayOption.DISPLAY_OPTION_WIRE_7=7", displayTrip.isIdentical && JSON.stringify(displayTrip.object.metadata.supported_model_displays) === JSON.stringify(displays)
     && displayOriginal.object.metadata.supported_model_displays[3] === 7, { withoutAdditionsDecodes: displayOriginal.object.metadata.supported_model_displays[3] });
-  let isUnknownRejected = false;
-  try { runtime.chatRequestCodec.encode({ notAField: true }); } catch (error) { isUnknownRejected = /Field not in the protobuf schema/.test(error.message); }
+  const isUnknownRejected = Effect.runSync(Effect.match(runtime.chatRequestCodec.encode({ notAField: true }), {
+    onFailure: (error) => /Field not in the protobuf schema/.test(error.message), onSuccess: () => false }));
   record("runtime rejects unknown DTO fields", isUnknownRejected && !parsed.lookupType("exa.api_server_pb.GetChatMessageRequest").fields.not_a_field);
   return { cases, failures, capturedRequests: cases.filter((item) => item.name.endsWith("/request")).length, responseFrames: frames };
 }

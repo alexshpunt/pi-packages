@@ -1,5 +1,8 @@
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createServer, type IncomingHttpHeaders } from "node:http";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { Stream } from "effect";
 import { expect, test } from "vitest";
 import { assertRunnableToolCalls, ChatAccumulator } from "../src/core/inference/accumulator.ts";
@@ -214,4 +217,13 @@ test("HTTP 401/429, Connect errors inside HTTP 200, and no token exposure", asyn
   });
   await expect(collect(client.stream(CHAT_METHOD, {}))).rejects.toThrow(/resource_exhausted: \[REDACTED\]/);
   expect(safeError("token=devin-session-token$abcdef")).toBe("token=[REDACTED]");
+});
+
+test("verify-proto rebuilds the proto sources and its checks pass against the runtime codecs", { timeout: 60_000 }, async () => {
+  const script = fileURLToPath(new URL("../verification/scripts/verify-proto.mjs", import.meta.url));
+  const { stdout } = await promisify(execFile)(process.execPath, [script, "--mutation-control"], { timeout: 50_000 });
+  const summary = JSON.parse(stdout);
+  expect(summary.ok).toBe(true);
+  expect(summary.runtime).toMatch(/^[1-9]\d* cases, 0 failures$/);
+  expect(summary.mutationControl).toMatchObject({ detected: true, sourceUnchanged: true });
 });

@@ -8,7 +8,7 @@ The selected tier applies to requests. Response tiers can differ; the Codex back
 
 ## Requirements
 
-Use Node.js 22.19 or later and Pi 1.0.0 or later with configured model access. This repository builds against Pi 1.3.0. For Fast, select an available model that [supports Fast](#supported-models-and-payloads); Ultrafast has additional API, authentication, and endpoint requirements. Model support checks do not supply account access or establish backend availability.
+Use Node.js 22.19 or later and Pi 1.0.0 or later with configured model access. This repository builds against Pi 1.4.0. For Fast, select an available model that [supports Fast](#supported-models-and-payloads); Ultrafast has additional API, authentication, and endpoint requirements. Model support checks do not supply account access or establish backend availability.
 
 ## Quick start
 

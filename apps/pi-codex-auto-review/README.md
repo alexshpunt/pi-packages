@@ -54,7 +54,7 @@ Use `/approve-model` to choose a review model without changing the conversation 
 - Add `--local` to `pi install` for a project-scoped entry. Pi loads project packages only after you trust that project.
 - Append `@<version>` to the npm package name to pin a published release. These documents describe the current source. A published version may not include its latest changes.
 
-**To refuse to start when approval controls fail to load,** use the [guarded CLI or SDK](docs/usage.md#run-with-protected-startup). Guarded startup also checks that the approval controls are ready before execution. Pi 1.3.0 exits with code 1 on extension loading errors during a fresh CLI startup, but reload and SDK loading handle such errors separately.
+**To refuse to start when approval controls fail to load,** use the [guarded CLI or SDK](docs/usage.md#run-with-protected-startup). Guarded startup also checks that the approval controls are ready before execution. Pi 1.4.0 exits with code 1 on extension loading errors during a fresh CLI startup, but reload and SDK loading handle such errors separately.
 
 ## Approval modes and settings
 

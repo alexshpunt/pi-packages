@@ -17,7 +17,7 @@ A provider-only Pi extension that runs Claude models through Claude Code and the
 
 ## Install
 
-Requires Pi 1.0.0 or newer and Node.js 22.19.0 or newer. Package loading and type checks were last confirmed with Pi 1.2.0 and 1.3.0.
+Requires Pi 1.0.0 or newer and Node.js 22.19.0 or newer. Package loading and type checks were last confirmed with Pi 1.4.0, and earlier with Pi 1.2.0 and 1.3.0.
 
 ```
 pi install npm:@buyong/pi-claude-bridge
@@ -58,7 +58,7 @@ Use `/model` to select any Claude model in pi-ai's catalog, for example `claude-
 
 Pi's tools are bridged to Claude Code, and you use them in Pi as usual. The bridge preserves `bash` arguments without adding a default timeout; execution-time limits belong to Pi's tool. Skills and selected-tool guidance are forwarded to Claude Code's system prompt, and steering sent mid-turn reaches Claude at the next tool boundary.
 
-**Thinking options:** With thinking on (choose the level with `/thinking`, or cycle it with Shift+Tab), the bridge requests adaptive thinking with summarized display for Claude models from generation 4.6 onward. Claude 4.5 models keep Claude Code's default handling and effort mapping. For models whose catalog entry does not allow turning thinking off (such as Sonnet 5.5), the bridge never sends a disabled-thinking request. Haiku 5.5 is registered as a model whose thinking cannot be turned off: Pi 1.3.0's catalog allows off, but Claude Code keeps thinking anyway.
+**Thinking options:** With thinking on (choose the level with `/thinking`, or cycle it with Shift+Tab), the bridge requests adaptive thinking with summarized display for Claude models from generation 4.6 onward. Claude 4.5 models keep Claude Code's default handling and effort mapping. For models whose catalog entry does not allow turning thinking off (such as Sonnet 5.5), the bridge never sends a disabled-thinking request. Haiku 5.5 is registered as a model whose thinking cannot be turned off: Pi 1.4.0's catalog allows off, but Claude Code keeps thinking anyway.
 
 **System prompt updates:** Each new query or resumed session receives the current project context, skills, and instructions captured from Pi (the provider uses `snapshot: false`). The MCP tools of a query that is already running are not updated live.
 

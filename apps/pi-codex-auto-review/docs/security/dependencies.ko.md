@@ -14,7 +14,7 @@ Pi 호스트는 `peerDependencies`로 두고 묶지 않습니다. `@buyong/redac
 
 ## 이 저장소의 개발 의존성
 
-pi-packages에서는 루트 `pnpm-lock.yaml`의 Pi 1.3.0으로 개발합니다. 이 버전의 `minimatch`는 보정 없이 `brace-expansion 5.0.12`를 쓰며, `tests/unit/dependency-security.test.mjs`의 의존성 보안 검사 2개가 2026-10-21에 통과했습니다. 의존성을 갱신하면 실제 설치 버전을 확인하고 이 보안 회귀 검사를 다시 실행하세요.
+pi-packages에서는 루트 `pnpm-lock.yaml`의 Pi 1.4.0으로 개발합니다. 이 버전의 `minimatch`는 보정 없이 `brace-expansion 5.0.12`를 쓰며, `tests/unit/dependency-security.test.mjs`의 의존성 보안 검사 2개가 2026-10-29에 통과했습니다. 의존성을 갱신하면 실제 설치 버전을 확인하고 이 보안 회귀 검사를 다시 실행하세요.
 
 이 결과는 이 저장소의 잠금 파일로 설치한 환경에 해당합니다. 별도로 설치한 Pi 호스트나 다른 프로젝트의 의존성은 바꾸지 않습니다. 다른 환경에서는 실제로 해석된 의존성과 그 환경의 감사 결과를 따로 확인해야 합니다.
 
