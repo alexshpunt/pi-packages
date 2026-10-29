@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### 새로워진 것
+
+- Computer Use가 켜져 있으면 `/computer-use-check`가 임시 런타임으로 네이티브 서비스에 접속해 앱 목록을 한 번 조회합니다. 보고서에서 Computer Use가 실제로 응답하는지 확인할 수 있습니다. 앱은 조작하지 않고 세션의 서버도 건드리지 않습니다.
+
+### 해결된 것
+
+- Browser Use 작업이 `The browser access host is unavailable`로 더는 실패하지 않습니다. 런타임 승인 대화상자는 그대로 동작합니다.
+
 ## [0.2.1] - 2026-10-21
 
 ### 달라진 것

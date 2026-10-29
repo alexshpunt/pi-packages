@@ -36,7 +36,7 @@ To run unreleased changes, [build and load from source](#build-and-load-from-sou
 
 Inside Pi:
 
-1. Run `/computer-use-check`. Resolve missing requirements for the features you plan to use (Computer Use, Browser Use, or both). Items marked `user-owned` (account, login, or OS permissions) need your own confirmation; `unverified` is not a pass. The check can run Desktop's installed validation scripts, but it does not install anything or operate apps or browsers.
+1. Run `/computer-use-check`. Resolve missing requirements for the features you plan to use (Computer Use, Browser Use, or both). Items marked `user-owned` (account, login, or OS permissions) need your own confirmation; `unverified` is not a pass. The check can run Desktop's installed validation scripts and, with Computer Use on, lists apps once through a temporary runtime connection. It does not install anything or operate apps or browsers.
 2. Run `/computer-use` and leave on only the features you need: **↑/↓** selects a feature, **Enter/Space** toggles it, and **Esc** closes the list. Changing either switch restarts the shared runtime once the agent is idle, which clears REPL variables and app/tab bindings.
 3. Run `/computer-use status` and check for a running server. If it is not running, follow the reported runtime/setup problem before asking the model to operate anything.
 4. Ask for an inventory without opening tabs or operating apps:

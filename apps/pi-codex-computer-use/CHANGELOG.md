@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### New
+
+- With Computer Use on, `/computer-use-check` now connects to the native service through a temporary runtime and lists apps once, so the report shows whether Computer Use actually answers. No app is operated, and the session's server is not touched.
+
+### Fixed
+
+- Browser Use tasks no longer fail with `The browser access host is unavailable`. Runtime approval dialogs still apply.
+
 ## [0.2.1] - 2026-10-21
 
 ### Improved
