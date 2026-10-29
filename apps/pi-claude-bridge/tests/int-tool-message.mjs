@@ -107,7 +107,6 @@ describe("tool-message integration", () => {
 	});
 
 	it("parallel tool calls with steer delivers all results", { timeout: TEST_TIMEOUT }, async () => {
-		const collector = collectText();
 		const mark = logMark();
 		await send({
 			type: "prompt",
@@ -121,10 +120,12 @@ describe("tool-message integration", () => {
 			streamingBehavior: "steer",
 		});
 		await waitForEvent("agent_end");
-		const text = collector.stop();
-		// All three tools should have their results in the response
-		const matches = (text.match(/slowtool completed/gi) || []).length;
-		expect(matches >= 3, `Expected 3 SlowTool results, found ${matches}: ${text.slice(0, 300)}`).toBeTruthy();
+		const records = readSessionRecords(sessionIdFrom(logSince(mark)));
+		// All three tool results must reach CC's session. The model's reply may summarise
+		// them ("all three calls finished"), so check the transcript, not the reply text.
+		const delivered = new Set(records.flatMap((r) =>
+			[...JSON.stringify(r.message?.content ?? "").matchAll(/SlowTool completed after (\d+)ms/g)].map((m) => m[1])));
+		expect([...delivered].sort(), "SlowTool results that reached CC's session").toEqual(["3000", "4000", "5000"]);
 		// Delivery only forwards a steer when the trailing message is a user message.
 		// Pi injects drained steers between tool results too (see extract-tool-results),
 		// and in that shape the steer would be dropped and the cursor advanced past it,
@@ -133,7 +134,6 @@ describe("tool-message integration", () => {
 		// <system-reminder> inside the tool_result content, which its own prompt-injection
 		// guidance tells the model to distrust (verbatim refusal seen on 2.1.280). Assert
 		// the transport fact instead: the steer reached CC's session at all.
-		const records = readSessionRecords(sessionIdFrom(logSince(mark)));
 		expect(records.some((r) => JSON.stringify(r.attachment ?? "").includes("PAPAYA")
 				|| JSON.stringify(r.message?.content ?? "").includes("PAPAYA")), `steer never reached CC's session — dropped between the parallel tool results`).toBeTruthy();
 	});
