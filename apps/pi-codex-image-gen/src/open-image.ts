@@ -11,7 +11,7 @@ export function defaultAppUnavailableReason(
     platform: NodeJS.Platform = process.platform,
 ): string | undefined {
     if (env.SSH_CONNECTION || env.SSH_CLIENT || env.SSH_TTY) {
-        return "SSH 세션에서는 원격 컴퓨터에서 열리므로 열지 않습니다.";
+        return "Cannot open an image on the remote computer over SSH.";
     }
     if (
         platform !== "darwin" &&
@@ -19,7 +19,7 @@ export function defaultAppUnavailableReason(
         !env.DISPLAY &&
         !env.WAYLAND_DISPLAY
     ) {
-        return "그래픽 화면(DISPLAY 또는 WAYLAND_DISPLAY)이 없어 열 수 없습니다.";
+        return "Cannot open an image without a graphical session (DISPLAY or WAYLAND_DISPLAY).";
     }
     return undefined;
 }
@@ -45,17 +45,13 @@ export async function openWithDefaultApp(path: string): Promise<void> {
     try {
         await access(path);
     } catch {
-        throw new Error(`저장된 파일을 찾을 수 없습니다: ${path}`);
+        throw new Error(`Saved file not found: ${path}`);
     }
     const [command, args] = defaultAppLauncher(path, process.platform);
     await new Promise<void>((resolve, reject) => {
         const child = spawn(command, args, { stdio: "ignore", detached: true });
         child.once("error", (error) =>
-            reject(
-                new Error(
-                    `${command}을(를) 실행하지 못했습니다: ${error.message}`,
-                ),
-            ),
+            reject(new Error(`Could not start ${command}: ${error.message}`)),
         );
         child.once("spawn", () => {
             child.unref();
