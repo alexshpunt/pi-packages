@@ -64,7 +64,6 @@
         "dist/**/*.d.ts",
         "dist/**/*.js.map",
         "README.md",
-        "README.ko.md",
         "LICENSE",
         "skills/**/*.md",
         "skills/**/LICENSE.txt",

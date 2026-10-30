@@ -16,7 +16,7 @@ function report(
 
 export function registerImageGenSettingsCommand(pi: ExtensionAPI): void {
     pi.registerCommand("codex-imagen", {
-        description: "이미지 생성 모델을 선택하고 저장합니다.",
+        description: "Select and save the image generation model.",
         getArgumentCompletions: (prefix) => {
             const choices = IMAGE_MODELS.filter((model) =>
                 model.startsWith(prefix.trim()),
@@ -33,12 +33,12 @@ export function registerImageGenSettingsCommand(pi: ExtensionAPI): void {
                     if (!ctx.hasUI) {
                         report(
                             ctx,
-                            `이미지 생성 모델: ${currentModel}\n설정: ${store.path}\n사용법: /codex-imagen gpt-image-2.5|gpt-image-2`,
+                            `Image model: ${currentModel}\nSettings: ${store.path}\nUsage: /codex-imagen gpt-image-2.5|gpt-image-2`,
                         );
                         return;
                     }
                     selected = await ctx.ui.select(
-                        `이미지 생성 모델 (현재: ${currentModel})`,
+                        `Image model (current: ${currentModel})`,
                         [
                             currentModel,
                             ...IMAGE_MODELS.filter(
@@ -50,14 +50,14 @@ export function registerImageGenSettingsCommand(pi: ExtensionAPI): void {
                 }
                 if (!isImageModel(selected))
                     throw new Error(
-                        "사용법: /codex-imagen [gpt-image-2.5|gpt-image-2]",
+                        "Usage: /codex-imagen [gpt-image-2.5|gpt-image-2]",
                     );
                 await store.save(selected);
-                report(ctx, `이미지 생성 모델: ${selected}`);
+                report(ctx, `Image model: ${selected}`);
             } catch (error) {
                 report(
                     ctx,
-                    `이미지 생성 설정을 변경하지 못했습니다: ${error instanceof Error ? error.message : String(error)}`,
+                    `Could not change image generation settings: ${error instanceof Error ? error.message : String(error)}`,
                     "error",
                 );
             }

@@ -568,6 +568,7 @@ export class ImagesClient {
             headers.set("Authorization", `Bearer ${this.credentials.apiKey}`);
             response = await this.fetchImpl(url, {
                 method: "POST",
+                redirect: "manual",
                 headers,
                 body,
                 signal,

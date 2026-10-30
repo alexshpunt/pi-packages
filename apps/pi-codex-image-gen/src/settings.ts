@@ -20,11 +20,11 @@ export class ImageGenSettingsStore {
         }
         const value: unknown = JSON.parse(raw);
         if (typeof value !== "object" || value === null || Array.isArray(value))
-            throw new Error("이미지 생성 설정은 JSON 객체여야 합니다.");
+            throw new Error("Image generation settings must be a JSON object.");
         const settings = value as Record<string, unknown>;
         if (settings.model !== undefined && !isImageModel(settings.model))
             throw new Error(
-                "이미지 생성 model은 gpt-image-2.5 또는 gpt-image-2여야 합니다.",
+                "The image generation model must be gpt-image-2.5 or gpt-image-2.",
             );
         return settings;
     }
@@ -37,7 +37,7 @@ export class ImageGenSettingsStore {
     /** Preserves unrelated keys and atomically replaces the saved model. */
     async save(model: ImageModel): Promise<void> {
         if (!isImageModel(model))
-            throw new Error("지원하지 않는 이미지 생성 모델입니다.");
+            throw new Error("Unsupported image generation model.");
         const settings = { ...(await this.read()), model };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
         const temporary = `${this.path}.${randomUUID()}.tmp`;
