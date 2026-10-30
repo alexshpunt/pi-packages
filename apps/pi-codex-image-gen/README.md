@@ -1,6 +1,6 @@
 # @buyong/pi-codex-image-gen
 
-**English** | [한국어](README.ko.md)
+This fork is not published separately. The npm installation instructions below install the upstream release, not this fork.
 
 Create new images or edit reference images from a Pi conversation. The package provides the Codex-compatible `image_gen` tool and `imagegen` skill. It uses Pi's `openai-codex` ChatGPT subscription credentials for image requests without switching your conversation provider or model.
 
@@ -11,6 +11,14 @@ Create new images or edit reference images from a Pi conversation. The package p
 - For edits, readable local reference images or images still present in the model-visible conversation.
 
 An OpenAI API key alone does not provide the subscription credentials this extension uses. Prompts and reference images are sent to the image backend; use only data you are authorized to send.
+
+## Privacy and network behavior
+
+Image requests send the prompt and reference images to the configured `openai-codex` backend. The default is `https://chatgpt.com/backend-api/codex`; Pi's resolved authentication or provider configuration can override it. A configured backend receives the bearer token, account ID, and any configured authentication headers as well as the request data. Trust the configured endpoint before using the tool. Redirect responses are rejected rather than followed.
+
+PNG, JPEG, and WebP references are sent as their original bytes and may contain metadata such as EXIF. Other formats are converted to PNG. Reference files are read in full, without a package-specific size limit. Backend errors can include request data reflected by the server; known credentials are redacted, but prompts and image data are not automatically removed.
+
+Network failures and HTTP 5xx responses can trigger up to four retries after the initial request. If a server completes a request before the response is lost, retrying can generate multiple images and incur additional charges. Cancellation does not guarantee remote work stopped. Generated images remain on disk until manually removed, and may also be stored in Pi session history. File permissions depend on the process umask; protect the agent directory accordingly.
 
 ## Quick start: create an image
 
