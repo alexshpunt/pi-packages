@@ -9,6 +9,7 @@
   "scripts": {
     "build": "turbo run build",
     "check": "turbo run typecheck lint",
+    "prepare": "node scripts/install-git-hooks.mjs",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "format": "biome format --write .",

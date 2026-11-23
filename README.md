@@ -61,6 +61,8 @@ pnpm --filter @buyong/pi-ollama-cloud typecheck
 pi -e ./apps/pi-ollama-cloud        # load an app in Pi for one session
 ```
 
+`pnpm install` enables a Git hook that formats staged files with Biome before each commit. It leaves unstaged edits out of the commit and preserves them in the working tree. If you already configured `core.hooksPath`, the installer keeps your hooks.
+
 `pnpm check` builds the workspace dependencies that a type check needs before checking a package. When you run one package's script directly, build that package and its workspace dependencies first with `pnpm --filter "<package>..." build`; for example, the type checks and tests of `pi-codex-auto-review` and `pi-redact` use the built `@buyong/redact`. Shared CI runs the same build before type checks.
 
 ## Shared CI and per-package releases

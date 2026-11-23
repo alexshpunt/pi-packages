@@ -61,6 +61,8 @@ pnpm --filter @buyong/pi-ollama-cloud typecheck
 pi -e ./apps/pi-ollama-cloud        # load an app in Pi for one session
 ```
 
+`pnpm install`은 커밋 전에 스테이징한 파일을 Biome으로 포맷하는 Git 훅을 설정합니다. 스테이징하지 않은 수정은 커밋에 포함하지 않고 작업 트리에 보존합니다. `core.hooksPath`를 이미 설정했다면 기존 훅을 그대로 사용합니다.
+
 `pnpm check`는 패키지를 검사하기 전에, 타입 검사에 필요한 작업 공간 의존성을 먼저 빌드합니다. 패키지 하나의 스크립트를 직접 실행할 때는 `pnpm --filter "<패키지>..." build`로 그 패키지와 작업 공간 의존성을 먼저 빌드합니다. 예를 들어 `pi-codex-auto-review`와 `pi-redact`의 타입 검사와 테스트는 빌드한 `@buyong/redact`를 씁니다. 공통 CI도 타입 검사 전에 같은 빌드를 실행합니다.
 
 ## 공통 CI와 패키지별 배포
